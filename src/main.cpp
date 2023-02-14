@@ -31,82 +31,18 @@ inline int GetNumBitsForMessage(uint16_t sequence)
 struct TestMessage : public yojimbo::Message
 {
     uint16_t sequence;
+    uint32_t hitpoints;
 
     TestMessage()
     {
         sequence = 0;
+        hitpoints = 0;
     }
 
     template <typename Stream> bool Serialize(Stream &stream)
     {
         serialize_bits(stream, sequence, 16);
-
-        int numBits = GetNumBitsForMessage(sequence);
-        int numWords = numBits / 32;
-        uint32_t dummy = 0;
-        for (int i = 0; i < numWords; ++i)
-            serialize_bits(stream, dummy, 32);
-        int numRemainderBits = numBits - numWords * 32;
-        if (numRemainderBits > 0)
-            serialize_bits(stream, dummy, numRemainderBits);
-
-        return true;
-    }
-
-    YOJIMBO_VIRTUAL_SERIALIZE_FUNCTIONS();
-};
-
-struct TestBlockMessage : public yojimbo::BlockMessage
-{
-    uint16_t sequence;
-
-    TestBlockMessage()
-    {
-        sequence = 0;
-    }
-
-    template <typename Stream> bool Serialize(Stream &stream)
-    {
-        serialize_bits(stream, sequence, 16);
-        return true;
-    }
-
-    YOJIMBO_VIRTUAL_SERIALIZE_FUNCTIONS();
-};
-
-struct TestSerializeFailOnReadMessage : public yojimbo::Message
-{
-    template <typename Stream> bool Serialize(Stream & /*stream*/)
-    {
-        return !Stream::IsReading;
-    }
-
-    YOJIMBO_VIRTUAL_SERIALIZE_FUNCTIONS();
-};
-
-struct TestExhaustStreamAllocatorOnReadMessage : public yojimbo::Message
-{
-    template <typename Stream> bool Serialize(Stream &stream)
-    {
-        if (Stream::IsReading)
-        {
-            const int NumBuffers = 100;
-
-            void *buffers[NumBuffers];
-
-            memset(buffers, 0, sizeof(buffers));
-
-            for (int i = 0; i < NumBuffers; ++i)
-            {
-                buffers[i] = YOJIMBO_ALLOCATE(stream.GetAllocator(), 1024 * 1024);
-            }
-
-            for (int i = 0; i < NumBuffers; ++i)
-            {
-                YOJIMBO_FREE(stream.GetAllocator(), buffers[i]);
-            }
-        }
-
+        serialize_uint32(stream, hitpoints);
         return true;
     }
 
@@ -116,37 +52,11 @@ struct TestExhaustStreamAllocatorOnReadMessage : public yojimbo::Message
 enum TestMessageType
 {
     TEST_MESSAGE,
-    TEST_BLOCK_MESSAGE,
-    TEST_SERIALIZE_FAIL_ON_READ_MESSAGE,
-    TEST_EXHAUST_STREAM_ALLOCATOR_ON_READ_MESSAGE,
     NUM_TEST_MESSAGE_TYPES
 };
 
 YOJIMBO_MESSAGE_FACTORY_START(TestMessageFactory, NUM_TEST_MESSAGE_TYPES);
 YOJIMBO_DECLARE_MESSAGE_TYPE(TEST_MESSAGE, TestMessage);
-YOJIMBO_DECLARE_MESSAGE_TYPE(TEST_BLOCK_MESSAGE, TestBlockMessage);
-YOJIMBO_DECLARE_MESSAGE_TYPE(TEST_SERIALIZE_FAIL_ON_READ_MESSAGE, TestSerializeFailOnReadMessage);
-YOJIMBO_DECLARE_MESSAGE_TYPE(TEST_EXHAUST_STREAM_ALLOCATOR_ON_READ_MESSAGE, TestExhaustStreamAllocatorOnReadMessage);
-YOJIMBO_MESSAGE_FACTORY_FINISH();
-
-enum SingleTestMessageType
-{
-    SINGLE_TEST_MESSAGE,
-    NUM_SINGLE_TEST_MESSAGE_TYPES
-};
-
-YOJIMBO_MESSAGE_FACTORY_START(SingleTestMessageFactory, NUM_SINGLE_TEST_MESSAGE_TYPES);
-YOJIMBO_DECLARE_MESSAGE_TYPE(SINGLE_TEST_MESSAGE, TestMessage);
-YOJIMBO_MESSAGE_FACTORY_FINISH();
-
-enum SingleBlockTestMessageType
-{
-    SINGLE_BLOCK_TEST_MESSAGE,
-    NUM_SINGLE_BLOCK_TEST_MESSAGE_TYPES
-};
-
-YOJIMBO_MESSAGE_FACTORY_START(SingleBlockTestMessageFactory, NUM_SINGLE_BLOCK_TEST_MESSAGE_TYPES);
-YOJIMBO_DECLARE_MESSAGE_TYPE(SINGLE_BLOCK_TEST_MESSAGE, TestBlockMessage);
 YOJIMBO_MESSAGE_FACTORY_FINISH();
 
 class TestAdapter : public yojimbo::Adapter
@@ -158,6 +68,16 @@ public:
         return YOJIMBO_NEW(allocator, TestMessageFactory, allocator);
     }
 };
+
+int yj_printf(const char *format, ...)
+{
+    va_list args;
+    va_start(args, format);
+    printf("[yojimbo] ");
+    int result = vprintf(format, args);
+    va_end(args);
+    return result;
+}
 
 static TestAdapter adapter;
 static double serverTime = 100.0;
@@ -181,14 +101,14 @@ yojimbo::Server &ServerStart()
 
     server->Start(yojimbo::MaxClients);
     if (!server->IsRunning()) {
-        printf("Failed to start server\n");
+        printf("yj: Failed to start server\n");
         return *server;
     }
 
-    printf("started server on port %d (insecure)\n", ServerPort);
+    printf("yj: started server on port %d (insecure)\n", ServerPort);
     char addressString[256];
     server->GetAddress().ToString(addressString, sizeof(addressString));
-    printf("server address is %s\n", addressString);
+    printf("yj: server address is %s\n", addressString);
 
     return *server;
 }
@@ -211,7 +131,10 @@ void ServerUpdate(yojimbo::Server &server)
                 case TEST_MESSAGE:
                 {
                     TestMessage *testMessage = (TestMessage *)message;
-                    printf("recv[seq=%d] TEST_MESSAGE\n", testMessage->sequence);
+                    printf("yj: recv[seq=%d] TEST_MESSAGE (hp=%d)\n",
+                        testMessage->sequence,
+                        testMessage->hitpoints
+                    );
                     server.ReleaseMessage(clientIdx, message);
                 }
                 break;
@@ -240,7 +163,7 @@ yojimbo::Client &ClientStart()
 
     uint64_t clientId = 0;
     yojimbo::random_bytes((uint8_t *)&clientId, 8);
-    printf("client id is %.16" PRIx64 "\n", clientId);
+    printf("yj: client id is %.16" PRIx64 "\n", clientId);
 
     yojimbo::ClientServerConfig config;
 
@@ -269,7 +192,7 @@ yojimbo::Client &ClientStart()
 
     char addressString[256];
     client->GetAddress().ToString(addressString, sizeof(addressString));
-    printf("client address is %s\n", addressString);
+    printf("yj: client address is %s\n", addressString);
 
     return *client;
 }
@@ -277,12 +200,13 @@ yojimbo::Client &ClientStart()
 void ClientUpdate(yojimbo::Client &client)
 {
     static double lastSentAt = 0;
-    if (clientTime > lastSentAt + 1.0) {
+    if (clientTime > lastSentAt + 0.2) {
         TestMessage *message = (TestMessage *)client.CreateMessage(TEST_MESSAGE);
         if (message)
         {
             static uint16_t numMessagesSentToServer = 0;
             message->sequence = (uint16_t)numMessagesSentToServer;
+            message->hitpoints = 100 - numMessagesSentToServer;
             client.SendMessage(0, message);
             numMessagesSentToServer++;
             lastSentAt = clientTime;
@@ -315,22 +239,12 @@ void ClientStop(yojimbo::Client &client)
 //------------------------------------------------------------------------------------
 int main(void)
 {
-    if (!InitializeYojimbo())
-    {
-        printf("error: failed to initialize Yojimbo!\n");
-        return 1;
-    }
-    yojimbo_log_level(YOJIMBO_LOG_LEVEL_INFO);
-    // yojimbo does this.. why?
-    //srand((unsigned int)time(NULL));
-
-    yojimbo::Server &server = ServerStart();
-    yojimbo::Client &client = ClientStart();
-
     // Initialization
     //--------------------------------------------------------------------------------------
     const int windowWidth = 1600;
     const int windowHeight = 900;
+
+    //SetTraceLogLevel(LOG_WARNING);
 
     InitWindow(windowWidth, windowHeight, "RayNet");
     SetWindowState(FLAG_VSYNC_HINT);
@@ -354,6 +268,21 @@ int main(void)
 
     const char *text = "Meow MEOW meow MeOw!";
     Vector2 textSize = MeasureTextEx(font, text, (float)fontSize, 1);
+
+    //---------------------------------------------------------------------------------------
+    if (!InitializeYojimbo())
+    {
+        printf("yj: error: failed to initialize Yojimbo!\n");
+        return 1;
+    }
+    yojimbo_log_level(YOJIMBO_LOG_LEVEL_INFO);
+    yojimbo_set_printf_function(yj_printf);
+    // yojimbo does this.. why?
+    //srand((unsigned int)time(NULL));
+
+    yojimbo::Server &server = ServerStart();
+    yojimbo::Client &client = ClientStart();
+    //---------------------------------------------------------------------------------------
 
     // Main game loop
     while (!WindowShouldClose())    // Detect window close button or ESC key
