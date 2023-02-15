@@ -11,148 +11,10 @@
 *
 ********************************************************************************************/
 
-#include "raylib/raylib.h"
-#include "yojimbo.h"
-
-
-const uint64_t ProtocolId = 0x11223344556677ULL;
-
-const int ClientPort = 30000;
-const int ServerPort = 40000;
-
-inline int GetNumBitsForMessage(uint16_t sequence)
-{
-    static int messageBitsArray[] = { 1, 320, 120, 4, 256, 45, 11, 13, 101, 100, 84, 95, 203, 2, 3, 8, 512, 5, 3, 7, 50 };
-    const int modulus = sizeof(messageBitsArray) / sizeof(int);
-    const int index = sequence % modulus;
-    return messageBitsArray[index];
-}
-
-struct TestMessage : public yojimbo::Message
-{
-    uint16_t sequence;
-    uint32_t hitpoints;
-
-    TestMessage()
-    {
-        sequence = 0;
-        hitpoints = 0;
-    }
-
-    template <typename Stream> bool Serialize(Stream &stream)
-    {
-        serialize_bits(stream, sequence, 16);
-        serialize_uint32(stream, hitpoints);
-        return true;
-    }
-
-    YOJIMBO_VIRTUAL_SERIALIZE_FUNCTIONS();
-};
-
-enum TestMessageType
-{
-    TEST_MESSAGE,
-    NUM_TEST_MESSAGE_TYPES
-};
-
-YOJIMBO_MESSAGE_FACTORY_START(TestMessageFactory, NUM_TEST_MESSAGE_TYPES);
-YOJIMBO_DECLARE_MESSAGE_TYPE(TEST_MESSAGE, TestMessage);
-YOJIMBO_MESSAGE_FACTORY_FINISH();
-
-class TestAdapter : public yojimbo::Adapter
-{
-public:
-
-    yojimbo::MessageFactory *CreateMessageFactory(yojimbo::Allocator &allocator)
-    {
-        return YOJIMBO_NEW(allocator, TestMessageFactory, allocator);
-    }
-};
-
-int yj_printf(const char *format, ...)
-{
-    va_list args;
-    va_start(args, format);
-    printf("[yojimbo] ");
-    int result = vprintf(format, args);
-    va_end(args);
-    return result;
-}
+#include "../common/common.h"
 
 static TestAdapter adapter;
-static double serverTime = 100.0;
 static double clientTime = 100.0;
-const double deltaTime = 0.01f;
-
-yojimbo::Server &ServerStart()
-{
-    static yojimbo::Server *server = nullptr;
-    if (server) {
-        return *server;
-    }
-
-    uint8_t privateKey[yojimbo::KeyBytes];
-    memset(privateKey, 0, yojimbo::KeyBytes);
-
-    yojimbo::ClientServerConfig config;
-
-    server = new yojimbo::Server(yojimbo::GetDefaultAllocator(), privateKey,
-        yojimbo::Address("127.0.0.1", ServerPort), config, adapter, serverTime);
-
-    server->Start(yojimbo::MaxClients);
-    if (!server->IsRunning()) {
-        printf("yj: Failed to start server\n");
-        return *server;
-    }
-
-    printf("yj: started server on port %d (insecure)\n", ServerPort);
-    char addressString[256];
-    server->GetAddress().ToString(addressString, sizeof(addressString));
-    printf("yj: server address is %s\n", addressString);
-
-    return *server;
-}
-
-void ServerUpdate(yojimbo::Server &server)
-{
-    if (!server.IsRunning())
-        return;
-
-    server.SendPackets();
-    server.ReceivePackets();
-
-    const int clientIdx = 0;
-    const int channelIdx = 0;
-    yojimbo::Message *message = server.ReceiveMessage(clientIdx, channelIdx);
-    do {
-        if (message) {
-            switch (message->GetType())
-            {
-                case TEST_MESSAGE:
-                {
-                    TestMessage *testMessage = (TestMessage *)message;
-                    printf("yj: recv[seq=%d] TEST_MESSAGE (hp=%d)\n",
-                        testMessage->sequence,
-                        testMessage->hitpoints
-                    );
-                    server.ReleaseMessage(clientIdx, message);
-                }
-                break;
-            }
-        }
-        message = server.ReceiveMessage(clientIdx, channelIdx);
-    } while (message);
-
-    serverTime += deltaTime;
-    server.AdvanceTime(serverTime);
-
-    yojimbo_sleep(deltaTime);
-}
-
-void ServerStop(yojimbo::Server &server)
-{
-    server.Stop();
-}
 
 yojimbo::Client &ClientStart()
 {
@@ -241,12 +103,9 @@ int main(void)
 {
     // Initialization
     //--------------------------------------------------------------------------------------
-    const int windowWidth = 1600;
-    const int windowHeight = 900;
-
     //SetTraceLogLevel(LOG_WARNING);
 
-    InitWindow(windowWidth, windowHeight, "RayNet");
+    InitWindow(windowWidth, windowHeight, "RayNet Client");
     SetWindowState(FLAG_VSYNC_HINT);
 
     // NOTE: There could be other, bigger monitors
@@ -255,7 +114,7 @@ int main(void)
     Vector2 screenSize = { (float)GetRenderWidth(), (float)GetRenderHeight() };
 
     SetWindowPosition(
-        monitorWidth / 2 - (int)screenSize.x / 2,
+        monitorWidth / 2, // - (int)screenSize.x / 2,
         monitorHeight / 2 - (int)screenSize.y / 2
     );
 
@@ -280,7 +139,6 @@ int main(void)
     // yojimbo does this.. why?
     //srand((unsigned int)time(NULL));
 
-    yojimbo::Server &server = ServerStart();
     yojimbo::Client &client = ClientStart();
     //---------------------------------------------------------------------------------------
 
@@ -289,7 +147,6 @@ int main(void)
     {
         // Update
         //----------------------------------------------------------------------------------
-        ServerUpdate(server);
         ClientUpdate(client);
 
         // Draw
@@ -328,10 +185,8 @@ int main(void)
     CloseWindow();                // Close window and OpenGL context
 
     ClientStop(client);
-    ServerStop(server);
 
     delete &client;
-    delete &server;
 
     ShutdownYojimbo();
     //--------------------------------------------------------------------------------------

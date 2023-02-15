@@ -10,11 +10,19 @@
       <Platform>x64</Platform>
     </ProjectConfiguration>
   </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="src\client\client.cpp" />
+    <ClCompile Include="src\common\net.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="src\common\common.h" />
+    <ClInclude Include="src\common\net.h" />
+  </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>16.0</VCProjectVersion>
     <Keyword>Win32Proj</Keyword>
     <ProjectGuid>{d47c56b5-dd7a-47d0-846d-9606e73aa45c}</ProjectGuid>
-    <RootNamespace>RayNet</RootNamespace>
+    <RootNamespace>Client</RootNamespace>
     <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
@@ -45,12 +53,12 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <OutDir>bin/</OutDir>
-    <IntDir>obj/</IntDir>
+    <IntDir>obj/$(ProjectName)/</IntDir>
     <TargetName>$(ProjectName)_dbg</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <OutDir>bin/</OutDir>
-    <IntDir>obj/</IntDir>
+    <IntDir>obj/$(ProjectName)/</IntDir>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
@@ -98,12 +106,6 @@
  %(AdditionalOptions)</AdditionalOptions>
     </Link>
   </ItemDefinitionGroup>
-  <ItemGroup>
-    <ClCompile Include="src\main.cpp" />
-  </ItemGroup>
-  <ItemGroup>
-    <ClInclude Include="include\yojimbo.h" />
-  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>
