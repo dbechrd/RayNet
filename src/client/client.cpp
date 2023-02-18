@@ -1,20 +1,6 @@
-/*******************************************************************************************
-*
-*   raylib [textures] example - Texture loading and drawing
-*
-*   Example originally created with raylib 1.0, last time updated with raylib 1.0
-*
-*   Example licensed under an unmodified zlib/libpng license, which is an OSI-certified,
-*   BSD-like license that allows static linking with closed source software
-*
-*   Copyright (c) 2014-2023 Ramon Santamaria (@raysan5)
-*
-********************************************************************************************/
-
 #include "../common/common.h"
 
-static TestAdapter adapter;
-static double clientTime = 100.0;
+TestAdapter adapter{};
 
 yojimbo::Client &ClientStart()
 {
@@ -27,10 +13,10 @@ yojimbo::Client &ClientStart()
     yojimbo::random_bytes((uint8_t *)&clientId, 8);
     printf("yj: client id is %.16" PRIx64 "\n", clientId);
 
-    yojimbo::ClientServerConfig config;
+    yojimbo::ClientServerConfig config{};
 
     client = new yojimbo::Client(yojimbo::GetDefaultAllocator(),
-        yojimbo::Address("0.0.0.0"), config, adapter, clientTime);
+        yojimbo::Address("0.0.0.0"), config, adapter, 100);
 
     yojimbo::Address serverAddress("127.0.0.1", ServerPort);
 
@@ -62,7 +48,9 @@ yojimbo::Client &ClientStart()
 void ClientUpdate(yojimbo::Client &client)
 {
     static double lastSentAt = 0;
-    if (clientTime > lastSentAt + 0.2) {
+    double now = client.GetTime();
+
+    if (now > lastSentAt + 0.2) {
         TestMessage *message = (TestMessage *)client.CreateMessage(TEST_MESSAGE);
         if (message)
         {
@@ -71,7 +59,7 @@ void ClientUpdate(yojimbo::Client &client)
             message->hitpoints = 100 - numMessagesSentToServer;
             client.SendMessage(0, message);
             numMessagesSentToServer++;
-            lastSentAt = clientTime;
+            lastSentAt = now;
         }
     }
 
@@ -82,13 +70,12 @@ void ClientUpdate(yojimbo::Client &client)
         return;
     }
 
-    clientTime += deltaTime;
-    client.AdvanceTime(clientTime);
+    client.AdvanceTime(now + deltaTime);
 
     if (client.ConnectionFailed())
         return;
 
-    yojimbo_sleep(deltaTime);
+    //yojimbo_sleep(deltaTime);
 }
 
 void ClientStop(yojimbo::Client &client)
@@ -96,16 +83,11 @@ void ClientStop(yojimbo::Client &client)
     client.Disconnect();
 }
 
-//------------------------------------------------------------------------------------
-// Program main entry point
-//------------------------------------------------------------------------------------
 int main(void)
 {
-    // Initialization
-    //--------------------------------------------------------------------------------------
     //SetTraceLogLevel(LOG_WARNING);
 
-    InitWindow(windowWidth, windowHeight, "RayNet Client");
+    InitWindow(WINDOW_WIDTH, WINDOW_HEIGHT, "RayNet Client");
     SetWindowState(FLAG_VSYNC_HINT);
 
     // NOTE: There could be other, bigger monitors
@@ -120,15 +102,14 @@ int main(void)
 
     // NOTE: Textures MUST be loaded after Window initialization (OpenGL context is required)
     Texture2D texture = LoadTexture("resources/cat.png");        // Texture loading
-    //---------------------------------------------------------------------------------------
 
-    int fontSize = 32;
-    Font font = LoadFontEx("resources/OpenSans-Bold.ttf", fontSize, 0, 0);
+    Font font = LoadFontEx(FONT_PATH, FONT_SIZE, 0, 0);
 
     const char *text = "Meow MEOW meow MeOw!";
-    Vector2 textSize = MeasureTextEx(font, text, (float)fontSize, 1);
+    Vector2 textSize = MeasureTextEx(font, text, (float)FONT_SIZE, 1);
 
-    //---------------------------------------------------------------------------------------
+    //--------------------
+    // Client
     if (!InitializeYojimbo())
     {
         printf("yj: error: failed to initialize Yojimbo!\n");
@@ -140,56 +121,75 @@ int main(void)
     //srand((unsigned int)time(NULL));
 
     yojimbo::Client &client = ClientStart();
-    //---------------------------------------------------------------------------------------
 
-    // Main game loop
-    while (!WindowShouldClose())    // Detect window close button or ESC key
+    while (!WindowShouldClose())
     {
+        //--------------------
         // Update
-        //----------------------------------------------------------------------------------
         ClientUpdate(client);
 
+        //--------------------
         // Draw
-        //----------------------------------------------------------------------------------
         BeginDrawing();
 
         ClearBackground(BROWN);
 
         Vector2 catPos = {
-            windowWidth / 2.0f - texture.width / 2.0f,
-            windowHeight / 2.0f - texture.height / 2.0f
+            WINDOW_WIDTH / 2.0f - texture.width / 2.0f,
+            WINDOW_HEIGHT / 2.0f - texture.height / 2.0f
         };
         DrawTexture(texture, (int)catPos.x, (int)catPos.y, WHITE);
 
         Vector2 textPos = {
-            windowWidth / 2 - textSize.x / 2,
+            WINDOW_WIDTH / 2 - textSize.x / 2,
             catPos.y + texture.height + 4
         };
-        Vector2 textShadowPos = textPos;
-        textShadowPos.x += 2;
-        textShadowPos.y += 2;
+        DrawTextShadowEx(font, text, textPos, (float)FONT_SIZE, RAYWHITE);
 
-        //DrawRectangle(windowWidth / 2 - textSize.x / 2, 370, textSize.x, textSize.y, WHITE);
-        DrawTextEx(font, text, textShadowPos, (float)fontSize, 1, BLACK);
-        DrawTextEx(font, text, textPos, (float)fontSize, 1, RAYWHITE);
+        {
+            float hud_y = 8.0f;
+            char buf[128];
+            #define DRAW_TEXT(label, fmt, ...) \
+                snprintf(buf, sizeof(buf), "%-12s : " fmt, label, __VA_ARGS__); \
+                DrawTextShadowEx(font, buf, { 8, hud_y }, (float)FONT_SIZE, RAYWHITE); \
+                hud_y += FONT_SIZE;
+
+            DRAW_TEXT("time", "%f", client.GetTime());
+
+            const char *clientState = "unknown";
+            switch (client.GetClientState()) {
+                case yojimbo::CLIENT_STATE_ERROR:        clientState = "CLIENT_STATE_ERROR"; break;
+                case yojimbo::CLIENT_STATE_DISCONNECTED: clientState = "CLIENT_STATE_DISCONNECTED"; break;
+                case yojimbo::CLIENT_STATE_CONNECTING:   clientState = "CLIENT_STATE_CONNECTING"; break;
+                case yojimbo::CLIENT_STATE_CONNECTED:    clientState = "CLIENT_STATE_CONNECTED"; break;
+            }
+            DRAW_TEXT("state", "%s", clientState);
+
+            yojimbo::NetworkInfo netInfo{};
+            client.GetNetworkInfo(netInfo);
+
+            DRAW_TEXT("rtt", "%f", netInfo.RTT);
+            DRAW_TEXT("%% loss", "%f", netInfo.packetLoss);
+            DRAW_TEXT("sent (kbps)", "%f", netInfo.sentBandwidth);
+            DRAW_TEXT("recv (kbps)", "%f", netInfo.receivedBandwidth);
+            DRAW_TEXT("ack  (kbps)", "%f", netInfo.ackedBandwidth);
+            DRAW_TEXT("sent (pckt)", "%" PRIu64, netInfo.numPacketsSent);
+            DRAW_TEXT("recv (pckt)", "%" PRIu64, netInfo.numPacketsReceived);
+            DRAW_TEXT("ack  (pckt)", "%" PRIu64, netInfo.numPacketsAcked);
+        }
 
         EndDrawing();
-        //----------------------------------------------------------------------------------
     }
 
-    // De-Initialization
-    //--------------------------------------------------------------------------------------
+    //--------------------
+    // Cleanup
     UnloadFont(font);
-    UnloadTexture(texture);       // Texture unloading
-
-    CloseWindow();                // Close window and OpenGL context
+    UnloadTexture(texture);
+    CloseWindow();
 
     ClientStop(client);
-
     delete &client;
-
     ShutdownYojimbo();
-    //--------------------------------------------------------------------------------------
 
     return 0;
 }

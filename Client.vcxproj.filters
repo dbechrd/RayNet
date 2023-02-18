@@ -3,6 +3,7 @@
   <ItemGroup>
     <ClCompile Include="src\client\client.cpp" />
     <ClCompile Include="src\common\net.cpp" />
+    <ClCompile Include="src\common\common.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\common\net.h" />

@@ -11,6 +11,7 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="src\common\common.cpp" />
     <ClCompile Include="src\common\net.cpp" />
     <ClCompile Include="src\server\server.cpp" />
   </ItemGroup>

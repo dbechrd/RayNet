@@ -12,6 +12,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\client\client.cpp" />
+    <ClCompile Include="src\common\common.cpp" />
     <ClCompile Include="src\common\net.cpp" />
   </ItemGroup>
   <ItemGroup>

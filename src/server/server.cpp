@@ -1,20 +1,6 @@
-/*******************************************************************************************
-*
-*   raylib [textures] example - Texture loading and drawing
-*
-*   Example originally created with raylib 1.0, last time updated with raylib 1.0
-*
-*   Example licensed under an unmodified zlib/libpng license, which is an OSI-certified,
-*   BSD-like license that allows static linking with closed source software
-*
-*   Copyright (c) 2014-2023 Ramon Santamaria (@raysan5)
-*
-********************************************************************************************/
-
 #include "../common/common.h"
 
-static TestAdapter adapter;
-static double serverTime = 100.0;
+TestAdapter adapter{};
 
 yojimbo::Server &ServerStart()
 {
@@ -26,10 +12,10 @@ yojimbo::Server &ServerStart()
     uint8_t privateKey[yojimbo::KeyBytes];
     memset(privateKey, 0, yojimbo::KeyBytes);
 
-    yojimbo::ClientServerConfig config;
+    yojimbo::ClientServerConfig config{};
 
     server = new yojimbo::Server(yojimbo::GetDefaultAllocator(), privateKey,
-        yojimbo::Address("127.0.0.1", ServerPort), config, adapter, serverTime);
+        yojimbo::Address("127.0.0.1", ServerPort), config, adapter, 100);
 
     server->Start(yojimbo::MaxClients);
     if (!server->IsRunning()) {
@@ -75,10 +61,9 @@ void ServerUpdate(yojimbo::Server &server)
         message = server.ReceiveMessage(clientIdx, channelIdx);
     } while (message);
 
-    serverTime += deltaTime;
-    server.AdvanceTime(serverTime);
+    server.AdvanceTime(server.GetTime() + deltaTime);
 
-    yojimbo_sleep(deltaTime);
+    //yojimbo_sleep(deltaTime);
 }
 
 void ServerStop(yojimbo::Server &server)
@@ -86,16 +71,11 @@ void ServerStop(yojimbo::Server &server)
     server.Stop();
 }
 
-//------------------------------------------------------------------------------------
-// Program main entry point
-//------------------------------------------------------------------------------------
 int main(void)
 {
-    // Initialization
-    //--------------------------------------------------------------------------------------
     //SetTraceLogLevel(LOG_WARNING);
 
-    InitWindow(windowWidth, windowHeight, "RayNet Server");
+    InitWindow(WINDOW_WIDTH, WINDOW_HEIGHT, "RayNet Server");
     SetWindowState(FLAG_VSYNC_HINT);
 
     // NOTE: There could be other, bigger monitors
@@ -110,15 +90,14 @@ int main(void)
 
     // NOTE: Textures MUST be loaded after Window initialization (OpenGL context is required)
     Texture2D texture = LoadTexture("resources/cat.png");        // Texture loading
-    //---------------------------------------------------------------------------------------
 
-    int fontSize = 32;
-    Font font = LoadFontEx("resources/OpenSans-Bold.ttf", fontSize, 0, 0);
+    Font font = LoadFontEx(FONT_PATH, FONT_SIZE, 0, 0);
 
     const char *text = "Listening...";
-    Vector2 textSize = MeasureTextEx(font, text, (float)fontSize, 1);
+    Vector2 textSize = MeasureTextEx(font, text, (float)FONT_SIZE, 1);
 
-    //---------------------------------------------------------------------------------------
+    //--------------------
+    // Server
     if (!InitializeYojimbo())
     {
         printf("yj: error: failed to initialize Yojimbo!\n");
@@ -130,56 +109,43 @@ int main(void)
     //srand((unsigned int)time(NULL));
 
     yojimbo::Server &server = ServerStart();
-    //---------------------------------------------------------------------------------------
 
-    // Main game loop
-    while (!WindowShouldClose())    // Detect window close button or ESC key
+    while (!WindowShouldClose())
     {
+        //--------------------
         // Update
-        //----------------------------------------------------------------------------------
         ServerUpdate(server);
 
+        //--------------------
         // Draw
-        //----------------------------------------------------------------------------------
         BeginDrawing();
 
         ClearBackground(BROWN);
 
         Vector2 catPos = {
-            windowWidth / 2.0f - texture.width / 2.0f,
-            windowHeight / 2.0f - texture.height / 2.0f
+            WINDOW_WIDTH / 2.0f - texture.width / 2.0f,
+            WINDOW_HEIGHT / 2.0f - texture.height / 2.0f
         };
         DrawTexture(texture, (int)catPos.x, (int)catPos.y, WHITE);
 
         Vector2 textPos = {
-            windowWidth / 2 - textSize.x / 2,
+            WINDOW_WIDTH / 2 - textSize.x / 2,
             catPos.y + texture.height + 4
         };
-        Vector2 textShadowPos = textPos;
-        textShadowPos.x += 2;
-        textShadowPos.y += 2;
-
-        //DrawRectangle(windowWidth / 2 - textSize.x / 2, 370, textSize.x, textSize.y, WHITE);
-        DrawTextEx(font, text, textShadowPos, (float)fontSize, 1, BLACK);
-        DrawTextEx(font, text, textPos, (float)fontSize, 1, RAYWHITE);
+        DrawTextShadowEx(font, text, textPos, (float)FONT_SIZE, RAYWHITE);
 
         EndDrawing();
-        //----------------------------------------------------------------------------------
     }
 
-    // De-Initialization
-    //--------------------------------------------------------------------------------------
+    //--------------------
+    // Cleanup
     UnloadFont(font);
-    UnloadTexture(texture);       // Texture unloading
-
-    CloseWindow();                // Close window and OpenGL context
+    UnloadTexture(texture);
+    CloseWindow();
 
     ServerStop(server);
-
     delete &server;
-
     ShutdownYojimbo();
-    //--------------------------------------------------------------------------------------
 
     return 0;
 }
