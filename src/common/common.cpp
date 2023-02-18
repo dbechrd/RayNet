@@ -1,5 +1,7 @@
 #include "common.h"
 
+World *g_world;
+
 void DrawTextShadowEx(Font font, const char *text, Vector2 pos, float fontSize, Color color)
 {
     Vector2 shadowPos = pos;

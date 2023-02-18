@@ -1,6 +1,5 @@
 #include "../common/common.h"
-
-TestAdapter adapter{};
+#include "../common/net.h"
 
 yojimbo::Server &ServerStart()
 {
@@ -9,25 +8,38 @@ yojimbo::Server &ServerStart()
         return *server;
     }
 
+#if 0
+    if (argc == 2)
+    {
+        Address commandLineAddress(argv[1]);
+        if (commandLineAddress.IsValid())
+        {
+            if (commandLineAddress.GetPort() == 0)
+                commandLineAddress.SetPort(ServerPort);
+            serverAddress = commandLineAddress;
+        }
+    }
+#endif
+
     uint8_t privateKey[yojimbo::KeyBytes];
     memset(privateKey, 0, yojimbo::KeyBytes);
 
     yojimbo::ClientServerConfig config{};
 
     server = new yojimbo::Server(yojimbo::GetDefaultAllocator(), privateKey,
-        yojimbo::Address("127.0.0.1", ServerPort), config, adapter, 100);
+        yojimbo::Address("127.0.0.1", SERVER_PORT), config, netAdapter, 100);
 
     server->Start(yojimbo::MaxClients);
     if (!server->IsRunning()) {
         printf("yj: Failed to start server\n");
         return *server;
     }
-
-    printf("yj: started server on port %d (insecure)\n", ServerPort);
+#if 0
+    printf("yj: started server on port %d (insecure)\n", SERVER_PORT);
     char addressString[256];
     server->GetAddress().ToString(addressString, sizeof(addressString));
     printf("yj: server address is %s\n", addressString);
-
+#endif
     return *server;
 }
 
@@ -46,13 +58,14 @@ void ServerUpdate(yojimbo::Server &server)
         if (message) {
             switch (message->GetType())
             {
-                case TEST_MESSAGE:
+                case MSG_PLAYER_STATE:
                 {
-                    TestMessage *testMessage = (TestMessage *)message;
-                    printf("yj: recv[seq=%d] TEST_MESSAGE (hp=%d)\n",
-                        testMessage->sequence,
-                        testMessage->hitpoints
+                    MsgPlayerState *msgPlayerState = (MsgPlayerState *)message;
+                    printf("yj: recv MSG_PLAYER_STATE (pos=%.02f,%.02f)\n",
+                        msgPlayerState->player.position.x,
+                        msgPlayerState->player.position.y
                     );
+                    g_world->player = msgPlayerState->player;
                     server.ReleaseMessage(clientIdx, message);
                 }
                 break;
@@ -61,9 +74,7 @@ void ServerUpdate(yojimbo::Server &server)
         message = server.ReceiveMessage(clientIdx, channelIdx);
     } while (message);
 
-    server.AdvanceTime(server.GetTime() + deltaTime);
-
-    //yojimbo_sleep(deltaTime);
+    server.AdvanceTime(server.GetTime() + FIXED_DT);
 }
 
 void ServerStop(yojimbo::Server &server)
@@ -105,10 +116,19 @@ int main(void)
     }
     yojimbo_log_level(YOJIMBO_LOG_LEVEL_INFO);
     yojimbo_set_printf_function(yj_printf);
-    // yojimbo does this.. why?
-    //srand((unsigned int)time(NULL));
+    // NOTE(dlb): yojimbo uses rand() for network simulator and random_int()/random_float()
+    srand((unsigned int)GetTime());
 
     yojimbo::Server &server = ServerStart();
+
+    //--------------------
+    // World
+    g_world = (World *)calloc(1, sizeof(*g_world));
+    if (!g_world) {
+        printf("error: failed to allocate world\n");
+        return 1;
+    }
+    Player &player = g_world->player;
 
     while (!WindowShouldClose())
     {
@@ -128,6 +148,8 @@ int main(void)
         };
         DrawTexture(texture, (int)catPos.x, (int)catPos.y, WHITE);
 
+        player.Draw();
+
         Vector2 textPos = {
             WINDOW_WIDTH / 2 - textSize.x / 2,
             catPos.y + texture.height + 4
@@ -139,13 +161,15 @@ int main(void)
 
     //--------------------
     // Cleanup
-    UnloadFont(font);
-    UnloadTexture(texture);
-    CloseWindow();
+    free(g_world);
 
     ServerStop(server);
     delete &server;
     ShutdownYojimbo();
+
+    UnloadFont(font);
+    UnloadTexture(texture);
+    CloseWindow();
 
     return 0;
 }

@@ -1,5 +1,7 @@
 #include "net.h"
 
+NetAdapter netAdapter{};
+
 int yj_printf(const char *format, ...)
 {
     va_list args;

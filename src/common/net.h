@@ -1,59 +1,58 @@
 #pragma once
+#include "common.h"
 #include "yojimbo.h"
 
-const uint64_t ProtocolId = 0x11223344556677ULL;
+#define PROTOCOL_ID 0x42424242424242ULL
+#define CLIENT_PORT 30000
+#define SERVER_PORT 40000
+#define FIXED_DT    (1.0f/60.0f)
 
-const int ClientPort = 30000;
-const int ServerPort = 40000;
-const double deltaTime = 0.01f;
-
-int yj_printf(const char *format, ...);
-
-inline int GetNumBitsForMessage(uint16_t sequence)
+struct MsgPlayerState : public yojimbo::Message
 {
-    static int messageBitsArray[] = { 1, 320, 120, 4, 256, 45, 11, 13, 101, 100, 84, 95, 203, 2, 3, 8, 512, 5, 3, 7, 50 };
-    const int modulus = sizeof(messageBitsArray) / sizeof(int);
-    const int index = sequence % modulus;
-    return messageBitsArray[index];
-}
+    // TODO(dlb): Should I type out all the serialized fields instead?
+    Player player;
 
-struct TestMessage : public yojimbo::Message
-{
-    uint16_t sequence;
-    uint32_t hitpoints;
-
-    TestMessage()
+    MsgPlayerState()
     {
-        sequence = 0;
-        hitpoints = 0;
+        memset(&player, 0, sizeof(player));
     }
 
     template <typename Stream> bool Serialize(Stream &stream)
     {
-        serialize_bits(stream, sequence, 16);
-        serialize_uint32(stream, hitpoints);
+        serialize_bytes(stream, (uint8_t *)&player.color, sizeof(player.color));
+        serialize_float(stream, player.size.x);
+        serialize_float(stream, player.size.y);
+        serialize_float(stream, player.speed);
+        serialize_float(stream, player.velocity.x);
+        serialize_float(stream, player.velocity.y);
+        serialize_float(stream, player.position.x);
+        serialize_float(stream, player.position.y);
         return true;
     }
 
     YOJIMBO_VIRTUAL_SERIALIZE_FUNCTIONS();
 };
 
-enum TestMessageType
+enum MsgType
 {
-    TEST_MESSAGE,
-    NUM_TEST_MESSAGE_TYPES
+    MSG_PLAYER_STATE,
+    MSG_COUNT,
 };
 
-YOJIMBO_MESSAGE_FACTORY_START(TestMessageFactory, NUM_TEST_MESSAGE_TYPES);
-YOJIMBO_DECLARE_MESSAGE_TYPE(TEST_MESSAGE, TestMessage);
+YOJIMBO_MESSAGE_FACTORY_START(MsgFactory, MSG_COUNT);
+YOJIMBO_DECLARE_MESSAGE_TYPE(MSG_PLAYER_STATE, MsgPlayerState);
 YOJIMBO_MESSAGE_FACTORY_FINISH();
 
-class TestAdapter : public yojimbo::Adapter
+class NetAdapter : public yojimbo::Adapter
 {
 public:
 
     yojimbo::MessageFactory *CreateMessageFactory(yojimbo::Allocator &allocator)
     {
-        return YOJIMBO_NEW(allocator, TestMessageFactory, allocator);
+        return YOJIMBO_NEW(allocator, MsgFactory, allocator);
     }
 };
+
+extern NetAdapter netAdapter;
+
+int yj_printf(const char *format, ...);

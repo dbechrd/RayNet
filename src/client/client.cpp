@@ -1,6 +1,24 @@
 #include "../common/common.h"
+#include "../common/net.h"
+#include <time.h>
 
-TestAdapter adapter{};
+void ClientTryConnect(yojimbo::Client &client)
+{
+    if (!client.IsDisconnected()) {
+        return;
+    }
+
+    uint8_t privateKey[yojimbo::KeyBytes];
+    memset(privateKey, 0, yojimbo::KeyBytes);
+
+    uint64_t clientId = 0;
+    yojimbo::random_bytes((uint8_t *)&clientId, 8);
+    printf("yj: client id is %.16" PRIx64 "\n", clientId);
+
+    yojimbo::Address serverAddress("127.0.0.1", SERVER_PORT);
+
+    client.InsecureConnect(privateKey, clientId, serverAddress);
+}
 
 yojimbo::Client &ClientStart()
 {
@@ -9,58 +27,31 @@ yojimbo::Client &ClientStart()
         return *client;
     }
 
-    uint64_t clientId = 0;
-    yojimbo::random_bytes((uint8_t *)&clientId, 8);
-    printf("yj: client id is %.16" PRIx64 "\n", clientId);
-
     yojimbo::ClientServerConfig config{};
 
     client = new yojimbo::Client(yojimbo::GetDefaultAllocator(),
-        yojimbo::Address("0.0.0.0"), config, adapter, 100);
+        yojimbo::Address("0.0.0.0"), config, netAdapter, 100);
 
-    yojimbo::Address serverAddress("127.0.0.1", ServerPort);
-
+    ClientTryConnect(*client);
 #if 0
-    if (argc == 2)
-    {
-        Address commandLineAddress(argv[1]);
-        if (commandLineAddress.IsValid())
-        {
-            if (commandLineAddress.GetPort() == 0)
-                commandLineAddress.SetPort(ServerPort);
-            serverAddress = commandLineAddress;
-        }
-    }
-#endif
-
-    uint8_t privateKey[yojimbo::KeyBytes];
-    memset(privateKey, 0, yojimbo::KeyBytes);
-
-    client->InsecureConnect(privateKey, clientId, serverAddress);
-
     char addressString[256];
     client->GetAddress().ToString(addressString, sizeof(addressString));
     printf("yj: client address is %s\n", addressString);
-
+#endif
     return *client;
 }
 
 void ClientUpdate(yojimbo::Client &client)
 {
-    static double lastSentAt = 0;
-    double now = client.GetTime();
+    if (client.IsDisconnected()) {
+        return;
+    }
 
-    if (now > lastSentAt + 0.2) {
-        TestMessage *message = (TestMessage *)client.CreateMessage(TEST_MESSAGE);
-        if (message)
-        {
-            static uint16_t numMessagesSentToServer = 0;
-            message->sequence = (uint16_t)numMessagesSentToServer;
-            message->hitpoints = 100 - numMessagesSentToServer;
-            client.SendMessage(0, message);
-            numMessagesSentToServer++;
-            lastSentAt = now;
-        }
+    MsgPlayerState *message = (MsgPlayerState *)client.CreateMessage(MSG_PLAYER_STATE);
+    if (message)
+    {
+        message->player = g_world->player;
+        client.SendMessage(0, message);
     }
 
     client.SendPackets();
@@ -70,12 +61,11 @@ void ClientUpdate(yojimbo::Client &client)
         return;
     }
 
-    client.AdvanceTime(now + deltaTime);
+    double now = client.GetTime();
+    client.AdvanceTime(now + FIXED_DT);
 
     if (client.ConnectionFailed())
         return;
-
-    //yojimbo_sleep(deltaTime);
 }
 
 void ClientStop(yojimbo::Client &client)
@@ -89,6 +79,7 @@ int main(void)
 
     InitWindow(WINDOW_WIDTH, WINDOW_HEIGHT, "RayNet Client");
     SetWindowState(FLAG_VSYNC_HINT);
+    //SetWindowState(FLAG_FULLSCREEN_MODE);
 
     // NOTE: There could be other, bigger monitors
     const int monitorWidth = GetMonitorWidth(0);
@@ -117,16 +108,74 @@ int main(void)
     }
     yojimbo_log_level(YOJIMBO_LOG_LEVEL_INFO);
     yojimbo_set_printf_function(yj_printf);
-    // yojimbo does this.. why?
-    //srand((unsigned int)time(NULL));
+    // NOTE(dlb): yojimbo uses rand() for network simulator and random_int()/random_float()
+    srand((unsigned int)GetTime());
 
     yojimbo::Client &client = ClientStart();
 
+    //--------------------
+    // World
+    g_world = (World *)calloc(1, sizeof(*g_world));
+    if (!g_world) {
+        printf("error: failed to allocate world\n");
+        return 1;
+    }
+
+    Player &player = g_world->player;
+    player.color = RED;
+    player.size = { 32, 64 };
+    player.position = { 100, 100 };
+    player.speed = 5.0f;
+
+    double frameStart = GetTime();
+    double frameDt = 0;
+
     while (!WindowShouldClose())
     {
+        {
+            double now = GetTime();
+            frameDt = now - frameStart;
+            frameStart = now;
+        }
+
         //--------------------
         // Update
         ClientUpdate(client);
+
+        if (IsKeyPressed(KEY_V)) {
+            if (IsWindowState(FLAG_VSYNC_HINT)) {
+                ClearWindowState(FLAG_VSYNC_HINT);
+            } else {
+                SetWindowState(FLAG_VSYNC_HINT);
+            }
+        }
+
+        if (IsKeyPressed(KEY_C)) {
+            ClientTryConnect(client);
+        }
+
+        Vector2 vDelta{};
+        if (IsKeyDown(KEY_A)) {
+            vDelta.x -= 1.0f;
+        }
+        if (IsKeyDown(KEY_D)) {
+            vDelta.x += 1.0f;
+        }
+        if (IsKeyDown(KEY_W)) {
+            vDelta.y -= 1.0f;
+        }
+        if (IsKeyDown(KEY_S)) {
+            vDelta.y += 1.0f;
+        }
+        if (vDelta.x && vDelta.y) {
+            float invLength = 1.0f / sqrtf(vDelta.x * vDelta.x + vDelta.y * vDelta.y);
+            vDelta.x *= invLength;
+            vDelta.y *= invLength;
+        }
+        player.velocity.x = vDelta.x * player.speed;
+        player.velocity.y = vDelta.y * player.speed;
+        player.position.x += player.velocity.x;
+        player.position.y += player.velocity.y;
 
         //--------------------
         // Draw
@@ -139,6 +188,8 @@ int main(void)
             WINDOW_HEIGHT / 2.0f - texture.height / 2.0f
         };
         DrawTexture(texture, (int)catPos.x, (int)catPos.y, WHITE);
+
+        player.Draw();
 
         Vector2 textPos = {
             WINDOW_WIDTH / 2 - textSize.x / 2,
@@ -183,13 +234,15 @@ int main(void)
 
     //--------------------
     // Cleanup
-    UnloadFont(font);
-    UnloadTexture(texture);
-    CloseWindow();
+    free(g_world);
 
     ClientStop(client);
     delete &client;
     ShutdownYojimbo();
+
+    UnloadFont(font);
+    UnloadTexture(texture);
+    CloseWindow();
 
     return 0;
 }

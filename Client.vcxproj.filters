@@ -2,11 +2,24 @@
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
     <ClCompile Include="src\client\client.cpp" />
-    <ClCompile Include="src\common\net.cpp" />
-    <ClCompile Include="src\common\common.cpp" />
+    <ClCompile Include="src\common\common.cpp">
+      <Filter>common</Filter>
+    </ClCompile>
+    <ClCompile Include="src\common\net.cpp">
+      <Filter>common</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="src\common\net.h" />
-    <ClInclude Include="src\common\common.h" />
+    <ClInclude Include="src\common\common.h">
+      <Filter>common</Filter>
+    </ClInclude>
+    <ClInclude Include="src\common\net.h">
+      <Filter>common</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="common">
+      <UniqueIdentifier>{7a1c409b-a5f2-4ea7-99a9-92167874350b}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
 </Project>
