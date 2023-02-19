@@ -11,13 +11,11 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="src\common\common.cpp" />
-    <ClCompile Include="src\common\net.cpp" />
+    <ClCompile Include="src\common\common_lib.cpp" />
     <ClCompile Include="src\server\server.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="src\common\common.h" />
-    <ClInclude Include="src\common\net.h" />
+    <ClInclude Include="src\common\common_lib.h" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>16.0</VCProjectVersion>
@@ -71,7 +69,6 @@
       <StringPooling>true</StringPooling>
       <WarningLevel>Level3</WarningLevel>
       <ExceptionHandling>false</ExceptionHandling>
-      <TreatAngleIncludeAsExternal>true</TreatAngleIncludeAsExternal>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -94,7 +91,6 @@
       <StringPooling>true</StringPooling>
       <WarningLevel>Level3</WarningLevel>
       <ExceptionHandling>false</ExceptionHandling>
-      <TreatAngleIncludeAsExternal>true</TreatAngleIncludeAsExternal>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>

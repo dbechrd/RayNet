@@ -1,5 +1,29 @@
-#include "../common/common.h"
-#include "../common/net.h"
+#include "../common/common_lib.h"
+
+class ServerNetAdapter : public NetAdapter
+{
+public:
+
+    void OnServerClientConnected(int clientIdx)
+    {
+        static const Color colors[]{
+            MAROON,
+            LIME,
+            SKYBLUE
+        };
+        Player &player = g_world->players[clientIdx];
+        player.color = colors[clientIdx % (sizeof(colors)/sizeof(colors[0]))];
+        player.size = { 32, 64 };
+        player.position = { 100, 100 };
+        player.speed = 5.0f;
+    }
+
+    void OnServerClientDisconnected(int clientIdx)
+    {
+        Player &player = g_world->players[clientIdx];
+        player.color = GRAY;
+    }
+};
 
 yojimbo::Server &ServerStart()
 {
@@ -25,10 +49,12 @@ yojimbo::Server &ServerStart()
     memset(privateKey, 0, yojimbo::KeyBytes);
 
     yojimbo::ClientServerConfig config{};
+    static ServerNetAdapter adapter{};
 
     server = new yojimbo::Server(yojimbo::GetDefaultAllocator(), privateKey,
-        yojimbo::Address("127.0.0.1", SERVER_PORT), config, netAdapter, 100);
+        yojimbo::Address("127.0.0.1", SERVER_PORT), config, adapter, 100);
 
+    // NOTE(dlb): This must be the same size as world->players[] array!
     server->Start(yojimbo::MaxClients);
     if (!server->IsRunning()) {
         printf("yj: Failed to start server\n");
@@ -43,38 +69,86 @@ yojimbo::Server &ServerStart()
     return *server;
 }
 
-void ServerUpdate(yojimbo::Server &server)
+void ServerUpdate(yojimbo::Server &server, double tickDt)
 {
     if (!server.IsRunning())
         return;
 
-    server.SendPackets();
+    const double serverNow = server.GetTime();
+    server.AdvanceTime(serverNow + tickDt);
     server.ReceivePackets();
 
-    const int clientIdx = 0;
-    const int channelIdx = 0;
-    yojimbo::Message *message = server.ReceiveMessage(clientIdx, channelIdx);
-    do {
-        if (message) {
-            switch (message->GetType())
-            {
-                case MSG_PLAYER_STATE:
+    for (int clientIdx = 0; clientIdx < yojimbo::MaxClients; clientIdx++) {
+        if (!server.IsClientConnected(clientIdx)) {
+            continue;
+        }
+
+        const int channelIdx = 0;
+        yojimbo::Message *message = server.ReceiveMessage(clientIdx, channelIdx);
+        do {
+            if (message) {
+                switch (message->GetType())
                 {
-                    MsgPlayerState *msgPlayerState = (MsgPlayerState *)message;
-                    printf("yj: recv MSG_PLAYER_STATE (pos=%.02f,%.02f)\n",
-                        msgPlayerState->player.position.x,
-                        msgPlayerState->player.position.y
-                    );
-                    g_world->player = msgPlayerState->player;
-                    server.ReleaseMessage(clientIdx, message);
+                    case MSG_C_PLAYER_INPUT:
+                    {
+                        Msg_C_PlayerInput *msgPlayerInput = (Msg_C_PlayerInput *)message;
+
+                        Player &player = g_world->players[clientIdx];
+                        Vector2 vDelta{};
+                        if (msgPlayerInput->playerInput.north) {
+                            vDelta.y -= 1.0f;
+                        }
+                        if (msgPlayerInput->playerInput.west) {
+                            vDelta.x -= 1.0f;
+                        }
+                        if (msgPlayerInput->playerInput.south) {
+                            vDelta.y += 1.0f;
+                        }
+                        if (msgPlayerInput->playerInput.east) {
+                            vDelta.x += 1.0f;
+                        }
+                        if (vDelta.x && vDelta.y) {
+                            float invLength = 1.0f / sqrtf(vDelta.x * vDelta.x + vDelta.y * vDelta.y);
+                            vDelta.x *= invLength;
+                            vDelta.y *= invLength;
+                        }
+                        player.velocity.x = vDelta.x * player.speed;
+                        player.velocity.y = vDelta.y * player.speed;
+                        player.position.x += player.velocity.x;
+                        player.position.y += player.velocity.y;
+
+                        server.ReleaseMessage(clientIdx, message);
+                        break;
+                    }
+                    default:
+                    {
+                        printf("foo\n");
+                        break;
+                    }
+                    break;
                 }
-                break;
+            }
+            message = server.ReceiveMessage(clientIdx, channelIdx);
+        } while (message);
+
+        // TODO: Send the world state that's relevant to this particular client
+        for (int otherClientIdx = 0; otherClientIdx < yojimbo::MaxClients; otherClientIdx++) {
+            if (!server.IsClientConnected(otherClientIdx)) {
+                continue;
+            }
+
+            Msg_S_PlayerState *message = (Msg_S_PlayerState *)server.CreateMessage(clientIdx, MSG_S_PLAYER_STATE);
+            if (message)
+            {
+                message->clientIdx = otherClientIdx;
+                message->player = g_world->players[otherClientIdx];
+                server.SendMessage(clientIdx, channelIdx, message);
             }
         }
-        message = server.ReceiveMessage(clientIdx, channelIdx);
-    } while (message);
+    }
 
-    server.AdvanceTime(server.GetTime() + FIXED_DT);
+
+    server.SendPackets();
 }
 
 void ServerStop(yojimbo::Server &server)
@@ -82,12 +156,13 @@ void ServerStop(yojimbo::Server &server)
     server.Stop();
 }
 
-int main(void)
+int main(int argc, char *argv[])
 {
     //SetTraceLogLevel(LOG_WARNING);
 
     InitWindow(WINDOW_WIDTH, WINDOW_HEIGHT, "RayNet Server");
     SetWindowState(FLAG_VSYNC_HINT);
+    SetWindowState(FLAG_WINDOW_RESIZABLE);
 
     // NOTE: There could be other, bigger monitors
     const int monitorWidth = GetMonitorWidth(0);
@@ -128,13 +203,20 @@ int main(void)
         printf("error: failed to allocate world\n");
         return 1;
     }
-    Player &player = g_world->player;
+
+    double tickStart = 0;
+    double tickAccum = 0;
 
     while (!WindowShouldClose())
     {
-        //--------------------
-        // Update
-        ServerUpdate(server);
+        double now = GetTime();
+        double tickDt = now - tickStart;
+        tickAccum = yojimbo_min(SERVER_TICK_DT * 5, tickAccum + tickDt);
+
+        while (tickAccum > SERVER_TICK_DT) {
+            ServerUpdate(server, SERVER_TICK_DT);
+            tickAccum -= SERVER_TICK_DT;
+        }
 
         //--------------------
         // Draw
@@ -148,13 +230,72 @@ int main(void)
         };
         DrawTexture(texture, (int)catPos.x, (int)catPos.y, WHITE);
 
-        player.Draw();
+        for (int i = 0; i < yojimbo::MaxClients; i++) {
+            Player &player = g_world->players[i];
+            if (player.color.a) {
+                player.Draw();
+            }
+        }
 
         Vector2 textPos = {
             WINDOW_WIDTH / 2 - textSize.x / 2,
             catPos.y + texture.height + 4
         };
         DrawTextShadowEx(font, text, textPos, (float)FONT_SIZE, RAYWHITE);
+
+        {
+            float hud_x = 8.0f;
+            float hud_y = 8.0f;
+            char buf[128];
+            #define DRAW_TEXT_MEASURE(measureRect, label, fmt, ...) { \
+                snprintf(buf, sizeof(buf), "%-12s : " fmt, label, __VA_ARGS__); \
+                Vector2 position{ hud_x, hud_y }; \
+                DrawTextShadowEx(font, buf, position, (float)FONT_SIZE, RAYWHITE); \
+                if (measureRect) { \
+                    Vector2 measure = MeasureTextEx(font, buf, (float)FONT_SIZE, 1.0); \
+                    *measureRect = { position.x, position.y, measure.x, measure.y }; \
+                } \
+                hud_y += FONT_SIZE; \
+            }
+
+            #define DRAW_TEXT(label, fmt, ...) \
+                DRAW_TEXT_MEASURE((Rectangle *)0, label, fmt, __VA_ARGS__)
+
+            DRAW_TEXT("time", "%f", server.GetTime());
+            DRAW_TEXT("clients", "%d", server.GetNumConnectedClients());
+
+            static bool showClientInfo[yojimbo::MaxClients];
+            for (int clientIdx = 0; clientIdx < yojimbo::MaxClients; clientIdx++) {
+                if (!server.IsClientConnected(clientIdx)) {
+                    continue;
+                }
+
+                Rectangle clientRowRect{};
+                DRAW_TEXT_MEASURE(&clientRowRect,
+                    showClientInfo[clientIdx] ? "[-] client" : "[+] client",
+                    "%d", clientIdx
+                );
+                if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)
+                    && CheckCollisionPointRec({ (float)GetMouseX(), (float)GetMouseY() }, clientRowRect))
+                {
+                    showClientInfo[clientIdx] = !showClientInfo[clientIdx];
+                }
+                if (showClientInfo[clientIdx]) {
+                    hud_x += 16.0f;
+                    yojimbo::NetworkInfo netInfo{};
+                    server.GetNetworkInfo(clientIdx, netInfo);
+                    DRAW_TEXT("  rtt", "%f", netInfo.RTT);
+                    DRAW_TEXT("  %% loss", "%f", netInfo.packetLoss);
+                    DRAW_TEXT("  sent (kbps)", "%f", netInfo.sentBandwidth);
+                    DRAW_TEXT("  recv (kbps)", "%f", netInfo.receivedBandwidth);
+                    DRAW_TEXT("  ack  (kbps)", "%f", netInfo.ackedBandwidth);
+                    DRAW_TEXT("  sent (pckt)", "%" PRIu64, netInfo.numPacketsSent);
+                    DRAW_TEXT("  recv (pckt)", "%" PRIu64, netInfo.numPacketsReceived);
+                    DRAW_TEXT("  ack  (pckt)", "%" PRIu64, netInfo.numPacketsAcked);
+                    hud_x -= 16.0f;
+                }
+            }
+        }
 
         EndDrawing();
     }

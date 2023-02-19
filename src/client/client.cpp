@@ -1,5 +1,4 @@
-#include "../common/common.h"
-#include "../common/net.h"
+#include "../common/common_lib.h"
 #include <time.h>
 
 void ClientTryConnect(yojimbo::Client &client)
@@ -28,9 +27,10 @@ yojimbo::Client &ClientStart()
     }
 
     yojimbo::ClientServerConfig config{};
+    static NetAdapter adapter{};
 
     client = new yojimbo::Client(yojimbo::GetDefaultAllocator(),
-        yojimbo::Address("0.0.0.0"), config, netAdapter, 100);
+        yojimbo::Address("0.0.0.0"), config, adapter, 100);
 
     ClientTryConnect(*client);
 #if 0
@@ -41,31 +41,47 @@ yojimbo::Client &ClientStart()
     return *client;
 }
 
-void ClientUpdate(yojimbo::Client &client)
+void ClientUpdate(yojimbo::Client &client, double frameDt, PlayerInput &playerInput)
 {
-    if (client.IsDisconnected()) {
+    const double clientNow = client.GetTime();
+    client.AdvanceTime(clientNow + frameDt);
+    client.ReceivePackets();
+
+    if (!client.IsConnected()) {
         return;
     }
 
-    MsgPlayerState *message = (MsgPlayerState *)client.CreateMessage(MSG_PLAYER_STATE);
-    if (message)
     {
-        message->player = g_world->player;
-        client.SendMessage(0, message);
+        const int channelIdx = 0;
+        yojimbo::Message *message = client.ReceiveMessage(channelIdx);
+        do {
+            if (message) {
+                switch (message->GetType())
+                {
+                    case MSG_S_PLAYER_STATE:
+                    {
+                        Msg_S_PlayerState *msgPlayerState = (Msg_S_PlayerState *)message;
+                        g_world->players[msgPlayerState->clientIdx] = msgPlayerState->player;
+                        client.ReleaseMessage(message);
+                    }
+                    break;
+                }
+            }
+            message = client.ReceiveMessage(channelIdx);
+        } while (message);
+    }
+
+    {
+        Msg_C_PlayerInput *message = (Msg_C_PlayerInput *)client.CreateMessage(MSG_C_PLAYER_INPUT);
+        if (message)
+        {
+            message->playerInput = playerInput;
+            client.SendMessage(0, message);
+            playerInput = {};
+        }
     }
 
     client.SendPackets();
-    client.ReceivePackets();
-
-    if (client.IsDisconnected()) {
-        return;
-    }
-
-    double now = client.GetTime();
-    client.AdvanceTime(now + FIXED_DT);
-
-    if (client.ConnectionFailed())
-        return;
 }
 
 void ClientStop(yojimbo::Client &client)
@@ -73,12 +89,13 @@ void ClientStop(yojimbo::Client &client)
     client.Disconnect();
 }
 
-int main(void)
+int main(int argc, char *argv[])
 {
     //SetTraceLogLevel(LOG_WARNING);
 
     InitWindow(WINDOW_WIDTH, WINDOW_HEIGHT, "RayNet Client");
     SetWindowState(FLAG_VSYNC_HINT);
+    SetWindowState(FLAG_WINDOW_RESIZABLE);
     //SetWindowState(FLAG_FULLSCREEN_MODE);
 
     // NOTE: There could be other, bigger monitors
@@ -121,14 +138,11 @@ int main(void)
         return 1;
     }
 
-    Player &player = g_world->player;
-    player.color = RED;
-    player.size = { 32, 64 };
-    player.position = { 100, 100 };
-    player.speed = 5.0f;
-
     double frameStart = GetTime();
     double frameDt = 0;
+
+    // TODO: Input history queue
+    PlayerInput playerInputAccum{};
 
     while (!WindowShouldClose())
     {
@@ -140,8 +154,6 @@ int main(void)
 
         //--------------------
         // Update
-        ClientUpdate(client);
-
         if (IsKeyPressed(KEY_V)) {
             if (IsWindowState(FLAG_VSYNC_HINT)) {
                 ClearWindowState(FLAG_VSYNC_HINT);
@@ -154,28 +166,14 @@ int main(void)
             ClientTryConnect(client);
         }
 
-        Vector2 vDelta{};
-        if (IsKeyDown(KEY_A)) {
-            vDelta.x -= 1.0f;
-        }
-        if (IsKeyDown(KEY_D)) {
-            vDelta.x += 1.0f;
-        }
-        if (IsKeyDown(KEY_W)) {
-            vDelta.y -= 1.0f;
-        }
-        if (IsKeyDown(KEY_S)) {
-            vDelta.y += 1.0f;
-        }
-        if (vDelta.x && vDelta.y) {
-            float invLength = 1.0f / sqrtf(vDelta.x * vDelta.x + vDelta.y * vDelta.y);
-            vDelta.x *= invLength;
-            vDelta.y *= invLength;
-        }
-        player.velocity.x = vDelta.x * player.speed;
-        player.velocity.y = vDelta.y * player.speed;
-        player.position.x += player.velocity.x;
-        player.position.y += player.velocity.y;
+        playerInputAccum.north |= IsKeyDown(KEY_W);
+        playerInputAccum.west  |= IsKeyDown(KEY_A);
+        playerInputAccum.south |= IsKeyDown(KEY_S);
+        playerInputAccum.east  |= IsKeyDown(KEY_D);
+
+        //--------------------
+        // Networking
+        ClientUpdate(client, frameDt, playerInputAccum);
 
         //--------------------
         // Draw
@@ -189,7 +187,12 @@ int main(void)
         };
         DrawTexture(texture, (int)catPos.x, (int)catPos.y, WHITE);
 
-        player.Draw();
+        for (int i = 0; i < yojimbo::MaxClients; i++) {
+            Player &player = g_world->players[i];
+            if (player.color.a) {
+                player.Draw();
+            }
+        }
 
         Vector2 textPos = {
             WINDOW_WIDTH / 2 - textSize.x / 2,
@@ -198,35 +201,59 @@ int main(void)
         DrawTextShadowEx(font, text, textPos, (float)FONT_SIZE, RAYWHITE);
 
         {
+            float hud_x = 8.0f;
             float hud_y = 8.0f;
             char buf[128];
-            #define DRAW_TEXT(label, fmt, ...) \
+            #define DRAW_TEXT_MEASURE(measureRect, label, fmt, ...) { \
                 snprintf(buf, sizeof(buf), "%-12s : " fmt, label, __VA_ARGS__); \
-                DrawTextShadowEx(font, buf, { 8, hud_y }, (float)FONT_SIZE, RAYWHITE); \
-                hud_y += FONT_SIZE;
+                Vector2 position{ hud_x, hud_y }; \
+                DrawTextShadowEx(font, buf, position, (float)FONT_SIZE, RAYWHITE); \
+                if (measureRect) { \
+                    Vector2 measure = MeasureTextEx(font, buf, (float)FONT_SIZE, 1.0); \
+                    *measureRect = { position.x, position.y, measure.x, measure.y }; \
+                } \
+                hud_y += FONT_SIZE; \
+            }
+
+            #define DRAW_TEXT(label, fmt, ...) \
+                DRAW_TEXT_MEASURE((Rectangle *)0, label, fmt, __VA_ARGS__)
 
             DRAW_TEXT("time", "%f", client.GetTime());
 
-            const char *clientState = "unknown";
-            switch (client.GetClientState()) {
-                case yojimbo::CLIENT_STATE_ERROR:        clientState = "CLIENT_STATE_ERROR"; break;
-                case yojimbo::CLIENT_STATE_DISCONNECTED: clientState = "CLIENT_STATE_DISCONNECTED"; break;
-                case yojimbo::CLIENT_STATE_CONNECTING:   clientState = "CLIENT_STATE_CONNECTING"; break;
-                case yojimbo::CLIENT_STATE_CONNECTED:    clientState = "CLIENT_STATE_CONNECTED"; break;
+            const char *clientStateStr = "unknown";
+            yojimbo::ClientState clientState = client.GetClientState();
+            switch (clientState) {
+                case yojimbo::CLIENT_STATE_ERROR:        clientStateStr = "CLIENT_STATE_ERROR"; break;
+                case yojimbo::CLIENT_STATE_DISCONNECTED: clientStateStr = "CLIENT_STATE_DISCONNECTED"; break;
+                case yojimbo::CLIENT_STATE_CONNECTING:   clientStateStr = "CLIENT_STATE_CONNECTING"; break;
+                case yojimbo::CLIENT_STATE_CONNECTED:    clientStateStr = "CLIENT_STATE_CONNECTED"; break;
             }
-            DRAW_TEXT("state", "%s", clientState);
 
-            yojimbo::NetworkInfo netInfo{};
-            client.GetNetworkInfo(netInfo);
-
-            DRAW_TEXT("rtt", "%f", netInfo.RTT);
-            DRAW_TEXT("%% loss", "%f", netInfo.packetLoss);
-            DRAW_TEXT("sent (kbps)", "%f", netInfo.sentBandwidth);
-            DRAW_TEXT("recv (kbps)", "%f", netInfo.receivedBandwidth);
-            DRAW_TEXT("ack  (kbps)", "%f", netInfo.ackedBandwidth);
-            DRAW_TEXT("sent (pckt)", "%" PRIu64, netInfo.numPacketsSent);
-            DRAW_TEXT("recv (pckt)", "%" PRIu64, netInfo.numPacketsReceived);
-            DRAW_TEXT("ack  (pckt)", "%" PRIu64, netInfo.numPacketsAcked);
+            static bool showNetInfo = false;
+            Rectangle netInfoRect{};
+            DRAW_TEXT_MEASURE(&netInfoRect,
+                showNetInfo ? "[-] state" : "[+] state",
+                "%s", clientStateStr
+            );
+            if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)
+                && CheckCollisionPointRec({ (float)GetMouseX(), (float)GetMouseY() }, netInfoRect))
+            {
+                showNetInfo = !showNetInfo;
+            }
+            if (showNetInfo) {
+                hud_x += 16.0f;
+                yojimbo::NetworkInfo netInfo{};
+                client.GetNetworkInfo(netInfo);
+                DRAW_TEXT("rtt", "%f", netInfo.RTT);
+                DRAW_TEXT("%% loss", "%f", netInfo.packetLoss);
+                DRAW_TEXT("sent (kbps)", "%f", netInfo.sentBandwidth);
+                DRAW_TEXT("recv (kbps)", "%f", netInfo.receivedBandwidth);
+                DRAW_TEXT("ack  (kbps)", "%f", netInfo.ackedBandwidth);
+                DRAW_TEXT("sent (pckt)", "%" PRIu64, netInfo.numPacketsSent);
+                DRAW_TEXT("recv (pckt)", "%" PRIu64, netInfo.numPacketsReceived);
+                DRAW_TEXT("ack  (pckt)", "%" PRIu64, netInfo.numPacketsAcked);
+                hud_x -= 16.0f;
+            }
         }
 
         EndDrawing();

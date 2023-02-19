@@ -1,6 +1,7 @@
 #include "net.h"
+#include "world.h"
 
-NetAdapter netAdapter{};
+World *g_world;
 
 int yj_printf(const char *format, ...)
 {
