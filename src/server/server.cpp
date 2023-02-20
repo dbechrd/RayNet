@@ -1,4 +1,20 @@
 #include "../common/common_lib.h"
+#include <queue>
+
+typedef std::queue<PlayerInput> PlayerInputQueue;
+
+struct ServerPlayer {
+    bool needsClockSync{};
+    Entity entity{};  // TODO(dlb): entityIdx into an actual world state
+    PlayerInputQueue inputQueue{};
+};
+
+typedef World<ServerPlayer> ServerWorld;
+
+ServerWorld *g_world;
+uint64_t tick = 0;
+double tickAccum = 0;
+double lastTickedAt = 0;
 
 class ServerNetAdapter : public NetAdapter
 {
@@ -6,28 +22,32 @@ public:
 
     void OnServerClientConnected(int clientIdx)
     {
+        ServerPlayer &serverPlayer = g_world->players[clientIdx];
+        serverPlayer.needsClockSync = true;
+
         static const Color colors[]{
             MAROON,
             LIME,
             SKYBLUE
         };
-        Player &player = g_world->players[clientIdx];
-        player.color = colors[clientIdx % (sizeof(colors)/sizeof(colors[0]))];
-        player.size = { 32, 64 };
-        player.position = { 100, 100 };
-        player.speed = 5.0f;
+        serverPlayer.entity.color = colors[clientIdx % (sizeof(colors) / sizeof(colors[0]))];
+        serverPlayer.entity.size = { 32, 64 };
+        serverPlayer.entity.position = { 100, 100 };
+        serverPlayer.entity.speed = WINDOW_HEIGHT / 5;
     }
 
     void OnServerClientDisconnected(int clientIdx)
     {
-        Player &player = g_world->players[clientIdx];
-        player.color = GRAY;
+        ServerPlayer &serverPlayer = g_world->players[clientIdx];
+        serverPlayer.entity.color = GRAY;
     }
 };
 
 yojimbo::Server &ServerStart()
 {
+    static ServerNetAdapter adapter{};
     static yojimbo::Server *server = nullptr;
+
     if (server) {
         return *server;
     }
@@ -49,10 +69,13 @@ yojimbo::Server &ServerStart()
     memset(privateKey, 0, yojimbo::KeyBytes);
 
     yojimbo::ClientServerConfig config{};
-    static ServerNetAdapter adapter{};
+    config.numChannels = CHANNEL_COUNT;
+    config.channel[CHANNEL_U_CLOCK_SYNC].type = yojimbo::CHANNEL_TYPE_UNRELIABLE_UNORDERED;
+    config.channel[CHANNEL_U_PLAYER_INPUT].type = yojimbo::CHANNEL_TYPE_UNRELIABLE_UNORDERED;
+    config.channel[CHANNEL_U_PLAYER_STATE].type = yojimbo::CHANNEL_TYPE_UNRELIABLE_UNORDERED;
 
     server = new yojimbo::Server(yojimbo::GetDefaultAllocator(), privateKey,
-        yojimbo::Address("127.0.0.1", SERVER_PORT), config, adapter, 100);
+        yojimbo::Address("127.0.0.1", SERVER_PORT), config, adapter, GetTime());
 
     // NOTE(dlb): This must be the same size as world->players[] array!
     server->Start(yojimbo::MaxClients);
@@ -69,85 +92,169 @@ yojimbo::Server &ServerStart()
     return *server;
 }
 
-void ServerUpdate(yojimbo::Server &server, double tickDt)
+void ServerProcessMessages(yojimbo::Server &server)
 {
-    if (!server.IsRunning())
-        return;
-
-    const double serverNow = server.GetTime();
-    server.AdvanceTime(serverNow + tickDt);
-    server.ReceivePackets();
-
     for (int clientIdx = 0; clientIdx < yojimbo::MaxClients; clientIdx++) {
         if (!server.IsClientConnected(clientIdx)) {
             continue;
         }
 
-        const int channelIdx = 0;
-        yojimbo::Message *message = server.ReceiveMessage(clientIdx, channelIdx);
-        do {
-            if (message) {
-                switch (message->GetType())
-                {
-                    case MSG_C_PLAYER_INPUT:
+        for (int channelIdx = 0; channelIdx < CHANNEL_COUNT; channelIdx++) {
+            yojimbo::Message *message = server.ReceiveMessage(clientIdx, channelIdx);
+            do {
+                if (message) {
+                    switch (message->GetType())
                     {
-                        Msg_C_PlayerInput *msgPlayerInput = (Msg_C_PlayerInput *)message;
-
-                        Player &player = g_world->players[clientIdx];
-                        Vector2 vDelta{};
-                        if (msgPlayerInput->playerInput.north) {
-                            vDelta.y -= 1.0f;
+                        case MSG_C_PLAYER_INPUT:
+                        {
+                            Msg_C_PlayerInput *msgPlayerInput = (Msg_C_PlayerInput *)message;
+                            g_world->players[clientIdx].inputQueue.push(msgPlayerInput->playerInput);
+                            server.ReleaseMessage(clientIdx, message);
+                            break;
                         }
-                        if (msgPlayerInput->playerInput.west) {
-                            vDelta.x -= 1.0f;
+                        default:
+                        {
+                            printf("foo\n");
+                            break;
                         }
-                        if (msgPlayerInput->playerInput.south) {
-                            vDelta.y += 1.0f;
-                        }
-                        if (msgPlayerInput->playerInput.east) {
-                            vDelta.x += 1.0f;
-                        }
-                        if (vDelta.x && vDelta.y) {
-                            float invLength = 1.0f / sqrtf(vDelta.x * vDelta.x + vDelta.y * vDelta.y);
-                            vDelta.x *= invLength;
-                            vDelta.y *= invLength;
-                        }
-                        player.velocity.x = vDelta.x * player.speed;
-                        player.velocity.y = vDelta.y * player.speed;
-                        player.position.x += player.velocity.x;
-                        player.position.y += player.velocity.y;
-
-                        server.ReleaseMessage(clientIdx, message);
                         break;
                     }
-                    default:
-                    {
-                        printf("foo\n");
-                        break;
-                    }
-                    break;
                 }
-            }
-            message = server.ReceiveMessage(clientIdx, channelIdx);
-        } while (message);
+                message = server.ReceiveMessage(clientIdx, channelIdx);
+            } while (message);
+        }
+    }
+}
+
+void ServerSendClientSnapshots(yojimbo::Server &server)
+{
+    for (int clientIdx = 0; clientIdx < yojimbo::MaxClients; clientIdx++) {
+        if (!server.IsClientConnected(clientIdx)) {
+            continue;
+        }
+        if (!server.CanSendMessage(clientIdx, CHANNEL_U_PLAYER_STATE)) {
+            continue;
+        }
 
         // TODO: Send the world state that's relevant to this particular client
         for (int otherClientIdx = 0; otherClientIdx < yojimbo::MaxClients; otherClientIdx++) {
             if (!server.IsClientConnected(otherClientIdx)) {
+                // TODO: Notify other player that this player has dc'd somehow (probably not here)
                 continue;
             }
 
-            Msg_S_PlayerState *message = (Msg_S_PlayerState *)server.CreateMessage(clientIdx, MSG_S_PLAYER_STATE);
+            Msg_S_EntityState *message = (Msg_S_EntityState *)server.CreateMessage(clientIdx, MSG_S_ENTITY_STATE);
             if (message)
             {
+                ServerPlayer &player = g_world->players[otherClientIdx];
                 message->clientIdx = otherClientIdx;
-                message->player = g_world->players[otherClientIdx];
-                server.SendMessage(clientIdx, channelIdx, message);
+                message->entityState.serverTime = lastTickedAt;
+                player.entity.Serialize(message->entityState);
+                server.SendMessage(clientIdx, CHANNEL_U_PLAYER_STATE, message);
             }
         }
     }
+}
 
+void ServerTick(yojimbo::Server &server)
+{
+    for (int clientIdx = 0; clientIdx < yojimbo::MaxClients; clientIdx++) {
+        if (!server.IsClientConnected(clientIdx)) {
+            continue;
+        }
 
+        // TODO(dlb): Eating the whole input queue indiscriminately is an awful
+        // idea, BUT I'm currently sending input faster than the server tick
+        // rate, so it's probably sorta less awful for now. I should actually
+        // try to figure out which tick/seq the input is and process them more
+        // intelligently...?? Maybe??
+
+        PlayerInput combinedInput{};
+        PlayerInputQueue &inputQueue = g_world->players[clientIdx].inputQueue;
+        while (!inputQueue.empty()) {
+            const PlayerInput &input = inputQueue.front();
+            combinedInput.north |= input.north;
+            combinedInput.west  |= input.west;
+            combinedInput.south |= input.south;
+            combinedInput.east  |= input.east ;
+            inputQueue.pop();
+        }
+
+        ServerPlayer &player = g_world->players[clientIdx];
+        Vector2 vDelta{};
+        if (combinedInput.north) {
+            vDelta.y -= 1.0f;
+        }
+        if (combinedInput.west) {
+            vDelta.x -= 1.0f;
+        }
+        if (combinedInput.south) {
+            vDelta.y += 1.0f;
+        }
+        if (combinedInput.east) {
+            vDelta.x += 1.0f;
+        }
+        if (vDelta.x && vDelta.y) {
+            float invLength = 1.0f / sqrtf(vDelta.x * vDelta.x + vDelta.y * vDelta.y);
+            vDelta.x *= invLength;
+            vDelta.y *= invLength;
+        }
+
+        player.entity.velocity.x = vDelta.x * player.entity.speed;
+        player.entity.velocity.y = vDelta.y * player.entity.speed;
+        player.entity.position.x += player.entity.velocity.x * SERVER_TICK_DT;
+        player.entity.position.y += player.entity.velocity.y * SERVER_TICK_DT;
+    }
+    tick++;
+    lastTickedAt = server.GetTime();
+}
+
+void ServerSendClockSync(yojimbo::Server &server)
+{
+    for (int clientIdx = 0; clientIdx < yojimbo::MaxClients; clientIdx++) {
+        if (!server.IsClientConnected(clientIdx)) {
+            continue;
+        }
+
+        ServerPlayer &serverPlayer = g_world->players[clientIdx];
+        if (serverPlayer.needsClockSync && server.CanSendMessage(clientIdx, CHANNEL_U_CLOCK_SYNC)) {
+            Msg_S_ClockSync *msgClockSync = (Msg_S_ClockSync *)server.CreateMessage(clientIdx, MSG_S_CLOCK_SYNC);
+            if (msgClockSync)
+            {
+                msgClockSync->serverTime = GetTime();
+                server.SendMessage(clientIdx, CHANNEL_U_CLOCK_SYNC, msgClockSync);
+                serverPlayer.needsClockSync = false;
+            }
+        }
+    }
+}
+
+void ServerUpdate(yojimbo::Server &server)
+{
+    if (!server.IsRunning())
+        return;
+
+    const double now = GetTime();
+    const double dt = now - server.GetTime();
+    server.AdvanceTime(now);
+
+    server.ReceivePackets();
+    ServerProcessMessages(server);
+
+    tickAccum += dt;
+    bool hasDelta = false;
+    while (tickAccum >= SERVER_TICK_DT) {
+        ServerTick(server);
+        tickAccum -= SERVER_TICK_DT;
+        hasDelta = true;
+    }
+
+    // TODO(dlb): Calculate actual deltas
+    if (hasDelta) {
+        ServerSendClientSnapshots(server);
+    }
+
+    ServerSendClockSync(server);
     server.SendPackets();
 }
 
@@ -184,6 +291,7 @@ int main(int argc, char *argv[])
 
     //--------------------
     // Server
+    // NOTE(DLB): MUST happen after InitWindow() so that GetTime() is valid!!
     if (!InitializeYojimbo())
     {
         printf("yj: error: failed to initialize Yojimbo!\n");
@@ -198,25 +306,15 @@ int main(int argc, char *argv[])
 
     //--------------------
     // World
-    g_world = (World *)calloc(1, sizeof(*g_world));
+    g_world = new ServerWorld; //(ServerWorld *)calloc(1, sizeof(*g_world));  // cuz fuck C++
     if (!g_world) {
         printf("error: failed to allocate world\n");
         return 1;
     }
 
-    double tickStart = 0;
-    double tickAccum = 0;
-
     while (!WindowShouldClose())
     {
-        double now = GetTime();
-        double tickDt = now - tickStart;
-        tickAccum = yojimbo_min(SERVER_TICK_DT * 5, tickAccum + tickDt);
-
-        while (tickAccum > SERVER_TICK_DT) {
-            ServerUpdate(server, SERVER_TICK_DT);
-            tickAccum -= SERVER_TICK_DT;
-        }
+        ServerUpdate(server);
 
         //--------------------
         // Draw
@@ -230,10 +328,10 @@ int main(int argc, char *argv[])
         };
         DrawTexture(texture, (int)catPos.x, (int)catPos.y, WHITE);
 
-        for (int i = 0; i < yojimbo::MaxClients; i++) {
-            Player &player = g_world->players[i];
-            if (player.color.a) {
-                player.Draw();
+        for (int clientIdx = 0; clientIdx < yojimbo::MaxClients; clientIdx++) {
+            ServerPlayer &player = g_world->players[clientIdx];
+            if (player.entity.color.a) {
+                player.entity.Draw(font, clientIdx);
             }
         }
 
@@ -261,7 +359,9 @@ int main(int argc, char *argv[])
             #define DRAW_TEXT(label, fmt, ...) \
                 DRAW_TEXT_MEASURE((Rectangle *)0, label, fmt, __VA_ARGS__)
 
-            DRAW_TEXT("time", "%f", server.GetTime());
+            DRAW_TEXT("time", "%.02f", server.GetTime());
+            DRAW_TEXT("tick", "%" PRIu64, tick);
+            DRAW_TEXT("tickAccum", "%.02f", tickAccum);
             DRAW_TEXT("clients", "%d", server.GetNumConnectedClients());
 
             static bool showClientInfo[yojimbo::MaxClients];
@@ -284,11 +384,11 @@ int main(int argc, char *argv[])
                     hud_x += 16.0f;
                     yojimbo::NetworkInfo netInfo{};
                     server.GetNetworkInfo(clientIdx, netInfo);
-                    DRAW_TEXT("  rtt", "%f", netInfo.RTT);
-                    DRAW_TEXT("  %% loss", "%f", netInfo.packetLoss);
-                    DRAW_TEXT("  sent (kbps)", "%f", netInfo.sentBandwidth);
-                    DRAW_TEXT("  recv (kbps)", "%f", netInfo.receivedBandwidth);
-                    DRAW_TEXT("  ack  (kbps)", "%f", netInfo.ackedBandwidth);
+                    DRAW_TEXT("  rtt", "%f.02", netInfo.RTT);
+                    DRAW_TEXT("  %% loss", "%.02f", netInfo.packetLoss);
+                    DRAW_TEXT("  sent (kbps)", "%.02f", netInfo.sentBandwidth);
+                    DRAW_TEXT("  recv (kbps)", "%.02f", netInfo.receivedBandwidth);
+                    DRAW_TEXT("  ack  (kbps)", "%.02f", netInfo.ackedBandwidth);
                     DRAW_TEXT("  sent (pckt)", "%" PRIu64, netInfo.numPacketsSent);
                     DRAW_TEXT("  recv (pckt)", "%" PRIu64, netInfo.numPacketsReceived);
                     DRAW_TEXT("  ack  (pckt)", "%" PRIu64, netInfo.numPacketsAcked);
@@ -302,7 +402,7 @@ int main(int argc, char *argv[])
 
     //--------------------
     // Cleanup
-    free(g_world);
+    delete g_world;
 
     ServerStop(server);
     delete &server;

@@ -1,7 +1,4 @@
 #include "net.h"
-#include "world.h"
-
-World *g_world;
 
 int yj_printf(const char *format, ...)
 {

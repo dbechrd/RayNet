@@ -1,8 +1,8 @@
 #pragma once
 #include "../common.h"
-#include "../player.h"
+#include <queue>
 
+template <typename T_Player>
 struct World {
-    Player players[yojimbo::MaxClients];
+    T_Player players[yojimbo::MaxClients]{};
 };
-extern World *g_world;

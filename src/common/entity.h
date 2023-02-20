@@ -9,5 +9,7 @@ struct Entity {
     Vector2 velocity;
     Vector2 position;
 
+    void Serialize(EntityState &entityState);
+    void ApplyStateInterpolated(EntityState &a, EntityState &b, double alpha);
     void Draw(const Font &font, int clientIdx);
 };
