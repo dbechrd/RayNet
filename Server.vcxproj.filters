@@ -17,5 +17,12 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\common\common_lib.h" />
+    <ClInclude Include="src\server\resource1.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="src\server\Server.rc" />
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="res\server.ico" />
   </ItemGroup>
 </Project>

@@ -264,12 +264,17 @@ void ServerStop(yojimbo::Server &server)
 }
 
 int main(int argc, char *argv[])
+//int __stdcall WinMain(void *hInstance, void *hPrevInstance, char *pCmdLine, int nCmdShow)
 {
     //SetTraceLogLevel(LOG_WARNING);
 
     InitWindow(WINDOW_WIDTH, WINDOW_HEIGHT, "RayNet Server");
     SetWindowState(FLAG_VSYNC_HINT);
     SetWindowState(FLAG_WINDOW_RESIZABLE);
+
+    Image icon = LoadImage("resources/server.png");
+    SetWindowIcon(icon);
+    UnloadImage(icon);
 
     // NOTE: There could be other, bigger monitors
     const int monitorWidth = GetMonitorWidth(0);

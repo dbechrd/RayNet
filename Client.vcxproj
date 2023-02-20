@@ -17,6 +17,12 @@
   <ItemGroup>
     <ClInclude Include="src\common\common_lib.h" />
   </ItemGroup>
+  <ItemGroup>
+    <Image Include="res\client.ico" />
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="src\client\Client.rc" />
+  </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>16.0</VCProjectVersion>
     <Keyword>Win32Proj</Keyword>

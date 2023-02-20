@@ -15,7 +15,14 @@
     <ClCompile Include="src\server\server.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="src\server\resource.h" />
     <ClInclude Include="src\common\common_lib.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="src\server\Server.rc" />
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="res\server.ico" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>16.0</VCProjectVersion>
@@ -71,12 +78,12 @@
       <ExceptionHandling>false</ExceptionHandling>
     </ClCompile>
     <Link>
-      <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalDependencies>raylib.lib;yojimbo.lib;kernel32.lib;user32.lib;gdi32.lib;shell32.lib;ws2_32.lib;winmm.lib</AdditionalDependencies>
       <AdditionalLibraryDirectories>lib</AdditionalLibraryDirectories>
       <AdditionalOptions>/NODEFAULTLIB:library
  %(AdditionalOptions)</AdditionalOptions>
+      <SubSystem>Console</SubSystem>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -93,7 +100,6 @@
       <ExceptionHandling>false</ExceptionHandling>
     </ClCompile>
     <Link>
-      <SubSystem>Console</SubSystem>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
@@ -101,6 +107,7 @@
       <AdditionalLibraryDirectories>lib</AdditionalLibraryDirectories>
       <AdditionalOptions>/NODEFAULTLIB:library
  %(AdditionalOptions)</AdditionalOptions>
+      <SubSystem>Console</SubSystem>
     </Link>
   </ItemDefinitionGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

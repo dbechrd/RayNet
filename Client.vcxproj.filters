@@ -18,4 +18,10 @@
       <UniqueIdentifier>{7f40841d-8edf-44f5-aae2-82a6b92d900f}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
+  <ItemGroup>
+    <Image Include="res\client.ico" />
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="src\client\Client.rc" />
+  </ItemGroup>
 </Project>

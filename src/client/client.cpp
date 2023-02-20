@@ -151,6 +151,7 @@ void ClientStop(yojimbo::Client &client)
 }
 
 int main(int argc, char *argv[])
+//int __stdcall WinMain(void *hInstance, void *hPrevInstance, char *pCmdLine, int nCmdShow)
 {
     //SetTraceLogLevel(LOG_WARNING);
 
@@ -158,6 +159,10 @@ int main(int argc, char *argv[])
     SetWindowState(FLAG_VSYNC_HINT);
     SetWindowState(FLAG_WINDOW_RESIZABLE);
     //SetWindowState(FLAG_FULLSCREEN_MODE);
+
+    Image icon = LoadImage("resources/client.png");
+    SetWindowIcon(icon);
+    UnloadImage(icon);
 
     // NOTE: There could be other, bigger monitors
     const int monitorWidth = GetMonitorWidth(0);
