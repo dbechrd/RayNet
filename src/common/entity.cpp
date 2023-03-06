@@ -9,15 +9,15 @@ void Entity::Serialize(EntityState &entityState)
     entityState.position = position;
 }
 
-void Entity::ApplyStateInterpolated(EntityState &a, EntityState &b, double alpha)
+void Entity::ApplyStateInterpolated(const EntityState &a, const EntityState &b, double alpha)
 {
     // TODO: Lerp at least position, also maybe the others
     color = b.color;
     size = b.size;
     speed = b.speed;
     velocity = b.velocity;
-    position.x = LERP(a.position.x, b.position.x, alpha);
-    position.y = LERP(a.position.y, b.position.y, alpha);
+    position.x = LERP(a.position.x, b.position.x, (float)alpha);
+    position.y = LERP(a.position.y, b.position.y, (float)alpha);
 }
 
 void Entity::Draw(const Font &font, int clientIdx) {

@@ -11,6 +11,6 @@ struct Entity {
     Vector2 position;
 
     void Serialize(EntityState &entityState);
-    void ApplyStateInterpolated(EntityState &a, EntityState &b, double alpha);
+    void ApplyStateInterpolated(const EntityState &a, const EntityState &b, double alpha);
     void Draw(const Font &font, int clientIdx);
 };

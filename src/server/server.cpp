@@ -3,6 +3,7 @@
 struct ServerPlayer {
     bool needsClockSync{};
     Entity entity{};  // TODO(dlb): entityIdx into an actual world state
+    uint32_t lastInputSeq{};  // sequence number of last input command we processed
     InputCommandQueue inputQueue{};
 };
 
@@ -30,13 +31,14 @@ public:
         serverPlayer.entity.color = colors[clientIdx % (sizeof(colors) / sizeof(colors[0]))];
         serverPlayer.entity.size = { 32, 64 };
         serverPlayer.entity.position = { 100, 100 };
-        serverPlayer.entity.speed = WINDOW_HEIGHT / 5;
+        serverPlayer.entity.speed = WINDOW_HEIGHT / 2;
     }
 
     void OnServerClientDisconnected(int clientIdx)
     {
         ServerPlayer &serverPlayer = g_world->players[clientIdx];
-        serverPlayer.entity.color = GRAY;
+        serverPlayer = {};
+        //serverPlayer.entity.color = GRAY;
     }
 };
 
@@ -68,8 +70,8 @@ yojimbo::Server &ServerStart()
     yojimbo::ClientServerConfig config{};
     config.numChannels = CHANNEL_COUNT;
     config.channel[CHANNEL_U_CLOCK_SYNC].type = yojimbo::CHANNEL_TYPE_UNRELIABLE_UNORDERED;
-    config.channel[CHANNEL_U_PLAYER_INPUT].type = yojimbo::CHANNEL_TYPE_UNRELIABLE_UNORDERED;
-    config.channel[CHANNEL_U_PLAYER_STATE].type = yojimbo::CHANNEL_TYPE_UNRELIABLE_UNORDERED;
+    config.channel[CHANNEL_U_INPUT_COMMANDS].type = yojimbo::CHANNEL_TYPE_UNRELIABLE_UNORDERED;
+    config.channel[CHANNEL_U_ENTITY_STATE].type = yojimbo::CHANNEL_TYPE_UNRELIABLE_UNORDERED;
 
     server = new yojimbo::Server(yojimbo::GetDefaultAllocator(), privateKey,
         yojimbo::Address("127.0.0.1", SERVER_PORT), config, adapter, GetTime());
@@ -100,10 +102,10 @@ void ServerProcessMessages(yojimbo::Server &server)
             yojimbo::Message *message = server.ReceiveMessage(clientIdx, channelIdx);
             while (message) {
                 switch (message->GetType()) {
-                    case MSG_C_PLAYER_INPUT:
+                    case MSG_C_INPUT_COMMANDS:
                     {
-                        Msg_C_PlayerInput *msgPlayerInput = (Msg_C_PlayerInput *)message;
-                        g_world->players[clientIdx].inputQueue.push(msgPlayerInput->playerInput);
+                        Msg_C_InputCommands *msgPlayerInput = (Msg_C_InputCommands *)message;
+                        g_world->players[clientIdx].inputQueue = msgPlayerInput->cmdQueue;
                         break;
                     }
                     default:
@@ -125,7 +127,7 @@ void ServerSendClientSnapshots(yojimbo::Server &server)
         if (!server.IsClientConnected(clientIdx)) {
             continue;
         }
-        if (!server.CanSendMessage(clientIdx, CHANNEL_U_PLAYER_STATE)) {
+        if (!server.CanSendMessage(clientIdx, CHANNEL_U_ENTITY_STATE)) {
             continue;
         }
 
@@ -142,10 +144,40 @@ void ServerSendClientSnapshots(yojimbo::Server &server)
                 msg->clientIdx = otherClientIdx;
                 msg->entityState.serverTime = lastTickedAt;
                 player.entity.Serialize(msg->entityState);
-                server.SendMessage(clientIdx, CHANNEL_U_PLAYER_STATE, msg);
+                server.SendMessage(clientIdx, CHANNEL_U_ENTITY_STATE, msg);
             }
         }
     }
+}
+
+void PlayerTick(ServerPlayer &player, const InputCommand *input) {
+    Vector2 vDelta{};
+
+    if (input) {
+        if (input->north) {
+            vDelta.y -= 1.0f;
+        }
+        if (input->west) {
+            vDelta.x -= 1.0f;
+        }
+        if (input->south) {
+            vDelta.y += 1.0f;
+        }
+        if (input->east) {
+            vDelta.x += 1.0f;
+        }
+        if (vDelta.x && vDelta.y) {
+            float invLength = 1.0f / sqrtf(vDelta.x * vDelta.x + vDelta.y * vDelta.y);
+            vDelta.x *= invLength;
+            vDelta.y *= invLength;
+        }
+        player.lastInputSeq = input->seq;
+    }
+
+    player.entity.velocity.x = vDelta.x * player.entity.speed;
+    player.entity.velocity.y = vDelta.y * player.entity.speed;
+    player.entity.position.x += player.entity.velocity.x * SERVER_TICK_DT;
+    player.entity.position.y += player.entity.velocity.y * SERVER_TICK_DT;
 }
 
 void ServerTick(yojimbo::Server &server)
@@ -155,47 +187,19 @@ void ServerTick(yojimbo::Server &server)
             continue;
         }
 
-        // TODO(dlb): Eating the whole input queue indiscriminately is an awful
-        // idea, BUT I'm currently sending input faster than the server tick
-        // rate, so it's probably sorta less awful for now. I should actually
-        // try to figure out which tick/seq the input is and process them more
-        // intelligently...?? Maybe??
-
-        InputCommand combinedInput{};
-        InputCommandQueue &inputQueue = g_world->players[clientIdx].inputQueue;
-        while (!inputQueue.empty()) {
-            const InputCommand &input = inputQueue.front();
-            combinedInput.north |= input.north;
-            combinedInput.west  |= input.west;
-            combinedInput.south |= input.south;
-            combinedInput.east  |= input.east ;
-            inputQueue.pop();
-        }
-
         ServerPlayer &player = g_world->players[clientIdx];
-        Vector2 vDelta{};
-        if (combinedInput.north) {
-            vDelta.y -= 1.0f;
-        }
-        if (combinedInput.west) {
-            vDelta.x -= 1.0f;
-        }
-        if (combinedInput.south) {
-            vDelta.y += 1.0f;
-        }
-        if (combinedInput.east) {
-            vDelta.x += 1.0f;
-        }
-        if (vDelta.x && vDelta.y) {
-            float invLength = 1.0f / sqrtf(vDelta.x * vDelta.x + vDelta.y * vDelta.y);
-            vDelta.x *= invLength;
-            vDelta.y *= invLength;
+
+        const InputCommand *nextCmd = 0;
+        const InputCommandQueue &inputQueue = g_world->players[clientIdx].inputQueue;
+        for (int i = 0; i < CLIENT_SEND_INPUT_COUNT; i++) {
+            const InputCommand &cmd = inputQueue.data[(inputQueue.nextIdx + i) % CLIENT_SEND_INPUT_COUNT];
+            if (cmd.seq > player.lastInputSeq) {
+                nextCmd = &cmd;
+                break;
+            }
         }
 
-        player.entity.velocity.x = vDelta.x * player.entity.speed;
-        player.entity.velocity.y = vDelta.y * player.entity.speed;
-        player.entity.position.x += player.entity.velocity.x * SERVER_TICK_DT;
-        player.entity.position.y += player.entity.velocity.y * SERVER_TICK_DT;
+        PlayerTick(player, nextCmd);
     }
     tick++;
     lastTickedAt = server.GetTime();

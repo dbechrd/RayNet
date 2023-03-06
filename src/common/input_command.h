@@ -1,12 +1,15 @@
 #pragma once
-#include <queue>
+#include "common.h"
 
 struct InputCommand {
-    int  seq;
+    uint32_t seq;
     bool north;
     bool west;
     bool south;
     bool east;
 };
 
-typedef std::queue<InputCommand> InputCommandQueue;
+struct InputCommandQueue {
+    int nextIdx;
+    InputCommand data[CLIENT_SEND_INPUT_COUNT];
+};

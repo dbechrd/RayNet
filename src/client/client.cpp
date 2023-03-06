@@ -3,8 +3,12 @@
 #include <time.h>
 
 struct Controller {
-    InputCommand      inputBuffer {}; // current buffer to prevent missed keypresses at higher framerates
-    InputCommandQueue inputQueue  {};
+    int nextSeq {};  // next input command sequence number to use
+
+    InputCommand cmdAccum {};       // accumulate input until we're ready to sample
+    double lastAccumSample {};      // time we last sampled accumulator
+    double lastCommandMsgSent {};   // time we last sent inputs to the server
+    InputCommandQueue cmdQueue {};  // queue of last N input samples
 };
 
 struct ClientEntity {
@@ -14,7 +18,8 @@ struct ClientEntity {
 
 typedef World<ClientEntity> ClientWorld;
 
-ClientWorld *g_world;
+Controller g_controller;
+ClientWorld g_world;
 
 double clientTimeDeltaVsServer = 0;  // how far ahead/behind client clock is
 
@@ -48,8 +53,8 @@ yojimbo::Client &ClientStart()
     yojimbo::ClientServerConfig config{};
     config.numChannels = CHANNEL_COUNT;
     config.channel[CHANNEL_U_CLOCK_SYNC].type = yojimbo::CHANNEL_TYPE_UNRELIABLE_UNORDERED;
-    config.channel[CHANNEL_U_PLAYER_INPUT].type = yojimbo::CHANNEL_TYPE_UNRELIABLE_UNORDERED;
-    config.channel[CHANNEL_U_PLAYER_STATE].type = yojimbo::CHANNEL_TYPE_UNRELIABLE_UNORDERED;
+    config.channel[CHANNEL_U_INPUT_COMMANDS].type = yojimbo::CHANNEL_TYPE_UNRELIABLE_UNORDERED;
+    config.channel[CHANNEL_U_ENTITY_STATE].type = yojimbo::CHANNEL_TYPE_UNRELIABLE_UNORDERED;
 
     client = new yojimbo::Client(yojimbo::GetDefaultAllocator(),
         yojimbo::Address("0.0.0.0"), config, adapter, GetTime());
@@ -63,21 +68,19 @@ yojimbo::Client &ClientStart()
     return *client;
 }
 
-void ClientSendInput(yojimbo::Client &client, InputCommand &playerInput)
+void ClientSendInput(yojimbo::Client &client, const Controller &controller)
 {
     const double now = GetTime();
 
     static double lastNetTick = 0;
     if (now - lastNetTick > CLIENT_SEND_INPUT_DT) {
-        Msg_C_PlayerInput *message = (Msg_C_PlayerInput *)client.CreateMessage(MSG_C_PLAYER_INPUT);
-        if (message)
-        {
-            message->playerInput = playerInput;
-            client.SendMessage(CHANNEL_U_PLAYER_INPUT, message);
-            int foo = message->GetRefCount();
-            //client.ReleaseMessage(message);
-            int bar = message->GetRefCount();
-            playerInput = {};
+        Msg_C_InputCommands *message = (Msg_C_InputCommands *)client.CreateMessage(MSG_C_INPUT_COMMANDS);
+        if (message) {
+            if (controller.cmdQueue.data[0].north) {
+                printf("");
+            }
+            message->cmdQueue = controller.cmdQueue;
+            client.SendMessage(CHANNEL_U_INPUT_COMMANDS, message);
         }
         lastNetTick = now;
     }
@@ -101,7 +104,7 @@ void ClientProcessMessages(yojimbo::Client &client)
                 case MSG_S_ENTITY_STATE:
                 {
                     Msg_S_EntityState *msgEntityState = (Msg_S_EntityState *)message;
-                    ClientEntity &player = g_world->players[msgEntityState->clientIdx];
+                    ClientEntity &player = g_world.players[msgEntityState->clientIdx];
                     if (player.snapshotHistory.size() == CLIENT_SNAPSHOT_COUNT) {
                         player.snapshotHistory.pop_front();
                     }
@@ -132,16 +135,23 @@ void ClientUpdate(yojimbo::Client &client)
     ClientProcessMessages(client);
 
     // Accmulate input every frame
-    static InputCommand playerInputAccum{};
-    playerInputAccum.north |= IsKeyDown(KEY_W);
-    playerInputAccum.west  |= IsKeyDown(KEY_A);
-    playerInputAccum.south |= IsKeyDown(KEY_S);
-    playerInputAccum.east  |= IsKeyDown(KEY_D);
+    g_controller.cmdAccum.north |= IsKeyDown(KEY_W);
+    g_controller.cmdAccum.west  |= IsKeyDown(KEY_A);
+    g_controller.cmdAccum.south |= IsKeyDown(KEY_S);
+    g_controller.cmdAccum.east  |= IsKeyDown(KEY_D);
+
+    // Sample accumulator once per server tick and push command into command queue
+    if (now - g_controller.lastAccumSample > SERVER_TICK_DT) {
+        g_controller.cmdAccum.seq = ++g_controller.nextSeq;
+        g_controller.cmdQueue.data[g_controller.cmdQueue.nextIdx++] = g_controller.cmdAccum;
+        g_controller.cmdQueue.nextIdx %= CLIENT_SEND_INPUT_COUNT;
+        g_controller.cmdAccum = {};
+    }
 
     // Send rolled up input at fixed interval
     static double lastNetTick = 0;
     if (now - lastNetTick > CLIENT_SEND_INPUT_DT) {
-        ClientSendInput(client, playerInputAccum);
+        ClientSendInput(client, g_controller);
         lastNetTick = now;
     }
 
@@ -151,6 +161,8 @@ void ClientUpdate(yojimbo::Client &client)
 void ClientStop(yojimbo::Client &client)
 {
     client.Disconnect();
+    g_controller = {};
+    g_world = {};
 }
 
 int main(int argc, char *argv[])
@@ -159,7 +171,7 @@ int main(int argc, char *argv[])
     //SetTraceLogLevel(LOG_WARNING);
 
     InitWindow(WINDOW_WIDTH, WINDOW_HEIGHT, "RayNet Client");
-    SetWindowState(FLAG_VSYNC_HINT);
+    //SetWindowState(FLAG_VSYNC_HINT);  // Gahhhhhh Windows fucking sucks at this
     SetWindowState(FLAG_WINDOW_RESIZABLE);
     //SetWindowState(FLAG_FULLSCREEN_MODE);
 
@@ -200,11 +212,13 @@ int main(int argc, char *argv[])
 
     //--------------------
     // World
+#if 0
     g_world = new ClientWorld;
     if (!g_world) {
         printf("error: failed to allocate world\n");
         return 1;
     }
+#endif
 
     double frameStart = GetTime();
     double frameDt = 0;
@@ -254,7 +268,7 @@ int main(int argc, char *argv[])
         DrawTexture(texture, (int)catPos.x, (int)catPos.y, WHITE);
 
         for (int clientIdx = 0; clientIdx < yojimbo::MaxClients; clientIdx++) {
-            ClientEntity &player = g_world->players[clientIdx];
+            ClientEntity &player = g_world.players[clientIdx];
 
             const double renderAt = serverNow - SERVER_TICK_DT * 3;
 
@@ -283,21 +297,27 @@ int main(int argc, char *argv[])
                 snapshotB = &player.snapshotHistory[snapshotBIdx];
             }
 
-            printf("client %d snapshot %d\n", clientIdx, snapshotBIdx);
-
+            // TODO: Move this to DRAW_TEXT in the tree view if we need it
+            //printf("client %d snapshot %d\n", clientIdx, snapshotBIdx);
+#if CLIENT_DBG_SNAPSHOT_SHADOWS
+            for (int i = 0; i < snapshotCount; i++) {
+                player.entity.ApplyStateInterpolated(player.snapshotHistory[i], player.snapshotHistory[i], 0.0);
+                player.entity.color = Fade(PINK, 0.5);
+                player.entity.Draw(font, i);
+            }
+#endif
             float alpha = 0;
             if (snapshotB != snapshotA) {
                 alpha = (renderAt - snapshotA->serverTime) /
                         (snapshotB->serverTime - snapshotA->serverTime);
             }
 
-            player.entity.ApplyStateInterpolated(
-                player.snapshotHistory[snapshotCount - 2],
-                player.snapshotHistory[snapshotCount - 1],
-                alpha
-            );
+            player.entity.ApplyStateInterpolated(*snapshotA, *snapshotB, alpha);
             if (player.entity.color.a) {
                 player.entity.Draw(font, clientIdx);
+                //for (int i = 0; i < snapshotCount; i++) {
+                //    player.entity.Draw(font, i);
+                //}
             }
         }
 
@@ -328,6 +348,7 @@ int main(int argc, char *argv[])
             DRAW_TEXT("serverTime", "%.02f", serverNow);
             DRAW_TEXT("serverDelta", "%.02f", clientTimeDeltaVsServer);
             DRAW_TEXT("time", "%.02f", now);
+            DRAW_TEXT("vsync", "%s", IsWindowState(FLAG_VSYNC_HINT) ? "on" : "off");
 
             const char *clientStateStr = "unknown";
             yojimbo::ClientState clientState = client.GetClientState();
@@ -370,7 +391,7 @@ int main(int argc, char *argv[])
 
     //--------------------
     // Cleanup
-    delete g_world;
+    //delete g_world;
 
     ClientStop(client);
     delete &client;
