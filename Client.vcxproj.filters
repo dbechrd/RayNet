@@ -8,17 +8,6 @@
     <ClInclude Include="src\common\common_lib.h" />
   </ItemGroup>
   <ItemGroup>
-    <Filter Include="common">
-      <UniqueIdentifier>{7a1c409b-a5f2-4ea7-99a9-92167874350b}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="common\net">
-      <UniqueIdentifier>{d88a1429-f5f1-4fcb-8d7c-494ce6359a7f}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="common\net\message">
-      <UniqueIdentifier>{7f40841d-8edf-44f5-aae2-82a6b92d900f}</UniqueIdentifier>
-    </Filter>
-  </ItemGroup>
-  <ItemGroup>
     <Image Include="res\client.ico" />
   </ItemGroup>
   <ItemGroup>

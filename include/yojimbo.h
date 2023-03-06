@@ -3988,6 +3988,7 @@ namespace yojimbo
                     Message * message = (Message*) i->first;
                     yojimbo_printf( YOJIMBO_LOG_LEVEL_ERROR, "leaked message %p (type %d, refcount %d)\n", message, message->GetType(), message->GetRefCount() );
                 }
+                yojimbo_assert( !"leaked messages" );
                 exit(1);
             }
             #endif // #if YOJIMBO_DEBUG_MESSAGE_LEAKS

@@ -1,5 +1,4 @@
 #pragma once
-
 #include "raylib/raylib.h"
 #include "yojimbo.h"
 
@@ -10,5 +9,3 @@
 #define FONT_SIZE 20
 
 #define LERP(a, b, alpha) ((a) + ((b) - (a)) * (alpha))
-
-void DrawTextShadowEx(Font font, const char *text, Vector2 pos, float fontSize, Color color);

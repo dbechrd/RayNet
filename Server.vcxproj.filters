@@ -2,22 +2,11 @@
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
     <ClCompile Include="src\server\server.cpp" />
-    <ClCompile Include="src\common\common_lib.cpp" />
+    <ClCompile Include="src\common\shared_lib.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <Filter Include="common">
-      <UniqueIdentifier>{e758a14a-7de6-431d-a53d-67f81b904f2a}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="common\net">
-      <UniqueIdentifier>{1aaf83d7-2a31-4afe-ba2c-d78536582fc8}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="common\net\message">
-      <UniqueIdentifier>{9c18352e-1b80-4b48-8c70-382b513facb3}</UniqueIdentifier>
-    </Filter>
-  </ItemGroup>
-  <ItemGroup>
-    <ClInclude Include="src\common\common_lib.h" />
-    <ClInclude Include="src\server\resource1.h" />
+    <ClInclude Include="src\common\shared_lib.h" />
+    <ClInclude Include="src\server\resource.h" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="src\server\Server.rc" />

@@ -1,10 +1,10 @@
 #pragma once
 #include "../../common.h"
-#include "../../player_input.h"
+#include "../../input_command.h"
 
 struct Msg_C_PlayerInput : public yojimbo::Message
 {
-    PlayerInput playerInput{};
+    InputCommand playerInput{};
 
     template <typename Stream> bool Serialize(Stream &stream)
     {

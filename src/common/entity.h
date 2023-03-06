@@ -1,5 +1,6 @@
 #pragma once
-#include "common.h"
+#include "shared_lib.h"
+#include "net/entity_state.h"
 
 struct Entity {
     Color color;

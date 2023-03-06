@@ -1,12 +1,9 @@
-#include "../common/common_lib.h"
-#include <queue>
-
-typedef std::queue<PlayerInput> PlayerInputQueue;
+#include "../common/shared_lib.h"
 
 struct ServerPlayer {
     bool needsClockSync{};
     Entity entity{};  // TODO(dlb): entityIdx into an actual world state
-    PlayerInputQueue inputQueue{};
+    InputCommandQueue inputQueue{};
 };
 
 typedef World<ServerPlayer> ServerWorld;
@@ -101,27 +98,23 @@ void ServerProcessMessages(yojimbo::Server &server)
 
         for (int channelIdx = 0; channelIdx < CHANNEL_COUNT; channelIdx++) {
             yojimbo::Message *message = server.ReceiveMessage(clientIdx, channelIdx);
-            do {
-                if (message) {
-                    switch (message->GetType())
+            while (message) {
+                switch (message->GetType()) {
+                    case MSG_C_PLAYER_INPUT:
                     {
-                        case MSG_C_PLAYER_INPUT:
-                        {
-                            Msg_C_PlayerInput *msgPlayerInput = (Msg_C_PlayerInput *)message;
-                            g_world->players[clientIdx].inputQueue.push(msgPlayerInput->playerInput);
-                            server.ReleaseMessage(clientIdx, message);
-                            break;
-                        }
-                        default:
-                        {
-                            printf("foo\n");
-                            break;
-                        }
+                        Msg_C_PlayerInput *msgPlayerInput = (Msg_C_PlayerInput *)message;
+                        g_world->players[clientIdx].inputQueue.push(msgPlayerInput->playerInput);
+                        break;
+                    }
+                    default:
+                    {
+                        printf("foo\n");
                         break;
                     }
                 }
+                server.ReleaseMessage(clientIdx, message);
                 message = server.ReceiveMessage(clientIdx, channelIdx);
-            } while (message);
+            }
         }
     }
 }
@@ -143,14 +136,13 @@ void ServerSendClientSnapshots(yojimbo::Server &server)
                 continue;
             }
 
-            Msg_S_EntityState *message = (Msg_S_EntityState *)server.CreateMessage(clientIdx, MSG_S_ENTITY_STATE);
-            if (message)
-            {
+            Msg_S_EntityState *msg = (Msg_S_EntityState *)server.CreateMessage(clientIdx, MSG_S_ENTITY_STATE);
+            if (msg) {
                 ServerPlayer &player = g_world->players[otherClientIdx];
-                message->clientIdx = otherClientIdx;
-                message->entityState.serverTime = lastTickedAt;
-                player.entity.Serialize(message->entityState);
-                server.SendMessage(clientIdx, CHANNEL_U_PLAYER_STATE, message);
+                msg->clientIdx = otherClientIdx;
+                msg->entityState.serverTime = lastTickedAt;
+                player.entity.Serialize(msg->entityState);
+                server.SendMessage(clientIdx, CHANNEL_U_PLAYER_STATE, msg);
             }
         }
     }
@@ -169,10 +161,10 @@ void ServerTick(yojimbo::Server &server)
         // try to figure out which tick/seq the input is and process them more
         // intelligently...?? Maybe??
 
-        PlayerInput combinedInput{};
-        PlayerInputQueue &inputQueue = g_world->players[clientIdx].inputQueue;
+        InputCommand combinedInput{};
+        InputCommandQueue &inputQueue = g_world->players[clientIdx].inputQueue;
         while (!inputQueue.empty()) {
-            const PlayerInput &input = inputQueue.front();
+            const InputCommand &input = inputQueue.front();
             combinedInput.north |= input.north;
             combinedInput.west  |= input.west;
             combinedInput.south |= input.south;
@@ -218,11 +210,10 @@ void ServerSendClockSync(yojimbo::Server &server)
 
         ServerPlayer &serverPlayer = g_world->players[clientIdx];
         if (serverPlayer.needsClockSync && server.CanSendMessage(clientIdx, CHANNEL_U_CLOCK_SYNC)) {
-            Msg_S_ClockSync *msgClockSync = (Msg_S_ClockSync *)server.CreateMessage(clientIdx, MSG_S_CLOCK_SYNC);
-            if (msgClockSync)
-            {
-                msgClockSync->serverTime = GetTime();
-                server.SendMessage(clientIdx, CHANNEL_U_CLOCK_SYNC, msgClockSync);
+            Msg_S_ClockSync *msg = (Msg_S_ClockSync *)server.CreateMessage(clientIdx, MSG_S_CLOCK_SYNC);
+            if (msg) {
+                msg->serverTime = GetTime();
+                server.SendMessage(clientIdx, CHANNEL_U_CLOCK_SYNC, msg);
                 serverPlayer.needsClockSync = false;
             }
         }

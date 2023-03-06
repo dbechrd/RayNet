@@ -12,10 +12,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\client\client.cpp" />
-    <ClCompile Include="src\common\common_lib.cpp" />
-  </ItemGroup>
-  <ItemGroup>
-    <ClInclude Include="src\common\common_lib.h" />
+    <ClCompile Include="src\common\shared_lib.cpp" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="res\client.ico" />
