@@ -8,5 +8,6 @@
 #include "net/messages/msg_s_entity_state.h"
 #include "net/net.h"
 #include "net/world.h"
+#include "ring_buffer.h"
 
 void DrawTextShadowEx(Font font, const char *text, Vector2 pos, float fontSize, Color color);

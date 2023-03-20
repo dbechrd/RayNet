@@ -1,12 +1,5 @@
 #include "../common/shared_lib.h"
 
-struct ServerPlayer {
-    bool needsClockSync{};
-    Entity entity{};  // TODO(dlb): entityIdx into an actual world state
-    uint32_t lastInputSeq{};  // sequence number of last input command we processed
-    InputCommandQueue inputQueue{};
-};
-
 typedef World<ServerPlayer> ServerWorld;
 
 ServerWorld *g_world;
@@ -74,7 +67,7 @@ yojimbo::Server &ServerStart()
     config.channel[CHANNEL_U_ENTITY_STATE].type = yojimbo::CHANNEL_TYPE_UNRELIABLE_UNORDERED;
 
     server = new yojimbo::Server(yojimbo::GetDefaultAllocator(), privateKey,
-        yojimbo::Address("127.0.0.1", SERVER_PORT), config, adapter, GetTime());
+        yojimbo::Address("127.0.0.1", SV_PORT), config, adapter, GetTime());
 
     // NOTE(dlb): This must be the same size as world->players[] array!
     server->Start(yojimbo::MaxClients);
@@ -83,7 +76,7 @@ yojimbo::Server &ServerStart()
         return *server;
     }
 #if 0
-    printf("yj: started server on port %d (insecure)\n", SERVER_PORT);
+    printf("yj: started server on port %d (insecure)\n", SV_PORT);
     char addressString[256];
     server->GetAddress().ToString(addressString, sizeof(addressString));
     printf("yj: server address is %s\n", addressString);
@@ -150,7 +143,7 @@ void ServerSendClientSnapshots(yojimbo::Server &server)
     }
 }
 
-void PlayerTick(ServerPlayer &player, const InputCommand *input) {
+void PlayerTick(ServerPlayer &player, const InputCmd *input) {
     Vector2 vDelta{};
 
     if (input) {
@@ -176,8 +169,8 @@ void PlayerTick(ServerPlayer &player, const InputCommand *input) {
 
     player.entity.velocity.x = vDelta.x * player.entity.speed;
     player.entity.velocity.y = vDelta.y * player.entity.speed;
-    player.entity.position.x += player.entity.velocity.x * SERVER_TICK_DT;
-    player.entity.position.y += player.entity.velocity.y * SERVER_TICK_DT;
+    player.entity.position.x += player.entity.velocity.x * SV_TICK_DT;
+    player.entity.position.y += player.entity.velocity.y * SV_TICK_DT;
 }
 
 void ServerTick(yojimbo::Server &server)
@@ -189,10 +182,10 @@ void ServerTick(yojimbo::Server &server)
 
         ServerPlayer &player = g_world->players[clientIdx];
 
-        const InputCommand *nextCmd = 0;
-        const InputCommandQueue &inputQueue = g_world->players[clientIdx].inputQueue;
-        for (int i = 0; i < CLIENT_SEND_INPUT_COUNT; i++) {
-            const InputCommand &cmd = inputQueue.data[(inputQueue.nextIdx + i) % CLIENT_SEND_INPUT_COUNT];
+        const InputCmd *nextCmd = 0;
+        auto &inputQueue = g_world->players[clientIdx].inputQueue;
+        for (int i = 0; i < inputQueue.size(); i++) {
+            const InputCmd &cmd = inputQueue[i];
             if (cmd.seq > player.lastInputSeq) {
                 nextCmd = &cmd;
                 break;
@@ -238,9 +231,9 @@ void ServerUpdate(yojimbo::Server &server)
 
     tickAccum += dt;
     bool hasDelta = false;
-    while (tickAccum >= SERVER_TICK_DT) {
+    while (tickAccum >= SV_TICK_DT) {
         ServerTick(server);
-        tickAccum -= SERVER_TICK_DT;
+        tickAccum -= SV_TICK_DT;
         hasDelta = true;
     }
 

@@ -5,15 +5,10 @@
 struct Controller {
     int nextSeq {};  // next input command sequence number to use
 
-    InputCommand cmdAccum {};       // accumulate input until we're ready to sample
-    double lastAccumSample {};      // time we last sampled accumulator
-    double lastCommandMsgSent {};   // time we last sent inputs to the server
-    InputCommandQueue cmdQueue {};  // queue of last N input samples
-};
-
-struct ClientEntity {
-    Entity entity{};
-    std::deque<EntityState> snapshotHistory{};
+    InputCmd cmdAccum{};       // accumulate input until we're ready to sample
+    double lastAccumSample{};      // time we last sampled accumulator
+    double lastCommandMsgSent{};   // time we last sent inputs to the server
+    RingBuffer<InputCmd, CL_SEND_INPUT_COUNT> cmdQueue{};  // queue of last N input samples
 };
 
 typedef World<ClientEntity> ClientWorld;
@@ -36,7 +31,7 @@ void ClientTryConnect(yojimbo::Client &client)
     yojimbo::random_bytes((uint8_t *)&clientId, 8);
     printf("yj: client id is %.16" PRIx64 "\n", clientId);
 
-    yojimbo::Address serverAddress("127.0.0.1", SERVER_PORT);
+    yojimbo::Address serverAddress("127.0.0.1", SV_PORT);
 
     client.InsecureConnect(privateKey, clientId, serverAddress);
 }
@@ -73,7 +68,7 @@ void ClientSendInput(yojimbo::Client &client, const Controller &controller)
     const double now = GetTime();
 
     static double lastNetTick = 0;
-    if (now - lastNetTick > CLIENT_SEND_INPUT_DT) {
+    if (now - lastNetTick > CL_SEND_INPUT_DT) {
         Msg_C_InputCommands *message = (Msg_C_InputCommands *)client.CreateMessage(MSG_C_INPUT_COMMANDS);
         if (message) {
             if (controller.cmdQueue.data[0].north) {
@@ -105,10 +100,7 @@ void ClientProcessMessages(yojimbo::Client &client)
                 {
                     Msg_S_EntityState *msgEntityState = (Msg_S_EntityState *)message;
                     ClientEntity &player = g_world.players[msgEntityState->clientIdx];
-                    if (player.snapshotHistory.size() == CLIENT_SNAPSHOT_COUNT) {
-                        player.snapshotHistory.pop_front();
-                    }
-                    player.snapshotHistory.push_back(msgEntityState->entityState);
+                    player.snapshots.push(msgEntityState->entityState);
                     break;
                 }
             }
@@ -141,16 +133,16 @@ void ClientUpdate(yojimbo::Client &client)
     g_controller.cmdAccum.east  |= IsKeyDown(KEY_D);
 
     // Sample accumulator once per server tick and push command into command queue
-    if (now - g_controller.lastAccumSample > SERVER_TICK_DT) {
+    if (now - g_controller.lastAccumSample > SV_TICK_DT) {
         g_controller.cmdAccum.seq = ++g_controller.nextSeq;
         g_controller.cmdQueue.data[g_controller.cmdQueue.nextIdx++] = g_controller.cmdAccum;
-        g_controller.cmdQueue.nextIdx %= CLIENT_SEND_INPUT_COUNT;
+        g_controller.cmdQueue.nextIdx %= CL_SEND_INPUT_COUNT;
         g_controller.cmdAccum = {};
     }
 
     // Send rolled up input at fixed interval
     static double lastNetTick = 0;
-    if (now - lastNetTick > CLIENT_SEND_INPUT_DT) {
+    if (now - lastNetTick > CL_SEND_INPUT_DT) {
         ClientSendInput(client, g_controller);
         lastNetTick = now;
     }
@@ -270,16 +262,13 @@ int main(int argc, char *argv[])
         for (int clientIdx = 0; clientIdx < yojimbo::MaxClients; clientIdx++) {
             ClientEntity &player = g_world.players[clientIdx];
 
-            const double renderAt = serverNow - SERVER_TICK_DT * 3;
-
             // TODO(dlb): Find snapshots nearest to (GetTime() - clientTimeDeltaVsServer)
-            const size_t snapshotCount = player.snapshotHistory.size();
-            if (snapshotCount < CLIENT_SNAPSHOT_COUNT) {
-                continue;
-            }
+            const double renderAt = serverNow - SV_TICK_DT * 3;
 
-            int snapshotBIdx = 0;
-            while (snapshotBIdx < snapshotCount && player.snapshotHistory[snapshotBIdx].serverTime <= renderAt) {
+            size_t snapshotBIdx = 0;
+            while (snapshotBIdx < player.snapshots.size()
+                && player.snapshots[snapshotBIdx].serverTime <= renderAt)
+            {
                 snapshotBIdx++;
             }
 
@@ -287,21 +276,21 @@ int main(int argc, char *argv[])
             const EntityState *snapshotB = 0;
 
             if (snapshotBIdx <= 0) {
-                snapshotA = &player.snapshotHistory[0];
-                snapshotB = &player.snapshotHistory[0];
-            } else if (snapshotBIdx >= snapshotCount) {
-                snapshotA = &player.snapshotHistory[snapshotCount - 1];
-                snapshotB = &player.snapshotHistory[snapshotCount - 1];
+                snapshotA = &player.snapshots.oldest();
+                snapshotB = &player.snapshots.oldest();
+            } else if (snapshotBIdx >= CL_SNAPSHOT_COUNT) {
+                snapshotA = &player.snapshots.newest();
+                snapshotB = &player.snapshots.newest();
             } else {
-                snapshotA = &player.snapshotHistory[(size_t)snapshotBIdx - 1];
-                snapshotB = &player.snapshotHistory[snapshotBIdx];
+                snapshotA = &player.snapshots[snapshotBIdx - 1];
+                snapshotB = &player.snapshots[snapshotBIdx];
             }
 
             // TODO: Move this to DRAW_TEXT in the tree view if we need it
             //printf("client %d snapshot %d\n", clientIdx, snapshotBIdx);
-#if CLIENT_DBG_SNAPSHOT_SHADOWS
-            for (int i = 0; i < snapshotCount; i++) {
-                player.entity.ApplyStateInterpolated(player.snapshotHistory[i], player.snapshotHistory[i], 0.0);
+#if CL_DBG_SNAPSHOT_SHADOWS
+            for (int i = 0; i < player.snapshots.size(); i++) {
+                player.entity.ApplyStateInterpolated(player.snapshots[i], player.snapshots[i], 0.0);
                 player.entity.color = Fade(PINK, 0.5);
                 player.entity.Draw(font, i);
             }

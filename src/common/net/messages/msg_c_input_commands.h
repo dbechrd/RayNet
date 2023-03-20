@@ -4,12 +4,12 @@
 
 struct Msg_C_InputCommands : public yojimbo::Message
 {
-    InputCommandQueue cmdQueue{};
+    RingBuffer<InputCmd, CL_SEND_INPUT_COUNT> cmdQueue{};
 
     template <typename Stream> bool Serialize(Stream &stream)
     {
-        for (int i = 0; i < CLIENT_SEND_INPUT_COUNT; i++) {
-            InputCommand &cmd = cmdQueue.data[i];
+        for (int i = 0; i < CL_SEND_INPUT_COUNT; i++) {
+            InputCmd &cmd = cmdQueue.data[i];
             serialize_uint32(stream, cmd.seq);
             serialize_bool(stream, cmd.north);
             serialize_bool(stream, cmd.west);

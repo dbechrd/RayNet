@@ -1,3 +1,4 @@
+#include "shared_lib.h"
 #include "entity.cpp"
 #include "net/net.cpp"
 
