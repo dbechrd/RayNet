@@ -13,14 +13,19 @@ struct Controller {
 
 typedef World<ClientEntity> ClientWorld;
 
-Controller g_controller;
-ClientWorld g_world;
+struct Client {
+    NetAdapter adapter;
+    yojimbo::Client *yj_client{};
 
-double clientTimeDeltaVsServer = 0;  // how far ahead/behind client clock is
+    double clientTimeDeltaVsServer{};  // how far ahead/behind client clock is
 
-void ClientTryConnect(yojimbo::Client &client)
+    Controller controller;
+    ClientWorld *world{};
+};
+
+void ClientTryConnect(Client *client)
 {
-    if (!client.IsDisconnected()) {
+    if (!client->yj_client->IsDisconnected()) {
         return;
     }
 
@@ -33,17 +38,18 @@ void ClientTryConnect(yojimbo::Client &client)
 
     yojimbo::Address serverAddress("127.0.0.1", SV_PORT);
 
-    client.InsecureConnect(privateKey, clientId, serverAddress);
+    client->yj_client->InsecureConnect(privateKey, clientId, serverAddress);
+    client->world = new ClientWorld;
 }
 
-yojimbo::Client &ClientStart()
+void ClientStart(Client *client)
 {
-    static NetAdapter adapter{};
-    static yojimbo::Client *client = nullptr;
-
-    if (client) {
-        return *client;
+    if (!InitializeYojimbo()) {
+        printf("yj: error: failed to initialize Yojimbo!\n");
+        return;
     }
+    yojimbo_log_level(YOJIMBO_LOG_LEVEL_INFO);
+    yojimbo_set_printf_function(yj_printf);
 
     yojimbo::ClientServerConfig config{};
     config.numChannels = CHANNEL_COUNT;
@@ -51,110 +57,117 @@ yojimbo::Client &ClientStart()
     config.channel[CHANNEL_U_INPUT_COMMANDS].type = yojimbo::CHANNEL_TYPE_UNRELIABLE_UNORDERED;
     config.channel[CHANNEL_U_ENTITY_STATE].type = yojimbo::CHANNEL_TYPE_UNRELIABLE_UNORDERED;
 
-    client = new yojimbo::Client(yojimbo::GetDefaultAllocator(),
-        yojimbo::Address("0.0.0.0"), config, adapter, GetTime());
+    client->yj_client = new yojimbo::Client(
+        yojimbo::GetDefaultAllocator(),
+        yojimbo::Address("0.0.0.0"),
+        config,
+        client->adapter,
+        GetTime()
+    );
 
-    ClientTryConnect(*client);
+    ClientTryConnect(client);
 #if 0
     char addressString[256];
     client->GetAddress().ToString(addressString, sizeof(addressString));
     printf("yj: client address is %s\n", addressString);
 #endif
-    return *client;
 }
 
-void ClientSendInput(yojimbo::Client &client, const Controller &controller)
+void ClientSendInput(Client *client, const Controller &controller)
 {
     const double now = GetTime();
 
     static double lastNetTick = 0;
     if (now - lastNetTick > CL_SEND_INPUT_DT) {
-        Msg_C_InputCommands *message = (Msg_C_InputCommands *)client.CreateMessage(MSG_C_INPUT_COMMANDS);
+        Msg_C_InputCommands *message = (Msg_C_InputCommands *)client->yj_client->CreateMessage(MSG_C_INPUT_COMMANDS);
         if (message) {
             if (controller.cmdQueue.data[0].north) {
                 printf("");
             }
             message->cmdQueue = controller.cmdQueue;
-            client.SendMessage(CHANNEL_U_INPUT_COMMANDS, message);
+            client->yj_client->SendMessage(CHANNEL_U_INPUT_COMMANDS, message);
         }
         lastNetTick = now;
     }
 }
 
-void ClientProcessMessages(yojimbo::Client &client)
+void ClientProcessMessages(Client *client)
 {
     for (int channelIdx = 0; channelIdx < CHANNEL_COUNT; channelIdx++) {
-        yojimbo::Message *message = client.ReceiveMessage(channelIdx);
+        yojimbo::Message *message = client->yj_client->ReceiveMessage(channelIdx);
         while (message) {
             switch (message->GetType()) {
                 case MSG_S_CLOCK_SYNC:
                 {
                     Msg_S_ClockSync *msgClockSync = (Msg_S_ClockSync *)message;
                     yojimbo::NetworkInfo netInfo{};
-                    client.GetNetworkInfo(netInfo);
+                    client->yj_client->GetNetworkInfo(netInfo);
                     const double approxServerNow = msgClockSync->serverTime + netInfo.RTT / 2000;
-                    clientTimeDeltaVsServer = GetTime() - approxServerNow;
+                    client->clientTimeDeltaVsServer = GetTime() - approxServerNow;
                     break;
                 }
                 case MSG_S_ENTITY_STATE:
                 {
                     Msg_S_EntityState *msgEntityState = (Msg_S_EntityState *)message;
-                    ClientEntity &player = g_world.players[msgEntityState->clientIdx];
+                    ClientEntity &player = client->world->players[msgEntityState->clientIdx];
                     player.snapshots.push(msgEntityState->entityState);
                     break;
                 }
             }
-            client.ReleaseMessage(message);
-            message = client.ReceiveMessage(channelIdx);
+            client->yj_client->ReleaseMessage(message);
+            message = client->yj_client->ReceiveMessage(channelIdx);
         };
     }
 }
 
-void ClientUpdate(yojimbo::Client &client)
+void ClientUpdate(Client *client)
 {
     const double now = GetTime();
 
     // NOTE(dlb): This sends keepalive packets
-    client.AdvanceTime(now);
+    client->yj_client->AdvanceTime(now);
 
     // TODO(dlb): Is it a good idea / necessary to receive packets every frame,
     // rather than at a fixed rate? It seems like it is... right!?
-    client.ReceivePackets();
-    if (!client.IsConnected()) {
+    client->yj_client->ReceivePackets();
+    if (!client->yj_client->IsConnected()) {
         return;
     }
 
     ClientProcessMessages(client);
 
     // Accmulate input every frame
-    g_controller.cmdAccum.north |= IsKeyDown(KEY_W);
-    g_controller.cmdAccum.west  |= IsKeyDown(KEY_A);
-    g_controller.cmdAccum.south |= IsKeyDown(KEY_S);
-    g_controller.cmdAccum.east  |= IsKeyDown(KEY_D);
+    client->controller.cmdAccum.north |= IsKeyDown(KEY_W);
+    client->controller.cmdAccum.west  |= IsKeyDown(KEY_A);
+    client->controller.cmdAccum.south |= IsKeyDown(KEY_S);
+    client->controller.cmdAccum.east  |= IsKeyDown(KEY_D);
 
     // Sample accumulator once per server tick and push command into command queue
-    if (now - g_controller.lastAccumSample > SV_TICK_DT) {
-        g_controller.cmdAccum.seq = ++g_controller.nextSeq;
-        g_controller.cmdQueue.data[g_controller.cmdQueue.nextIdx++] = g_controller.cmdAccum;
-        g_controller.cmdQueue.nextIdx %= CL_SEND_INPUT_COUNT;
-        g_controller.cmdAccum = {};
+    if (now - client->controller.lastAccumSample > SV_TICK_DT) {
+        client->controller.cmdAccum.seq = ++client->controller.nextSeq;
+        client->controller.cmdQueue.data[client->controller.cmdQueue.nextIdx++] = client->controller.cmdAccum;
+        client->controller.cmdQueue.nextIdx %= CL_SEND_INPUT_COUNT;
+        client->controller.cmdAccum = {};
     }
 
     // Send rolled up input at fixed interval
     static double lastNetTick = 0;
     if (now - lastNetTick > CL_SEND_INPUT_DT) {
-        ClientSendInput(client, g_controller);
+        ClientSendInput(client, client->controller);
         lastNetTick = now;
     }
 
-    client.SendPackets();
+    client->yj_client->SendPackets();
 }
 
-void ClientStop(yojimbo::Client &client)
+void ClientStop(Client *client)
 {
-    client.Disconnect();
-    g_controller = {};
-    g_world = {};
+    client->yj_client->Disconnect();
+    client->clientTimeDeltaVsServer = 0;
+
+    client->controller = {};
+    delete client->world;
+    client->world = {};
 }
 
 int main(int argc, char *argv[])
@@ -163,6 +176,9 @@ int main(int argc, char *argv[])
     //SetTraceLogLevel(LOG_WARNING);
 
     InitWindow(WINDOW_WIDTH, WINDOW_HEIGHT, "RayNet Client");
+    // NOTE(dlb): yojimbo uses rand() for network simulator and random_int()/random_float()
+    srand((unsigned int)GetTime());
+
     //SetWindowState(FLAG_VSYNC_HINT);  // Gahhhhhh Windows fucking sucks at this
     SetWindowState(FLAG_WINDOW_RESIZABLE);
     //SetWindowState(FLAG_FULLSCREEN_MODE);
@@ -190,32 +206,11 @@ int main(int argc, char *argv[])
 
     //--------------------
     // Client
-    if (!InitializeYojimbo())
-    {
-        printf("yj: error: failed to initialize Yojimbo!\n");
-        return 1;
-    }
-    yojimbo_log_level(YOJIMBO_LOG_LEVEL_INFO);
-    yojimbo_set_printf_function(yj_printf);
-    // NOTE(dlb): yojimbo uses rand() for network simulator and random_int()/random_float()
-    srand((unsigned int)GetTime());
-
-    yojimbo::Client &client = ClientStart();
-
-    //--------------------
-    // World
-#if 0
-    g_world = new ClientWorld;
-    if (!g_world) {
-        printf("error: failed to allocate world\n");
-        return 1;
-    }
-#endif
+    Client *client = new Client;
+    ClientStart(client);
 
     double frameStart = GetTime();
     double frameDt = 0;
-
-    // TODO: Input history queue
 
     while (!WindowShouldClose())
     {
@@ -245,12 +240,11 @@ int main(int argc, char *argv[])
         //--------------------
         // Networking
         ClientUpdate(client);
-        const double serverNow = now - clientTimeDeltaVsServer;
+        const double serverNow = now - client->clientTimeDeltaVsServer;
 
         //--------------------
         // Draw
         BeginDrawing();
-
         ClearBackground(BROWN);
 
         Vector2 catPos = {
@@ -259,54 +253,56 @@ int main(int argc, char *argv[])
         };
         DrawTexture(texture, (int)catPos.x, (int)catPos.y, WHITE);
 
-        for (int clientIdx = 0; clientIdx < yojimbo::MaxClients; clientIdx++) {
-            ClientEntity &player = g_world.players[clientIdx];
+        if (client->yj_client->IsConnected()) {
+            for (int clientIdx = 0; clientIdx < yojimbo::MaxClients; clientIdx++) {
+                ClientEntity &player = client->world->players[clientIdx];
 
-            // TODO(dlb): Find snapshots nearest to (GetTime() - clientTimeDeltaVsServer)
-            const double renderAt = serverNow - SV_TICK_DT * 3;
+                // TODO(dlb): Find snapshots nearest to (GetTime() - clientTimeDeltaVsServer)
+                const double renderAt = serverNow - SV_TICK_DT * 3;
 
-            size_t snapshotBIdx = 0;
-            while (snapshotBIdx < player.snapshots.size()
-                && player.snapshots[snapshotBIdx].serverTime <= renderAt)
-            {
-                snapshotBIdx++;
-            }
+                size_t snapshotBIdx = 0;
+                while (snapshotBIdx < player.snapshots.size()
+                    && player.snapshots[snapshotBIdx].serverTime <= renderAt)
+                {
+                    snapshotBIdx++;
+                }
 
-            const EntityState *snapshotA = 0;
-            const EntityState *snapshotB = 0;
+                const EntityState *snapshotA = 0;
+                const EntityState *snapshotB = 0;
 
-            if (snapshotBIdx <= 0) {
-                snapshotA = &player.snapshots.oldest();
-                snapshotB = &player.snapshots.oldest();
-            } else if (snapshotBIdx >= CL_SNAPSHOT_COUNT) {
-                snapshotA = &player.snapshots.newest();
-                snapshotB = &player.snapshots.newest();
-            } else {
-                snapshotA = &player.snapshots[snapshotBIdx - 1];
-                snapshotB = &player.snapshots[snapshotBIdx];
-            }
+                if (snapshotBIdx <= 0) {
+                    snapshotA = &player.snapshots.oldest();
+                    snapshotB = &player.snapshots.oldest();
+                } else if (snapshotBIdx >= CL_SNAPSHOT_COUNT) {
+                    snapshotA = &player.snapshots.newest();
+                    snapshotB = &player.snapshots.newest();
+                } else {
+                    snapshotA = &player.snapshots[snapshotBIdx - 1];
+                    snapshotB = &player.snapshots[snapshotBIdx];
+                }
 
-            // TODO: Move this to DRAW_TEXT in the tree view if we need it
-            //printf("client %d snapshot %d\n", clientIdx, snapshotBIdx);
-#if CL_DBG_SNAPSHOT_SHADOWS
-            for (int i = 0; i < player.snapshots.size(); i++) {
-                player.entity.ApplyStateInterpolated(player.snapshots[i], player.snapshots[i], 0.0);
-                player.entity.color = Fade(PINK, 0.5);
-                player.entity.Draw(font, i);
-            }
-#endif
-            float alpha = 0;
-            if (snapshotB != snapshotA) {
-                alpha = (renderAt - snapshotA->serverTime) /
-                        (snapshotB->serverTime - snapshotA->serverTime);
-            }
+                // TODO: Move this to DRAW_TEXT in the tree view if we need it
+                //printf("client %d snapshot %d\n", clientIdx, snapshotBIdx);
+    #if CL_DBG_SNAPSHOT_SHADOWS
+                for (int i = 0; i < player.snapshots.size(); i++) {
+                    player.entity.ApplyStateInterpolated(player.snapshots[i], player.snapshots[i], 0.0);
+                    player.entity.color = Fade(PINK, 0.5);
+                    player.entity.Draw(font, i);
+                }
+    #endif
+                float alpha = 0;
+                if (snapshotB != snapshotA) {
+                    alpha = (renderAt - snapshotA->serverTime) /
+                            (snapshotB->serverTime - snapshotA->serverTime);
+                }
 
-            player.entity.ApplyStateInterpolated(*snapshotA, *snapshotB, alpha);
-            if (player.entity.color.a) {
-                player.entity.Draw(font, clientIdx);
-                //for (int i = 0; i < snapshotCount; i++) {
-                //    player.entity.Draw(font, i);
-                //}
+                player.entity.ApplyStateInterpolated(*snapshotA, *snapshotB, alpha);
+                if (player.entity.color.a) {
+                    player.entity.Draw(font, clientIdx);
+                    //for (int i = 0; i < snapshotCount; i++) {
+                    //    player.entity.Draw(font, i);
+                    //}
+                }
             }
         }
 
@@ -335,12 +331,12 @@ int main(int argc, char *argv[])
                 DRAW_TEXT_MEASURE((Rectangle *)0, label, fmt, __VA_ARGS__)
 
             DRAW_TEXT("serverTime", "%.02f", serverNow);
-            DRAW_TEXT("serverDelta", "%.02f", clientTimeDeltaVsServer);
+            DRAW_TEXT("serverDelta", "%.02f", client->clientTimeDeltaVsServer);
             DRAW_TEXT("time", "%.02f", now);
             DRAW_TEXT("vsync", "%s", IsWindowState(FLAG_VSYNC_HINT) ? "on" : "off");
 
             const char *clientStateStr = "unknown";
-            yojimbo::ClientState clientState = client.GetClientState();
+            yojimbo::ClientState clientState = client->yj_client->GetClientState();
             switch (clientState) {
                 case yojimbo::CLIENT_STATE_ERROR:        clientStateStr = "CLIENT_STATE_ERROR"; break;
                 case yojimbo::CLIENT_STATE_DISCONNECTED: clientStateStr = "CLIENT_STATE_DISCONNECTED"; break;
@@ -362,7 +358,7 @@ int main(int argc, char *argv[])
             if (showNetInfo) {
                 hud_x += 16.0f;
                 yojimbo::NetworkInfo netInfo{};
-                client.GetNetworkInfo(netInfo);
+                client->yj_client->GetNetworkInfo(netInfo);
                 DRAW_TEXT("rtt", "%.02f", netInfo.RTT);
                 DRAW_TEXT("%% loss", "%.02f", netInfo.packetLoss);
                 DRAW_TEXT("sent (kbps)", "%.02f", netInfo.sentBandwidth);
@@ -380,10 +376,10 @@ int main(int argc, char *argv[])
 
     //--------------------
     // Cleanup
-    //delete g_world;
-
     ClientStop(client);
-    delete &client;
+    delete client->yj_client;
+    client->yj_client = {};
+    delete client;
     ShutdownYojimbo();
 
     UnloadFont(font);
