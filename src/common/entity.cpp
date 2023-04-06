@@ -1,17 +1,21 @@
 #include "entity.h"
 
-void Entity::Serialize(EntityState &entityState)
+void Entity::Serialize(EntitySnapshot &entitySnapshot, double serverTime, uint32_t entityId)
 {
-    entityState.color = color;
-    entityState.size = size;
-    entityState.speed = speed;
-    entityState.velocity = velocity;
-    entityState.position = position;
+    entitySnapshot.serverTime = serverTime;
+    entitySnapshot.id = entityId;
+    entitySnapshot.type = type;
+    entitySnapshot.color = color;
+    entitySnapshot.size = size;
+    entitySnapshot.speed = speed;
+    entitySnapshot.velocity = velocity;
+    entitySnapshot.position = position;
 }
 
-void Entity::ApplyStateInterpolated(const EntityState &a, const EntityState &b, double alpha)
+void Entity::ApplyStateInterpolated(const EntitySnapshot &a, const EntitySnapshot &b, double alpha)
 {
     // TODO: Lerp at least position, also maybe the others
+    type = b.type;
     color = b.color;
     size = b.size;
     speed = b.speed;

@@ -1,13 +1,10 @@
 #include "../common/shared_lib.h"
-
-typedef World<ServerPlayer> ServerWorld;
-
-struct Server;
+#include "server_world.h"
 
 class ServerNetAdapter : public NetAdapter
 {
 public:
-    Server *server;
+    struct Server *server;
 
     ServerNetAdapter(Server *server)
     {
@@ -32,21 +29,27 @@ struct Server {
     {
         ServerPlayer &serverPlayer = world->players[clientIdx];
         serverPlayer.needsClockSync = true;
+        serverPlayer.entityId = clientIdx;  // TODO alloc index, or keep all clients in lower indices??
 
         static const Color colors[]{
             MAROON,
             LIME,
             SKYBLUE
         };
-        serverPlayer.entity.color = colors[clientIdx % (sizeof(colors) / sizeof(colors[0]))];
-        serverPlayer.entity.size = { 32, 64 };
-        serverPlayer.entity.position = { 100, 100 };
-        serverPlayer.entity.speed = WINDOW_HEIGHT / 2;
+
+        Entity &entity = world->entities[serverPlayer.entityId];
+        entity.type = Entity_Player;
+        entity.color = colors[clientIdx % (sizeof(colors) / sizeof(colors[0]))];
+        entity.size = { 32, 64 };
+        entity.position = { 100, 100 };
+        entity.speed = WINDOW_HEIGHT / 2;
     }
 
     void OnClientLeave(int clientIdx)
     {
         ServerPlayer &serverPlayer = world->players[clientIdx];
+        Entity &entity = world->entities[serverPlayer.entityId];
+        entity = {};
         serverPlayer = {};
         //serverPlayer.entity.color = GRAY;
     }
@@ -93,7 +96,7 @@ void ServerStart(Server *server)
     config.numChannels = CHANNEL_COUNT;
     config.channel[CHANNEL_U_CLOCK_SYNC].type = yojimbo::CHANNEL_TYPE_UNRELIABLE_UNORDERED;
     config.channel[CHANNEL_U_INPUT_COMMANDS].type = yojimbo::CHANNEL_TYPE_UNRELIABLE_UNORDERED;
-    config.channel[CHANNEL_U_ENTITY_STATE].type = yojimbo::CHANNEL_TYPE_UNRELIABLE_UNORDERED;
+    config.channel[CHANNEL_U_ENTITY_SNAPSHOT].type = yojimbo::CHANNEL_TYPE_UNRELIABLE_UNORDERED;
 
     server->yj_server = new yojimbo::Server(
         yojimbo::GetDefaultAllocator(),
@@ -154,30 +157,27 @@ void ServerSendClientSnapshots(Server *server)
         if (!server->yj_server->IsClientConnected(clientIdx)) {
             continue;
         }
-        if (!server->yj_server->CanSendMessage(clientIdx, CHANNEL_U_ENTITY_STATE)) {
+        if (!server->yj_server->CanSendMessage(clientIdx, CHANNEL_U_ENTITY_SNAPSHOT)) {
             continue;
         }
 
-        // TODO: Send the world state that's relevant to this particular client
-        for (int otherClientIdx = 0; otherClientIdx < yojimbo::MaxClients; otherClientIdx++) {
-            if (!server->yj_server->IsClientConnected(otherClientIdx)) {
-                // TODO: Notify other player that this player has dc'd somehow (probably not here)
+        // TODO: Send only the world state that's relevant to this particular client
+        for (int entityId = 0; entityId < SV_MAX_ENTITIES; entityId++) {
+            Entity &entity = server->world->entities[entityId];
+            if (!entity.type) {
                 continue;
             }
 
-            Msg_S_EntityState *msg = (Msg_S_EntityState *)server->yj_server->CreateMessage(clientIdx, MSG_S_ENTITY_STATE);
+            Msg_S_EntitySnapshot *msg = (Msg_S_EntitySnapshot *)server->yj_server->CreateMessage(clientIdx, MSG_S_ENTITY_SNAPSHOT);
             if (msg) {
-                ServerPlayer &player = server->world->players[otherClientIdx];
-                msg->clientIdx = otherClientIdx;
-                msg->entityState.serverTime = server->lastTickedAt;
-                player.entity.Serialize(msg->entityState);
-                server->yj_server->SendMessage(clientIdx, CHANNEL_U_ENTITY_STATE, msg);
+                entity.Serialize(msg->entitySnapshot, server->lastTickedAt, entityId);
+                server->yj_server->SendMessage(clientIdx, CHANNEL_U_ENTITY_SNAPSHOT, msg);
             }
         }
     }
 }
 
-void PlayerTick(ServerPlayer &player, const InputCmd *input) {
+void EntityTick(Entity &entity, const InputCmd *input) {
     Vector2 vDelta{};
 
     if (input) {
@@ -198,13 +198,12 @@ void PlayerTick(ServerPlayer &player, const InputCmd *input) {
             vDelta.x *= invLength;
             vDelta.y *= invLength;
         }
-        player.lastInputSeq = input->seq;
     }
 
-    player.entity.velocity.x = vDelta.x * player.entity.speed;
-    player.entity.velocity.y = vDelta.y * player.entity.speed;
-    player.entity.position.x += player.entity.velocity.x * SV_TICK_DT;
-    player.entity.position.y += player.entity.velocity.y * SV_TICK_DT;
+    entity.velocity.x = vDelta.x * entity.speed;
+    entity.velocity.y = vDelta.y * entity.speed;
+    entity.position.x += entity.velocity.x * SV_TICK_DT;
+    entity.position.y += entity.velocity.y * SV_TICK_DT;
 }
 
 void ServerTick(Server *server)
@@ -222,12 +221,38 @@ void ServerTick(Server *server)
             const InputCmd &cmd = inputQueue[i];
             if (cmd.seq > player.lastInputSeq) {
                 nextCmd = &cmd;
+                player.lastInputSeq = nextCmd->seq;
                 break;
             }
         }
 
-        PlayerTick(player, nextCmd);
+        Entity &entity = server->world->entities[player.entityId];
+        EntityTick(entity, nextCmd);
     }
+
+    for (int entityId = yojimbo::MaxClients; entityId < SV_MAX_ENTITIES; entityId++) {
+        Entity &entity = server->world->entities[entityId];
+
+        InputCmd aiCmd{};
+        if (entity.velocity.x > 0) {
+            if (entity.position.x + entity.size.x / 2 >= WINDOW_WIDTH) {
+                aiCmd.west = true;
+            } else {
+                aiCmd.east = true;
+            }
+        } else if (entity.velocity.x < 0) {
+            if (entity.position.x - entity.size.x / 2 <= 0) {
+                aiCmd.east = true;
+            } else {
+                aiCmd.west = true;
+            }
+        } else {
+            aiCmd.east = true;
+        }
+
+        EntityTick(entity, &aiCmd);
+    }
+
     server->tick++;
     server->lastTickedAt = server->yj_server->GetTime();
 }
@@ -337,6 +362,16 @@ int main(int argc, char *argv[])
         return 1;
     }
 
+    //-----------------
+    // Bots
+    Entity &bot1 = server->world->entities[65];  // todo alloc index (freelist?)
+    bot1.type = Entity_Bot;
+    bot1.color = SKYBLUE;
+    bot1.size = { 32, 32 };
+    bot1.position = { 200, 200 };
+    bot1.speed = WINDOW_HEIGHT / 4;
+    //-----------------
+
     while (!WindowShouldClose())
     {
         ServerUpdate(server);
@@ -352,10 +387,10 @@ int main(int argc, char *argv[])
         };
         DrawTexture(texture, (int)catPos.x, (int)catPos.y, WHITE);
 
-        for (int clientIdx = 0; clientIdx < yojimbo::MaxClients; clientIdx++) {
-            ServerPlayer &player = server->world->players[clientIdx];
-            if (player.entity.color.a) {
-                player.entity.Draw(font, clientIdx);
+        for (int entityId = 0; entityId < SV_MAX_ENTITIES; entityId++) {
+            Entity &entity = server->world->entities[entityId];
+            if (entity.type) {
+                entity.Draw(font, entityId);
             }
         }
 

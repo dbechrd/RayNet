@@ -1,4 +1,5 @@
 #include "../common/shared_lib.h"
+#include "client_world.h"
 #include <deque>
 #include <time.h>
 
@@ -10,8 +11,6 @@ struct Controller {
     double lastCommandMsgSent{};   // time we last sent inputs to the server
     RingBuffer<InputCmd, CL_SEND_INPUT_COUNT> cmdQueue{};  // queue of last N input samples
 };
-
-typedef World<ClientEntity> ClientWorld;
 
 struct Client {
     NetAdapter adapter;
@@ -55,7 +54,7 @@ void ClientStart(Client *client)
     config.numChannels = CHANNEL_COUNT;
     config.channel[CHANNEL_U_CLOCK_SYNC].type = yojimbo::CHANNEL_TYPE_UNRELIABLE_UNORDERED;
     config.channel[CHANNEL_U_INPUT_COMMANDS].type = yojimbo::CHANNEL_TYPE_UNRELIABLE_UNORDERED;
-    config.channel[CHANNEL_U_ENTITY_STATE].type = yojimbo::CHANNEL_TYPE_UNRELIABLE_UNORDERED;
+    config.channel[CHANNEL_U_ENTITY_SNAPSHOT].type = yojimbo::CHANNEL_TYPE_UNRELIABLE_UNORDERED;
 
     client->yj_client = new yojimbo::Client(
         yojimbo::GetDefaultAllocator(),
@@ -106,11 +105,11 @@ void ClientProcessMessages(Client *client)
                     client->clientTimeDeltaVsServer = GetTime() - approxServerNow;
                     break;
                 }
-                case MSG_S_ENTITY_STATE:
+                case MSG_S_ENTITY_SNAPSHOT:
                 {
-                    Msg_S_EntityState *msgEntityState = (Msg_S_EntityState *)message;
-                    ClientEntity &player = client->world->players[msgEntityState->clientIdx];
-                    player.snapshots.push(msgEntityState->entityState);
+                    Msg_S_EntitySnapshot *msgEntitySnapshot = (Msg_S_EntitySnapshot *)message;
+                    EntityGhost &ghost = client->world->ghosts[msgEntitySnapshot->entitySnapshot.id];
+                    ghost.snapshots.push(msgEntitySnapshot->entitySnapshot);
                     break;
                 }
             }
@@ -254,40 +253,41 @@ int main(int argc, char *argv[])
         DrawTexture(texture, (int)catPos.x, (int)catPos.y, WHITE);
 
         if (client->yj_client->IsConnected()) {
-            for (int clientIdx = 0; clientIdx < yojimbo::MaxClients; clientIdx++) {
-                ClientEntity &player = client->world->players[clientIdx];
+            for (int entityId = 0; entityId < SV_MAX_ENTITIES; entityId++) {
+                EntityGhost &ghost = client->world->ghosts[entityId];
 
                 // TODO(dlb): Find snapshots nearest to (GetTime() - clientTimeDeltaVsServer)
                 const double renderAt = serverNow - SV_TICK_DT * 3;
 
                 size_t snapshotBIdx = 0;
-                while (snapshotBIdx < player.snapshots.size()
-                    && player.snapshots[snapshotBIdx].serverTime <= renderAt)
+                while (snapshotBIdx < ghost.snapshots.size()
+                    && ghost.snapshots[snapshotBIdx].serverTime <= renderAt)
                 {
                     snapshotBIdx++;
                 }
 
-                const EntityState *snapshotA = 0;
-                const EntityState *snapshotB = 0;
+                const EntitySnapshot *snapshotA = 0;
+                const EntitySnapshot *snapshotB = 0;
 
                 if (snapshotBIdx <= 0) {
-                    snapshotA = &player.snapshots.oldest();
-                    snapshotB = &player.snapshots.oldest();
+                    snapshotA = &ghost.snapshots.oldest();
+                    snapshotB = &ghost.snapshots.oldest();
                 } else if (snapshotBIdx >= CL_SNAPSHOT_COUNT) {
-                    snapshotA = &player.snapshots.newest();
-                    snapshotB = &player.snapshots.newest();
+                    snapshotA = &ghost.snapshots.newest();
+                    snapshotB = &ghost.snapshots.newest();
                 } else {
-                    snapshotA = &player.snapshots[snapshotBIdx - 1];
-                    snapshotB = &player.snapshots[snapshotBIdx];
+                    snapshotA = &ghost.snapshots[snapshotBIdx - 1];
+                    snapshotB = &ghost.snapshots[snapshotBIdx];
                 }
 
                 // TODO: Move this to DRAW_TEXT in the tree view if we need it
                 //printf("client %d snapshot %d\n", clientIdx, snapshotBIdx);
     #if CL_DBG_SNAPSHOT_SHADOWS
-                for (int i = 0; i < player.snapshots.size(); i++) {
-                    player.entity.ApplyStateInterpolated(player.snapshots[i], player.snapshots[i], 0.0);
-                    player.entity.color = Fade(PINK, 0.5);
-                    player.entity.Draw(font, i);
+                for (int i = 0; i < ghost.snapshots.size(); i++) {
+                    Entity &entity = client->world->entities[ghost.entityId];
+                    entity.ApplyStateInterpolated(ghost.snapshots[i], ghost.snapshots[i], 0.0);
+                    entity.color = Fade(PINK, 0.5);
+                    entity.Draw(font, i);
                 }
     #endif
                 float alpha = 0;
@@ -296,11 +296,12 @@ int main(int argc, char *argv[])
                             (snapshotB->serverTime - snapshotA->serverTime);
                 }
 
-                player.entity.ApplyStateInterpolated(*snapshotA, *snapshotB, alpha);
-                if (player.entity.color.a) {
-                    player.entity.Draw(font, clientIdx);
+                Entity &entity = client->world->entities[ghost.entityId];
+                entity.ApplyStateInterpolated(*snapshotA, *snapshotB, alpha);
+                if (entity.color.a) {
+                    entity.Draw(font, entityId);
                     //for (int i = 0; i < snapshotCount; i++) {
-                    //    player.entity.Draw(font, i);
+                    //    entity.Draw(font, i);
                     //}
                 }
             }

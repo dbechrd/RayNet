@@ -1,9 +1,17 @@
 #pragma once
 #include "input_command.h"
-#include "net/entity_state.h"
+#include "net/entity_snapshot.h"
 #include "ring_buffer.h"
 
+enum EntityType {
+    Entity_None,
+    Entity_Player,
+    Entity_Bot,
+    Entity_Count,
+};
+
 struct Entity {
+    EntityType type;
     Color color;
     Vector2 size;
 
@@ -11,19 +19,7 @@ struct Entity {
     Vector2 velocity;
     Vector2 position;
 
-    void Serialize(EntityState &entityState);
-    void ApplyStateInterpolated(const EntityState &a, const EntityState &b, double alpha);
+    void Serialize(EntitySnapshot &entitySnapshot, double serverTime, uint32_t entityId);
+    void ApplyStateInterpolated(const EntitySnapshot &a, const EntitySnapshot &b, double alpha);
     void Draw(const Font &font, int clientIdx);
-};
-
-struct ServerPlayer {
-    bool     needsClockSync {};
-    Entity   entity         {};  // TODO(dlb): entityIdx into an actual world state
-    uint32_t lastInputSeq   {};  // sequence number of last input command we processed
-    RingBuffer<InputCmd, CL_SEND_INPUT_COUNT> inputQueue{};
-};
-
-struct ClientEntity {
-    Entity entity{};
-    RingBuffer<EntityState, CL_SNAPSHOT_COUNT> snapshots{};
 };
