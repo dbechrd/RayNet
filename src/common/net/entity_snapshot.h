@@ -5,6 +5,7 @@ enum EntityType;
 
 struct EntitySnapshot {
     double      serverTime {};
+    uint32_t    lastProcessedInputCmd {};
 
     uint32_t    id         {};
     EntityType  type       {};

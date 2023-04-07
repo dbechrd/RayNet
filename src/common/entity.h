@@ -19,7 +19,8 @@ struct Entity {
     Vector2 velocity;
     Vector2 position;
 
-    void Serialize(EntitySnapshot &entitySnapshot, double serverTime, uint32_t entityId);
+    void Serialize(uint32_t entityId, EntitySnapshot &entitySnapshot, double serverTime, uint32_t lastProcessedInputCmd);
+    void Tick(const InputCmd *input, double dt);
     void ApplyStateInterpolated(const EntitySnapshot &a, const EntitySnapshot &b, double alpha);
     void Draw(const Font &font, int clientIdx);
 };

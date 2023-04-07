@@ -3,7 +3,6 @@
 #include "../common/entity.h"
 
 struct EntityGhost {
-    uint32_t entityId{};
     RingBuffer<EntitySnapshot, CL_SNAPSHOT_COUNT> snapshots{};
 };
 

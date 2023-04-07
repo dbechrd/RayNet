@@ -19,12 +19,12 @@
 #define PROTOCOL_ID             0x42424242424242ULL
 
 #define SV_PORT                 40000
-#define SV_TICK_DT              (1.0/10.0)
+#define SV_TICK_DT              (1.0/20.0)
 #define SV_MAX_ENTITIES         128
 
 #define CL_PORT                 30000
 #define CL_SEND_INPUT_COUNT     16
-#define CL_SEND_INPUT_DT        (1.0/60.0)
+#define CL_SEND_INPUT_DT        (1.0/20.0)
 #define CL_SNAPSHOT_COUNT       16
 
 #define CL_DBG_SNAPSHOT_SHADOWS 1

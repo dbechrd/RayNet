@@ -42,7 +42,7 @@ struct Server {
         entity.color = colors[clientIdx % (sizeof(colors) / sizeof(colors[0]))];
         entity.size = { 32, 64 };
         entity.position = { 100, 100 };
-        entity.speed = WINDOW_HEIGHT / 2;
+        entity.speed = 200;
     }
 
     void OnClientLeave(int clientIdx)
@@ -138,11 +138,6 @@ void ServerProcessMessages(Server *server)
                         server->world->players[clientIdx].inputQueue = msgPlayerInput->cmdQueue;
                         break;
                     }
-                    default:
-                    {
-                        printf("foo\n");
-                        break;
-                    }
                 }
                 server->yj_server->ReleaseMessage(clientIdx, message);
                 message = server->yj_server->ReceiveMessage(clientIdx, channelIdx);
@@ -170,40 +165,12 @@ void ServerSendClientSnapshots(Server *server)
 
             Msg_S_EntitySnapshot *msg = (Msg_S_EntitySnapshot *)server->yj_server->CreateMessage(clientIdx, MSG_S_ENTITY_SNAPSHOT);
             if (msg) {
-                entity.Serialize(msg->entitySnapshot, server->lastTickedAt, entityId);
+                ServerPlayer &serverPlayer = server->world->players[clientIdx];
+                entity.Serialize(entityId, msg->entitySnapshot, server->lastTickedAt, serverPlayer.lastInputSeq);
                 server->yj_server->SendMessage(clientIdx, CHANNEL_U_ENTITY_SNAPSHOT, msg);
             }
         }
     }
-}
-
-void EntityTick(Entity &entity, const InputCmd *input) {
-    Vector2 vDelta{};
-
-    if (input) {
-        if (input->north) {
-            vDelta.y -= 1.0f;
-        }
-        if (input->west) {
-            vDelta.x -= 1.0f;
-        }
-        if (input->south) {
-            vDelta.y += 1.0f;
-        }
-        if (input->east) {
-            vDelta.x += 1.0f;
-        }
-        if (vDelta.x && vDelta.y) {
-            float invLength = 1.0f / sqrtf(vDelta.x * vDelta.x + vDelta.y * vDelta.y);
-            vDelta.x *= invLength;
-            vDelta.y *= invLength;
-        }
-    }
-
-    entity.velocity.x = vDelta.x * entity.speed;
-    entity.velocity.y = vDelta.y * entity.speed;
-    entity.position.x += entity.velocity.x * SV_TICK_DT;
-    entity.position.y += entity.velocity.y * SV_TICK_DT;
 }
 
 void ServerTick(Server *server)
@@ -227,7 +194,7 @@ void ServerTick(Server *server)
         }
 
         Entity &entity = server->world->entities[player.entityId];
-        EntityTick(entity, nextCmd);
+        entity.Tick(nextCmd, SV_TICK_DT);
     }
 
     for (int entityId = yojimbo::MaxClients; entityId < SV_MAX_ENTITIES; entityId++) {
@@ -236,12 +203,14 @@ void ServerTick(Server *server)
         InputCmd aiCmd{};
         if (entity.velocity.x > 0) {
             if (entity.position.x + entity.size.x / 2 >= WINDOW_WIDTH) {
+                entity.velocity.x = 0;
                 aiCmd.west = true;
             } else {
                 aiCmd.east = true;
             }
         } else if (entity.velocity.x < 0) {
             if (entity.position.x - entity.size.x / 2 <= 0) {
+                entity.velocity.x = 0;
                 aiCmd.east = true;
             } else {
                 aiCmd.west = true;
@@ -250,7 +219,7 @@ void ServerTick(Server *server)
             aiCmd.east = true;
         }
 
-        EntityTick(entity, &aiCmd);
+        entity.Tick(&aiCmd, SV_TICK_DT);
     }
 
     server->tick++;
@@ -369,7 +338,7 @@ int main(int argc, char *argv[])
     bot1.color = SKYBLUE;
     bot1.size = { 32, 32 };
     bot1.position = { 200, 200 };
-    bot1.speed = WINDOW_HEIGHT / 4;
+    bot1.speed = 20;
     //-----------------
 
     while (!WindowShouldClose())

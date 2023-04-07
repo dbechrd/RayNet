@@ -13,6 +13,7 @@ struct Msg_S_EntitySnapshot : public yojimbo::Message
         serialize_uint32(stream, type);
         entitySnapshot.type = (EntityType)type;
         serialize_double(stream, entitySnapshot.serverTime);
+        serialize_uint32(stream, entitySnapshot.lastProcessedInputCmd);
         serialize_bits(stream, entitySnapshot.color.r, 8);
         serialize_bits(stream, entitySnapshot.color.g, 8);
         serialize_bits(stream, entitySnapshot.color.b, 8);

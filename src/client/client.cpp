@@ -74,19 +74,10 @@ void ClientStart(Client *client)
 
 void ClientSendInput(Client *client, const Controller &controller)
 {
-    const double now = GetTime();
-
-    static double lastNetTick = 0;
-    if (now - lastNetTick > CL_SEND_INPUT_DT) {
-        Msg_C_InputCommands *message = (Msg_C_InputCommands *)client->yj_client->CreateMessage(MSG_C_INPUT_COMMANDS);
-        if (message) {
-            if (controller.cmdQueue.data[0].north) {
-                printf("");
-            }
-            message->cmdQueue = controller.cmdQueue;
-            client->yj_client->SendMessage(CHANNEL_U_INPUT_COMMANDS, message);
-        }
-        lastNetTick = now;
+    Msg_C_InputCommands *message = (Msg_C_InputCommands *)client->yj_client->CreateMessage(MSG_C_INPUT_COMMANDS);
+    if (message) {
+        message->cmdQueue = controller.cmdQueue;
+        client->yj_client->SendMessage(CHANNEL_U_INPUT_COMMANDS, message);
     }
 }
 
@@ -108,6 +99,8 @@ void ClientProcessMessages(Client *client)
                 case MSG_S_ENTITY_SNAPSHOT:
                 {
                     Msg_S_EntitySnapshot *msgEntitySnapshot = (Msg_S_EntitySnapshot *)message;
+                    Entity &entity = client->world->entities[msgEntitySnapshot->entitySnapshot.id];
+                    entity.type = msgEntitySnapshot->entitySnapshot.type;
                     EntityGhost &ghost = client->world->ghosts[msgEntitySnapshot->entitySnapshot.id];
                     ghost.snapshots.push(msgEntitySnapshot->entitySnapshot);
                     break;
@@ -147,6 +140,7 @@ void ClientUpdate(Client *client)
         client->controller.cmdQueue.data[client->controller.cmdQueue.nextIdx++] = client->controller.cmdAccum;
         client->controller.cmdQueue.nextIdx %= CL_SEND_INPUT_COUNT;
         client->controller.cmdAccum = {};
+        client->controller.lastAccumSample = now;
     }
 
     // Send rolled up input at fixed interval
@@ -253,7 +247,12 @@ int main(int argc, char *argv[])
         DrawTexture(texture, (int)catPos.x, (int)catPos.y, WHITE);
 
         if (client->yj_client->IsConnected()) {
-            for (int entityId = 0; entityId < SV_MAX_ENTITIES; entityId++) {
+            for (uint32_t entityId = 0; entityId < SV_MAX_ENTITIES; entityId++) {
+                Entity &entity = client->world->entities[entityId];
+                if (entity.type == Entity_None) {
+                    continue;
+                }
+
                 EntityGhost &ghost = client->world->ghosts[entityId];
 
                 // TODO(dlb): Find snapshots nearest to (GetTime() - clientTimeDeltaVsServer)
@@ -284,7 +283,7 @@ int main(int argc, char *argv[])
                 //printf("client %d snapshot %d\n", clientIdx, snapshotBIdx);
     #if CL_DBG_SNAPSHOT_SHADOWS
                 for (int i = 0; i < ghost.snapshots.size(); i++) {
-                    Entity &entity = client->world->entities[ghost.entityId];
+                    Entity &entity = client->world->entities[entityId];
                     entity.ApplyStateInterpolated(ghost.snapshots[i], ghost.snapshots[i], 0.0);
                     entity.color = Fade(PINK, 0.5);
                     entity.Draw(font, i);
@@ -296,13 +295,34 @@ int main(int argc, char *argv[])
                             (snapshotB->serverTime - snapshotA->serverTime);
                 }
 
-                Entity &entity = client->world->entities[ghost.entityId];
-                entity.ApplyStateInterpolated(*snapshotA, *snapshotB, alpha);
+                if (entityId == client->yj_client->GetClientIndex()) {
+                    uint32_t lastProcessedInputCmd = 0;
+                    if (ghost.snapshots.size()) {
+                        const EntitySnapshot &latestSnapshot = ghost.snapshots.newest();
+                        entity.ApplyStateInterpolated(ghost.snapshots.newest(), ghost.snapshots.newest(), 0);
+                        lastProcessedInputCmd = latestSnapshot.lastProcessedInputCmd;
+                    }
+
+                    uint32_t oldestInput = client->controller.cmdQueue.oldest().seq;
+                    if (oldestInput > lastProcessedInputCmd + 1) {
+                        printf("%d inputs dropped.\n", oldestInput - lastProcessedInputCmd - 1);
+                    }
+
+                    for (size_t cmdIndex = 0; cmdIndex < client->controller.cmdQueue.size(); cmdIndex++) {
+                        InputCmd &inputCmd = client->controller.cmdQueue[cmdIndex];
+                        if (inputCmd.seq > lastProcessedInputCmd) {
+                            entity.Tick(&inputCmd, SV_TICK_DT);
+                        }
+                    }
+
+                    const double cmdAccumDt = now - client->controller.lastAccumSample;
+                    entity.Tick(&client->controller.cmdAccum, cmdAccumDt);
+                } else {
+                    entity.ApplyStateInterpolated(*snapshotA, *snapshotB, alpha);
+                }
+
                 if (entity.color.a) {
                     entity.Draw(font, entityId);
-                    //for (int i = 0; i < snapshotCount; i++) {
-                    //    entity.Draw(font, i);
-                    //}
                 }
             }
         }

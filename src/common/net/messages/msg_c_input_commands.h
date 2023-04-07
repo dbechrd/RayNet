@@ -9,7 +9,7 @@ struct Msg_C_InputCommands : public yojimbo::Message
     template <typename Stream> bool Serialize(Stream &stream)
     {
         for (int i = 0; i < CL_SEND_INPUT_COUNT; i++) {
-            InputCmd &cmd = cmdQueue.data[i];
+            InputCmd &cmd = cmdQueue[i];
             serialize_uint32(stream, cmd.seq);
             serialize_bool(stream, cmd.north);
             serialize_bool(stream, cmd.west);
