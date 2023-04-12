@@ -3,20 +3,22 @@
 #include <deque>
 #include <time.h>
 
+typedef RingBuffer<double, 64> FpsHistogram;
+
 struct Controller {
     int nextSeq {};  // next input command sequence number to use
 
-    InputCmd cmdAccum{};       // accumulate input until we're ready to sample
-    double lastAccumSample{};      // time we last sampled accumulator
-    double lastCommandMsgSent{};   // time we last sent inputs to the server
+    InputCmd cmdAccum{};          // accumulate input until we're ready to sample
+    double lastAccumSample{};     // time we last sampled accumulator
+    double lastCommandMsgSent{};  // time we last sent inputs to the server
     RingBuffer<InputCmd, CL_SEND_INPUT_COUNT> cmdQueue{};  // queue of last N input samples
 };
 
 struct Client {
     NetAdapter adapter;
     yojimbo::Client *yj_client{};
-
     double clientTimeDeltaVsServer{};  // how far ahead/behind client clock is
+    double lastNetTick{};              // for fixed-step networking updates
 
     Controller controller;
     ClientWorld *world{};
@@ -128,7 +130,7 @@ void ClientUpdate(Client *client)
 
     ClientProcessMessages(client);
 
-    // Accmulate input every frame
+    // Accmulate input every frame (probably not necessary.. let's try per tick)
     client->controller.cmdAccum.north |= IsKeyDown(KEY_W);
     client->controller.cmdAccum.west  |= IsKeyDown(KEY_A);
     client->controller.cmdAccum.south |= IsKeyDown(KEY_S);
@@ -144,10 +146,9 @@ void ClientUpdate(Client *client)
     }
 
     // Send rolled up input at fixed interval
-    static double lastNetTick = 0;
-    if (now - lastNetTick > CL_SEND_INPUT_DT) {
+    if (now - client->controller.lastCommandMsgSent > CL_SEND_INPUT_DT) {
         ClientSendInput(client, client->controller);
-        lastNetTick = now;
+        client->controller.lastCommandMsgSent = now;
     }
 
     client->yj_client->SendPackets();
@@ -161,6 +162,38 @@ void ClientStop(Client *client)
     client->controller = {};
     delete client->world;
     client->world = {};
+}
+
+void draw_fps_histogram(FpsHistogram &fpsHistogram, int x, int y)
+{
+    const float barPadding = 1.0f;
+    const float barWidth = 1.0f;
+    const float histoHeight = 20.0f;
+
+    float maxValue = 0.0f;
+    for (int i = 0; i < fpsHistogram.size(); i++) {
+        maxValue = MAX(maxValue, fpsHistogram[i]);
+    }
+
+    const float barScale = histoHeight / maxValue;
+
+    Vector2 cursor{};
+    cursor.x = x;
+    cursor.y = y;
+
+    for (int i = 0; i < fpsHistogram.size(); i++) {
+        float bottom = cursor.y + histoHeight;
+        float height = fpsHistogram[i] * barScale;
+
+        Rectangle rect{};
+        rect.x = cursor.x;
+        rect.y = bottom - height;
+        rect.width = barWidth;
+        rect.height = height;
+        DrawRectangleRec(rect, RAYWHITE);
+
+        cursor.x += barWidth + barPadding;
+    }
 }
 
 int main(int argc, char *argv[])
@@ -202,15 +235,19 @@ int main(int argc, char *argv[])
     Client *client = new Client;
     ClientStart(client);
 
+    FpsHistogram fpsHistogram{};
     double frameStart = GetTime();
     double frameDt = 0;
+    double frameDtSmooth = 60;
 
     while (!WindowShouldClose())
     {
         const double now = GetTime();
         {
             frameDt = now - frameStart;
+            frameDtSmooth = LERP(frameDtSmooth, frameDt, 0.1);
             frameStart = now;
+            fpsHistogram.push(frameDtSmooth);
         }
 
         //--------------------
@@ -232,7 +269,10 @@ int main(int argc, char *argv[])
 
         //--------------------
         // Networking
-        ClientUpdate(client);
+        if (now - client->lastNetTick > SV_TICK_DT) {
+            ClientUpdate(client);
+            client->lastNetTick = now;
+        }
         const double serverNow = now - client->clientTimeDeltaVsServer;
 
         //--------------------
@@ -335,10 +375,10 @@ int main(int argc, char *argv[])
 
         {
             float hud_x = 8.0f;
-            float hud_y = 8.0f;
+            float hud_y = 30.0f;
             char buf[128];
             #define DRAW_TEXT_MEASURE(measureRect, label, fmt, ...) { \
-                snprintf(buf, sizeof(buf), "%-12s : " fmt, label, __VA_ARGS__); \
+                snprintf(buf, sizeof(buf), "%-10s : " fmt, label, __VA_ARGS__); \
                 Vector2 position{ hud_x, hud_y }; \
                 DrawTextShadowEx(font, buf, position, (float)FONT_SIZE, RAYWHITE); \
                 if (measureRect) { \
@@ -351,10 +391,10 @@ int main(int argc, char *argv[])
             #define DRAW_TEXT(label, fmt, ...) \
                 DRAW_TEXT_MEASURE((Rectangle *)0, label, fmt, __VA_ARGS__)
 
-            DRAW_TEXT("serverTime", "%.02f", serverNow);
-            DRAW_TEXT("serverDelta", "%.02f", client->clientTimeDeltaVsServer);
+            DRAW_TEXT("serverTime", "%.02f (%s%.02f)", serverNow, client->clientTimeDeltaVsServer > 0 ? "+" : "", client->clientTimeDeltaVsServer);
             DRAW_TEXT("time", "%.02f", now);
             DRAW_TEXT("vsync", "%s", IsWindowState(FLAG_VSYNC_HINT) ? "on" : "off");
+            DRAW_TEXT("frameDt", "%0.2f fps (%.02f ms)", 1.0 / frameDt, frameDt);
 
             const char *clientStateStr = "unknown";
             yojimbo::ClientState clientState = client->yj_client->GetClientState();
@@ -381,7 +421,7 @@ int main(int argc, char *argv[])
                 yojimbo::NetworkInfo netInfo{};
                 client->yj_client->GetNetworkInfo(netInfo);
                 DRAW_TEXT("rtt", "%.02f", netInfo.RTT);
-                DRAW_TEXT("%% loss", "%.02f", netInfo.packetLoss);
+                DRAW_TEXT("% loss", "%.02f", netInfo.packetLoss);
                 DRAW_TEXT("sent (kbps)", "%.02f", netInfo.sentBandwidth);
                 DRAW_TEXT("recv (kbps)", "%.02f", netInfo.receivedBandwidth);
                 DRAW_TEXT("ack  (kbps)", "%.02f", netInfo.ackedBandwidth);
@@ -391,6 +431,8 @@ int main(int argc, char *argv[])
                 hud_x -= 16.0f;
             }
         }
+
+        draw_fps_histogram(fpsHistogram, 8, 8);
 
         EndDrawing();
     }

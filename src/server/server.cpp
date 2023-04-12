@@ -175,6 +175,7 @@ void ServerSendClientSnapshots(Server *server)
 
 void ServerTick(Server *server)
 {
+    // Update players
     for (int clientIdx = 0; clientIdx < yojimbo::MaxClients; clientIdx++) {
         if (!server->yj_server->IsClientConnected(clientIdx)) {
             continue;
@@ -197,8 +198,12 @@ void ServerTick(Server *server)
         entity.Tick(nextCmd, SV_TICK_DT);
     }
 
+    // Update bots
     for (int entityId = yojimbo::MaxClients; entityId < SV_MAX_ENTITIES; entityId++) {
         Entity &entity = server->world->entities[entityId];
+        if (entity.type != Entity_Bot) {
+            continue;
+        }
 
         InputCmd aiCmd{};
         if (entity.velocity.x > 0) {
@@ -325,7 +330,7 @@ int main(int argc, char *argv[])
 
     //--------------------
     // World
-    server->world = new ServerWorld; //(ServerWorld *)calloc(1, sizeof(*g_world));  // cuz fuck C++
+    server->world = new ServerWorld;
     if (!server->world) {
         printf("error: failed to allocate world\n");
         return 1;
@@ -338,7 +343,7 @@ int main(int argc, char *argv[])
     bot1.color = SKYBLUE;
     bot1.size = { 32, 32 };
     bot1.position = { 200, 200 };
-    bot1.speed = 20;
+    bot1.speed = 300;
     //-----------------
 
     while (!WindowShouldClose())
@@ -413,7 +418,7 @@ int main(int argc, char *argv[])
                     yojimbo::NetworkInfo netInfo{};
                     server->yj_server->GetNetworkInfo(clientIdx, netInfo);
                     DRAW_TEXT("  rtt", "%f.02", netInfo.RTT);
-                    DRAW_TEXT("  %% loss", "%.02f", netInfo.packetLoss);
+                    DRAW_TEXT("  % loss", "%.02f", netInfo.packetLoss);
                     DRAW_TEXT("  sent (kbps)", "%.02f", netInfo.sentBandwidth);
                     DRAW_TEXT("  recv (kbps)", "%.02f", netInfo.receivedBandwidth);
                     DRAW_TEXT("  ack  (kbps)", "%.02f", netInfo.ackedBandwidth);

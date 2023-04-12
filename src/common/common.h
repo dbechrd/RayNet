@@ -13,6 +13,8 @@
 // Helper macros
 
 #define LERP(a, b, alpha) ((a) + ((b) - (a)) * (alpha))
+#define MIN(a, b) ((a) < (b) ? (a) : (b))
+#define MAX(a, b) ((a) > (b) ? (a) : (b))
 
 // Networking
 
@@ -23,7 +25,7 @@
 #define SV_MAX_ENTITIES         128
 
 #define CL_PORT                 30000
-#define CL_SEND_INPUT_COUNT     16
+#define CL_SEND_INPUT_COUNT     8
 #define CL_SEND_INPUT_DT        (1.0/20.0)
 #define CL_SNAPSHOT_COUNT       16
 
