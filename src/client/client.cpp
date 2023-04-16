@@ -3,7 +3,13 @@
 #include <deque>
 #include <time.h>
 
-typedef RingBuffer<double, 64> FpsHistogram;
+static bool CL_DBG_SNAPSHOT_SHADOWS = true;
+
+struct HistoLine {
+    double fps;
+    bool doNetTick;
+};
+typedef RingBuffer<HistoLine, 64> FpsHistogram;
 
 struct Controller {
     int nextSeq {};  // next input command sequence number to use
@@ -43,7 +49,7 @@ void ClientTryConnect(Client *client)
     client->world = new ClientWorld;
 }
 
-void ClientStart(Client *client)
+void ClientStart(Client *client, double now)
 {
     if (!InitializeYojimbo()) {
         printf("yj: error: failed to initialize Yojimbo!\n");
@@ -63,7 +69,7 @@ void ClientStart(Client *client)
         yojimbo::Address("0.0.0.0"),
         config,
         client->adapter,
-        GetTime()
+        now
     );
 
     ClientTryConnect(client);
@@ -80,10 +86,12 @@ void ClientSendInput(Client *client, const Controller &controller)
     if (message) {
         message->cmdQueue = controller.cmdQueue;
         client->yj_client->SendMessage(CHANNEL_U_INPUT_COMMANDS, message);
+    } else {
+        printf("Failed to create INPUT_COMMANDS message.\n");
     }
 }
 
-void ClientProcessMessages(Client *client)
+void ClientProcessMessages(Client *client, double now)
 {
     for (int channelIdx = 0; channelIdx < CHANNEL_COUNT; channelIdx++) {
         yojimbo::Message *message = client->yj_client->ReceiveMessage(channelIdx);
@@ -95,7 +103,7 @@ void ClientProcessMessages(Client *client)
                     yojimbo::NetworkInfo netInfo{};
                     client->yj_client->GetNetworkInfo(netInfo);
                     const double approxServerNow = msgClockSync->serverTime + netInfo.RTT / 2000;
-                    client->clientTimeDeltaVsServer = GetTime() - approxServerNow;
+                    client->clientTimeDeltaVsServer = approxServerNow;
                     break;
                 }
                 case MSG_S_ENTITY_SNAPSHOT:
@@ -114,10 +122,8 @@ void ClientProcessMessages(Client *client)
     }
 }
 
-void ClientUpdate(Client *client)
+void ClientUpdate(Client *client, double now)
 {
-    const double now = GetTime();
-
     // NOTE(dlb): This sends keepalive packets
     client->yj_client->AdvanceTime(now);
 
@@ -128,16 +134,10 @@ void ClientUpdate(Client *client)
         return;
     }
 
-    ClientProcessMessages(client);
-
-    // Accmulate input every frame (probably not necessary.. let's try per tick)
-    client->controller.cmdAccum.north |= IsKeyDown(KEY_W);
-    client->controller.cmdAccum.west  |= IsKeyDown(KEY_A);
-    client->controller.cmdAccum.south |= IsKeyDown(KEY_S);
-    client->controller.cmdAccum.east  |= IsKeyDown(KEY_D);
+    ClientProcessMessages(client, now);
 
     // Sample accumulator once per server tick and push command into command queue
-    if (now - client->controller.lastAccumSample > SV_TICK_DT) {
+    if (now - client->controller.lastAccumSample >= CL_SAMPLE_INPUT_DT) {
         client->controller.cmdAccum.seq = ++client->controller.nextSeq;
         client->controller.cmdQueue.data[client->controller.cmdQueue.nextIdx++] = client->controller.cmdAccum;
         client->controller.cmdQueue.nextIdx %= CL_SEND_INPUT_COUNT;
@@ -146,7 +146,7 @@ void ClientUpdate(Client *client)
     }
 
     // Send rolled up input at fixed interval
-    if (now - client->controller.lastCommandMsgSent > CL_SEND_INPUT_DT) {
+    if (now - client->controller.lastCommandMsgSent >= CL_SEND_INPUT_DT) {
         ClientSendInput(client, client->controller);
         client->controller.lastCommandMsgSent = now;
     }
@@ -158,6 +158,7 @@ void ClientStop(Client *client)
 {
     client->yj_client->Disconnect();
     client->clientTimeDeltaVsServer = 0;
+    client->lastNetTick = 0;
 
     client->controller = {};
     delete client->world;
@@ -167,12 +168,12 @@ void ClientStop(Client *client)
 void draw_fps_histogram(FpsHistogram &fpsHistogram, int x, int y)
 {
     const float barPadding = 1.0f;
-    const float barWidth = 1.0f;
+    const float barWidth = 2.0f;
     const float histoHeight = 20.0f;
 
     float maxValue = 0.0f;
     for (int i = 0; i < fpsHistogram.size(); i++) {
-        maxValue = MAX(maxValue, fpsHistogram[i]);
+        maxValue = MAX(maxValue, fpsHistogram[i].fps);
     }
 
     const float barScale = histoHeight / maxValue;
@@ -183,14 +184,14 @@ void draw_fps_histogram(FpsHistogram &fpsHistogram, int x, int y)
 
     for (int i = 0; i < fpsHistogram.size(); i++) {
         float bottom = cursor.y + histoHeight;
-        float height = fpsHistogram[i] * barScale;
+        float height = fpsHistogram[i].fps * barScale;
 
         Rectangle rect{};
         rect.x = cursor.x;
         rect.y = bottom - height;
         rect.width = barWidth;
         rect.height = height;
-        DrawRectangleRec(rect, RAYWHITE);
+        DrawRectangleRec(rect, fpsHistogram[i].doNetTick ? GREEN : RAYWHITE);
 
         cursor.x += barWidth + barPadding;
     }
@@ -201,11 +202,12 @@ int main(int argc, char *argv[])
 {
     //SetTraceLogLevel(LOG_WARNING);
 
-    InitWindow(WINDOW_WIDTH, WINDOW_HEIGHT, "RayNet Client");
+    const double startedAt = GetTime();
     // NOTE(dlb): yojimbo uses rand() for network simulator and random_int()/random_float()
-    srand((unsigned int)GetTime());
+    srand((unsigned int)startedAt);
 
-    //SetWindowState(FLAG_VSYNC_HINT);  // Gahhhhhh Windows fucking sucks at this
+    InitWindow(WINDOW_WIDTH, WINDOW_HEIGHT, "RayNet Client");
+    SetWindowState(FLAG_VSYNC_HINT);  // Gahhhhhh Windows fucking sucks at this
     SetWindowState(FLAG_WINDOW_RESIZABLE);
     //SetWindowState(FLAG_FULLSCREEN_MODE);
 
@@ -218,22 +220,17 @@ int main(int argc, char *argv[])
     const int monitorHeight = GetMonitorHeight(0);
     Vector2 screenSize = { (float)GetRenderWidth(), (float)GetRenderHeight() };
 
-    SetWindowPosition(
-        monitorWidth / 2, // - (int)screenSize.x / 2,
-        monitorHeight / 2 - (int)screenSize.y / 2
-    );
-
-    Texture2D texture = LoadTexture("resources/cat.png");
+    //SetWindowPosition(
+    //    monitorWidth / 2, // - (int)screenSize.x / 2,
+    //    monitorHeight / 2 - (int)screenSize.y / 2
+    //);
 
     Font font = LoadFontEx(FONT_PATH, FONT_SIZE, 0, 0);
-
-    const char *text = "Meow MEOW meow MeOw!";
-    Vector2 textSize = MeasureTextEx(font, text, (float)FONT_SIZE, 1);
 
     //--------------------
     // Client
     Client *client = new Client;
-    ClientStart(client);
+    ClientStart(client, startedAt);
 
     FpsHistogram fpsHistogram{};
     double frameStart = GetTime();
@@ -243,20 +240,31 @@ int main(int argc, char *argv[])
     while (!WindowShouldClose())
     {
         const double now = GetTime();
-        {
-            frameDt = now - frameStart;
-            frameDtSmooth = LERP(frameDtSmooth, frameDt, 0.1);
-            frameStart = now;
-            fpsHistogram.push(frameDtSmooth);
-        }
+        bool doNetTick = now - client->lastNetTick >= SV_TICK_DT;
+        frameDt = now - frameStart;
+        frameDtSmooth = LERP(frameDtSmooth, frameDt, 0.1);
+        frameStart = now;
+        HistoLine histoLine{ frameDtSmooth, doNetTick };
+        fpsHistogram.push(histoLine);
+
+        //--------------------
+        // Accmulate input every frame
+        client->controller.cmdAccum.north |= IsKeyDown(KEY_W);
+        client->controller.cmdAccum.west |= IsKeyDown(KEY_A);
+        client->controller.cmdAccum.south |= IsKeyDown(KEY_S);
+        client->controller.cmdAccum.east |= IsKeyDown(KEY_D);
 
         //--------------------
         // Update
         if (IsKeyPressed(KEY_V)) {
+            bool isFullScreen = IsWindowState(FLAG_FULLSCREEN_MODE);
             if (IsWindowState(FLAG_VSYNC_HINT)) {
                 ClearWindowState(FLAG_VSYNC_HINT);
             } else {
                 SetWindowState(FLAG_VSYNC_HINT);
+                if (isFullScreen) {
+                    SetWindowState(FLAG_FULLSCREEN_MODE);
+                }
             }
         }
 
@@ -266,11 +274,14 @@ int main(int argc, char *argv[])
         if (IsKeyPressed(KEY_X)) {
             ClientStop(client);
         }
+        if (IsKeyPressed(KEY_Z)) {
+            CL_DBG_SNAPSHOT_SHADOWS = !CL_DBG_SNAPSHOT_SHADOWS;
+        }
 
         //--------------------
         // Networking
-        if (now - client->lastNetTick > SV_TICK_DT) {
-            ClientUpdate(client);
+        if (doNetTick) {
+            ClientUpdate(client, now);
             client->lastNetTick = now;
         }
         const double serverNow = now - client->clientTimeDeltaVsServer;
@@ -278,13 +289,7 @@ int main(int argc, char *argv[])
         //--------------------
         // Draw
         BeginDrawing();
-        ClearBackground(BROWN);
-
-        Vector2 catPos = {
-            WINDOW_WIDTH / 2.0f - texture.width / 2.0f,
-            WINDOW_HEIGHT / 2.0f - texture.height / 2.0f
-        };
-        DrawTexture(texture, (int)catPos.x, (int)catPos.y, WHITE);
+        ClearBackground(CLITERAL(Color){ 20, 60, 30, 255 });
 
         if (client->yj_client->IsConnected()) {
             for (uint32_t entityId = 0; entityId < SV_MAX_ENTITIES; entityId++) {
@@ -321,14 +326,15 @@ int main(int argc, char *argv[])
 
                 // TODO: Move this to DRAW_TEXT in the tree view if we need it
                 //printf("client %d snapshot %d\n", clientIdx, snapshotBIdx);
-    #if CL_DBG_SNAPSHOT_SHADOWS
-                for (int i = 0; i < ghost.snapshots.size(); i++) {
-                    Entity &entity = client->world->entities[entityId];
-                    entity.ApplyStateInterpolated(ghost.snapshots[i], ghost.snapshots[i], 0.0);
-                    entity.color = Fade(PINK, 0.5);
-                    entity.Draw(font, i);
+                if (CL_DBG_SNAPSHOT_SHADOWS) {
+                    for (int i = 0; i < ghost.snapshots.size(); i++) {
+                        Entity &entity = client->world->entities[entityId];
+                        entity.ApplyStateInterpolated(ghost.snapshots[i], ghost.snapshots[i], 0.0);
+                        entity.color = Fade(PINK, 0.5);
+                        entity.Draw(font, i);
+                    }
                 }
-    #endif
+
                 float alpha = 0;
                 if (snapshotB != snapshotA) {
                     alpha = (renderAt - snapshotA->serverTime) /
@@ -343,20 +349,29 @@ int main(int argc, char *argv[])
                         lastProcessedInputCmd = latestSnapshot.lastProcessedInputCmd;
                     }
 
-                    uint32_t oldestInput = client->controller.cmdQueue.oldest().seq;
-                    if (oldestInput > lastProcessedInputCmd + 1) {
-                        printf("%d inputs dropped.\n", oldestInput - lastProcessedInputCmd - 1);
-                    }
+                    Color entityColor = entity.color;
 
+                    const double cmdAccumDt = now - client->controller.lastAccumSample;
+                    //printf(" accumDt=%5.2f", cmdAccumDt);
+                    //printf("  %u |", lastProcessedInputCmd);
                     for (size_t cmdIndex = 0; cmdIndex < client->controller.cmdQueue.size(); cmdIndex++) {
                         InputCmd &inputCmd = client->controller.cmdQueue[cmdIndex];
                         if (inputCmd.seq > lastProcessedInputCmd) {
+                            //printf(" %d", inputCmd.seq);
                             entity.Tick(&inputCmd, SV_TICK_DT);
+                            //entity.color = Fade(SKYBLUE, 0.5);
+                            //entity.Draw(font, inputCmd.seq);
                         }
                     }
-
-                    const double cmdAccumDt = now - client->controller.lastAccumSample;
                     entity.Tick(&client->controller.cmdAccum, cmdAccumDt);
+                    entity.color = Fade(entityColor, 0.5f);
+
+                    uint32_t oldestInput = client->controller.cmdQueue.oldest().seq;
+                    if (oldestInput > lastProcessedInputCmd + 1) {
+                        //printf(" (%d inputs dropped)", oldestInput - lastProcessedInputCmd - 1);
+                    }
+
+                    //putchar('\n');
                 } else {
                     entity.ApplyStateInterpolated(*snapshotA, *snapshotB, alpha);
                 }
@@ -367,18 +382,12 @@ int main(int argc, char *argv[])
             }
         }
 
-        Vector2 textPos = {
-            WINDOW_WIDTH / 2 - textSize.x / 2,
-            catPos.y + texture.height + 4
-        };
-        DrawTextShadowEx(font, text, textPos, (float)FONT_SIZE, RAYWHITE);
-
         {
             float hud_x = 8.0f;
             float hud_y = 30.0f;
             char buf[128];
             #define DRAW_TEXT_MEASURE(measureRect, label, fmt, ...) { \
-                snprintf(buf, sizeof(buf), "%-10s : " fmt, label, __VA_ARGS__); \
+                snprintf(buf, sizeof(buf), "%-11s : " fmt, label, __VA_ARGS__); \
                 Vector2 position{ hud_x, hud_y }; \
                 DrawTextShadowEx(font, buf, position, (float)FONT_SIZE, RAYWHITE); \
                 if (measureRect) { \
@@ -391,10 +400,10 @@ int main(int argc, char *argv[])
             #define DRAW_TEXT(label, fmt, ...) \
                 DRAW_TEXT_MEASURE((Rectangle *)0, label, fmt, __VA_ARGS__)
 
-            DRAW_TEXT("serverTime", "%.02f (%s%.02f)", serverNow, client->clientTimeDeltaVsServer > 0 ? "+" : "", client->clientTimeDeltaVsServer);
-            DRAW_TEXT("time", "%.02f", now);
+            DRAW_TEXT("serverTime", "%.2f (%s%.2f)", serverNow, client->clientTimeDeltaVsServer > 0 ? "+" : "", client->clientTimeDeltaVsServer);
+            DRAW_TEXT("time", "%.2f", now);
             DRAW_TEXT("vsync", "%s", IsWindowState(FLAG_VSYNC_HINT) ? "on" : "off");
-            DRAW_TEXT("frameDt", "%0.2f fps (%.02f ms)", 1.0 / frameDt, frameDt);
+            DRAW_TEXT("frameDt", "%.2f fps (%.2f ms)", 1.0 / frameDt, frameDt);
 
             const char *clientStateStr = "unknown";
             yojimbo::ClientState clientState = client->yj_client->GetClientState();
@@ -420,11 +429,11 @@ int main(int argc, char *argv[])
                 hud_x += 16.0f;
                 yojimbo::NetworkInfo netInfo{};
                 client->yj_client->GetNetworkInfo(netInfo);
-                DRAW_TEXT("rtt", "%.02f", netInfo.RTT);
-                DRAW_TEXT("% loss", "%.02f", netInfo.packetLoss);
-                DRAW_TEXT("sent (kbps)", "%.02f", netInfo.sentBandwidth);
-                DRAW_TEXT("recv (kbps)", "%.02f", netInfo.receivedBandwidth);
-                DRAW_TEXT("ack  (kbps)", "%.02f", netInfo.ackedBandwidth);
+                DRAW_TEXT("rtt", "%.2f", netInfo.RTT);
+                DRAW_TEXT("% loss", "%.2f", netInfo.packetLoss);
+                DRAW_TEXT("sent (kbps)", "%.2f", netInfo.sentBandwidth);
+                DRAW_TEXT("recv (kbps)", "%.2f", netInfo.receivedBandwidth);
+                DRAW_TEXT("ack  (kbps)", "%.2f", netInfo.ackedBandwidth);
                 DRAW_TEXT("sent (pckt)", "%" PRIu64, netInfo.numPacketsSent);
                 DRAW_TEXT("recv (pckt)", "%" PRIu64, netInfo.numPacketsReceived);
                 DRAW_TEXT("ack  (pckt)", "%" PRIu64, netInfo.numPacketsAcked);
@@ -435,6 +444,7 @@ int main(int argc, char *argv[])
         draw_fps_histogram(fpsHistogram, 8, 8);
 
         EndDrawing();
+        //yojimbo_sleep(0.001);
     }
 
     //--------------------
@@ -446,7 +456,6 @@ int main(int argc, char *argv[])
     ShutdownYojimbo();
 
     UnloadFont(font);
-    UnloadTexture(texture);
     CloseWindow();
 
     return 0;

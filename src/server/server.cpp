@@ -250,19 +250,15 @@ void ServerSendClockSync(Server *server)
     }
 }
 
-void ServerUpdate(Server *server)
+void ServerUpdate(Server *server, double now)
 {
     if (!server->yj_server->IsRunning())
         return;
 
-    const double now = GetTime();
-    const double dt = now - server->yj_server->GetTime();
     server->yj_server->AdvanceTime(now);
-
     server->yj_server->ReceivePackets();
     ServerProcessMessages(server);
 
-    server->tickAccum += dt;
     bool hasDelta = false;
     while (server->tickAccum >= SV_TICK_DT) {
         ServerTick(server);
@@ -296,7 +292,7 @@ int main(int argc, char *argv[])
     // NOTE(dlb): yojimbo uses rand() for network simulator and random_int()/random_float()
     srand((unsigned int)GetTime());
 
-    SetWindowState(FLAG_VSYNC_HINT);
+    //SetWindowState(FLAG_VSYNC_HINT);
     SetWindowState(FLAG_WINDOW_RESIZABLE);
 
     Image icon = LoadImage("resources/server.png");
@@ -308,10 +304,10 @@ int main(int argc, char *argv[])
     const int monitorHeight = GetMonitorHeight(0);
     Vector2 screenSize = { (float)GetRenderWidth(), (float)GetRenderHeight() };
 
-    SetWindowPosition(
-        monitorWidth / 2 - (int)screenSize.x, // / 2,
-        monitorHeight / 2 - (int)screenSize.y / 2
-    );
+    //SetWindowPosition(
+    //    monitorWidth / 2 - (int)screenSize.x, // / 2,
+    //    monitorHeight / 2 - (int)screenSize.y / 2
+    //);
 
     // NOTE: Textures MUST be loaded after Window initialization (OpenGL context is required)
     Texture2D texture = LoadTexture("resources/cat.png");
@@ -346,9 +342,20 @@ int main(int argc, char *argv[])
     bot1.speed = 300;
     //-----------------
 
+    double frameStart = GetTime();
+    double frameDt = 0;
+
     while (!WindowShouldClose())
     {
-        ServerUpdate(server);
+        const double now = GetTime();
+        frameDt = now - frameStart;
+        frameStart = now;
+
+        server->tickAccum += frameDt;
+        if (server->tickAccum >= SV_TICK_DT) {
+            printf("[%.2f][%.2f] ServerUpdate %d\n", server->tickAccum, now, (int)server->tick);
+            ServerUpdate(server, now);
+        }
 
         //--------------------
         // Draw
@@ -431,6 +438,7 @@ int main(int argc, char *argv[])
         }
 
         EndDrawing();
+        yojimbo_sleep(0.001);
     }
 
     //--------------------

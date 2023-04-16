@@ -34,6 +34,8 @@ void Entity::Tick(const InputCmd *input, double dt) {
             accelDelta.x *= invLength;
             accelDelta.y *= invLength;
         }
+    } else {
+        printf("No input\n");
     }
 
     velocity.x += accelDelta.x * speed;
@@ -68,12 +70,21 @@ void Entity::ApplyStateInterpolated(const EntitySnapshot &a, const EntitySnapsho
 }
 
 void Entity::Draw(const Font &font, int clientIdx) {
+#if 1
     DrawRectanglePro(
         { position.x, position.y, size.x, size.y },
         { size.x / 2, size.y },
         0,
         color
     );
+#else
+    DrawRectangleRounded(
+        { position.x, position.y, size.x, size.y },
+        0.5f,
+        4,
+        color
+    );
+#endif
     const char *str = TextFormat("%d", clientIdx);
     Vector2 strSize = MeasureTextEx(font, str, (float)FONT_SIZE, 1.0f);
     DrawTextShadowEx(font, str,

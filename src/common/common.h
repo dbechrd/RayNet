@@ -4,8 +4,8 @@
 
 // Stuff that probably shouldn't be here
 
-#define WINDOW_WIDTH 800
-#define WINDOW_HEIGHT 900
+#define WINDOW_WIDTH 1920//800
+#define WINDOW_HEIGHT 1080//900
 
 #define FONT_PATH "resources/Hack-Bold.ttf"
 #define FONT_SIZE 20
@@ -25,8 +25,7 @@
 #define SV_MAX_ENTITIES         128
 
 #define CL_PORT                 30000
+#define CL_SAMPLE_INPUT_DT      SV_TICK_DT //(1.0/120.0)
 #define CL_SEND_INPUT_COUNT     8
-#define CL_SEND_INPUT_DT        (1.0/20.0)
+#define CL_SEND_INPUT_DT        SV_TICK_DT //(1.0/120.0)
 #define CL_SNAPSHOT_COUNT       16
-
-#define CL_DBG_SNAPSHOT_SHADOWS 1
