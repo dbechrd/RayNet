@@ -190,6 +190,7 @@ void ServerTick(Server *server)
             if (cmd.seq > player.lastInputSeq) {
                 nextCmd = &cmd;
                 player.lastInputSeq = nextCmd->seq;
+                printf("Processed command %d\n", (int32_t)server->tick - (int32_t)nextCmd->seq);
                 break;
             }
         }
@@ -304,10 +305,10 @@ int main(int argc, char *argv[])
     const int monitorHeight = GetMonitorHeight(0);
     Vector2 screenSize = { (float)GetRenderWidth(), (float)GetRenderHeight() };
 
-    //SetWindowPosition(
-    //    monitorWidth / 2 - (int)screenSize.x, // / 2,
-    //    monitorHeight / 2 - (int)screenSize.y / 2
-    //);
+    SetWindowPosition(
+        monitorWidth / 2 - (int)screenSize.x, // / 2,
+        monitorHeight / 2 - (int)screenSize.y / 2
+    );
 
     // NOTE: Textures MUST be loaded after Window initialization (OpenGL context is required)
     Texture2D texture = LoadTexture("resources/cat.png");
@@ -353,7 +354,7 @@ int main(int argc, char *argv[])
 
         server->tickAccum += frameDt;
         if (server->tickAccum >= SV_TICK_DT) {
-            printf("[%.2f][%.2f] ServerUpdate %d\n", server->tickAccum, now, (int)server->tick);
+            //printf("[%.2f][%.2f] ServerUpdate %d\n", server->tickAccum, now, (int)server->tick);
             ServerUpdate(server, now);
         }
 

@@ -14,9 +14,10 @@ typedef RingBuffer<HistoLine, 64> FpsHistogram;
 struct Controller {
     int nextSeq {};  // next input command sequence number to use
 
-    InputCmd cmdAccum{};          // accumulate input until we're ready to sample
-    double lastAccumSample{};     // time we last sampled accumulator
-    double lastCommandMsgSent{};  // time we last sent inputs to the server
+    InputCmd cmdAccum{};         // accumulate input until we're ready to sample
+    double sampleInputAccum{};   // when this fills up, we are due to sample again
+    double lastInputSampleAt{};  // time we last sampled accumulator
+    double lastCommandSentAt{};  // time we last sent inputs to the server
     RingBuffer<InputCmd, CL_SEND_INPUT_COUNT> cmdQueue{};  // queue of last N input samples
 };
 
@@ -24,6 +25,7 @@ struct Client {
     NetAdapter adapter;
     yojimbo::Client *yj_client{};
     double clientTimeDeltaVsServer{};  // how far ahead/behind client clock is
+    double netTickAccum{};             // when this fills up, a net tick is due
     double lastNetTick{};              // for fixed-step networking updates
 
     Controller controller;
@@ -137,18 +139,18 @@ void ClientUpdate(Client *client, double now)
     ClientProcessMessages(client, now);
 
     // Sample accumulator once per server tick and push command into command queue
-    if (now - client->controller.lastAccumSample >= CL_SAMPLE_INPUT_DT) {
+    if (client->controller.sampleInputAccum >= CL_SAMPLE_INPUT_DT) {
         client->controller.cmdAccum.seq = ++client->controller.nextSeq;
-        client->controller.cmdQueue.data[client->controller.cmdQueue.nextIdx++] = client->controller.cmdAccum;
-        client->controller.cmdQueue.nextIdx %= CL_SEND_INPUT_COUNT;
+        client->controller.cmdQueue.push(client->controller.cmdAccum);
         client->controller.cmdAccum = {};
-        client->controller.lastAccumSample = now;
+        client->controller.lastInputSampleAt = now;
+        client->controller.sampleInputAccum -= CL_SAMPLE_INPUT_DT;
     }
 
     // Send rolled up input at fixed interval
-    if (now - client->controller.lastCommandMsgSent >= CL_SEND_INPUT_DT) {
+    if (now - client->controller.lastCommandSentAt >= CL_SEND_INPUT_DT) {
         ClientSendInput(client, client->controller);
-        client->controller.lastCommandMsgSent = now;
+        client->controller.lastCommandSentAt = now;
     }
 
     client->yj_client->SendPackets();
@@ -220,10 +222,10 @@ int main(int argc, char *argv[])
     const int monitorHeight = GetMonitorHeight(0);
     Vector2 screenSize = { (float)GetRenderWidth(), (float)GetRenderHeight() };
 
-    //SetWindowPosition(
-    //    monitorWidth / 2, // - (int)screenSize.x / 2,
-    //    monitorHeight / 2 - (int)screenSize.y / 2
-    //);
+    SetWindowPosition(
+        monitorWidth / 2, // - (int)screenSize.x / 2,
+        monitorHeight / 2 - (int)screenSize.y / 2
+    );
 
     Font font = LoadFontEx(FONT_PATH, FONT_SIZE, 0, 0);
 
@@ -240,19 +242,24 @@ int main(int argc, char *argv[])
     while (!WindowShouldClose())
     {
         const double now = GetTime();
-        bool doNetTick = now - client->lastNetTick >= SV_TICK_DT;
-        frameDt = now - frameStart;
+
+        frameDt = MIN(now - frameStart, SV_TICK_DT);  // arbitrary limit for now
         frameDtSmooth = LERP(frameDtSmooth, frameDt, 0.1);
         frameStart = now;
+
+        client->controller.sampleInputAccum += frameDt;
+        client->netTickAccum += frameDt;
+        bool doNetTick = client->netTickAccum >= SV_TICK_DT;
+
         HistoLine histoLine{ frameDtSmooth, doNetTick };
         fpsHistogram.push(histoLine);
 
         //--------------------
         // Accmulate input every frame
         client->controller.cmdAccum.north |= IsKeyDown(KEY_W);
-        client->controller.cmdAccum.west |= IsKeyDown(KEY_A);
+        client->controller.cmdAccum.west  |= IsKeyDown(KEY_A);
         client->controller.cmdAccum.south |= IsKeyDown(KEY_S);
-        client->controller.cmdAccum.east |= IsKeyDown(KEY_D);
+        client->controller.cmdAccum.east  |= IsKeyDown(KEY_D);
 
         //--------------------
         // Update
@@ -283,6 +290,7 @@ int main(int argc, char *argv[])
         if (doNetTick) {
             ClientUpdate(client, now);
             client->lastNetTick = now;
+            client->netTickAccum -= SV_TICK_DT;
         }
         const double serverNow = now - client->clientTimeDeltaVsServer;
 
@@ -351,7 +359,7 @@ int main(int argc, char *argv[])
 
                     Color entityColor = entity.color;
 
-                    const double cmdAccumDt = now - client->controller.lastAccumSample;
+                    const double cmdAccumDt = now - client->controller.lastInputSampleAt;
                     //printf(" accumDt=%5.2f", cmdAccumDt);
                     //printf("  %u |", lastProcessedInputCmd);
                     for (size_t cmdIndex = 0; cmdIndex < client->controller.cmdQueue.size(); cmdIndex++) {
@@ -363,8 +371,8 @@ int main(int argc, char *argv[])
                             //entity.Draw(font, inputCmd.seq);
                         }
                     }
-                    entity.Tick(&client->controller.cmdAccum, cmdAccumDt);
-                    entity.color = Fade(entityColor, 0.5f);
+                    //entity.Tick(&client->controller.cmdAccum, cmdAccumDt);
+                    //entity.color = Fade(entityColor, 0.5f);
 
                     uint32_t oldestInput = client->controller.cmdQueue.oldest().seq;
                     if (oldestInput > lastProcessedInputCmd + 1) {

@@ -34,15 +34,14 @@ void Entity::Tick(const InputCmd *input, double dt) {
             accelDelta.x *= invLength;
             accelDelta.y *= invLength;
         }
-    } else {
-        printf("No input\n");
     }
 
     velocity.x += accelDelta.x * speed;
     velocity.y += accelDelta.y * speed;
 
-    velocity.x *= 0.5f;
-    velocity.y *= 0.5f;
+    const float drag = 8.0f;
+    velocity.x *= (1.0f - drag * dt);
+    velocity.y *= (1.0f - drag * dt);
 
     position.x += velocity.x * dt;
     position.y += velocity.y * dt;

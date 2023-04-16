@@ -5,10 +5,6 @@
     <ClCompile Include="src\common\shared_lib.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="src\common\shared_lib.h" />
-    <ClInclude Include="src\server\resource.h" />
-  </ItemGroup>
-  <ItemGroup>
     <ResourceCompile Include="src\server\Server.rc" />
   </ItemGroup>
   <ItemGroup>
