@@ -219,15 +219,23 @@ int main(int argc, char *argv[])
     SetWindowIcon(icon);
     UnloadImage(icon);
 
-    // NOTE: There could be other, bigger monitors
-    const int monitorWidth = GetMonitorWidth(0);
-    const int monitorHeight = GetMonitorHeight(0);
     Vector2 screenSize = { (float)GetRenderWidth(), (float)GetRenderHeight() };
 
+#if CL_DBG_ONE_SCREEN
+    const int monitorWidth = GetMonitorWidth(0);
+    const int monitorHeight = GetMonitorHeight(0);
     SetWindowPosition(
         monitorWidth / 2, // - (int)screenSize.x / 2,
         monitorHeight / 2 - (int)screenSize.y / 2
     );
+#elif CL_DBG_TWO_SCREEN
+    const int monitorWidth = GetMonitorWidth(0);
+    const int monitorHeight = GetMonitorHeight(0);
+    SetWindowPosition(
+        monitorWidth / 2 - (int)screenSize.x / 2,
+        monitorHeight / 2 - (int)screenSize.y / 2
+    );
+#endif
 
     Font font = LoadFontEx(FONT_PATH, FONT_SIZE, 0, 0);
 

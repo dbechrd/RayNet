@@ -300,15 +300,24 @@ int main(int argc, char *argv[])
     SetWindowIcon(icon);
     UnloadImage(icon);
 
-    // NOTE: There could be other, bigger monitors
-    const int monitorWidth = GetMonitorWidth(0);
-    const int monitorHeight = GetMonitorHeight(0);
     Vector2 screenSize = { (float)GetRenderWidth(), (float)GetRenderHeight() };
 
+#if CL_DBG_ONE_SCREEN
+    const int monitorWidth = GetMonitorWidth(0);
+    const int monitorHeight = GetMonitorHeight(0);
     SetWindowPosition(
         monitorWidth / 2 - (int)screenSize.x, // / 2,
         monitorHeight / 2 - (int)screenSize.y / 2
     );
+#elif CL_DBG_TWO_SCREEN
+    const int monitorWidth = GetMonitorWidth(1);
+    const int monitorHeight = GetMonitorHeight(1);
+    Vector2 monitor2 = GetMonitorPosition(1);
+    SetWindowPosition(
+        monitor2.x + monitorWidth / 2 - (int)screenSize.x / 2,
+        monitor2.y + monitorHeight / 2 - (int)screenSize.y / 2
+    );
+#endif
 
     // NOTE: Textures MUST be loaded after Window initialization (OpenGL context is required)
     Texture2D texture = LoadTexture("resources/cat.png");
