@@ -337,7 +337,7 @@ int main(int argc, char *argv[])
     // Bots
     Entity &bot1 = server->world->entities[65];  // todo alloc index (freelist?)
     bot1.type = Entity_Bot;
-    bot1.color = SKYBLUE;
+    bot1.color = DARKPURPLE;
     bot1.size = { 32, 32 };
     bot1.position = { 200, 200 };
     bot1.speed = 300;

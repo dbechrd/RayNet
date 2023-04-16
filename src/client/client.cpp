@@ -4,6 +4,7 @@
 #include <time.h>
 
 static bool CL_DBG_SNAPSHOT_SHADOWS = true;
+static bool CL_DBG_PAUSE_HISTOGRAM = false;
 
 struct HistoLine {
     double fps;
@@ -32,7 +33,7 @@ struct Client {
     ClientWorld *world{};
 };
 
-void ClientTryConnect(Client *client)
+void ClientTryConnect(Client *client, double now)
 {
     if (!client->yj_client->IsDisconnected()) {
         return;
@@ -74,7 +75,7 @@ void ClientStart(Client *client, double now)
         now
     );
 
-    ClientTryConnect(client);
+    ClientTryConnect(client, now);
 #if 0
     char addressString[256];
     client->GetAddress().ToString(addressString, sizeof(addressString));
@@ -105,7 +106,7 @@ void ClientProcessMessages(Client *client, double now)
                     yojimbo::NetworkInfo netInfo{};
                     client->yj_client->GetNetworkInfo(netInfo);
                     const double approxServerNow = msgClockSync->serverTime + netInfo.RTT / 2000;
-                    client->clientTimeDeltaVsServer = approxServerNow;
+                    client->clientTimeDeltaVsServer = now - approxServerNow;
                     break;
                 }
                 case MSG_S_ENTITY_SNAPSHOT:
@@ -160,6 +161,7 @@ void ClientStop(Client *client)
 {
     client->yj_client->Disconnect();
     client->clientTimeDeltaVsServer = 0;
+    client->netTickAccum = 0;
     client->lastNetTick = 0;
 
     client->controller = {};
@@ -251,8 +253,10 @@ int main(int argc, char *argv[])
         client->netTickAccum += frameDt;
         bool doNetTick = client->netTickAccum >= SV_TICK_DT;
 
-        HistoLine histoLine{ frameDtSmooth, doNetTick };
-        fpsHistogram.push(histoLine);
+        if (!CL_DBG_PAUSE_HISTOGRAM) {
+            HistoLine histoLine{ frameDtSmooth, doNetTick };
+            fpsHistogram.push(histoLine);
+        }
 
         //--------------------
         // Accmulate input every frame
@@ -276,13 +280,16 @@ int main(int argc, char *argv[])
         }
 
         if (IsKeyPressed(KEY_C)) {
-            ClientTryConnect(client);
+            ClientTryConnect(client, now);
         }
         if (IsKeyPressed(KEY_X)) {
             ClientStop(client);
         }
         if (IsKeyPressed(KEY_Z)) {
             CL_DBG_SNAPSHOT_SHADOWS = !CL_DBG_SNAPSHOT_SHADOWS;
+        }
+        if (IsKeyPressed(KEY_H)) {
+            CL_DBG_PAUSE_HISTOGRAM = !CL_DBG_PAUSE_HISTOGRAM;
         }
 
         //--------------------
@@ -309,7 +316,7 @@ int main(int argc, char *argv[])
                 EntityGhost &ghost = client->world->ghosts[entityId];
 
                 // TODO(dlb): Find snapshots nearest to (GetTime() - clientTimeDeltaVsServer)
-                const double renderAt = serverNow - SV_TICK_DT * 3;
+                const double renderAt = serverNow - SV_TICK_DT;
 
                 size_t snapshotBIdx = 0;
                 while (snapshotBIdx < ghost.snapshots.size()
@@ -338,7 +345,7 @@ int main(int argc, char *argv[])
                     for (int i = 0; i < ghost.snapshots.size(); i++) {
                         Entity &entity = client->world->entities[entityId];
                         entity.ApplyStateInterpolated(ghost.snapshots[i], ghost.snapshots[i], 0.0);
-                        entity.color = Fade(PINK, 0.5);
+                        entity.color = Fade(GRAY, 0.5);
                         entity.Draw(font, i);
                     }
                 }
@@ -367,8 +374,10 @@ int main(int argc, char *argv[])
                         if (inputCmd.seq > lastProcessedInputCmd) {
                             //printf(" %d", inputCmd.seq);
                             entity.Tick(&inputCmd, SV_TICK_DT);
-                            entity.color = Fade(SKYBLUE, 0.5);
-                            entity.Draw(font, inputCmd.seq);
+                            if (CL_DBG_SNAPSHOT_SHADOWS) {
+                                entity.color = Fade(SKYBLUE, 0.5);
+                                entity.Draw(font, inputCmd.seq);
+                            }
                         }
                     }
                     //entity.Tick(&client->controller.cmdAccum, cmdAccumDt);

@@ -28,4 +28,4 @@
 #define CL_SAMPLE_INPUT_DT      SV_TICK_DT //(1.0/120.0)
 #define CL_SEND_INPUT_COUNT     4
 #define CL_SEND_INPUT_DT        SV_TICK_DT //(1.0/120.0)
-#define CL_SNAPSHOT_COUNT       8
+#define CL_SNAPSHOT_COUNT       16
