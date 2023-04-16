@@ -190,7 +190,7 @@ void ServerTick(Server *server)
             if (cmd.seq > player.lastInputSeq) {
                 nextCmd = &cmd;
                 player.lastInputSeq = nextCmd->seq;
-                printf("Processed command %d\n", (int32_t)server->tick - (int32_t)nextCmd->seq);
+                //printf("Processed command %d\n", (int32_t)server->tick - (int32_t)nextCmd->seq);
                 break;
             }
         }

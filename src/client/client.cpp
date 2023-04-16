@@ -367,12 +367,12 @@ int main(int argc, char *argv[])
                         if (inputCmd.seq > lastProcessedInputCmd) {
                             //printf(" %d", inputCmd.seq);
                             entity.Tick(&inputCmd, SV_TICK_DT);
-                            //entity.color = Fade(SKYBLUE, 0.5);
-                            //entity.Draw(font, inputCmd.seq);
+                            entity.color = Fade(SKYBLUE, 0.5);
+                            entity.Draw(font, inputCmd.seq);
                         }
                     }
                     //entity.Tick(&client->controller.cmdAccum, cmdAccumDt);
-                    //entity.color = Fade(entityColor, 0.5f);
+                    entity.color = entityColor;
 
                     uint32_t oldestInput = client->controller.cmdQueue.oldest().seq;
                     if (oldestInput > lastProcessedInputCmd + 1) {
