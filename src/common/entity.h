@@ -22,5 +22,5 @@ struct Entity {
     void Serialize(uint32_t entityId, EntitySnapshot &entitySnapshot, double serverTime, uint32_t lastProcessedInputCmd);
     void Tick(const InputCmd *input, double dt);
     void ApplyStateInterpolated(const EntitySnapshot &a, const EntitySnapshot &b, double alpha);
-    void Draw(const Font &font, int clientIdx);
+    void Draw(const Font &font, int clientIdx, float scale);
 };

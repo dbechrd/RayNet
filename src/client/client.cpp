@@ -239,6 +239,9 @@ int main(int argc, char *argv[])
 
     Font font = LoadFontEx(FONT_PATH, FONT_SIZE, 0, 0);
 
+    // NOTE: Textures MUST be loaded after Window initialization (OpenGL context is required)
+    Texture2D texture = LoadTexture("resources/bumber.png");
+
     //--------------------
     // Client
     Client *client = new Client;
@@ -314,6 +317,12 @@ int main(int argc, char *argv[])
         BeginDrawing();
         ClearBackground(CLITERAL(Color){ 20, 60, 30, 255 });
 
+        Vector2 catPos = {
+            WINDOW_WIDTH / 2.0f - texture.width / 2.0f,
+            WINDOW_HEIGHT / 2.0f - texture.height / 2.0f
+        };
+        DrawTexture(texture, (int)catPos.x, (int)catPos.y, WHITE);
+
         if (client->yj_client->IsConnected()) {
             for (uint32_t entityId = 0; entityId < SV_MAX_ENTITIES; entityId++) {
                 Entity &entity = client->world->entities[entityId];
@@ -354,7 +363,9 @@ int main(int argc, char *argv[])
                         Entity &entity = client->world->entities[entityId];
                         entity.ApplyStateInterpolated(ghost.snapshots[i], ghost.snapshots[i], 0.0);
                         entity.color = Fade(GRAY, 0.5);
-                        entity.Draw(font, i);
+
+                        const float scalePer = 1.0f / (CL_SNAPSHOT_COUNT + 1);
+                        entity.Draw(font, i, scalePer + i * scalePer);
                     }
                 }
 
@@ -383,8 +394,9 @@ int main(int argc, char *argv[])
                             //printf(" %d", inputCmd.seq);
                             entity.Tick(&inputCmd, SV_TICK_DT);
                             if (CL_DBG_SNAPSHOT_SHADOWS) {
-                                entity.color = Fade(SKYBLUE, 0.5);
-                                entity.Draw(font, inputCmd.seq);
+                                //entity.color = Fade(SKYBLUE, 0.5);
+                                entity.color = Fade(DARKGRAY, 0.5);
+                                entity.Draw(font, inputCmd.seq, 1);
                             }
                         }
                     }
@@ -402,7 +414,7 @@ int main(int argc, char *argv[])
                 }
 
                 if (entity.color.a) {
-                    entity.Draw(font, entityId);
+                    entity.Draw(font, entityId, 1);
                 }
             }
         }
@@ -480,6 +492,7 @@ int main(int argc, char *argv[])
     delete client;
     ShutdownYojimbo();
 
+    UnloadTexture(texture);
     UnloadFont(font);
     CloseWindow();
 

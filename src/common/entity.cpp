@@ -68,14 +68,58 @@ void Entity::ApplyStateInterpolated(const EntitySnapshot &a, const EntitySnapsho
     position.y = LERP(a.position.y, b.position.y, (float)alpha);
 }
 
-void Entity::Draw(const Font &font, int clientIdx) {
+// TODO: Refactor out into drawrectangle or some shit
+void Entity::Draw(const Font &font, int clientIdx, float scale) {
+#if 1
+    // Scale
+    float sx = size.x * scale;
+    float sy = size.y * scale;
+
+    // Position (after scaling)
+    float x = position.x;
+    float y = position.y - (size.y - sy) / 2;
+
 #if 1
     DrawRectanglePro(
-        { position.x, position.y, size.x, size.y },
-        { size.x / 2, size.y },
+        { x, y, sx, sy },
+        { sx / 2, sy },
         0,
         color
     );
+#else
+    DrawRectanglePro(
+        { x, y, sx, sy },
+        { sx / 2, sy },
+        0,
+        RED
+    );
+    DrawRectangleLinesEx({ x - sx / 2, y - sy, sx, sy }, 10, BLACK);
+
+    DrawRectanglePro(
+        { x + sx, y, sx, sy },
+        { sx / 2, sy },
+        0,
+        GREEN
+    );
+    DrawRectangleLinesEx({ x + sx - sx / 2, y - sy, sx, sy }, 10, BLACK);
+
+    DrawRectanglePro(
+        { x, y + sy, sx, sy },
+        { sx / 2, sy },
+        0,
+        BLUE
+    );
+    DrawRectangleLinesEx({ x - sx / 2, y + sy - sy, sx, sy }, 10, BLACK);
+
+    DrawRectanglePro(
+        { x + sx, y + sy, sx, sy },
+        { sx / 2, sy },
+        0,
+        YELLOW
+    );
+    DrawRectangleLinesEx({ x + sx - sx / 2, y + sy - sy, sx, sy }, 10, BLACK);
+#endif
+
 #else
     DrawRectangleRounded(
         { position.x, position.y, size.x, size.y },
@@ -84,6 +128,8 @@ void Entity::Draw(const Font &font, int clientIdx) {
         color
     );
 #endif
+
+#if CL_DBG_SNAPSHOT_IDS
     const char *str = TextFormat("%d", clientIdx);
     Vector2 strSize = MeasureTextEx(font, str, (float)FONT_SIZE, 1.0f);
     DrawTextShadowEx(font, str,
@@ -93,4 +139,5 @@ void Entity::Draw(const Font &font, int clientIdx) {
         },
         (float)FONT_SIZE, RAYWHITE
     );
+#endif
 }

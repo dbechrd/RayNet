@@ -40,9 +40,9 @@ struct Server {
         Entity &entity = world->entities[serverPlayer.entityId];
         entity.type = Entity_Player;
         entity.color = colors[clientIdx % (sizeof(colors) / sizeof(colors[0]))];
-        entity.size = { 32, 64 };
+        entity.size = { 64, 32 };
         entity.position = { 100, 100 };
-        entity.speed = 200;
+        entity.speed = 100;
     }
 
     void OnClientLeave(int clientIdx)
@@ -206,7 +206,50 @@ void ServerTick(Server *server)
             continue;
         }
 
+        static const Vector2 points[] = {
+            { 554, 347 },
+            { 598, 408 },
+            { 673, 450 },
+            { 726, 480 },
+            { 767, 535 },
+            { 813, 595 },
+            { 888, 621 },
+            { 952, 598 },
+            { 990, 553 },
+            { 1011, 490 },
+            { 988, 426 },
+            { 949, 368 },
+            { 905, 316 },
+            { 857, 260 },
+            { 801, 239 },
+            { 757, 267 },
+            { 702, 295 },
+            { 641, 274 },
+            { 591, 258 },
+            { 546, 289 }
+        };
+        static int targetIdx = 0;
+
+        Vector2 target = points[targetIdx];
+        if (fabsf(entity.position.x - points[targetIdx].x) < 10 &&
+            fabsf((entity.position.y - entity.size.y / 2) - points[targetIdx].y) < 10) {
+            targetIdx++;
+            targetIdx = (targetIdx + 1) % 20;
+        }
+
         InputCmd aiCmd{};
+        if (entity.position.x < target.x) {
+            aiCmd.east = true;
+        } else if (entity.position.x > target.x) {
+            aiCmd.west = true;
+        }
+        if (entity.position.y - entity.size.y / 2 < target.y) {
+            aiCmd.south = true;
+        } else if (entity.position.y - entity.size.y / 2 > target.y) {
+            aiCmd.north = true;
+        }
+
+        /*InputCmd aiCmd{};
         if (entity.velocity.x > 0) {
             if (entity.position.x + entity.size.x / 2 >= WINDOW_WIDTH) {
                 entity.velocity.x = 0;
@@ -223,7 +266,7 @@ void ServerTick(Server *server)
             }
         } else {
             aiCmd.east = true;
-        }
+        }*/
 
         entity.Tick(&aiCmd, SV_TICK_DT);
     }
@@ -320,7 +363,7 @@ int main(int argc, char *argv[])
 #endif
 
     // NOTE: Textures MUST be loaded after Window initialization (OpenGL context is required)
-    Texture2D texture = LoadTexture("resources/cat.png");
+    Texture2D texture = LoadTexture("resources/bumber.png");
 
     Font font = LoadFontEx(FONT_PATH, FONT_SIZE, 0, 0);
 
@@ -347,9 +390,9 @@ int main(int argc, char *argv[])
     Entity &bot1 = server->world->entities[65];  // todo alloc index (freelist?)
     bot1.type = Entity_Bot;
     bot1.color = DARKPURPLE;
-    bot1.size = { 32, 32 };
+    bot1.size = { 64, 32 };
     bot1.position = { 200, 200 };
-    bot1.speed = 300;
+    bot1.speed = 100;
     //-----------------
 
     double frameStart = GetTime();
@@ -360,6 +403,10 @@ int main(int argc, char *argv[])
         const double now = GetTime();
         frameDt = now - frameStart;
         frameStart = now;
+
+        if (IsKeyPressed(KEY_C)) {
+            printf("%d, %d\n", GetMouseX(), GetMouseY());
+        }
 
         server->tickAccum += frameDt;
         if (server->tickAccum >= SV_TICK_DT) {
@@ -381,7 +428,7 @@ int main(int argc, char *argv[])
         for (int entityId = 0; entityId < SV_MAX_ENTITIES; entityId++) {
             Entity &entity = server->world->entities[entityId];
             if (entity.type) {
-                entity.Draw(font, entityId);
+                entity.Draw(font, entityId, 1);
             }
         }
 
@@ -413,6 +460,7 @@ int main(int argc, char *argv[])
             DRAW_TEXT("tick", "%" PRIu64, server->tick);
             DRAW_TEXT("tickAccum", "%.02f", server->tickAccum);
             DRAW_TEXT("clients", "%d", server->yj_server->GetNumConnectedClients());
+            DRAW_TEXT("cursor", "%d, %d", GetMouseX(), GetMouseY());
 
             static bool showClientInfo[yojimbo::MaxClients];
             for (int clientIdx = 0; clientIdx < yojimbo::MaxClients; clientIdx++) {

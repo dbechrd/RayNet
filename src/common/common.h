@@ -32,3 +32,4 @@
 
 #define CL_DBG_ONE_SCREEN      0
 #define CL_DBG_TWO_SCREEN      1
+#define CL_DBG_SNAPSHOT_IDS    0
