@@ -25,7 +25,6 @@ struct Msg_S_EntitySnapshot : public yojimbo::Message
         serialize_float(stream, entitySnapshot.velocity.y);
         serialize_float(stream, entitySnapshot.position.x);
         serialize_float(stream, entitySnapshot.position.y);
-
         return true;
     }
 

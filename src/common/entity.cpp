@@ -13,33 +13,18 @@ void Entity::Serialize(uint32_t entityId, EntitySnapshot &entitySnapshot, double
     entitySnapshot.position = position;
 }
 
-void Entity::Tick(const InputCmd *input, double dt) {
-    Vector2 accelDelta{};
+void Entity::ApplyForce(Vector2 force)
+{
+    forceAccum.x += force.x;
+    forceAccum.y += force.y;
+}
 
-    if (input) {
-        if (input->north) {
-            accelDelta.y -= 1.0f;
-        }
-        if (input->west) {
-            accelDelta.x -= 1.0f;
-        }
-        if (input->south) {
-            accelDelta.y += 1.0f;
-        }
-        if (input->east) {
-            accelDelta.x += 1.0f;
-        }
-        if (accelDelta.x && accelDelta.y) {
-            float invLength = 1.0f / sqrtf(accelDelta.x * accelDelta.x + accelDelta.y * accelDelta.y);
-            accelDelta.x *= invLength;
-            accelDelta.y *= invLength;
-        }
-    }
+void Entity::Tick(double dt)
+{
+    velocity.x += forceAccum.x;
+    velocity.y += forceAccum.y;
+    forceAccum = {};
 
-    velocity.x += accelDelta.x * speed;
-    velocity.y += accelDelta.y * speed;
-
-    const float drag = 8.0f;
     velocity.x *= (1.0f - drag * dt);
     velocity.y *= (1.0f - drag * dt);
 

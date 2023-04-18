@@ -3,6 +3,7 @@
 #include "../common/entity.h"
 
 struct ServerPlayer {
+    uint32_t clientIdx      {};  // yj_client index
     bool     needsClockSync {};
     uint32_t entityId       {};
     uint32_t lastInputSeq   {};  // sequence number of last input command we processed
@@ -11,5 +12,11 @@ struct ServerPlayer {
 
 struct ServerWorld {
     Entity entities[SV_MAX_ENTITIES]{};
-    ServerPlayer players[yojimbo::MaxClients]{};
+    ServerPlayer players[SV_MAX_PLAYERS]{};
+    uint32_t freelist_head = SV_MAX_PLAYERS;
+
+    ServerWorld();
+    uint32_t MakeEntity(EntityType entityType);
+    void DespawnEntity(uint32_t entityId);
+    void DestroyEntity(uint32_t entityId);
 };

@@ -15,6 +15,7 @@ struct Msg_C_InputCommands : public yojimbo::Message
             serialize_bool(stream, cmd.west);
             serialize_bool(stream, cmd.south);
             serialize_bool(stream, cmd.east);
+            serialize_bool(stream, cmd.fire);
         }
         return true;
     }

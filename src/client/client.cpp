@@ -63,9 +63,10 @@ void ClientStart(Client *client, double now)
 
     yojimbo::ClientServerConfig config{};
     config.numChannels = CHANNEL_COUNT;
-    config.channel[CHANNEL_U_CLOCK_SYNC].type = yojimbo::CHANNEL_TYPE_UNRELIABLE_UNORDERED;
+    config.channel[CHANNEL_R_CLOCK_SYNC].type = yojimbo::CHANNEL_TYPE_RELIABLE_ORDERED;
     config.channel[CHANNEL_U_INPUT_COMMANDS].type = yojimbo::CHANNEL_TYPE_UNRELIABLE_UNORDERED;
     config.channel[CHANNEL_U_ENTITY_SNAPSHOT].type = yojimbo::CHANNEL_TYPE_UNRELIABLE_UNORDERED;
+    config.channel[CHANNEL_R_ENTITY_DESPAWN].type = yojimbo::CHANNEL_TYPE_RELIABLE_ORDERED;
 
     client->yj_client = new yojimbo::Client(
         yojimbo::GetDefaultAllocator(),
@@ -116,6 +117,15 @@ void ClientProcessMessages(Client *client, double now)
                     entity.type = msgEntitySnapshot->entitySnapshot.type;
                     EntityGhost &ghost = client->world->ghosts[msgEntitySnapshot->entitySnapshot.id];
                     ghost.snapshots.push(msgEntitySnapshot->entitySnapshot);
+                    break;
+                }
+                case MSG_S_ENTITY_DESPAWN:
+                {
+                    Msg_S_EntityDespawn *msgEntityDespawn = (Msg_S_EntityDespawn *)message;
+                    Entity &entity = client->world->entities[msgEntityDespawn->entityId];
+                    entity = {};
+                    EntityGhost &ghost = client->world->ghosts[msgEntityDespawn->entityId];
+                    ghost.snapshots = {};
                     break;
                 }
             }
@@ -275,6 +285,7 @@ int main(int argc, char *argv[])
         client->controller.cmdAccum.west  |= IsKeyDown(KEY_A);
         client->controller.cmdAccum.south |= IsKeyDown(KEY_S);
         client->controller.cmdAccum.east  |= IsKeyDown(KEY_D);
+        client->controller.cmdAccum.fire  |= IsMouseButtonPressed(MOUSE_LEFT_BUTTON);
 
         //--------------------
         // Update
@@ -392,7 +403,8 @@ int main(int argc, char *argv[])
                         InputCmd &inputCmd = client->controller.cmdQueue[cmdIndex];
                         if (inputCmd.seq > lastProcessedInputCmd) {
                             //printf(" %d", inputCmd.seq);
-                            entity.Tick(&inputCmd, SV_TICK_DT);
+                            entity.ApplyForce(inputCmd.GenerateMoveForce(entity.speed));
+                            entity.Tick(SV_TICK_DT);
                             if (CL_DBG_SNAPSHOT_SHADOWS) {
                                 //entity.color = Fade(SKYBLUE, 0.5);
                                 entity.color = Fade(DARKGRAY, 0.5);
