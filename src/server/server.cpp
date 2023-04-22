@@ -1,5 +1,6 @@
 #include "../common/shared_lib.h"
 #include "server_world.h"
+#include <stack>
 #include <cassert>
 
 class ServerNetAdapter : public NetAdapter
@@ -432,34 +433,58 @@ struct Map {
     }
 };
 
-void Fill(Map &map, int tileDefId)
+struct Coord {
+    int x, y;
+};
+
+bool NeedsFill(Map &map, int x, int y, int tileDefFill)
 {
-    //Tile &foo = map.At(x, y);
+    if (x >= 0 && y >= 0 && x < map.width && y < map.height) {
+        return map.At(x, y).tileDefId == tileDefFill;
+    }
+    return false;
+}
 
-    //fn fill(x, y):
-    //    if not Inside(x, y) then return
-    //    let s = new empty stack or queue
-    //    Add (x, y) to s
-    //    while s is not empty:
-    //        Remove an (x, y) from s
-    //        let lx = x
-    //        while Inside(lx - 1, y):
-    //            Set(lx - 1, y)
-    //            lx = lx - 1
-    //        while Inside(x, y):
-    //            Set(x, y)
-    //            x = x + 1
-    //      scan(lx, x - 1, y + 1, s)
-    //      scan(lx, x - 1, y - 1, s)
+void Scan(Map &map, int lx, int rx, int y, int tileDefFill, std::stack<Coord> &stack)
+{
+    bool inSpan = false;
+    for (int x = lx; x < rx; x++) {
+        if (!NeedsFill(map, x, y, tileDefFill)) {
+            inSpan = false;
+        } else if (!inSpan) {
+            stack.push({ x, y });
+            inSpan = true;
+        }
+    }
+}
 
-    //fn scan(lx, rx, y, s):
-    //    let span_added = false
-    //    for x in lx .. rx:
-    //        if not Inside(x, y):
-    //            span_added = false
-    //        else if not span_added:
-    //            Add (x, y) to s
-    //            span_added = true
+void Fill(Map &map, int x, int y, int tileDefId)
+{
+    int tileDefFill = map.At(x, y).tileDefId;
+    if (tileDefFill == tileDefId) {
+        return;
+    }
+
+    std::stack<Coord> stack{};
+    stack.push({ x, y });
+
+    while (!stack.empty()) {
+        Coord coord = stack.top();
+        stack.pop();
+
+        int lx = coord.x;
+        int rx = coord.x;
+        while (NeedsFill(map, lx - 1, coord.y, tileDefFill)) {
+            map.At(lx - 1, coord.y).tileDefId = tileDefId;
+            lx -= 1;
+        }
+        while (NeedsFill(map, rx, coord.y, tileDefFill)) {
+            map.At(rx, coord.y).tileDefId = tileDefId;
+            rx += 1;
+        }
+        Scan(map, lx, rx, coord.y - 1, tileDefFill, stack);
+        Scan(map, lx, rx, coord.y + 1, tileDefFill, stack);
+    }
 }
 
 static Sound sndSoftTick;
@@ -630,14 +655,41 @@ void Play(Server &server)
         bool editorPickTileDef = IsMouseButtonPressed(MOUSE_BUTTON_LEFT);
         bool editorPlaceTile = IsMouseButtonDown(MOUSE_BUTTON_LEFT);
         bool editorPickTile = IsMouseButtonDown(MOUSE_BUTTON_MIDDLE);
-        bool editorBucketFill = IsKeyPressed(KEY_F);
+        bool editorFillTile = IsKeyPressed(KEY_F);
         bool tileDefHovered = false;
 
-        // Action Bar
-        static float cornerRoundness = 0.2f;
-        static float cornerSegments = 4;
-        static Vector2 lineThick{ 1.0f, 1.0f };
+        // Map
+        static Map map(128, 128);
 
+        BeginMode2D(camera2d);
+        for (int y = 0; y < map.height; y++) {
+            for (int x = 0; x < map.width; x++) {
+                Tile &tile = map.At(x, y);
+                tile.pos = { 100.0f + x * 32.0f, 140.0f + y * 32.0f };
+                Vector2 screenPos = GetWorldToScreen2D(tile.pos, camera2d);
+                Rectangle tileRectScreen{ screenPos.x, screenPos.y, 32 * camera2d.zoom, 32 * camera2d.zoom };
+
+                bool tileHovered = dlb_CheckCollisionPointRec(GetMousePosition(), tileRectScreen);
+                if (tileHovered) {
+                    if (editorPlaceTile) {
+                        tile.tileDefId = cursor.tileDefId;
+                    } else if (editorPickTile) {
+                        cursor.tileDefId = tile.tileDefId;
+                    } else if (editorFillTile) {
+                        Fill(map, x, y, cursor.tileDefId);
+                    }
+                }
+                TileDef &tileDef = tileDefs[tile.tileDefId];
+                Rectangle texRect{ (float)tileDef.x, (float)tileDef.y, (float)tileDef.w, (float)tileDef.h };
+                DrawTextureRec(tilesTexture, texRect, tile.pos, WHITE);
+                if (tileHovered) {
+                    DrawRectangleLines(tile.pos.x, tile.pos.y, tileDef.w, tileDef.h, WHITE);
+                }
+            }
+        }
+        EndMode2D();
+
+        // Action Bar
         {
             float x = 300;
             float y = 8;
@@ -677,32 +729,6 @@ void Play(Server &server)
                 DrawRectangleLines(screenPos.x, screenPos.y, tileDef.w, tileDef.h, WHITE);
             }
         }
-
-        // Map
-        BeginMode2D(camera2d);
-        static Map map(32, 32);
-        for (int y = 0; y < map.height; y++) {
-            for (int x = 0; x < map.width; x++) {
-                Tile &tile = map.At(x, y);
-                tile.pos = { 100.0f + x * 32.0f, 140.0f + y * 32.0f };
-                Vector2 screenPos = GetWorldToScreen2D(tile.pos, camera2d);
-                Rectangle tileRectScreen{ screenPos.x, screenPos.y, 32 * camera2d.zoom, 32 * camera2d.zoom };
-
-                bool tileHovered = dlb_CheckCollisionPointRec(GetMousePosition(), tileRectScreen);
-                if (tileHovered && editorPlaceTile) {
-                    tile.tileDefId = cursor.tileDefId;
-                } else if (tileHovered && editorPickTile) {
-                    cursor.tileDefId = tile.tileDefId;
-                }
-                TileDef &tileDef = tileDefs[tile.tileDefId];
-                Rectangle texRect{ (float)tileDef.x, (float)tileDef.y, (float)tileDef.w, (float)tileDef.h };
-                DrawTextureRec(tilesTexture, texRect, tile.pos, WHITE);
-                if (tileHovered) {
-                    DrawRectangleLines(tile.pos.x, tile.pos.y, tileDef.w, tileDef.h, WHITE);
-                }
-            }
-        }
-        EndMode2D();
 
         // Cursor tile
         //{
