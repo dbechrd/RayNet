@@ -408,65 +408,141 @@ struct TileDef {
     { 4 * (TILE_W + 2) + 1, 0 * (TILE_W + 2) + 1 },
 };
 
-struct Tile {
-    int tileDefId;
-};
+typedef uint8_t Tile;
 
 struct Map {
     struct Coord {
         int x, y;
     };
 
+    const int MAGIC = 0xDBBB9192;
+    int version;
     int width;
     int height;
     Tile *tiles;
 
-    Map(int width, int height) : width(width), height(height)
+    Err Alloc(int version, int width, int height)
     {
+        version = 1;
+        if (width <= 0 || height <= 0 || width > 128 || height > 128) {
+            return RN_INVALID_SIZE;
+        }
+
         tiles = (Tile *)calloc((size_t)width * height, sizeof(*tiles));
+        if (!tiles) {
+            return RN_BAD_ALLOC;
+        }
+
+        return RN_SUCCESS;
     }
 
     ~Map() {
         free(tiles);
     }
 
-    Tile &At(int x, int y) {
+    Err Save(const char *filename)
+    {
+        FILE *file = fopen(filename, "w");
+        if (file) {
+            assert(width);
+            assert(height);
+            assert(tiles);
+
+            fwrite(&MAGIC, sizeof(MAGIC), 1, file);
+            fwrite(&version, sizeof(version), 1, file);
+            fwrite(&width, sizeof(width), 1, file);
+            fwrite(&height, sizeof(height), 1, file);
+            fwrite(tiles, sizeof(*tiles), (size_t)width * height, file);
+            fclose(file);
+            return RN_SUCCESS;
+        }
+        return RN_BAD_FILE_WRITE;
+    }
+
+    Err Load(const char *filename)
+    {
+        FILE *file = fopen(filename, "r");
+        if (file) {
+            int magic = 0;
+            fread(&magic, sizeof(magic), 1, file);
+            if (magic != MAGIC) {
+                return RN_BAD_MAGIC;
+            }
+            fread(&version, sizeof(version), 1, file);
+
+            int oldWidth = width;
+            int oldHeight = height;
+            fread(&width, sizeof(width), 1, file);
+            fread(&height, sizeof(height), 1, file);
+            if (!width || !height) {
+                return RN_INVALID_SIZE;
+            } else if (width != oldWidth || height != oldHeight) {
+                free(tiles);
+                tiles = (Tile *)calloc((size_t)width * height, sizeof(*tiles));
+            }
+
+            if (!tiles) {
+                return RN_BAD_ALLOC;
+            }
+
+            fread(tiles, sizeof(*tiles), (size_t)width * height, file);
+
+            fclose(file);
+            return RN_SUCCESS;
+        }
+        return RN_BAD_FILE_READ;
+    }
+
+    Tile At(int x, int y) {
+        assert(x >= 0);
+        assert(y >= 0);
         assert(x < width);
         assert(y < height);
         return tiles[y * width + x];
     }
 
-    Tile *AtTry(int x, int y) {
+    bool AtTry(int x, int y, Tile &tile) {
         if (x >= 0 && y >= 0 && x < width && y < height) {
-            return &At(x, y);
-        }
-        return 0;
-    }
-
-    bool WorldToTileIndex(int world_x, int world_y, Coord &coord) {
-        int x = world_x / TILE_W;
-        int y = world_y / TILE_W;
-        if (x >= 0 && y >= 0 && x < width && y < height) {
-            coord.x = x;
-            coord.y = y;
+            tile = At(x, y);
             return true;
         }
         return false;
     }
 
-    Tile *AtWorld(int world_x, int world_y) {
+    bool WorldToTileIndex(int world_x, int world_y, Coord &coord) {
+        if (world_x >= 0 && world_y >= 0 && world_x < width * TILE_W && world_y < height * TILE_W) {
+            coord.x = world_x / TILE_W;
+            coord.y = world_y / TILE_W;
+            return true;
+        }
+        return false;
+    }
+
+    bool AtWorld(int world_x, int world_y, Tile &tile) {
         Coord coord{};
         if (WorldToTileIndex(world_x, world_y, coord)) {
-            return &At(coord.x, coord.y);
+            tile = At(coord.x, coord.y);
+            return true;
         }
-        return 0;
+        return false;
+    }
+
+    void Set(int x, int y, Tile tile) {
+        assert(x >= 0);
+        assert(y >= 0);
+        assert(x < width);
+        assert(y < height);
+        tiles[y * width + x] = tile;
     }
 };
 
 bool NeedsFill(Map &map, int x, int y, int tileDefFill)
 {
-    Tile *tile = map.AtTry(x, y);
-    return tile && map.At(x, y).tileDefId == tileDefFill;
+    Tile tile;
+    if (map.AtTry(x, y, tile)) {
+        return tile == tileDefFill;
+    }
+    return false;
 }
 
 void Scan(Map &map, int lx, int rx, int y, int tileDefFill, std::stack<Map::Coord> &stack)
@@ -484,7 +560,7 @@ void Scan(Map &map, int lx, int rx, int y, int tileDefFill, std::stack<Map::Coor
 
 void Fill(Map &map, int x, int y, int tileDefId)
 {
-    int tileDefFill = map.At(x, y).tileDefId;
+    int tileDefFill = map.At(x, y);
     if (tileDefFill == tileDefId) {
         return;
     }
@@ -499,11 +575,11 @@ void Fill(Map &map, int x, int y, int tileDefId)
         int lx = coord.x;
         int rx = coord.x;
         while (NeedsFill(map, lx - 1, coord.y, tileDefFill)) {
-            map.At(lx - 1, coord.y).tileDefId = tileDefId;
+            map.Set(lx - 1, coord.y, tileDefId);
             lx -= 1;
         }
         while (NeedsFill(map, rx, coord.y, tileDefFill)) {
-            map.At(rx, coord.y).tileDefId = tileDefId;
+            map.Set(rx, coord.y, tileDefId);
             rx += 1;
         }
         Scan(map, lx, rx, coord.y - 1, tileDefFill, stack);
@@ -593,13 +669,18 @@ void Play(Server &server)
         catPos.y + catTexture.height + 4
     };
 
-    Camera3D camera3d{};
+#define LEVEL_001 "maps/level1.dat"
+
+    Map map{};
+    map.Load(LEVEL_001);
+
+    /*Camera3D camera3d{};
     camera3d.position = {0, 0, 0};
     camera3d.target = {0, 0, -1};
     camera3d.up = {0, 1, 0};
     camera3d.fovy = 90;
     camera3d.projection = CAMERA_PERSPECTIVE;
-    SetCameraMode(camera3d, CAMERA_FREE);
+    SetCameraMode(camera3d, CAMERA_FREE);*/
 
     Camera2D camera2d{};
     camera2d.zoom = 1.0f;
@@ -626,6 +707,13 @@ void Play(Server &server)
 
         if (IsKeyPressed(KEY_H)) {
             histogram.paused = !histogram.paused;
+        }
+        if (IsKeyPressed(KEY_V)) {
+            if (IsWindowState(FLAG_VSYNC_HINT)) {
+                ClearWindowState(FLAG_VSYNC_HINT);
+            } else {
+                SetWindowState(FLAG_VSYNC_HINT);
+            }
         }
         if (IsKeyDown(KEY_LEFT_CONTROL) && IsKeyPressed(KEY_ZERO)) {
             camera2d.zoom = 1.0f;
@@ -693,10 +781,15 @@ void Play(Server &server)
         bool tileDefHovered = false;
 
         // Map
-        static Map map(128, 128);
+#if _DEBUG
+        if (IsKeyPressed(KEY_F9)) {
+            __debugbreak();
+        }
+#endif
 
         Vector2 cursorWorldPos = GetScreenToWorld2D({ (float)GetMouseX(), (float)GetMouseY() }, camera2d);
-        Tile *hoveredTile = map.AtWorld((int32_t)cursorWorldPos.x, (int32_t)cursorWorldPos.y);
+        Tile hoveredTile;
+        bool hoveringTile = map.AtWorld((int32_t)cursorWorldPos.x, (int32_t)cursorWorldPos.y, hoveredTile);
 
 #if CL_DBG_TILE_CULLING
         const int screenMargin = 64;
@@ -715,8 +808,8 @@ void Play(Server &server)
         BeginMode2D(camera2d);
         for (int y = yMin; y < yMax; y++) {
             for (int x = xMin; x < xMax; x++) {
-                Tile &tile = map.At(x, y);
-                TileDef &tileDef = tileDefs[tile.tileDefId];
+                Tile tile = map.At(x, y);
+                TileDef &tileDef = tileDefs[tile];
 
                 Rectangle texRect{ (float)tileDef.x, (float)tileDef.y, TILE_W, TILE_W };
                 Vector2 tilePos = { (float)x * TILE_W, (float)y * TILE_W };
@@ -724,15 +817,15 @@ void Play(Server &server)
             }
         }
 
-        if (hoveredTile) {
+        if (hoveringTile) {
             Map::Coord coord{};
             bool validCoord = map.WorldToTileIndex(cursorWorldPos.x, cursorWorldPos.y, coord);
             assert(validCoord);  // should always be true when hoveredTile != null
 
             if (editorPlaceTile) {
-                hoveredTile->tileDefId = cursor.tileDefId;
+                map.Set(coord.x, coord.y, cursor.tileDefId);
             } else if (editorPickTile) {
-                cursor.tileDefId = hoveredTile->tileDefId;
+                cursor.tileDefId = hoveredTile;
             } else if (editorFillTile) {
                 Fill(map, coord.x, coord.y, cursor.tileDefId);
             }
@@ -759,10 +852,16 @@ void Play(Server &server)
 
             Vector2 uiCursor{ 360, 8 };
             if (UIButton(font, "Save", uiCursor)) {
-                // TODO: Save something
+                if (map.Save(LEVEL_001) != RN_SUCCESS) {
+                    // TODO: Display error message on screen for N seconds or
+                    // until dismissed
+                }
             }
             if (UIButton(font, "Load", uiCursor)) {
-                // TODO: Save something
+                if (!map.Load(LEVEL_001) != RN_SUCCESS) {
+                    // TODO: Display error message on screen for N seconds or
+                    // until dismissed
+                }
             }
         }
 

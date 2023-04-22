@@ -41,3 +41,14 @@
 #define CL_DBG_TWO_SCREEN      1
 #define CL_DBG_SNAPSHOT_IDS    0
 #define CL_DBG_TILE_CULLING    0
+
+// Shared types
+
+enum Err {
+    RN_SUCCESS          =  0,
+    RN_BAD_ALLOC        = -1,
+    RN_BAD_MAGIC        = -2,
+    RN_BAD_FILE_READ    = -3,
+    RN_BAD_FILE_WRITE   = -4,
+    RN_INVALID_SIZE     = -5,
+};
