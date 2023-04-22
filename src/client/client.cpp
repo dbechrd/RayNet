@@ -1,16 +1,10 @@
 #include "../common/shared_lib.h"
+#include "../common/histogram.h"
 #include "client_world.h"
 #include <deque>
 #include <time.h>
 
 static bool CL_DBG_SNAPSHOT_SHADOWS = true;
-static bool CL_DBG_PAUSE_HISTOGRAM = false;
-
-struct HistoLine {
-    double fps;
-    bool doNetTick;
-};
-typedef RingBuffer<HistoLine, 64> FpsHistogram;
 
 struct Controller {
     int nextSeq {};  // next input command sequence number to use
@@ -179,38 +173,6 @@ void ClientStop(Client *client)
     client->world = {};
 }
 
-void draw_fps_histogram(FpsHistogram &fpsHistogram, int x, int y)
-{
-    const float barPadding = 1.0f;
-    const float barWidth = 2.0f;
-    const float histoHeight = 20.0f;
-
-    float maxValue = 0.0f;
-    for (int i = 0; i < fpsHistogram.size(); i++) {
-        maxValue = MAX(maxValue, fpsHistogram[i].fps);
-    }
-
-    const float barScale = histoHeight / maxValue;
-
-    Vector2 cursor{};
-    cursor.x = x;
-    cursor.y = y;
-
-    for (int i = 0; i < fpsHistogram.size(); i++) {
-        float bottom = cursor.y + histoHeight;
-        float height = fpsHistogram[i].fps * barScale;
-
-        Rectangle rect{};
-        rect.x = cursor.x;
-        rect.y = bottom - height;
-        rect.width = barWidth;
-        rect.height = height;
-        DrawRectangleRec(rect, fpsHistogram[i].doNetTick ? GREEN : RAYWHITE);
-
-        cursor.x += barWidth + barPadding;
-    }
-}
-
 int main(int argc, char *argv[])
 //int __stdcall WinMain(void *hInstance, void *hPrevInstance, char *pCmdLine, int nCmdShow)
 {
@@ -257,7 +219,7 @@ int main(int argc, char *argv[])
     Client *client = new Client;
     ClientStart(client, startedAt);
 
-    FpsHistogram fpsHistogram{};
+    Histogram histogram{};
     double frameStart = GetTime();
     double frameDt = 0;
     double frameDtSmooth = 60;
@@ -265,7 +227,6 @@ int main(int argc, char *argv[])
     while (!WindowShouldClose())
     {
         const double now = GetTime();
-
         frameDt = MIN(now - frameStart, SV_TICK_DT);  // arbitrary limit for now
         frameDtSmooth = LERP(frameDtSmooth, frameDt, 0.1);
         frameStart = now;
@@ -273,11 +234,6 @@ int main(int argc, char *argv[])
         client->controller.sampleInputAccum += frameDt;
         client->netTickAccum += frameDt;
         bool doNetTick = client->netTickAccum >= SV_TICK_DT;
-
-        if (!CL_DBG_PAUSE_HISTOGRAM) {
-            HistoLine histoLine{ frameDtSmooth, doNetTick };
-            fpsHistogram.push(histoLine);
-        }
 
         //--------------------
         // Accmulate input every frame
@@ -311,8 +267,10 @@ int main(int argc, char *argv[])
             CL_DBG_SNAPSHOT_SHADOWS = !CL_DBG_SNAPSHOT_SHADOWS;
         }
         if (IsKeyPressed(KEY_H)) {
-            CL_DBG_PAUSE_HISTOGRAM = !CL_DBG_PAUSE_HISTOGRAM;
+            histogram.paused = !histogram.paused;
         }
+
+        histogram.Push(frameDtSmooth, doNetTick ? GREEN : RAYWHITE);
 
         //--------------------
         // Networking
@@ -449,10 +407,10 @@ int main(int argc, char *argv[])
             #define DRAW_TEXT(label, fmt, ...) \
                 DRAW_TEXT_MEASURE((Rectangle *)0, label, fmt, __VA_ARGS__)
 
+            DRAW_TEXT("frameDt", "%.2f fps (%.2f ms) (vsync=%s)", 1.0 / frameDt, frameDt, IsWindowState(FLAG_VSYNC_HINT) ? "on" : "off");
             DRAW_TEXT("serverTime", "%.2f (%s%.2f)", serverNow, client->clientTimeDeltaVsServer > 0 ? "+" : "", client->clientTimeDeltaVsServer);
-            DRAW_TEXT("time", "%.2f", now);
-            DRAW_TEXT("vsync", "%s", IsWindowState(FLAG_VSYNC_HINT) ? "on" : "off");
-            DRAW_TEXT("frameDt", "%.2f fps (%.2f ms)", 1.0 / frameDt, frameDt);
+            DRAW_TEXT("localTime", "%.2f", now);
+            DRAW_TEXT("cursor", "%d, %d", GetMouseX(), GetMouseY());
 
             const char *clientStateStr = "unknown";
             yojimbo::ClientState clientState = client->yj_client->GetClientState();
@@ -490,8 +448,7 @@ int main(int argc, char *argv[])
             }
         }
 
-        draw_fps_histogram(fpsHistogram, 8, 8);
-
+        histogram.Draw(8, 8);
         EndDrawing();
         //yojimbo_sleep(0.001);
     }

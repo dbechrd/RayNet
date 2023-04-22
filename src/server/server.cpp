@@ -1,4 +1,5 @@
 #include "../common/shared_lib.h"
+#include "../common/histogram.h"
 #include "server_world.h"
 #include <stack>
 #include <cassert>
@@ -398,26 +399,29 @@ struct Cursor {
 
 struct TileDef {
     int x, y;
-    int w, h;
 } tileDefs[] = {
-    { 0, 0, 32, 32 },  // empty tile
-    { 32, 0, 32, 32 },
-    { 64, 0, 32, 32 },
-    { 96, 0, 32, 32 },
-    { 128, 0, 32, 32 },
+    // n * (w + pad*2) + pad
+    { 0 * (TILE_W + 2) + 1, 0 * (TILE_W + 2) + 1 },  // empty tile
+    { 1 * (TILE_W + 2) + 1, 0 * (TILE_W + 2) + 1 },
+    { 2 * (TILE_W + 2) + 1, 0 * (TILE_W + 2) + 1 },
+    { 3 * (TILE_W + 2) + 1, 0 * (TILE_W + 2) + 1 },
+    { 4 * (TILE_W + 2) + 1, 0 * (TILE_W + 2) + 1 },
 };
 
 struct Tile {
     int tileDefId;
-    Vector2 pos;
 };
 
 struct Map {
-    uint16_t width;
-    uint16_t height;
+    struct Coord {
+        int x, y;
+    };
+
+    int width;
+    int height;
     Tile *tiles;
 
-    Map(uint16_t width, uint16_t height) : width(width), height(height)
+    Map(int width, int height) : width(width), height(height)
     {
         tiles = (Tile *)calloc((size_t)width * height, sizeof(*tiles));
     }
@@ -426,26 +430,46 @@ struct Map {
         free(tiles);
     }
 
-    Tile &At(uint16_t x, uint16_t y) {
+    Tile &At(int x, int y) {
         assert(x < width);
         assert(y < height);
         return tiles[y * width + x];
     }
-};
 
-struct Coord {
-    int x, y;
+    Tile *AtTry(int x, int y) {
+        if (x >= 0 && y >= 0 && x < width && y < height) {
+            return &At(x, y);
+        }
+        return 0;
+    }
+
+    bool WorldToTileIndex(int world_x, int world_y, Coord &coord) {
+        int x = world_x / TILE_W;
+        int y = world_y / TILE_W;
+        if (x >= 0 && y >= 0 && x < width && y < height) {
+            coord.x = x;
+            coord.y = y;
+            return true;
+        }
+        return false;
+    }
+
+    Tile *AtWorld(int world_x, int world_y) {
+        Coord coord{};
+        if (WorldToTileIndex(world_x, world_y, coord)) {
+            return &At(coord.x, coord.y);
+        }
+        return 0;
+    }
 };
 
 bool NeedsFill(Map &map, int x, int y, int tileDefFill)
 {
-    if (x >= 0 && y >= 0 && x < map.width && y < map.height) {
-        return map.At(x, y).tileDefId == tileDefFill;
-    }
-    return false;
+    Tile *tile = map.AtTry(x, y);
+    return tile && map.At(x, y).tileDefId == tileDefFill;
 }
 
-void Scan(Map &map, int lx, int rx, int y, int tileDefFill, std::stack<Coord> &stack)
+void Scan(Map &map, int lx, int rx, int y, int tileDefFill, std::stack<Map::Coord> &stack)
 {
     bool inSpan = false;
     for (int x = lx; x < rx; x++) {
@@ -465,11 +489,11 @@ void Fill(Map &map, int x, int y, int tileDefId)
         return;
     }
 
-    std::stack<Coord> stack{};
+    std::stack<Map::Coord> stack{};
     stack.push({ x, y });
 
     while (!stack.empty()) {
-        Coord coord = stack.top();
+        Map::Coord coord = stack.top();
         stack.pop();
 
         int lx = coord.x;
@@ -580,23 +604,33 @@ void Play(Server &server)
     Camera2D camera2d{};
     camera2d.zoom = 1.0f;
 
+    Histogram histogram{};
     double frameStart = GetTime();
     double frameDt = 0;
+    double frameDtSmooth = 60;
+
     while (!WindowShouldClose())
     {
         const double now = GetTime();
-        frameDt = now - frameStart;
+        frameDt = MIN(now - frameStart, SV_TICK_DT * 3);  // arbitrary limit for now
+        frameDtSmooth = LERP(frameDtSmooth, frameDt, 0.1);
         frameStart = now;
 
-        if (IsKeyPressed(KEY_C)) {
-            printf("%d, %d\n", GetMouseX(), GetMouseY());
-        }
-
         server.tickAccum += frameDt;
-        if (server.tickAccum >= SV_TICK_DT) {
+
+        bool doNetTick = server.tickAccum >= SV_TICK_DT;
+        while (server.tickAccum >= SV_TICK_DT) {
             //printf("[%.2f][%.2f] ServerUpdate %d\n", server.tickAccum, now, (int)server.tick);
             ServerUpdate(server, now);
         }
+
+        if (IsKeyPressed(KEY_H)) {
+            histogram.paused = !histogram.paused;
+        }
+        if (IsKeyDown(KEY_LEFT_CONTROL) && IsKeyPressed(KEY_ZERO)) {
+            camera2d.zoom = 1.0f;
+        }
+        histogram.Push(frameDtSmooth, doNetTick ? GREEN : RAYWHITE);
 
 #if 0
         if (IsMouseButtonDown(MOUSE_BUTTON_RIGHT)) {
@@ -661,33 +695,61 @@ void Play(Server &server)
         // Map
         static Map map(128, 128);
 
-        BeginMode2D(camera2d);
-        for (int y = 0; y < map.height; y++) {
-            for (int x = 0; x < map.width; x++) {
-                Tile &tile = map.At(x, y);
-                tile.pos = { 100.0f + x * 32.0f, 140.0f + y * 32.0f };
-                Vector2 screenPos = GetWorldToScreen2D(tile.pos, camera2d);
-                Rectangle tileRectScreen{ screenPos.x, screenPos.y, 32 * camera2d.zoom, 32 * camera2d.zoom };
+        Vector2 cursorWorldPos = GetScreenToWorld2D({ (float)GetMouseX(), (float)GetMouseY() }, camera2d);
+        Tile *hoveredTile = map.AtWorld((int32_t)cursorWorldPos.x, (int32_t)cursorWorldPos.y);
 
-                bool tileHovered = dlb_CheckCollisionPointRec(GetMousePosition(), tileRectScreen);
-                if (tileHovered) {
-                    if (editorPlaceTile) {
-                        tile.tileDefId = cursor.tileDefId;
-                    } else if (editorPickTile) {
-                        cursor.tileDefId = tile.tileDefId;
-                    } else if (editorFillTile) {
-                        Fill(map, x, y, cursor.tileDefId);
-                    }
-                }
+#if CL_DBG_TILE_CULLING
+        const int screenMargin = 64;
+        Vector2 screenTLWorld = GetScreenToWorld2D({ screenMargin, screenMargin }, camera2d);
+        Vector2 screenBRWorld = GetScreenToWorld2D({ (float)GetScreenWidth() - screenMargin, (float)GetScreenHeight() - screenMargin }, camera2d);
+#else
+        Vector2 screenTLWorld = GetScreenToWorld2D({ 0, 0 }, camera2d);
+        Vector2 screenBRWorld = GetScreenToWorld2D({ (float)GetScreenWidth(), (float)GetScreenHeight() }, camera2d);
+#endif
+
+        int yMin = CLAMP(floorf(screenTLWorld.y / TILE_W), 0, map.height);
+        int yMax = CLAMP(ceilf(screenBRWorld.y / TILE_W), 0, map.height);
+        int xMin = CLAMP(floorf(screenTLWorld.x / TILE_W), 0, map.width);
+        int xMax = CLAMP(ceilf(screenBRWorld.x / TILE_W), 0, map.width);
+
+        BeginMode2D(camera2d);
+        for (int y = yMin; y < yMax; y++) {
+            for (int x = xMin; x < xMax; x++) {
+                Tile &tile = map.At(x, y);
                 TileDef &tileDef = tileDefs[tile.tileDefId];
-                Rectangle texRect{ (float)tileDef.x, (float)tileDef.y, (float)tileDef.w, (float)tileDef.h };
-                DrawTextureRec(tilesTexture, texRect, tile.pos, WHITE);
-                if (tileHovered) {
-                    DrawRectangleLines(tile.pos.x, tile.pos.y, tileDef.w, tileDef.h, WHITE);
-                }
+
+                Rectangle texRect{ (float)tileDef.x, (float)tileDef.y, TILE_W, TILE_W };
+                Vector2 tilePos = { (float)x * TILE_W, (float)y * TILE_W };
+                DrawTextureRec(tilesTexture, texRect, tilePos, WHITE);
             }
         }
+
+        if (hoveredTile) {
+            Map::Coord coord{};
+            bool validCoord = map.WorldToTileIndex(cursorWorldPos.x, cursorWorldPos.y, coord);
+            assert(validCoord);  // should always be true when hoveredTile != null
+
+            if (editorPlaceTile) {
+                hoveredTile->tileDefId = cursor.tileDefId;
+            } else if (editorPickTile) {
+                cursor.tileDefId = hoveredTile->tileDefId;
+            } else if (editorFillTile) {
+                Fill(map, coord.x, coord.y, cursor.tileDefId);
+            }
+
+            DrawRectangleLines(coord.x * TILE_W, coord.y * TILE_W, TILE_W, TILE_W, WHITE);
+        }
         EndMode2D();
+
+#if CL_DBG_TILE_CULLING
+        // Screen bounds debug rect for tile culling
+        DrawRectangleLinesEx({
+            screenMargin,
+            screenMargin,
+            (float)GetScreenWidth() - screenMargin*2,
+            (float)GetScreenHeight() - screenMargin*2,
+            }, 1.0f, PINK);
+#endif
 
         // Action Bar
         {
@@ -695,7 +757,7 @@ void Play(Server &server)
             float y = 8;
             float pad = 4;
 
-            Vector2 uiCursor{ 300, 8 };
+            Vector2 uiCursor{ 360, 8 };
             if (UIButton(font, "Save", uiCursor)) {
                 // TODO: Save something
             }
@@ -707,8 +769,8 @@ void Play(Server &server)
         // Tile selector
         for (int i = 0; i < ARRAY_SIZE(tileDefs); i++) {
             TileDef &tileDef = tileDefs[i];
-            Vector2 screenPos = { 300.0f + i * 32.0f + i * 2, 38.0f };
-            Rectangle tileDefRectScreen{ screenPos.x, screenPos.y, 32, 32 };
+            Vector2 screenPos = { 360.0f + i * TILE_W + i * 2, 38.0f };
+            Rectangle tileDefRectScreen{ screenPos.x, screenPos.y, TILE_W, TILE_W };
             bool hover = dlb_CheckCollisionPointRec(GetMousePosition(), tileDefRectScreen);
             static int prevHover = -1;
             if (hover) {
@@ -721,19 +783,19 @@ void Play(Server &server)
                 }
                 tileDefHovered = true;
             }
-            Rectangle texRect{ (float)tileDef.x, (float)tileDef.y, (float)tileDef.w, (float)tileDef.h };
+            Rectangle texRect{ (float)tileDef.x, (float)tileDef.y, TILE_W, TILE_W };
             DrawTextureRec(tilesTexture, texRect, screenPos, WHITE);
             if (i == cursor.tileDefId) {
-                DrawRectangleLines(screenPos.x, screenPos.y, tileDef.w, tileDef.h, YELLOW);
+                DrawRectangleLines(screenPos.x, screenPos.y, TILE_W, TILE_W, YELLOW);
             } else if (hover) {
-                DrawRectangleLines(screenPos.x, screenPos.y, tileDef.w, tileDef.h, WHITE);
+                DrawRectangleLines(screenPos.x, screenPos.y, TILE_W, TILE_W, WHITE);
             }
         }
 
         // Cursor tile
         //{
         //    TileDef &tileDef = tileDefs[cursor.tileDefId];
-        //    Rectangle texRect{ tileDef.x, tileDef.y, tileDef.w, tileDef.h };
+        //    Rectangle texRect{ tileDef.x, tileDef.y, TILE_W, TILE_W };
         //    Vector2 screenPos = GetMousePosition();
         //    //screenPos.x -= tileDef.w / 2;
         //    //screenPos.y -= tileDef.h / 2;
@@ -742,10 +804,14 @@ void Play(Server &server)
 
         {
             float hud_x = 8.0f;
-            float hud_y = 8.0f;
+            float hud_y = 30.0f;
             char buf[128];
 #define DRAW_TEXT_MEASURE(measureRect, label, fmt, ...) { \
-                snprintf(buf, sizeof(buf), "%-12s : " fmt, label, __VA_ARGS__); \
+                if (label) { \
+                    snprintf(buf, sizeof(buf), "%-12s : " fmt, label, __VA_ARGS__); \
+                } else { \
+                    snprintf(buf, sizeof(buf), fmt, __VA_ARGS__); \
+                } \
                 Vector2 position{ hud_x, hud_y }; \
                 DrawTextShadowEx(font, buf, position, (float)font.baseSize, RAYWHITE); \
                 if (measureRect) { \
@@ -758,11 +824,12 @@ void Play(Server &server)
 #define DRAW_TEXT(label, fmt, ...) \
                 DRAW_TEXT_MEASURE((Rectangle *)0, label, fmt, __VA_ARGS__)
 
+            DRAW_TEXT((const char *)0, "%.2f fps (%.2f ms) (vsync=%s)", 1.0 / frameDt, frameDt, IsWindowState(FLAG_VSYNC_HINT) ? "on" : "off");
             DRAW_TEXT("time", "%.02f", server.yj_server->GetTime());
             DRAW_TEXT("tick", "%" PRIu64, server.tick);
             DRAW_TEXT("tickAccum", "%.02f", server.tickAccum);
-            DRAW_TEXT("clients", "%d", server.yj_server->GetNumConnectedClients());
             DRAW_TEXT("cursor", "%d, %d", GetMouseX(), GetMouseY());
+            DRAW_TEXT("clients", "%d", server.yj_server->GetNumConnectedClients());
 
             static bool showClientInfo[yojimbo::MaxClients];
             for (int clientIdx = 0; clientIdx < yojimbo::MaxClients; clientIdx++) {
@@ -797,6 +864,7 @@ void Play(Server &server)
             }
         }
 
+        histogram.Draw(8, 8);
         EndDrawing();
         yojimbo_sleep(0.001);
     }

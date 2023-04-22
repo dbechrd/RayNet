@@ -9,6 +9,8 @@
 #define WINDOW_WIDTH 1600
 #define WINDOW_HEIGHT 900
 
+#define TILE_W 32
+
 #define FONT_PATH "resources/Hack-Bold.ttf"
 #define FONT_SIZE 20
 
@@ -38,3 +40,4 @@
 #define CL_DBG_ONE_SCREEN      0
 #define CL_DBG_TWO_SCREEN      1
 #define CL_DBG_SNAPSHOT_IDS    0
+#define CL_DBG_TILE_CULLING    0

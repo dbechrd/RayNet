@@ -12,6 +12,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="include\tracy\TracyClient.cpp" />
+    <ClCompile Include="src\common\histogram.cpp" />
     <ClCompile Include="src\common\shared_lib.cpp" />
     <ClCompile Include="src\server\server.cpp" />
     <ClCompile Include="src\server\server_world.cpp" />

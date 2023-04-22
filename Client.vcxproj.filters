@@ -5,11 +5,15 @@
     <ClCompile Include="src\common\shared_lib.cpp" />
     <ClCompile Include="include\tracy\TracyClient.cpp" />
     <ClCompile Include="src\common\common.cpp" />
+    <ClCompile Include="src\common\histogram.cpp" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="res\client.ico" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="src\client\Client.rc" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="src\common\histogram.h" />
   </ItemGroup>
 </Project>
