@@ -116,13 +116,13 @@ void Entity::Draw(const Font &font, int clientIdx, float scale) {
 
 #if CL_DBG_SNAPSHOT_IDS
     const char *str = TextFormat("%d", clientIdx);
-    Vector2 strSize = MeasureTextEx(font, str, (float)FONT_SIZE, 1.0f);
+    Vector2 strSize = MeasureTextEx(font, str, (float)font.baseSize, 1.0f);
     DrawTextShadowEx(font, str,
         {
             position.x - strSize.x / 2,
             position.y - strSize.y
         },
-        (float)FONT_SIZE, RAYWHITE
+        (float)font.baseSize, RAYWHITE
     );
 #endif
 }

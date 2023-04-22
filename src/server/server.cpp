@@ -462,8 +462,72 @@ void Fill(Map &map, int tileDefId)
     //            span_added = true
 }
 
+static Sound sndSoftTick;
+static Sound sndHardTick;
+
+bool UIButton(Font font, const char *text, Vector2 &uiCursor)
+{
+    const Vector2 margin{ 8, 8 };
+    const Vector2 pad{ 8, 1 };
+    const float cornerRoundness = 0.2f;
+    const float cornerSegments = 4;
+    const Vector2 lineThick{ 1.0f, 1.0f };
+
+    Vector2 textSize = MeasureTextEx(font, text, font.baseSize, 1.0f);
+    Vector2 buttonSize = textSize;
+    buttonSize.x += pad.x * 2;
+    buttonSize.y += pad.y * 2;
+
+    Rectangle buttonRect = {
+        uiCursor.x - lineThick.x,
+        uiCursor.y - lineThick.y,
+        buttonSize.x + lineThick.x * 2,
+        buttonSize.y + lineThick.y * 2
+    };
+    if (lineThick.x || lineThick.y) {
+        DrawRectangleRounded(
+            buttonRect,
+            cornerRoundness, cornerSegments, BLACK
+        );
+    }
+
+    static const char *prevHover = 0;
+
+    Color color = BLUE;
+    bool hover = false;
+    bool down = false;
+    bool clicked = false;
+    if (dlb_CheckCollisionPointRec(GetMousePosition(), buttonRect)) {
+        hover = true;
+        color = SKYBLUE;
+        if (IsMouseButtonDown(MOUSE_BUTTON_LEFT)) {
+            down = true;
+            color = DARKBLUE;
+        } else if (IsMouseButtonReleased(MOUSE_BUTTON_LEFT)) {
+            clicked = true;
+        }
+    }
+
+    if (clicked) {
+        PlaySound(sndHardTick);
+    } else if (hover && text != prevHover) {
+        PlaySound(sndSoftTick);
+        prevHover = text;
+    }
+
+    float yOffset = (down ? 0 : -lineThick.y * 2);
+    DrawRectangleRounded({ uiCursor.x, uiCursor.y + yOffset, buttonSize.x, buttonSize.y }, cornerRoundness, cornerSegments, color);
+    DrawTextShadowEx(font, text, { uiCursor.x + pad.x, uiCursor.y + pad.y + yOffset }, font.baseSize, WHITE);
+
+    uiCursor.x += buttonSize.x + margin.x;
+    return clicked;
+}
+
 void Play(Server &server)
 {
+    sndSoftTick = LoadSound("resources/soft_tick.wav");
+    sndHardTick = LoadSound("resources/hard_tick.wav");
+
     Texture2D catTexture = LoadTexture("resources/cat.png");
     Vector2 catPos = {
         WINDOW_WIDTH / 2.0f - catTexture.width / 2.0f,
@@ -474,7 +538,7 @@ void Play(Server &server)
 
     Font font = LoadFontEx(FONT_PATH, FONT_SIZE, 0, 0);
     const char *text = "Listening...";
-    Vector2 statusMsgSize = MeasureTextEx(font, text, (float)FONT_SIZE, 1);
+    Vector2 statusMsgSize = MeasureTextEx(font, text, (float)font.baseSize, 1);
     Vector2 statusMsgPos = {
         WINDOW_WIDTH / 2 - statusMsgSize.x / 2,
         catPos.y + catTexture.height + 4
@@ -561,7 +625,7 @@ void Play(Server &server)
             }
         }
 
-        DrawTextShadowEx(font, text, statusMsgPos, (float)FONT_SIZE, RAYWHITE);
+        DrawTextShadowEx(font, text, statusMsgPos, (float)font.baseSize, RAYWHITE);
 
         bool editorPickTileDef = IsMouseButtonPressed(MOUSE_BUTTON_LEFT);
         bool editorPlaceTile = IsMouseButtonDown(MOUSE_BUTTON_LEFT);
@@ -572,66 +636,37 @@ void Play(Server &server)
         // Action Bar
         static float cornerRoundness = 0.2f;
         static float cornerSegments = 4;
-        static float lineThick = 2.0f;
+        static Vector2 lineThick{ 1.0f, 1.0f };
 
         {
             float x = 300;
-            float y = 4;
-            Vector2 pad{ 8, 1 };
+            float y = 8;
+            float pad = 4;
 
-            if (IsKeyPressed(KEY_ONE)) {
-                cornerRoundness += 0.1f * (IsKeyDown(KEY_LEFT_SHIFT) ? -1.0f : 1.0f);
-                cornerRoundness = CLAMP(cornerRoundness, 0.1f, 10.0f);
+            Vector2 uiCursor{ 300, 8 };
+            if (UIButton(font, "Save", uiCursor)) {
+                // TODO: Save something
             }
-            if (IsKeyPressed(KEY_TWO)) {
-                cornerSegments += 1.0f * (IsKeyDown(KEY_LEFT_SHIFT) ? -1.0f : 1.0f);
-                cornerSegments = CLAMP(cornerSegments, 1.0f, 10.0f);
+            if (UIButton(font, "Load", uiCursor)) {
+                // TODO: Save something
             }
-            if (IsKeyPressed(KEY_THREE)) {
-                lineThick += 1.0f * (IsKeyDown(KEY_LEFT_SHIFT) ? -1.0f : 1.0f);
-                lineThick = CLAMP(lineThick, 0.0f, 3.0f);
-            }
-
-            Vector2 textSize = MeasureTextEx(font, "Save", FONT_SIZE, 1.0f);
-            Vector2 buttonSize = textSize;
-            buttonSize.x += pad.x * 2;
-            buttonSize.y += pad.y * 2;
-
-            Rectangle buttonRect = { x - lineThick, y - lineThick, buttonSize.x + lineThick * 2, buttonSize.y + lineThick * 2 };
-            if (lineThick) {
-                DrawRectangleRounded(
-                    buttonRect,
-                    cornerRoundness, cornerSegments, BLACK
-                );
-            }
-
-            Color color = BLUE;
-            bool hover = false;
-            bool down = false;
-            bool clicked = false;
-            if (dlb_CheckCollisionPointRec(GetMousePosition(), buttonRect)) {
-                hover = true;
-                color = SKYBLUE;
-                if (IsMouseButtonDown(MOUSE_BUTTON_LEFT)) {
-                    down = true;
-                    color = DARKBLUE;
-                } else if (IsMouseButtonReleased(MOUSE_BUTTON_LEFT)) {
-                    clicked = true;
-                }
-            }
-
-            DrawRectangleRounded({ x, y, buttonSize.x, buttonSize.y }, cornerRoundness, cornerSegments, color);
-            DrawTextShadowEx(font, "Save", { x + pad.x, y + pad.y }, FONT_SIZE, WHITE);
         }
 
         // Tile selector
         for (int i = 0; i < ARRAY_SIZE(tileDefs); i++) {
             TileDef &tileDef = tileDefs[i];
-            Vector2 screenPos = { 300.0f + i * 32.0f, 48.0f };
+            Vector2 screenPos = { 300.0f + i * 32.0f + i * 2, 38.0f };
             Rectangle tileDefRectScreen{ screenPos.x, screenPos.y, 32, 32 };
             bool hover = dlb_CheckCollisionPointRec(GetMousePosition(), tileDefRectScreen);
-            if (hover && editorPickTileDef) {
-                cursor.tileDefId = i;
+            static int prevHover = -1;
+            if (hover) {
+                if (editorPickTileDef) {
+                    PlaySound(sndHardTick);
+                    cursor.tileDefId = i;
+                } else if (i != prevHover) {
+                    PlaySound(sndSoftTick);
+                    prevHover = i;
+                }
                 tileDefHovered = true;
             }
             Rectangle texRect{ (float)tileDef.x, (float)tileDef.y, (float)tileDef.w, (float)tileDef.h };
@@ -652,6 +687,7 @@ void Play(Server &server)
                 tile.pos = { 100.0f + x * 32.0f, 140.0f + y * 32.0f };
                 Vector2 screenPos = GetWorldToScreen2D(tile.pos, camera2d);
                 Rectangle tileRectScreen{ screenPos.x, screenPos.y, 32 * camera2d.zoom, 32 * camera2d.zoom };
+
                 bool tileHovered = dlb_CheckCollisionPointRec(GetMousePosition(), tileRectScreen);
                 if (tileHovered && editorPlaceTile) {
                     tile.tileDefId = cursor.tileDefId;
@@ -685,12 +721,12 @@ void Play(Server &server)
 #define DRAW_TEXT_MEASURE(measureRect, label, fmt, ...) { \
                 snprintf(buf, sizeof(buf), "%-12s : " fmt, label, __VA_ARGS__); \
                 Vector2 position{ hud_x, hud_y }; \
-                DrawTextShadowEx(font, buf, position, (float)FONT_SIZE, RAYWHITE); \
+                DrawTextShadowEx(font, buf, position, (float)font.baseSize, RAYWHITE); \
                 if (measureRect) { \
-                    Vector2 measure = MeasureTextEx(font, buf, (float)FONT_SIZE, 1.0); \
+                    Vector2 measure = MeasureTextEx(font, buf, (float)font.baseSize, 1.0); \
                     *measureRect = { position.x, position.y, measure.x, measure.y }; \
                 } \
-                hud_y += FONT_SIZE; \
+                hud_y += font.baseSize; \
             }
 
 #define DRAW_TEXT(label, fmt, ...) \
@@ -701,7 +737,6 @@ void Play(Server &server)
             DRAW_TEXT("tickAccum", "%.02f", server.tickAccum);
             DRAW_TEXT("clients", "%d", server.yj_server->GetNumConnectedClients());
             DRAW_TEXT("cursor", "%d, %d", GetMouseX(), GetMouseY());
-            DRAW_TEXT("save", "round: %.1f, seg: %.1f, thick: %.1f", cornerRoundness, cornerSegments, lineThick);
 
             static bool showClientInfo[yojimbo::MaxClients];
             for (int clientIdx = 0; clientIdx < yojimbo::MaxClients; clientIdx++) {
@@ -749,6 +784,8 @@ int main(int argc, char *argv[])
 //int __stdcall WinMain(void *hInstance, void *hPrevInstance, char *pCmdLine, int nCmdShow)
 {
     //SetTraceLogLevel(LOG_WARNING);
+
+    InitAudioDevice();
 
     InitWindow(WINDOW_WIDTH, WINDOW_HEIGHT, "RayNet Server");
     // NOTE(dlb): yojimbo uses rand() for network simulator and random_int()/random_float()
@@ -826,5 +863,6 @@ int main(int argc, char *argv[])
     server = {};
     ShutdownYojimbo();
     CloseWindow();
+    CloseAudioDevice();
     return 0;
 }

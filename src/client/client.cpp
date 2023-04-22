@@ -438,12 +438,12 @@ int main(int argc, char *argv[])
             #define DRAW_TEXT_MEASURE(measureRect, label, fmt, ...) { \
                 snprintf(buf, sizeof(buf), "%-11s : " fmt, label, __VA_ARGS__); \
                 Vector2 position{ hud_x, hud_y }; \
-                DrawTextShadowEx(font, buf, position, (float)FONT_SIZE, RAYWHITE); \
+                DrawTextShadowEx(font, buf, position, (float)font.baseSize, RAYWHITE); \
                 if (measureRect) { \
-                    Vector2 measure = MeasureTextEx(font, buf, (float)FONT_SIZE, 1.0); \
+                    Vector2 measure = MeasureTextEx(font, buf, (float)font.baseSize, 1.0); \
                     *measureRect = { position.x, position.y, measure.x, measure.y }; \
                 } \
-                hud_y += FONT_SIZE; \
+                hud_y += font.baseSize; \
             }
 
             #define DRAW_TEXT(label, fmt, ...) \
