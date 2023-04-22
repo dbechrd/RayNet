@@ -11,7 +11,9 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="include\tracy\TracyClient.cpp" />
     <ClCompile Include="src\client\client.cpp" />
+    <ClCompile Include="src\common\common.cpp" />
     <ClCompile Include="src\common\shared_lib.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -71,7 +73,6 @@
       <AdditionalIncludeDirectories>include</AdditionalIncludeDirectories>
       <StringPooling>true</StringPooling>
       <WarningLevel>Level3</WarningLevel>
-      <ExceptionHandling>false</ExceptionHandling>
       <DebugInformationFormat>OldStyle</DebugInformationFormat>
     </ClCompile>
     <Link>

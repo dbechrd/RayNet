@@ -4,6 +4,7 @@
     <ClCompile Include="src\server\server.cpp" />
     <ClCompile Include="src\common\shared_lib.cpp" />
     <ClCompile Include="src\server\server_world.cpp" />
+    <ClCompile Include="include\tracy\TracyClient.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="src\server\Server.rc" />

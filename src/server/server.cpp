@@ -1,5 +1,6 @@
 #include "../common/shared_lib.h"
 #include "server_world.h"
+#include <cassert>
 
 class ServerNetAdapter : public NetAdapter
 {
@@ -381,6 +382,86 @@ void ServerStop(Server &server)
     server.world = {};
 }
 
+bool dlb_CheckCollisionPointRec(Vector2 point, Rectangle rec)
+{
+    bool collision = false;
+
+    if ((point.x >= rec.x) && (point.x < (rec.x + rec.width)) && (point.y >= rec.y) && (point.y < (rec.y + rec.height))) collision = true;
+
+    return collision;
+}
+
+struct Cursor {
+    int tileDefId;
+} cursor{};
+
+struct TileDef {
+    int x, y;
+    int w, h;
+} tileDefs[] = {
+    { 0, 0, 32, 32 },  // empty tile
+    { 32, 0, 32, 32 },
+    { 64, 0, 32, 32 },
+    { 96, 0, 32, 32 },
+    { 128, 0, 32, 32 },
+};
+
+struct Tile {
+    int tileDefId;
+    Vector2 pos;
+};
+
+struct Map {
+    uint16_t width;
+    uint16_t height;
+    Tile *tiles;
+
+    Map(uint16_t width, uint16_t height) : width(width), height(height)
+    {
+        tiles = (Tile *)calloc((size_t)width * height, sizeof(*tiles));
+    }
+
+    ~Map() {
+        free(tiles);
+    }
+
+    Tile &At(uint16_t x, uint16_t y) {
+        assert(x < width);
+        assert(y < height);
+        return tiles[y * width + x];
+    }
+};
+
+void Fill(Map &map, int tileDefId)
+{
+    //Tile &foo = map.At(x, y);
+
+    //fn fill(x, y):
+    //    if not Inside(x, y) then return
+    //    let s = new empty stack or queue
+    //    Add (x, y) to s
+    //    while s is not empty:
+    //        Remove an (x, y) from s
+    //        let lx = x
+    //        while Inside(lx - 1, y):
+    //            Set(lx - 1, y)
+    //            lx = lx - 1
+    //        while Inside(x, y):
+    //            Set(x, y)
+    //            x = x + 1
+    //      scan(lx, x - 1, y + 1, s)
+    //      scan(lx, x - 1, y - 1, s)
+
+    //fn scan(lx, rx, y, s):
+    //    let span_added = false
+    //    for x in lx .. rx:
+    //        if not Inside(x, y):
+    //            span_added = false
+    //        else if not span_added:
+    //            Add (x, y) to s
+    //            span_added = true
+}
+
 void Play(Server &server)
 {
     Texture2D catTexture = LoadTexture("resources/cat.png");
@@ -389,6 +470,8 @@ void Play(Server &server)
         WINDOW_HEIGHT / 2.0f - catTexture.height / 2.0f
     };
 
+    Texture2D tilesTexture = LoadTexture("resources/tiles32.png");
+
     Font font = LoadFontEx(FONT_PATH, FONT_SIZE, 0, 0);
     const char *text = "Listening...";
     Vector2 statusMsgSize = MeasureTextEx(font, text, (float)FONT_SIZE, 1);
@@ -396,6 +479,17 @@ void Play(Server &server)
         WINDOW_WIDTH / 2 - statusMsgSize.x / 2,
         catPos.y + catTexture.height + 4
     };
+
+    Camera3D camera3d{};
+    camera3d.position = {0, 0, 0};
+    camera3d.target = {0, 0, -1};
+    camera3d.up = {0, 1, 0};
+    camera3d.fovy = 90;
+    camera3d.projection = CAMERA_PERSPECTIVE;
+    SetCameraMode(camera3d, CAMERA_FREE);
+
+    Camera2D camera2d{};
+    camera2d.zoom = 1.0f;
 
     double frameStart = GetTime();
     double frameDt = 0;
@@ -415,6 +509,44 @@ void Play(Server &server)
             ServerUpdate(server, now);
         }
 
+#if 0
+        if (IsMouseButtonDown(MOUSE_BUTTON_RIGHT)) {
+            Vector2 delta = GetMouseDelta();
+            camera2d.target.x -= delta.x;
+            camera2d.target.y -= delta.y;
+        }
+        camera2d.zoom += GetMouseWheelMove() * 0.2f * camera2d.zoom;
+#else
+        if (IsMouseButtonDown(MOUSE_BUTTON_RIGHT))
+        {
+            Vector2 delta = GetMouseDelta();
+            delta = Vector2Scale(delta, -1.0f / camera2d.zoom);
+
+            camera2d.target = Vector2Add(camera2d.target, delta);
+        }
+
+        // Zoom based on mouse wheel
+        float wheel = GetMouseWheelMove();
+        if (wheel != 0)
+        {
+            // Get the world point that is under the mouse
+            Vector2 mouseWorldPos = GetScreenToWorld2D(GetMousePosition(), camera2d);
+
+            // Set the offset to where the mouse is
+            camera2d.offset = GetMousePosition();
+
+            // Set the target to match, so that the camera maps the world space point
+            // under the cursor to the screen space point under the cursor at any zoom
+            camera2d.target = mouseWorldPos;
+
+            // Zoom increment
+            const float zoomIncrement = 0.125f;
+
+            camera2d.zoom += (wheel * zoomIncrement * camera2d.zoom);
+            if (camera2d.zoom < zoomIncrement) camera2d.zoom = zoomIncrement;
+        }
+#endif
+
         //--------------------
         // Draw
         BeginDrawing();
@@ -430,6 +562,121 @@ void Play(Server &server)
         }
 
         DrawTextShadowEx(font, text, statusMsgPos, (float)FONT_SIZE, RAYWHITE);
+
+        bool editorPickTileDef = IsMouseButtonPressed(MOUSE_BUTTON_LEFT);
+        bool editorPlaceTile = IsMouseButtonDown(MOUSE_BUTTON_LEFT);
+        bool editorPickTile = IsMouseButtonDown(MOUSE_BUTTON_MIDDLE);
+        bool editorBucketFill = IsKeyPressed(KEY_F);
+        bool tileDefHovered = false;
+
+        // Action Bar
+        static float cornerRoundness = 0.2f;
+        static float cornerSegments = 4;
+        static float lineThick = 2.0f;
+
+        {
+            float x = 300;
+            float y = 4;
+            Vector2 pad{ 8, 1 };
+
+            if (IsKeyPressed(KEY_ONE)) {
+                cornerRoundness += 0.1f * (IsKeyDown(KEY_LEFT_SHIFT) ? -1.0f : 1.0f);
+                cornerRoundness = CLAMP(cornerRoundness, 0.1f, 10.0f);
+            }
+            if (IsKeyPressed(KEY_TWO)) {
+                cornerSegments += 1.0f * (IsKeyDown(KEY_LEFT_SHIFT) ? -1.0f : 1.0f);
+                cornerSegments = CLAMP(cornerSegments, 1.0f, 10.0f);
+            }
+            if (IsKeyPressed(KEY_THREE)) {
+                lineThick += 1.0f * (IsKeyDown(KEY_LEFT_SHIFT) ? -1.0f : 1.0f);
+                lineThick = CLAMP(lineThick, 0.0f, 3.0f);
+            }
+
+            Vector2 textSize = MeasureTextEx(font, "Save", FONT_SIZE, 1.0f);
+            Vector2 buttonSize = textSize;
+            buttonSize.x += pad.x * 2;
+            buttonSize.y += pad.y * 2;
+
+            Rectangle buttonRect = { x - lineThick, y - lineThick, buttonSize.x + lineThick * 2, buttonSize.y + lineThick * 2 };
+            if (lineThick) {
+                DrawRectangleRounded(
+                    buttonRect,
+                    cornerRoundness, cornerSegments, BLACK
+                );
+            }
+
+            Color color = BLUE;
+            bool hover = false;
+            bool down = false;
+            bool clicked = false;
+            if (dlb_CheckCollisionPointRec(GetMousePosition(), buttonRect)) {
+                hover = true;
+                color = SKYBLUE;
+                if (IsMouseButtonDown(MOUSE_BUTTON_LEFT)) {
+                    down = true;
+                    color = DARKBLUE;
+                } else if (IsMouseButtonReleased(MOUSE_BUTTON_LEFT)) {
+                    clicked = true;
+                }
+            }
+
+            DrawRectangleRounded({ x, y, buttonSize.x, buttonSize.y }, cornerRoundness, cornerSegments, color);
+            DrawTextShadowEx(font, "Save", { x + pad.x, y + pad.y }, FONT_SIZE, WHITE);
+        }
+
+        // Tile selector
+        for (int i = 0; i < ARRAY_SIZE(tileDefs); i++) {
+            TileDef &tileDef = tileDefs[i];
+            Vector2 screenPos = { 300.0f + i * 32.0f, 48.0f };
+            Rectangle tileDefRectScreen{ screenPos.x, screenPos.y, 32, 32 };
+            bool hover = dlb_CheckCollisionPointRec(GetMousePosition(), tileDefRectScreen);
+            if (hover && editorPickTileDef) {
+                cursor.tileDefId = i;
+                tileDefHovered = true;
+            }
+            Rectangle texRect{ (float)tileDef.x, (float)tileDef.y, (float)tileDef.w, (float)tileDef.h };
+            DrawTextureRec(tilesTexture, texRect, screenPos, WHITE);
+            if (i == cursor.tileDefId) {
+                DrawRectangleLines(screenPos.x, screenPos.y, tileDef.w, tileDef.h, YELLOW);
+            } else if (hover) {
+                DrawRectangleLines(screenPos.x, screenPos.y, tileDef.w, tileDef.h, WHITE);
+            }
+        }
+
+        // Map
+        BeginMode2D(camera2d);
+        static Map map(32, 32);
+        for (int y = 0; y < map.height; y++) {
+            for (int x = 0; x < map.width; x++) {
+                Tile &tile = map.At(x, y);
+                tile.pos = { 100.0f + x * 32.0f, 140.0f + y * 32.0f };
+                Vector2 screenPos = GetWorldToScreen2D(tile.pos, camera2d);
+                Rectangle tileRectScreen{ screenPos.x, screenPos.y, 32 * camera2d.zoom, 32 * camera2d.zoom };
+                bool tileHovered = dlb_CheckCollisionPointRec(GetMousePosition(), tileRectScreen);
+                if (tileHovered && editorPlaceTile) {
+                    tile.tileDefId = cursor.tileDefId;
+                } else if (tileHovered && editorPickTile) {
+                    cursor.tileDefId = tile.tileDefId;
+                }
+                TileDef &tileDef = tileDefs[tile.tileDefId];
+                Rectangle texRect{ (float)tileDef.x, (float)tileDef.y, (float)tileDef.w, (float)tileDef.h };
+                DrawTextureRec(tilesTexture, texRect, tile.pos, WHITE);
+                if (tileHovered) {
+                    DrawRectangleLines(tile.pos.x, tile.pos.y, tileDef.w, tileDef.h, WHITE);
+                }
+            }
+        }
+        EndMode2D();
+
+        // Cursor tile
+        //{
+        //    TileDef &tileDef = tileDefs[cursor.tileDefId];
+        //    Rectangle texRect{ tileDef.x, tileDef.y, tileDef.w, tileDef.h };
+        //    Vector2 screenPos = GetMousePosition();
+        //    //screenPos.x -= tileDef.w / 2;
+        //    //screenPos.y -= tileDef.h / 2;
+        //    DrawTextureRec(tilesTexture, texRect, screenPos, WHITE);
+        //}
 
         {
             float hud_x = 8.0f;
@@ -454,6 +701,7 @@ void Play(Server &server)
             DRAW_TEXT("tickAccum", "%.02f", server.tickAccum);
             DRAW_TEXT("clients", "%d", server.yj_server->GetNumConnectedClients());
             DRAW_TEXT("cursor", "%d, %d", GetMouseX(), GetMouseY());
+            DRAW_TEXT("save", "round: %.1f, seg: %.1f, thick: %.1f", cornerRoundness, cornerSegments, lineThick);
 
             static bool showClientInfo[yojimbo::MaxClients];
             for (int clientIdx = 0; clientIdx < yojimbo::MaxClients; clientIdx++) {
@@ -493,6 +741,7 @@ void Play(Server &server)
     }
 
     UnloadTexture(catTexture);
+    UnloadTexture(tilesTexture);
     UnloadFont(font);
 }
 
@@ -524,7 +773,7 @@ int main(int argc, char *argv[])
 #elif CL_DBG_TWO_SCREEN
     const int monitorWidth = GetMonitorWidth(1);
     const int monitorHeight = GetMonitorHeight(1);
-    Vector2 monitor2 = GetMonitorPosition(1);
+    Vector2 monitor2 = GetMonitorPosition(0);
     SetWindowPosition(
         monitor2.x + monitorWidth / 2 - (int)screenSize.x / 2,
         monitor2.y + monitorHeight / 2 - (int)screenSize.y / 2

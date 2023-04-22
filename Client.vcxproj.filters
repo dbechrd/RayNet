@@ -3,6 +3,8 @@
   <ItemGroup>
     <ClCompile Include="src\client\client.cpp" />
     <ClCompile Include="src\common\shared_lib.cpp" />
+    <ClCompile Include="include\tracy\TracyClient.cpp" />
+    <ClCompile Include="src\common\common.cpp" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="res\client.ico" />
