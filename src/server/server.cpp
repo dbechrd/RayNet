@@ -400,12 +400,28 @@ struct Cursor {
 struct TileDef {
     int x, y;
 } tileDefs[] = {
-    // n * (w + pad*2) + pad
-    { 0 * (TILE_W + 2) + 1, 0 * (TILE_W + 2) + 1 },  // empty tile
-    { 1 * (TILE_W + 2) + 1, 0 * (TILE_W + 2) + 1 },
-    { 2 * (TILE_W + 2) + 1, 0 * (TILE_W + 2) + 1 },
-    { 3 * (TILE_W + 2) + 1, 0 * (TILE_W + 2) + 1 },
-    { 4 * (TILE_W + 2) + 1, 0 * (TILE_W + 2) + 1 },
+#define TILEDEF(y, x) { x * (TILE_W + 2) + 1, y * (TILE_W + 2) + 1 }
+    TILEDEF(0, 0),
+    TILEDEF(0, 1),
+    TILEDEF(0, 2),
+    TILEDEF(0, 3),
+    TILEDEF(0, 4),
+    TILEDEF(1, 0),
+    TILEDEF(1, 1),
+    TILEDEF(1, 2),
+    TILEDEF(1, 3),
+    TILEDEF(1, 4),
+    TILEDEF(2, 0),
+    TILEDEF(2, 1),
+    TILEDEF(2, 2),
+    TILEDEF(2, 3),
+    TILEDEF(2, 4),
+    TILEDEF(3, 0),
+    TILEDEF(3, 1),
+    TILEDEF(3, 2),
+    TILEDEF(3, 3),
+    TILEDEF(3, 4),
+#undef TILEDEF
 };
 
 typedef uint8_t Tile;
@@ -415,7 +431,7 @@ struct Map {
         int x, y;
     };
 
-    const int MAGIC = 0xDBBB9192;
+    const uint32_t MAGIC = 0xDBBB9192;
     int version;
     int width;
     int height;
@@ -728,8 +744,7 @@ void Play(Server &server)
         }
         camera2d.zoom += GetMouseWheelMove() * 0.2f * camera2d.zoom;
 #else
-        if (IsMouseButtonDown(MOUSE_BUTTON_RIGHT))
-        {
+        if (IsMouseButtonDown(MOUSE_BUTTON_RIGHT)) {
             Vector2 delta = GetMouseDelta();
             delta = Vector2Scale(delta, -1.0f / camera2d.zoom);
 
@@ -778,7 +793,6 @@ void Play(Server &server)
         bool editorPlaceTile = IsMouseButtonDown(MOUSE_BUTTON_LEFT);
         bool editorPickTile = IsMouseButtonDown(MOUSE_BUTTON_MIDDLE);
         bool editorFillTile = IsKeyPressed(KEY_F);
-        bool tileDefHovered = false;
 
         // Map
 #if _DEBUG
@@ -787,9 +801,26 @@ void Play(Server &server)
         }
 #endif
 
-        Vector2 cursorWorldPos = GetScreenToWorld2D({ (float)GetMouseX(), (float)GetMouseY() }, camera2d);
-        Tile hoveredTile;
-        bool hoveringTile = map.AtWorld((int32_t)cursorWorldPos.x, (int32_t)cursorWorldPos.y, hoveredTile);
+        // Tile selector (collision only)
+        static int prevTileDefHovered = -1;
+        int tileDefHovered = -1;
+
+        for (int i = 0; i < ARRAY_SIZE(tileDefs); i++) {
+            Vector2 screenPos = { 360.0f + i * TILE_W + i * 2, 38.0f };
+            Rectangle tileDefRectScreen{ screenPos.x, screenPos.y, TILE_W, TILE_W };
+            bool hover = dlb_CheckCollisionPointRec(GetMousePosition(), tileDefRectScreen);
+            if (hover) {
+                tileDefHovered = i;
+                if (editorPickTileDef) {
+                    PlaySound(sndHardTick);
+                    cursor.tileDefId = i;
+                } else if (tileDefHovered != prevTileDefHovered) {
+                    PlaySound(sndSoftTick);
+                }
+                prevTileDefHovered = tileDefHovered;
+                break;
+            }
+        }
 
 #if CL_DBG_TILE_CULLING
         const int screenMargin = 64;
@@ -817,6 +848,9 @@ void Play(Server &server)
             }
         }
 
+        Vector2 cursorWorldPos = GetScreenToWorld2D({ (float)GetMouseX(), (float)GetMouseY() }, camera2d);
+        Tile hoveredTile;
+        bool hoveringTile = tileDefHovered < 0 && map.AtWorld((int32_t)cursorWorldPos.x, (int32_t)cursorWorldPos.y, hoveredTile);
         if (hoveringTile) {
             Map::Coord coord{};
             bool validCoord = map.WorldToTileIndex(cursorWorldPos.x, cursorWorldPos.y, coord);
@@ -869,24 +903,11 @@ void Play(Server &server)
         for (int i = 0; i < ARRAY_SIZE(tileDefs); i++) {
             TileDef &tileDef = tileDefs[i];
             Vector2 screenPos = { 360.0f + i * TILE_W + i * 2, 38.0f };
-            Rectangle tileDefRectScreen{ screenPos.x, screenPos.y, TILE_W, TILE_W };
-            bool hover = dlb_CheckCollisionPointRec(GetMousePosition(), tileDefRectScreen);
-            static int prevHover = -1;
-            if (hover) {
-                if (editorPickTileDef) {
-                    PlaySound(sndHardTick);
-                    cursor.tileDefId = i;
-                } else if (i != prevHover) {
-                    PlaySound(sndSoftTick);
-                    prevHover = i;
-                }
-                tileDefHovered = true;
-            }
             Rectangle texRect{ (float)tileDef.x, (float)tileDef.y, TILE_W, TILE_W };
             DrawTextureRec(tilesTexture, texRect, screenPos, WHITE);
             if (i == cursor.tileDefId) {
                 DrawRectangleLines(screenPos.x, screenPos.y, TILE_W, TILE_W, YELLOW);
-            } else if (hover) {
+            } else if (i == tileDefHovered) {
                 DrawRectangleLines(screenPos.x, screenPos.y, TILE_W, TILE_W, WHITE);
             }
         }
