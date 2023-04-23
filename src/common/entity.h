@@ -18,6 +18,7 @@ struct Entity {
     uint32_t index;
     Color color;
     Vector2 size;
+    float radius;  // collision
 
     float drag;
     float speed;

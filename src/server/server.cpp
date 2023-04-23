@@ -44,7 +44,8 @@ struct Server {
         entity.type = Entity_Player;
         entity.index = clientIdx;
         entity.color = colors[clientIdx % (sizeof(colors) / sizeof(colors[0]))];
-        entity.size = { 64, 32 };
+        entity.size = { 32, 64 };
+        entity.radius = 10;
         entity.position = { 100, 100 };
         entity.speed = 100;
         entity.drag = 8.0f;
@@ -669,21 +670,9 @@ void Play(Server &server)
     sndSoftTick = LoadSound("resources/soft_tick.wav");
     sndHardTick = LoadSound("resources/hard_tick.wav");
 
-    Texture2D catTexture = LoadTexture("resources/cat.png");
-    Vector2 catPos = {
-        WINDOW_WIDTH / 2.0f - catTexture.width / 2.0f,
-        WINDOW_HEIGHT / 2.0f - catTexture.height / 2.0f
-    };
-
     Texture2D tilesTexture = LoadTexture("resources/tiles32.png");
 
     Font font = LoadFontEx(FONT_PATH, FONT_SIZE, 0, 0);
-    const char *text = "Listening...";
-    Vector2 statusMsgSize = MeasureTextEx(font, text, (float)font.baseSize, 1);
-    Vector2 statusMsgPos = {
-        WINDOW_WIDTH / 2 - statusMsgSize.x / 2,
-        catPos.y + catTexture.height + 4
-    };
 
 #define LEVEL_001 "maps/level1.dat"
 
@@ -705,6 +694,8 @@ void Play(Server &server)
     double frameStart = GetTime();
     double frameDt = 0;
     double frameDtSmooth = 60;
+
+    bool editorActive = false;
 
     while (!WindowShouldClose())
     {
@@ -734,65 +725,52 @@ void Play(Server &server)
         if (IsKeyDown(KEY_LEFT_CONTROL) && IsKeyPressed(KEY_ZERO)) {
             camera2d.zoom = 1.0f;
         }
+        if (IsKeyPressed(KEY_GRAVE)) {
+            editorActive = !editorActive;
+        }
+
         histogram.Push(frameDtSmooth, doNetTick ? GREEN : RAYWHITE);
 
-#if 0
-        if (IsMouseButtonDown(MOUSE_BUTTON_RIGHT)) {
-            Vector2 delta = GetMouseDelta();
-            camera2d.target.x -= delta.x;
-            camera2d.target.y -= delta.y;
+        if (editorActive) {
+            if (IsMouseButtonDown(MOUSE_BUTTON_RIGHT)) {
+                Vector2 delta = GetMouseDelta();
+                delta = Vector2Scale(delta, -1.0f / camera2d.zoom);
+
+                camera2d.target = Vector2Add(camera2d.target, delta);
+            }
+
+            // Zoom based on mouse wheel
+            float wheel = GetMouseWheelMove();
+            if (wheel != 0)
+            {
+                // Get the world point that is under the mouse
+                Vector2 mouseWorldPos = GetScreenToWorld2D(GetMousePosition(), camera2d);
+
+                // Set the offset to where the mouse is
+                camera2d.offset = GetMousePosition();
+
+                // Set the target to match, so that the camera maps the world space point
+                // under the cursor to the screen space point under the cursor at any zoom
+                camera2d.target = mouseWorldPos;
+
+                // Zoom increment
+                const float zoomIncrement = 0.125f;
+
+                camera2d.zoom += (wheel * zoomIncrement * camera2d.zoom);
+                if (camera2d.zoom < zoomIncrement) camera2d.zoom = zoomIncrement;
+            }
+        } else {
+            camera2d.offset = {};
+            camera2d.target = {};
+            camera2d.zoom = 1;
         }
-        camera2d.zoom += GetMouseWheelMove() * 0.2f * camera2d.zoom;
-#else
-        if (IsMouseButtonDown(MOUSE_BUTTON_RIGHT)) {
-            Vector2 delta = GetMouseDelta();
-            delta = Vector2Scale(delta, -1.0f / camera2d.zoom);
 
-            camera2d.target = Vector2Add(camera2d.target, delta);
-        }
-
-        // Zoom based on mouse wheel
-        float wheel = GetMouseWheelMove();
-        if (wheel != 0)
-        {
-            // Get the world point that is under the mouse
-            Vector2 mouseWorldPos = GetScreenToWorld2D(GetMousePosition(), camera2d);
-
-            // Set the offset to where the mouse is
-            camera2d.offset = GetMousePosition();
-
-            // Set the target to match, so that the camera maps the world space point
-            // under the cursor to the screen space point under the cursor at any zoom
-            camera2d.target = mouseWorldPos;
-
-            // Zoom increment
-            const float zoomIncrement = 0.125f;
-
-            camera2d.zoom += (wheel * zoomIncrement * camera2d.zoom);
-            if (camera2d.zoom < zoomIncrement) camera2d.zoom = zoomIncrement;
-        }
-#endif
+        const Vector2 cursorWorldPos = GetScreenToWorld2D({ (float)GetMouseX(), (float)GetMouseY() }, camera2d);
 
         //--------------------
         // Draw
         BeginDrawing();
         ClearBackground(BROWN);
-
-        DrawTexture(catTexture, (int)catPos.x, (int)catPos.y, WHITE);
-
-        for (int entityId = 0; entityId < SV_MAX_ENTITIES; entityId++) {
-            Entity &entity = server.world->entities[entityId];
-            if (entity.type) {
-                entity.Draw(font, entityId, 1);
-            }
-        }
-
-        DrawTextShadowEx(font, text, statusMsgPos, (float)font.baseSize, RAYWHITE);
-
-        bool editorPickTileDef = IsMouseButtonPressed(MOUSE_BUTTON_LEFT);
-        bool editorPlaceTile = IsMouseButtonDown(MOUSE_BUTTON_LEFT);
-        bool editorPickTile = IsMouseButtonDown(MOUSE_BUTTON_MIDDLE);
-        bool editorFillTile = IsKeyPressed(KEY_F);
 
         // Map
 #if _DEBUG
@@ -801,24 +779,28 @@ void Play(Server &server)
         }
 #endif
 
-        // Tile selector (collision only)
+        // [Editor] Tile selector (collision test)
         static int prevTileDefHovered = -1;
         int tileDefHovered = -1;
 
-        for (int i = 0; i < ARRAY_SIZE(tileDefs); i++) {
-            Vector2 screenPos = { 360.0f + i * TILE_W + i * 2, 38.0f };
-            Rectangle tileDefRectScreen{ screenPos.x, screenPos.y, TILE_W, TILE_W };
-            bool hover = dlb_CheckCollisionPointRec(GetMousePosition(), tileDefRectScreen);
-            if (hover) {
-                tileDefHovered = i;
-                if (editorPickTileDef) {
-                    PlaySound(sndHardTick);
-                    cursor.tileDefId = i;
-                } else if (tileDefHovered != prevTileDefHovered) {
-                    PlaySound(sndSoftTick);
+        if (editorActive) {
+            const bool editorPickTileDef = IsMouseButtonPressed(MOUSE_BUTTON_LEFT);
+
+            for (int i = 0; i < ARRAY_SIZE(tileDefs); i++) {
+                Vector2 screenPos = { 360.0f + i * TILE_W + i * 2, 38.0f };
+                Rectangle tileDefRectScreen{ screenPos.x, screenPos.y, TILE_W, TILE_W };
+                bool hover = dlb_CheckCollisionPointRec(GetMousePosition(), tileDefRectScreen);
+                if (hover) {
+                    tileDefHovered = i;
+                    if (editorPickTileDef) {
+                        PlaySound(sndHardTick);
+                        cursor.tileDefId = i;
+                    } else if (tileDefHovered != prevTileDefHovered) {
+                        PlaySound(sndSoftTick);
+                    }
+                    prevTileDefHovered = tileDefHovered;
+                    break;
                 }
-                prevTileDefHovered = tileDefHovered;
-                break;
             }
         }
 
@@ -848,24 +830,41 @@ void Play(Server &server)
             }
         }
 
-        Vector2 cursorWorldPos = GetScreenToWorld2D({ (float)GetMouseX(), (float)GetMouseY() }, camera2d);
-        Tile hoveredTile;
-        bool hoveringTile = tileDefHovered < 0 && map.AtWorld((int32_t)cursorWorldPos.x, (int32_t)cursorWorldPos.y, hoveredTile);
-        if (hoveringTile) {
-            Map::Coord coord{};
-            bool validCoord = map.WorldToTileIndex(cursorWorldPos.x, cursorWorldPos.y, coord);
-            assert(validCoord);  // should always be true when hoveredTile != null
+        // [Editor] Tile actions and hover highlight
+        if (editorActive) {
+            const bool editorPlaceTile = IsMouseButtonDown(MOUSE_BUTTON_LEFT);
+            const bool editorPickTile = IsMouseButtonDown(MOUSE_BUTTON_MIDDLE);
+            const bool editorFillTile = IsKeyPressed(KEY_F);
 
-            if (editorPlaceTile) {
-                map.Set(coord.x, coord.y, cursor.tileDefId);
-            } else if (editorPickTile) {
-                cursor.tileDefId = hoveredTile;
-            } else if (editorFillTile) {
-                Fill(map, coord.x, coord.y, cursor.tileDefId);
+            Tile hoveredTile;
+            bool hoveringTile = tileDefHovered < 0 && map.AtWorld((int32_t)cursorWorldPos.x, (int32_t)cursorWorldPos.y, hoveredTile);
+            if (hoveringTile) {
+                Map::Coord coord{};
+                bool validCoord = map.WorldToTileIndex(cursorWorldPos.x, cursorWorldPos.y, coord);
+                assert(validCoord);  // should always be true when hoveredTile != null
+
+                if (editorPlaceTile) {
+                    map.Set(coord.x, coord.y, cursor.tileDefId);
+                } else if (editorPickTile) {
+                    cursor.tileDefId = hoveredTile;
+                } else if (editorFillTile) {
+                    Fill(map, coord.x, coord.y, cursor.tileDefId);
+                }
+
+                DrawRectangleLines(coord.x * TILE_W, coord.y * TILE_W, TILE_W, TILE_W, WHITE);
             }
-
-            DrawRectangleLines(coord.x * TILE_W, coord.y * TILE_W, TILE_W, TILE_W, WHITE);
         }
+
+        for (int entityId = 0; entityId < SV_MAX_ENTITIES; entityId++) {
+            Entity &entity = server.world->entities[entityId];
+            if (entity.type) {
+                entity.Draw(font, entityId, 1);
+                if (entity.radius) {
+                    DrawCircle(entity.position.x, entity.position.y, entity.radius, Fade(PINK, 0.5));
+                }
+            }
+        }
+
         EndMode2D();
 
 #if CL_DBG_TILE_CULLING
@@ -878,8 +877,8 @@ void Play(Server &server)
             }, 1.0f, PINK);
 #endif
 
-        // Action Bar
-        {
+        // [Editor] Action Bar
+        if (editorActive) {
             float x = 300;
             float y = 8;
             float pad = 4;
@@ -897,30 +896,20 @@ void Play(Server &server)
                     // until dismissed
                 }
             }
-        }
 
-        // Tile selector
-        for (int i = 0; i < ARRAY_SIZE(tileDefs); i++) {
-            TileDef &tileDef = tileDefs[i];
-            Vector2 screenPos = { 360.0f + i * TILE_W + i * 2, 38.0f };
-            Rectangle texRect{ (float)tileDef.x, (float)tileDef.y, TILE_W, TILE_W };
-            DrawTextureRec(tilesTexture, texRect, screenPos, WHITE);
-            if (i == cursor.tileDefId) {
-                DrawRectangleLines(screenPos.x, screenPos.y, TILE_W, TILE_W, YELLOW);
-            } else if (i == tileDefHovered) {
-                DrawRectangleLines(screenPos.x, screenPos.y, TILE_W, TILE_W, WHITE);
+            // Tile selector
+            for (int i = 0; i < ARRAY_SIZE(tileDefs); i++) {
+                TileDef &tileDef = tileDefs[i];
+                Vector2 screenPos = { 360.0f + i * TILE_W + i * 2, 38.0f };
+                Rectangle texRect{ (float)tileDef.x, (float)tileDef.y, TILE_W, TILE_W };
+                DrawTextureRec(tilesTexture, texRect, screenPos, WHITE);
+                if (i == cursor.tileDefId) {
+                    DrawRectangleLines(screenPos.x, screenPos.y, TILE_W, TILE_W, YELLOW);
+                } else if (i == tileDefHovered) {
+                    DrawRectangleLines(screenPos.x, screenPos.y, TILE_W, TILE_W, WHITE);
+                }
             }
         }
-
-        // Cursor tile
-        //{
-        //    TileDef &tileDef = tileDefs[cursor.tileDefId];
-        //    Rectangle texRect{ tileDef.x, tileDef.y, TILE_W, TILE_W };
-        //    Vector2 screenPos = GetMousePosition();
-        //    //screenPos.x -= tileDef.w / 2;
-        //    //screenPos.y -= tileDef.h / 2;
-        //    DrawTextureRec(tilesTexture, texRect, screenPos, WHITE);
-        //}
 
         {
             float hud_x = 8.0f;
@@ -948,7 +937,7 @@ void Play(Server &server)
             DRAW_TEXT("time", "%.02f", server.yj_server->GetTime());
             DRAW_TEXT("tick", "%" PRIu64, server.tick);
             DRAW_TEXT("tickAccum", "%.02f", server.tickAccum);
-            DRAW_TEXT("cursor", "%d, %d", GetMouseX(), GetMouseY());
+            DRAW_TEXT("cursor", "%d, %d (world: %.f, %.f)", GetMouseX(), GetMouseY(), cursorWorldPos.x, cursorWorldPos.y);
             DRAW_TEXT("clients", "%d", server.yj_server->GetNumConnectedClients());
 
             static bool showClientInfo[yojimbo::MaxClients];
@@ -989,7 +978,6 @@ void Play(Server &server)
         yojimbo_sleep(0.001);
     }
 
-    UnloadTexture(catTexture);
     UnloadTexture(tilesTexture);
     UnloadFont(font);
 }
@@ -1055,16 +1043,18 @@ int main(int argc, char *argv[])
 
     //-----------------
     // Bots
+#if 1
     uint32_t eid_bot1 = server->world->MakeEntity(Entity_Bot);
     if (eid_bot1) {
         Entity &bot1 = server->world->entities[eid_bot1];
         bot1.type = Entity_Bot;
         bot1.color = DARKPURPLE;
-        bot1.size = { 64, 32 };
+        bot1.size = { 32, 64 };
         bot1.position = { 200, 200 };
-        bot1.speed = 100;
+        bot1.speed = 10;
         bot1.drag = 8.0f;
     }
+#endif
     //-----------------
 
     Play(*server);
