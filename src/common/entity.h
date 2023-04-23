@@ -19,6 +19,7 @@ struct Entity {
     Color color;
     Vector2 size;
     float radius;  // collision
+    bool colliding;
 
     float drag;
     float speed;

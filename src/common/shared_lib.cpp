@@ -1,6 +1,7 @@
 #include "shared_lib.h"
 #include "entity.cpp"
 #include "net/net.cpp"
+#include "tilemap.cpp"
 
 void DrawTextShadowEx(Font font, const char *text, Vector2 pos, float fontSize, Color color)
 {

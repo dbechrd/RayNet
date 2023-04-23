@@ -3,6 +3,7 @@
 #include "raylib/raylib.h"
 #include "raylib/raymath.h"
 #include "yojimbo.h"
+#include <cassert>
 
 // Stuff that probably shouldn't be here
 
@@ -41,6 +42,7 @@
 #define CL_DBG_TWO_SCREEN      1
 #define CL_DBG_SNAPSHOT_IDS    0
 #define CL_DBG_TILE_CULLING    0
+#define CL_DBG_CIRCLE_VS_REC   0
 
 // Shared types
 

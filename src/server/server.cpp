@@ -4,6 +4,91 @@
 #include <stack>
 #include <cassert>
 
+struct Cursor {
+    int tileDefId;
+} cursor{};
+
+struct TileDef {
+    int x, y;  // position in spritesheet
+    bool collide;
+} tileDefs[] = {
+#define TILEDEF(y, x, collide) { x * (TILE_W + 2) + 1, y * (TILE_W + 2) + 1, collide }
+    TILEDEF(0, 0, 0),  // void
+    TILEDEF(0, 1, 0),  // bright grass
+    TILEDEF(0, 2, 0),  // bright water
+    TILEDEF(0, 3, 0),
+    TILEDEF(0, 4, 0),
+    TILEDEF(1, 0, 0),
+    TILEDEF(1, 1, 0),
+    TILEDEF(1, 2, 0),
+    TILEDEF(1, 3, 0),
+    TILEDEF(1, 4, 0),
+    TILEDEF(2, 0, 0),
+    TILEDEF(2, 1, 0),
+    TILEDEF(2, 2, 0),
+    TILEDEF(2, 3, 0),
+    TILEDEF(2, 4, 0),
+    TILEDEF(3, 0, 0),
+    TILEDEF(3, 1, 0),
+    TILEDEF(3, 2, 0),
+    TILEDEF(3, 3, 0),
+    TILEDEF(3, 4, 1),  // dark water
+#undef TILEDEF
+};
+
+bool dlb_CheckCollisionPointRec(Vector2 point, Rectangle rec)
+{
+    bool collision = false;
+
+    if ((point.x >= rec.x) && (point.x < (rec.x + rec.width)) && (point.y >= rec.y) && (point.y < (rec.y + rec.height))) collision = true;
+
+    return collision;
+}
+
+bool dlb_CheckCollisionCircleRec(Vector2 center, float radius, Rectangle rec, Vector2 &contact, Vector2 &normal, float &depth)
+{
+    float xOverlap = 0;
+    float yOverlap = 0;
+
+    Vector2 pt = center;  // circle center point constrained to box
+    if (pt.x < rec.x) {
+        pt.x = rec.x;
+    } else if (pt.x >= rec.x + rec.width) {
+        pt.x = rec.x + rec.width;
+    } else {
+        float recCenterX = rec.x + rec.width / 2;
+        xOverlap = pt.x < recCenterX ? rec.x - pt.x : (rec.x + rec.width) - pt.x;
+    }
+
+    if (pt.y < rec.y) {
+        pt.y = rec.y;
+    } else if (pt.y >= rec.y + rec.height) {
+        pt.y = rec.y + rec.height;
+    } else {
+        float recCenterY = rec.y + rec.height / 2;
+        yOverlap = pt.y < recCenterY ? rec.y - pt.y : (rec.y + rec.height) - pt.y;
+    }
+
+    if (Vector2DistanceSqr(pt, center) < radius*radius) {
+        contact = pt;  // closest point to "pt" on the surface of the box
+        if (fabsf(xOverlap) < fabsf(yOverlap)) {
+            contact.x += xOverlap;
+        } else if (fabsf(yOverlap) < fabsf(xOverlap)) {
+            contact.y += yOverlap;
+        }
+
+        Vector2 pen = Vector2Subtract(center, contact);
+        depth = radius - Vector2Length(pen);
+        normal = Vector2Normalize(pen);
+
+        if (xOverlap && yOverlap) {
+            depth -= radius*2;
+        }
+        return true;
+    }
+    return false;
+}
+
 class ServerNetAdapter : public NetAdapter
 {
 public:
@@ -277,8 +362,61 @@ void ServerTick(Server &server)
     // Tick entites
     for (int entityId = 0; entityId < SV_MAX_ENTITIES; entityId++) {
         Entity &entity = server.world->entities[entityId];
-        if (entity.type && !entity.despawnedAt) {
-            entity_ticker[entity.type](server, entityId, SV_TICK_DT);
+        if (!entity.type || entity.despawnedAt) {
+            continue;
+        }
+
+        entity_ticker[entity.type](server, entityId, SV_TICK_DT);
+    }
+
+    // Resolve collisions
+    for (int entityId = 0; entityId < SV_MAX_ENTITIES; entityId++) {
+        Entity &entity = server.world->entities[entityId];
+        if (!entity.type || entity.despawnedAt || !entity.radius) {
+            continue;
+        }
+
+        entity.colliding = false;
+
+        Vector2 topLeft{
+            entity.position.x - entity.radius,
+            entity.position.y - entity.radius
+        };
+        Vector2 bottomRight{
+            entity.position.x + entity.radius,
+            entity.position.y + entity.radius
+        };
+
+        int yMin = CLAMP(floorf(topLeft.y / TILE_W), 0, server.world->map.height);
+        int yMax = CLAMP(ceilf(bottomRight.y / TILE_W), 0, server.world->map.height);
+        int xMin = CLAMP(floorf(topLeft.x / TILE_W), 0, server.world->map.width);
+        int xMax = CLAMP(ceilf(bottomRight.x / TILE_W), 0, server.world->map.width);
+
+        for (int y = yMin; y < yMax; y++) {
+            for (int x = xMin; x < xMax; x++) {
+                Tile tile{};
+                if (server.world->map.AtTry(x, y, tile)) {
+                    TileDef &tileDef = tileDefs[tile];
+                    if (tileDef.collide) {
+                        Rectangle tileRect{};
+                        Vector2 tilePos = { (float)x * TILE_W, (float)y * TILE_W };
+                        tileRect.x = tilePos.x;
+                        tileRect.y = tilePos.y;
+                        tileRect.width = TILE_W;
+                        tileRect.height = TILE_W;
+                        Vector2 contact{};
+                        Vector2 normal{};
+                        float depth{};
+                        if (dlb_CheckCollisionCircleRec(entity.position, entity.radius, tileRect, contact, normal, depth)) {
+                            entity.colliding = true;
+                            if (Vector2DotProduct(entity.velocity, normal) < 0) {
+                                entity.position.x += normal.x * depth;
+                                entity.position.y += normal.y * depth;
+                            }
+                        }
+                    }
+                }
+            }
         }
     }
 
@@ -385,175 +523,7 @@ void ServerStop(Server &server)
     server.world = {};
 }
 
-bool dlb_CheckCollisionPointRec(Vector2 point, Rectangle rec)
-{
-    bool collision = false;
-
-    if ((point.x >= rec.x) && (point.x < (rec.x + rec.width)) && (point.y >= rec.y) && (point.y < (rec.y + rec.height))) collision = true;
-
-    return collision;
-}
-
-struct Cursor {
-    int tileDefId;
-} cursor{};
-
-struct TileDef {
-    int x, y;
-} tileDefs[] = {
-#define TILEDEF(y, x) { x * (TILE_W + 2) + 1, y * (TILE_W + 2) + 1 }
-    TILEDEF(0, 0),
-    TILEDEF(0, 1),
-    TILEDEF(0, 2),
-    TILEDEF(0, 3),
-    TILEDEF(0, 4),
-    TILEDEF(1, 0),
-    TILEDEF(1, 1),
-    TILEDEF(1, 2),
-    TILEDEF(1, 3),
-    TILEDEF(1, 4),
-    TILEDEF(2, 0),
-    TILEDEF(2, 1),
-    TILEDEF(2, 2),
-    TILEDEF(2, 3),
-    TILEDEF(2, 4),
-    TILEDEF(3, 0),
-    TILEDEF(3, 1),
-    TILEDEF(3, 2),
-    TILEDEF(3, 3),
-    TILEDEF(3, 4),
-#undef TILEDEF
-};
-
-typedef uint8_t Tile;
-
-struct Map {
-    struct Coord {
-        int x, y;
-    };
-
-    const uint32_t MAGIC = 0xDBBB9192;
-    int version;
-    int width;
-    int height;
-    Tile *tiles;
-
-    Err Alloc(int version, int width, int height)
-    {
-        version = 1;
-        if (width <= 0 || height <= 0 || width > 128 || height > 128) {
-            return RN_INVALID_SIZE;
-        }
-
-        tiles = (Tile *)calloc((size_t)width * height, sizeof(*tiles));
-        if (!tiles) {
-            return RN_BAD_ALLOC;
-        }
-
-        return RN_SUCCESS;
-    }
-
-    ~Map() {
-        free(tiles);
-    }
-
-    Err Save(const char *filename)
-    {
-        FILE *file = fopen(filename, "w");
-        if (file) {
-            assert(width);
-            assert(height);
-            assert(tiles);
-
-            fwrite(&MAGIC, sizeof(MAGIC), 1, file);
-            fwrite(&version, sizeof(version), 1, file);
-            fwrite(&width, sizeof(width), 1, file);
-            fwrite(&height, sizeof(height), 1, file);
-            fwrite(tiles, sizeof(*tiles), (size_t)width * height, file);
-            fclose(file);
-            return RN_SUCCESS;
-        }
-        return RN_BAD_FILE_WRITE;
-    }
-
-    Err Load(const char *filename)
-    {
-        FILE *file = fopen(filename, "r");
-        if (file) {
-            int magic = 0;
-            fread(&magic, sizeof(magic), 1, file);
-            if (magic != MAGIC) {
-                return RN_BAD_MAGIC;
-            }
-            fread(&version, sizeof(version), 1, file);
-
-            int oldWidth = width;
-            int oldHeight = height;
-            fread(&width, sizeof(width), 1, file);
-            fread(&height, sizeof(height), 1, file);
-            if (!width || !height) {
-                return RN_INVALID_SIZE;
-            } else if (width != oldWidth || height != oldHeight) {
-                free(tiles);
-                tiles = (Tile *)calloc((size_t)width * height, sizeof(*tiles));
-            }
-
-            if (!tiles) {
-                return RN_BAD_ALLOC;
-            }
-
-            fread(tiles, sizeof(*tiles), (size_t)width * height, file);
-
-            fclose(file);
-            return RN_SUCCESS;
-        }
-        return RN_BAD_FILE_READ;
-    }
-
-    Tile At(int x, int y) {
-        assert(x >= 0);
-        assert(y >= 0);
-        assert(x < width);
-        assert(y < height);
-        return tiles[y * width + x];
-    }
-
-    bool AtTry(int x, int y, Tile &tile) {
-        if (x >= 0 && y >= 0 && x < width && y < height) {
-            tile = At(x, y);
-            return true;
-        }
-        return false;
-    }
-
-    bool WorldToTileIndex(int world_x, int world_y, Coord &coord) {
-        if (world_x >= 0 && world_y >= 0 && world_x < width * TILE_W && world_y < height * TILE_W) {
-            coord.x = world_x / TILE_W;
-            coord.y = world_y / TILE_W;
-            return true;
-        }
-        return false;
-    }
-
-    bool AtWorld(int world_x, int world_y, Tile &tile) {
-        Coord coord{};
-        if (WorldToTileIndex(world_x, world_y, coord)) {
-            tile = At(coord.x, coord.y);
-            return true;
-        }
-        return false;
-    }
-
-    void Set(int x, int y, Tile tile) {
-        assert(x >= 0);
-        assert(y >= 0);
-        assert(x < width);
-        assert(y < height);
-        tiles[y * width + x] = tile;
-    }
-};
-
-bool NeedsFill(Map &map, int x, int y, int tileDefFill)
+bool NeedsFill(Tilemap &map, int x, int y, int tileDefFill)
 {
     Tile tile;
     if (map.AtTry(x, y, tile)) {
@@ -562,7 +532,7 @@ bool NeedsFill(Map &map, int x, int y, int tileDefFill)
     return false;
 }
 
-void Scan(Map &map, int lx, int rx, int y, int tileDefFill, std::stack<Map::Coord> &stack)
+void Scan(Tilemap &map, int lx, int rx, int y, int tileDefFill, std::stack<Tilemap::Coord> &stack)
 {
     bool inSpan = false;
     for (int x = lx; x < rx; x++) {
@@ -575,18 +545,18 @@ void Scan(Map &map, int lx, int rx, int y, int tileDefFill, std::stack<Map::Coor
     }
 }
 
-void Fill(Map &map, int x, int y, int tileDefId)
+void Fill(Tilemap &map, int x, int y, int tileDefId)
 {
     int tileDefFill = map.At(x, y);
     if (tileDefFill == tileDefId) {
         return;
     }
 
-    std::stack<Map::Coord> stack{};
+    std::stack<Tilemap::Coord> stack{};
     stack.push({ x, y });
 
     while (!stack.empty()) {
-        Map::Coord coord = stack.top();
+        Tilemap::Coord coord = stack.top();
         stack.pop();
 
         int lx = coord.x;
@@ -676,8 +646,10 @@ void Play(Server &server)
 
 #define LEVEL_001 "maps/level1.dat"
 
-    Map map{};
-    map.Load(LEVEL_001);
+    server.world->map.Load(LEVEL_001);
+
+    Camera2D &camera2d = server.world->camera2d;
+    Tilemap &map = server.world->map;
 
     /*Camera3D camera3d{};
     camera3d.position = {0, 0, 0};
@@ -687,7 +659,6 @@ void Play(Server &server)
     camera3d.projection = CAMERA_PERSPECTIVE;
     SetCameraMode(camera3d, CAMERA_FREE);*/
 
-    Camera2D camera2d{};
     camera2d.zoom = 1.0f;
 
     Histogram histogram{};
@@ -707,10 +678,6 @@ void Play(Server &server)
         server.tickAccum += frameDt;
 
         bool doNetTick = server.tickAccum >= SV_TICK_DT;
-        while (server.tickAccum >= SV_TICK_DT) {
-            //printf("[%.2f][%.2f] ServerUpdate %d\n", server.tickAccum, now, (int)server.tick);
-            ServerUpdate(server, now);
-        }
 
         if (IsKeyPressed(KEY_H)) {
             histogram.paused = !histogram.paused;
@@ -767,17 +734,15 @@ void Play(Server &server)
 
         const Vector2 cursorWorldPos = GetScreenToWorld2D({ (float)GetMouseX(), (float)GetMouseY() }, camera2d);
 
+        while (server.tickAccum >= SV_TICK_DT) {
+            //printf("[%.2f][%.2f] ServerUpdate %d\n", server.tickAccum, now, (int)server.tick);
+            ServerUpdate(server, now);
+        }
+
         //--------------------
         // Draw
         BeginDrawing();
         ClearBackground(BROWN);
-
-        // Map
-#if _DEBUG
-        if (IsKeyPressed(KEY_F9)) {
-            __debugbreak();
-        }
-#endif
 
         // [Editor] Tile selector (collision test)
         static int prevTileDefHovered = -1;
@@ -804,6 +769,7 @@ void Play(Server &server)
             }
         }
 
+        // [World] Tilemap
 #if CL_DBG_TILE_CULLING
         const int screenMargin = 64;
         Vector2 screenTLWorld = GetScreenToWorld2D({ screenMargin, screenMargin }, camera2d);
@@ -839,7 +805,7 @@ void Play(Server &server)
             Tile hoveredTile;
             bool hoveringTile = tileDefHovered < 0 && map.AtWorld((int32_t)cursorWorldPos.x, (int32_t)cursorWorldPos.y, hoveredTile);
             if (hoveringTile) {
-                Map::Coord coord{};
+                Tilemap::Coord coord{};
                 bool validCoord = map.WorldToTileIndex(cursorWorldPos.x, cursorWorldPos.y, coord);
                 assert(validCoord);  // should always be true when hoveredTile != null
 
@@ -860,10 +826,45 @@ void Play(Server &server)
             if (entity.type) {
                 entity.Draw(font, entityId, 1);
                 if (entity.radius) {
-                    DrawCircle(entity.position.x, entity.position.y, entity.radius, Fade(PINK, 0.5));
+                    DrawCircle(entity.position.x, entity.position.y, entity.radius, entity.colliding ? Fade(RED, 0.5) : Fade(GRAY, 0.5));
                 }
             }
         }
+
+#if CL_DBG_CIRCLE_VS_REC
+        {
+            Tile tile{};
+            if (server.world->map.AtTry(0, 0, tile)) {
+                Rectangle tileRect{};
+                Vector2 tilePos = { 0, 0 };
+                tileRect.x = tilePos.x;
+                tileRect.y = tilePos.y;
+                tileRect.width = TILE_W;
+                tileRect.height = TILE_W;
+                Vector2 contact{};
+                Vector2 normal{};
+                float depth{};
+                if (dlb_CheckCollisionCircleRec(cursorWorldPos, 10, tileRect, contact, normal, depth)) {
+                    DrawCircle(cursorWorldPos.x, cursorWorldPos.y, 10, Fade(RED, 0.5f));
+
+                    Vector2 resolve = Vector2Scale(normal, depth);
+                    DrawLine(
+                        contact.x,
+                        contact.y,
+                        contact.x + resolve.x,
+                        contact.y + resolve.y,
+                        ORANGE
+                    );
+                    DrawCircle(contact.x, contact.y, 1, BLUE);
+                    DrawCircle(contact.x + resolve.x, contact.y + resolve.y, 1, ORANGE);
+
+                    DrawCircle(cursorWorldPos.x + resolve.x, cursorWorldPos.y + resolve.y, 10, Fade(LIME, 0.5f));
+                } else {
+                    DrawCircle(cursorWorldPos.x, cursorWorldPos.y, 10, Fade(GRAY, 0.5f));
+                }
+            }
+        }
+#endif
 
         EndMode2D();
 
@@ -1050,8 +1051,9 @@ int main(int argc, char *argv[])
         bot1.type = Entity_Bot;
         bot1.color = DARKPURPLE;
         bot1.size = { 32, 64 };
+        bot1.radius = 10;
         bot1.position = { 200, 200 };
-        bot1.speed = 10;
+        bot1.speed = 30;
         bot1.drag = 8.0f;
     }
 #endif

@@ -1,6 +1,7 @@
 #pragma once
 #include "../common/common.h"
 #include "../common/entity.h"
+#include "../common/tilemap.h"
 
 struct ServerPlayer {
     uint32_t clientIdx      {};  // yj_client index
@@ -11,6 +12,8 @@ struct ServerPlayer {
 };
 
 struct ServerWorld {
+    Camera2D camera2d{};
+    Tilemap map{};
     Entity entities[SV_MAX_ENTITIES]{};
     ServerPlayer players[SV_MAX_PLAYERS]{};
     uint32_t freelist_head = SV_MAX_PLAYERS;
