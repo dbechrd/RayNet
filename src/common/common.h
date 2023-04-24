@@ -15,6 +15,8 @@
 #define FONT_PATH "resources/Hack-Bold.ttf"
 #define FONT_SIZE 20
 
+#define LEVEL_001 "maps/level1.dat"
+
 // Helper macros
 
 #define LERP(a, b, alpha) ((a) + ((b) - (a)) * (alpha))
@@ -37,6 +39,7 @@
 #define CL_SEND_INPUT_COUNT     4
 #define CL_SEND_INPUT_DT        SV_TICK_DT //(1.0/120.0)
 #define CL_SNAPSHOT_COUNT       16
+#define CL_CLIENT_SIDE_PREDICT  1
 
 #define CL_DBG_ONE_SCREEN      0
 #define CL_DBG_TWO_SCREEN      1
@@ -53,4 +56,5 @@ enum Err {
     RN_BAD_FILE_READ    = -3,
     RN_BAD_FILE_WRITE   = -4,
     RN_INVALID_SIZE     = -5,
+    RN_INVALID_PATH     = -6,
 };

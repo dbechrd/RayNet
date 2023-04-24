@@ -44,6 +44,8 @@ void ClientTryConnect(Client *client, double now)
 
     client->yj_client->InsecureConnect(privateKey, clientId, serverAddress);
     client->world = new ClientWorld;
+    client->world->camera2d.zoom = 1.0f;
+    client->world->map.Load(LEVEL_001);
 }
 
 void ClientStart(Client *client, double now)
@@ -209,10 +211,7 @@ int main(int argc, char *argv[])
     );
 #endif
 
-    Font font = LoadFontEx(FONT_PATH, FONT_SIZE, 0, 0);
-
-    // NOTE: Textures MUST be loaded after Window initialization (OpenGL context is required)
-    Texture2D texture = LoadTexture("resources/bumber.png");
+    Font fntHackBold20 = LoadFontEx(FONT_PATH, FONT_SIZE, 0, 0);
 
     //--------------------
     // Client
@@ -244,7 +243,7 @@ int main(int argc, char *argv[])
         client->controller.cmdAccum.fire  |= IsMouseButtonPressed(MOUSE_LEFT_BUTTON);
 
         //--------------------
-        // Update
+        // Input
         if (IsKeyPressed(KEY_V)) {
             bool isFullScreen = IsWindowState(FLAG_FULLSCREEN_MODE);
             if (IsWindowState(FLAG_VSYNC_HINT)) {
@@ -270,8 +269,6 @@ int main(int argc, char *argv[])
             histogram.paused = !histogram.paused;
         }
 
-        histogram.Push(frameDtSmooth, doNetTick ? GREEN : RAYWHITE);
-
         //--------------------
         // Networking
         if (doNetTick) {
@@ -282,15 +279,8 @@ int main(int argc, char *argv[])
         const double serverNow = now - client->clientTimeDeltaVsServer;
 
         //--------------------
-        // Draw
-        BeginDrawing();
-        ClearBackground(CLITERAL(Color){ 20, 60, 30, 255 });
-
-        Vector2 catPos = {
-            WINDOW_WIDTH / 2.0f - texture.width / 2.0f,
-            WINDOW_HEIGHT / 2.0f - texture.height / 2.0f
-        };
-        DrawTexture(texture, (int)catPos.x, (int)catPos.y, WHITE);
+        // Update
+        histogram.Push(frameDtSmooth, doNetTick ? GREEN : RAYWHITE);
 
         if (client->yj_client->IsConnected()) {
             for (uint32_t entityId = 0; entityId < SV_MAX_ENTITIES; entityId++) {
@@ -298,95 +288,146 @@ int main(int argc, char *argv[])
                 if (entity.type == Entity_None) {
                     continue;
                 }
-
                 EntityGhost &ghost = client->world->ghosts[entityId];
 
-                // TODO(dlb): Find snapshots nearest to (GetTime() - clientTimeDeltaVsServer)
-                const double renderAt = serverNow - SV_TICK_DT;
-
-                size_t snapshotBIdx = 0;
-                while (snapshotBIdx < ghost.snapshots.size()
-                    && ghost.snapshots[snapshotBIdx].serverTime <= renderAt)
-                {
-                    snapshotBIdx++;
-                }
-
-                const EntitySnapshot *snapshotA = 0;
-                const EntitySnapshot *snapshotB = 0;
-
-                if (snapshotBIdx <= 0) {
-                    snapshotA = &ghost.snapshots.oldest();
-                    snapshotB = &ghost.snapshots.oldest();
-                } else if (snapshotBIdx >= CL_SNAPSHOT_COUNT) {
-                    snapshotA = &ghost.snapshots.newest();
-                    snapshotB = &ghost.snapshots.newest();
-                } else {
-                    snapshotA = &ghost.snapshots[snapshotBIdx - 1];
-                    snapshotB = &ghost.snapshots[snapshotBIdx];
-                }
-
-                // TODO: Move this to DRAW_TEXT in the tree view if we need it
-                //printf("client %d snapshot %d\n", clientIdx, snapshotBIdx);
-                if (CL_DBG_SNAPSHOT_SHADOWS) {
-                    for (int i = 0; i < ghost.snapshots.size(); i++) {
-                        Entity &entity = client->world->entities[entityId];
-                        entity.ApplyStateInterpolated(ghost.snapshots[i], ghost.snapshots[i], 0.0);
-                        entity.color = Fade(GRAY, 0.5);
-
-                        const float scalePer = 1.0f / (CL_SNAPSHOT_COUNT + 1);
-                        entity.Draw(font, i, scalePer + i * scalePer);
-                    }
-                }
-
-                float alpha = 0;
-                if (snapshotB != snapshotA) {
-                    alpha = (renderAt - snapshotA->serverTime) /
-                            (snapshotB->serverTime - snapshotA->serverTime);
-                }
-
+                // Local player
                 if (entityId == client->yj_client->GetClientIndex()) {
                     uint32_t lastProcessedInputCmd = 0;
+
+                    // Apply latest snapshot
                     if (ghost.snapshots.size()) {
                         const EntitySnapshot &latestSnapshot = ghost.snapshots.newest();
                         entity.ApplyStateInterpolated(ghost.snapshots.newest(), ghost.snapshots.newest(), 0);
                         lastProcessedInputCmd = latestSnapshot.lastProcessedInputCmd;
                     }
 
-                    Color entityColor = entity.color;
-
+    #if CL_CLIENT_SIDE_PREDICT
+                    // Apply unacked input
                     const double cmdAccumDt = now - client->controller.lastInputSampleAt;
-                    //printf(" accumDt=%5.2f", cmdAccumDt);
-                    //printf("  %u |", lastProcessedInputCmd);
                     for (size_t cmdIndex = 0; cmdIndex < client->controller.cmdQueue.size(); cmdIndex++) {
                         InputCmd &inputCmd = client->controller.cmdQueue[cmdIndex];
                         if (inputCmd.seq > lastProcessedInputCmd) {
-                            //printf(" %d", inputCmd.seq);
                             entity.ApplyForce(inputCmd.GenerateMoveForce(entity.speed));
                             entity.Tick(SV_TICK_DT);
-                            if (CL_DBG_SNAPSHOT_SHADOWS) {
-                                //entity.color = Fade(SKYBLUE, 0.5);
-                                entity.color = Fade(DARKGRAY, 0.5);
-                                entity.Draw(font, inputCmd.seq, 1);
-                            }
+                            client->world->map.ResolveEntityTerrainCollisions(entity);
                         }
                     }
                     //entity.Tick(&client->controller.cmdAccum, cmdAccumDt);
-                    entity.color = entityColor;
+    #endif
 
+                    // Check for ignored input packets
                     uint32_t oldestInput = client->controller.cmdQueue.oldest().seq;
                     if (oldestInput > lastProcessedInputCmd + 1) {
-                        //printf(" (%d inputs dropped)", oldestInput - lastProcessedInputCmd - 1);
+                        //printf(" localPlayer: %d inputs dropped\n", oldestInput - lastProcessedInputCmd - 1);
+                    }
+                } else {
+                    // TODO(dlb): Find snapshots nearest to (GetTime() - clientTimeDeltaVsServer)
+                    const double renderAt = serverNow - SV_TICK_DT;
+
+                    size_t snapshotBIdx = 0;
+                    while (snapshotBIdx < ghost.snapshots.size()
+                        && ghost.snapshots[snapshotBIdx].serverTime <= renderAt)
+                    {
+                        snapshotBIdx++;
                     }
 
-                    //putchar('\n');
-                } else {
+                    const EntitySnapshot *snapshotA = 0;
+                    const EntitySnapshot *snapshotB = 0;
+
+                    if (snapshotBIdx <= 0) {
+                        snapshotA = &ghost.snapshots.oldest();
+                        snapshotB = &ghost.snapshots.oldest();
+                    } else if (snapshotBIdx >= CL_SNAPSHOT_COUNT) {
+                        snapshotA = &ghost.snapshots.newest();
+                        snapshotB = &ghost.snapshots.newest();
+                    } else {
+                        snapshotA = &ghost.snapshots[snapshotBIdx - 1];
+                        snapshotB = &ghost.snapshots[snapshotBIdx];
+                    }
+
+                    float alpha = 0;
+                    if (snapshotB != snapshotA) {
+                        alpha = (renderAt - snapshotA->serverTime) /
+                            (snapshotB->serverTime - snapshotA->serverTime);
+                    }
+
                     entity.ApplyStateInterpolated(*snapshotA, *snapshotB, alpha);
                 }
-
-                if (entity.color.a) {
-                    entity.Draw(font, entityId, 1);
-                }
             }
+        }
+
+        //--------------------
+        // Draw
+        BeginDrawing();
+        ClearBackground(CLITERAL(Color){ 20, 60, 30, 255 });
+
+        if (client->yj_client->IsConnected()) {
+            //--------------------
+            // Camera
+            // TODO: Move update code out of draw code and update local player's
+            // position before using it to determine camera location... doh!
+            {
+                Entity &localPlayer = client->world->entities[client->yj_client->GetClientIndex()];
+                client->world->camera2d.offset = { (float)GetScreenWidth()/2, (float)GetScreenHeight()/2 };
+                client->world->camera2d.target = { localPlayer.position.x, localPlayer.position.y };
+            }
+
+            BeginMode2D(client->world->camera2d);
+            client->world->map.Draw(client->world->camera2d);
+
+            for (uint32_t entityId = 0; entityId < SV_MAX_ENTITIES; entityId++) {
+                Entity &entity = client->world->entities[entityId];
+                if (entity.type == Entity_None) {
+                    continue;
+                }
+                EntityGhost &ghost = client->world->ghosts[entityId];
+
+                // TODO: Move this to DRAW_TEXT in the tree view if we need it
+                //printf("client %d snapshot %d\n", clientIdx, snapshotBIdx);
+                if (CL_DBG_SNAPSHOT_SHADOWS) {
+                    Entity ghostInstance = client->world->entities[entityId];
+                    for (int i = 0; i < ghost.snapshots.size(); i++) {
+                        ghostInstance.ApplyStateInterpolated(ghost.snapshots[i], ghost.snapshots[i], 0.0);
+                        ghostInstance.color = Fade(GRAY, 0.5);
+
+                        const float scalePer = 1.0f / (CL_SNAPSHOT_COUNT + 1);
+                        ghostInstance.Draw(fntHackBold20, i, scalePer + i * scalePer);
+                    }
+
+#if CL_CLIENT_SIDE_PREDICT
+                    // NOTE(dlb): These aren't actually snapshot shadows, they're client-side prediction shadows
+                    if (entityId == client->yj_client->GetClientIndex()) {
+                        Entity predictionInstance = client->world->entities[entityId];
+
+                        uint32_t lastProcessedInputCmd = 0;
+                        if (ghost.snapshots.size()) {
+                            const EntitySnapshot &latestSnapshot = ghost.snapshots.newest();
+                            predictionInstance.ApplyStateInterpolated(ghost.snapshots.newest(), ghost.snapshots.newest(), 0);
+                            lastProcessedInputCmd = latestSnapshot.lastProcessedInputCmd;
+                        }
+
+                        //predictionInstance.color = Fade(SKYBLUE, 0.5);
+                        predictionInstance.color = Fade(DARKGRAY, 0.5);
+
+                        const double cmdAccumDt = now - client->controller.lastInputSampleAt;
+                        for (size_t cmdIndex = 0; cmdIndex < client->controller.cmdQueue.size(); cmdIndex++) {
+                            InputCmd &inputCmd = client->controller.cmdQueue[cmdIndex];
+                            if (inputCmd.seq > lastProcessedInputCmd) {
+                                predictionInstance.ApplyForce(inputCmd.GenerateMoveForce(predictionInstance.speed));
+                                predictionInstance.Tick(SV_TICK_DT);
+                                client->world->map.ResolveEntityTerrainCollisions(predictionInstance);
+                                predictionInstance.Draw(fntHackBold20, inputCmd.seq, 1);
+                            }
+                        }
+                        //predictionInstance.Tick(&client->controller.cmdAccum, cmdAccumDt);
+                    }
+#endif
+                }
+
+                entity.Draw(fntHackBold20, entityId, 1);
+            }
+
+            EndMode2D();
         }
 
         {
@@ -396,12 +437,12 @@ int main(int argc, char *argv[])
             #define DRAW_TEXT_MEASURE(measureRect, label, fmt, ...) { \
                 snprintf(buf, sizeof(buf), "%-11s : " fmt, label, __VA_ARGS__); \
                 Vector2 position{ hud_x, hud_y }; \
-                DrawTextShadowEx(font, buf, position, (float)font.baseSize, RAYWHITE); \
+                DrawTextShadowEx(fntHackBold20, buf, position, (float)fntHackBold20.baseSize, RAYWHITE); \
                 if (measureRect) { \
-                    Vector2 measure = MeasureTextEx(font, buf, (float)font.baseSize, 1.0); \
+                    Vector2 measure = MeasureTextEx(fntHackBold20, buf, (float)fntHackBold20.baseSize, 1.0); \
                     *measureRect = { position.x, position.y, measure.x, measure.y }; \
                 } \
-                hud_y += font.baseSize; \
+                hud_y += fntHackBold20.baseSize; \
             }
 
             #define DRAW_TEXT(label, fmt, ...) \
@@ -461,8 +502,7 @@ int main(int argc, char *argv[])
     delete client;
     ShutdownYojimbo();
 
-    UnloadTexture(texture);
-    UnloadFont(font);
+    UnloadFont(fntHackBold20);
     CloseWindow();
 
     return 0;

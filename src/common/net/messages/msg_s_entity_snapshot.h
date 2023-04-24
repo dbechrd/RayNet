@@ -20,6 +20,8 @@ struct Msg_S_EntitySnapshot : public yojimbo::Message
         serialize_bits(stream, entitySnapshot.color.a, 8);
         serialize_float(stream, entitySnapshot.size.x);
         serialize_float(stream, entitySnapshot.size.y);
+        serialize_float(stream, entitySnapshot.radius);
+        serialize_float(stream, entitySnapshot.drag);
         serialize_float(stream, entitySnapshot.speed);
         serialize_float(stream, entitySnapshot.velocity.x);
         serialize_float(stream, entitySnapshot.velocity.y);

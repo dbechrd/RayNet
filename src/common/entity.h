@@ -19,7 +19,7 @@ struct Entity {
     Color color;
     Vector2 size;
     float radius;  // collision
-    bool colliding;
+    bool colliding;  // not sync'd, local flag for debugging colliders
 
     float drag;
     float speed;

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "common.h"
+#include "collision.h"
 #include "entity.h"
 #include "input_command.h"
 #include "net/entity_snapshot.h"

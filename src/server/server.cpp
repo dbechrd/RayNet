@@ -8,87 +8,6 @@ struct Cursor {
     int tileDefId;
 } cursor{};
 
-struct TileDef {
-    int x, y;  // position in spritesheet
-    bool collide;
-} tileDefs[] = {
-#define TILEDEF(y, x, collide) { x * (TILE_W + 2) + 1, y * (TILE_W + 2) + 1, collide }
-    TILEDEF(0, 0, 0),  // void
-    TILEDEF(0, 1, 0),  // bright grass
-    TILEDEF(0, 2, 0),  // bright water
-    TILEDEF(0, 3, 0),
-    TILEDEF(0, 4, 0),
-    TILEDEF(1, 0, 0),
-    TILEDEF(1, 1, 0),
-    TILEDEF(1, 2, 0),
-    TILEDEF(1, 3, 0),
-    TILEDEF(1, 4, 0),
-    TILEDEF(2, 0, 0),
-    TILEDEF(2, 1, 0),
-    TILEDEF(2, 2, 0),
-    TILEDEF(2, 3, 0),
-    TILEDEF(2, 4, 0),
-    TILEDEF(3, 0, 0),
-    TILEDEF(3, 1, 0),
-    TILEDEF(3, 2, 0),
-    TILEDEF(3, 3, 0),
-    TILEDEF(3, 4, 1),  // dark water
-#undef TILEDEF
-};
-
-bool dlb_CheckCollisionPointRec(Vector2 point, Rectangle rec)
-{
-    bool collision = false;
-
-    if ((point.x >= rec.x) && (point.x < (rec.x + rec.width)) && (point.y >= rec.y) && (point.y < (rec.y + rec.height))) collision = true;
-
-    return collision;
-}
-
-bool dlb_CheckCollisionCircleRec(Vector2 center, float radius, Rectangle rec, Vector2 &contact, Vector2 &normal, float &depth)
-{
-    float xOverlap = 0;
-    float yOverlap = 0;
-
-    Vector2 pt = center;  // circle center point constrained to box
-    if (pt.x < rec.x) {
-        pt.x = rec.x;
-    } else if (pt.x >= rec.x + rec.width) {
-        pt.x = rec.x + rec.width;
-    } else {
-        float recCenterX = rec.x + rec.width / 2;
-        xOverlap = pt.x < recCenterX ? rec.x - pt.x : (rec.x + rec.width) - pt.x;
-    }
-
-    if (pt.y < rec.y) {
-        pt.y = rec.y;
-    } else if (pt.y >= rec.y + rec.height) {
-        pt.y = rec.y + rec.height;
-    } else {
-        float recCenterY = rec.y + rec.height / 2;
-        yOverlap = pt.y < recCenterY ? rec.y - pt.y : (rec.y + rec.height) - pt.y;
-    }
-
-    if (Vector2DistanceSqr(pt, center) < radius*radius) {
-        contact = pt;  // closest point to "pt" on the surface of the box
-        if (fabsf(xOverlap) < fabsf(yOverlap)) {
-            contact.x += xOverlap;
-        } else if (fabsf(yOverlap) < fabsf(xOverlap)) {
-            contact.y += yOverlap;
-        }
-
-        Vector2 pen = Vector2Subtract(center, contact);
-        depth = radius - Vector2Length(pen);
-        normal = Vector2Normalize(pen);
-
-        if (xOverlap && yOverlap) {
-            depth -= radius*2;
-        }
-        return true;
-    }
-    return false;
-}
-
 class ServerNetAdapter : public NetAdapter
 {
 public:
@@ -367,57 +286,7 @@ void ServerTick(Server &server)
         }
 
         entity_ticker[entity.type](server, entityId, SV_TICK_DT);
-    }
-
-    // Resolve collisions
-    for (int entityId = 0; entityId < SV_MAX_ENTITIES; entityId++) {
-        Entity &entity = server.world->entities[entityId];
-        if (!entity.type || entity.despawnedAt || !entity.radius) {
-            continue;
-        }
-
-        entity.colliding = false;
-
-        Vector2 topLeft{
-            entity.position.x - entity.radius,
-            entity.position.y - entity.radius
-        };
-        Vector2 bottomRight{
-            entity.position.x + entity.radius,
-            entity.position.y + entity.radius
-        };
-
-        int yMin = CLAMP(floorf(topLeft.y / TILE_W), 0, server.world->map.height);
-        int yMax = CLAMP(ceilf(bottomRight.y / TILE_W), 0, server.world->map.height);
-        int xMin = CLAMP(floorf(topLeft.x / TILE_W), 0, server.world->map.width);
-        int xMax = CLAMP(ceilf(bottomRight.x / TILE_W), 0, server.world->map.width);
-
-        for (int y = yMin; y < yMax; y++) {
-            for (int x = xMin; x < xMax; x++) {
-                Tile tile{};
-                if (server.world->map.AtTry(x, y, tile)) {
-                    TileDef &tileDef = tileDefs[tile];
-                    if (tileDef.collide) {
-                        Rectangle tileRect{};
-                        Vector2 tilePos = { (float)x * TILE_W, (float)y * TILE_W };
-                        tileRect.x = tilePos.x;
-                        tileRect.y = tilePos.y;
-                        tileRect.width = TILE_W;
-                        tileRect.height = TILE_W;
-                        Vector2 contact{};
-                        Vector2 normal{};
-                        float depth{};
-                        if (dlb_CheckCollisionCircleRec(entity.position, entity.radius, tileRect, contact, normal, depth)) {
-                            entity.colliding = true;
-                            if (Vector2DotProduct(entity.velocity, normal) < 0) {
-                                entity.position.x += normal.x * depth;
-                                entity.position.y += normal.y * depth;
-                            }
-                        }
-                    }
-                }
-            }
-        }
+        server.world->map.ResolveEntityTerrainCollisions(entity);
     }
 
     server.tick++;
@@ -640,13 +509,15 @@ void Play(Server &server)
     sndSoftTick = LoadSound("resources/soft_tick.wav");
     sndHardTick = LoadSound("resources/hard_tick.wav");
 
-    Texture2D tilesTexture = LoadTexture("resources/tiles32.png");
+    Font fntHackBold20 = LoadFontEx(FONT_PATH, FONT_SIZE, 0, 0);
 
-    Font font = LoadFontEx(FONT_PATH, FONT_SIZE, 0, 0);
-
-#define LEVEL_001 "maps/level1.dat"
-
-    server.world->map.Load(LEVEL_001);
+    Err err = server.world->map.Load(LEVEL_001);
+    if (err != RN_SUCCESS) {
+        printf("Failed to load map with code %d\n", err);
+        assert(!"oops");
+        // TODO: Display error message on screen for N seconds or
+        // until dismissed
+    }
 
     Camera2D &camera2d = server.world->camera2d;
     Tilemap &map = server.world->map;
@@ -751,7 +622,7 @@ void Play(Server &server)
         if (editorActive) {
             const bool editorPickTileDef = IsMouseButtonPressed(MOUSE_BUTTON_LEFT);
 
-            for (int i = 0; i < ARRAY_SIZE(tileDefs); i++) {
+            for (int i = 0; i < server.world->map.tileDefCount; i++) {
                 Vector2 screenPos = { 360.0f + i * TILE_W + i * 2, 38.0f };
                 Rectangle tileDefRectScreen{ screenPos.x, screenPos.y, TILE_W, TILE_W };
                 bool hover = dlb_CheckCollisionPointRec(GetMousePosition(), tileDefRectScreen);
@@ -769,32 +640,9 @@ void Play(Server &server)
             }
         }
 
-        // [World] Tilemap
-#if CL_DBG_TILE_CULLING
-        const int screenMargin = 64;
-        Vector2 screenTLWorld = GetScreenToWorld2D({ screenMargin, screenMargin }, camera2d);
-        Vector2 screenBRWorld = GetScreenToWorld2D({ (float)GetScreenWidth() - screenMargin, (float)GetScreenHeight() - screenMargin }, camera2d);
-#else
-        Vector2 screenTLWorld = GetScreenToWorld2D({ 0, 0 }, camera2d);
-        Vector2 screenBRWorld = GetScreenToWorld2D({ (float)GetScreenWidth(), (float)GetScreenHeight() }, camera2d);
-#endif
-
-        int yMin = CLAMP(floorf(screenTLWorld.y / TILE_W), 0, map.height);
-        int yMax = CLAMP(ceilf(screenBRWorld.y / TILE_W), 0, map.height);
-        int xMin = CLAMP(floorf(screenTLWorld.x / TILE_W), 0, map.width);
-        int xMax = CLAMP(ceilf(screenBRWorld.x / TILE_W), 0, map.width);
-
         BeginMode2D(camera2d);
-        for (int y = yMin; y < yMax; y++) {
-            for (int x = xMin; x < xMax; x++) {
-                Tile tile = map.At(x, y);
-                TileDef &tileDef = tileDefs[tile];
 
-                Rectangle texRect{ (float)tileDef.x, (float)tileDef.y, TILE_W, TILE_W };
-                Vector2 tilePos = { (float)x * TILE_W, (float)y * TILE_W };
-                DrawTextureRec(tilesTexture, texRect, tilePos, WHITE);
-            }
-        }
+        server.world->map.Draw(camera2d);
 
         // [Editor] Tile actions and hover highlight
         if (editorActive) {
@@ -824,7 +672,7 @@ void Play(Server &server)
         for (int entityId = 0; entityId < SV_MAX_ENTITIES; entityId++) {
             Entity &entity = server.world->entities[entityId];
             if (entity.type) {
-                entity.Draw(font, entityId, 1);
+                entity.Draw(fntHackBold20, entityId, 1);
                 if (entity.radius) {
                     DrawCircle(entity.position.x, entity.position.y, entity.radius, entity.colliding ? Fade(RED, 0.5) : Fade(GRAY, 0.5));
                 }
@@ -885,25 +733,28 @@ void Play(Server &server)
             float pad = 4;
 
             Vector2 uiCursor{ 360, 8 };
-            if (UIButton(font, "Save", uiCursor)) {
+            if (UIButton(fntHackBold20, "Save", uiCursor)) {
                 if (map.Save(LEVEL_001) != RN_SUCCESS) {
                     // TODO: Display error message on screen for N seconds or
                     // until dismissed
                 }
             }
-            if (UIButton(font, "Load", uiCursor)) {
-                if (!map.Load(LEVEL_001) != RN_SUCCESS) {
+            if (UIButton(fntHackBold20, "Load", uiCursor)) {
+                Err err = map.Load(LEVEL_001);
+                if (err != RN_SUCCESS) {
+                    printf("Failed to load map with code %d\n", err);
+                    assert(!"oops");
                     // TODO: Display error message on screen for N seconds or
                     // until dismissed
                 }
             }
 
             // Tile selector
-            for (int i = 0; i < ARRAY_SIZE(tileDefs); i++) {
-                TileDef &tileDef = tileDefs[i];
+            for (int i = 0; i < server.world->map.tileDefCount; i++) {
+                TileDef &tileDef = server.world->map.tileDefs[i];
                 Vector2 screenPos = { 360.0f + i * TILE_W + i * 2, 38.0f };
                 Rectangle texRect{ (float)tileDef.x, (float)tileDef.y, TILE_W, TILE_W };
-                DrawTextureRec(tilesTexture, texRect, screenPos, WHITE);
+                DrawTextureRec(server.world->map.texture, texRect, screenPos, WHITE);
                 if (i == cursor.tileDefId) {
                     DrawRectangleLines(screenPos.x, screenPos.y, TILE_W, TILE_W, YELLOW);
                 } else if (i == tileDefHovered) {
@@ -923,12 +774,12 @@ void Play(Server &server)
                     snprintf(buf, sizeof(buf), fmt, __VA_ARGS__); \
                 } \
                 Vector2 position{ hud_x, hud_y }; \
-                DrawTextShadowEx(font, buf, position, (float)font.baseSize, RAYWHITE); \
+                DrawTextShadowEx(fntHackBold20, buf, position, (float)fntHackBold20.baseSize, RAYWHITE); \
                 if (measureRect) { \
-                    Vector2 measure = MeasureTextEx(font, buf, (float)font.baseSize, 1.0); \
+                    Vector2 measure = MeasureTextEx(fntHackBold20, buf, (float)fntHackBold20.baseSize, 1.0); \
                     *measureRect = { position.x, position.y, measure.x, measure.y }; \
                 } \
-                hud_y += font.baseSize; \
+                hud_y += fntHackBold20.baseSize; \
             }
 
 #define DRAW_TEXT(label, fmt, ...) \
@@ -979,8 +830,7 @@ void Play(Server &server)
         yojimbo_sleep(0.001);
     }
 
-    UnloadTexture(tilesTexture);
-    UnloadFont(font);
+    UnloadFont(fntHackBold20);
 }
 
 int main(int argc, char *argv[])

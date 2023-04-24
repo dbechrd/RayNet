@@ -8,6 +8,8 @@ void Entity::Serialize(uint32_t entityId, EntitySnapshot &entitySnapshot, double
     entitySnapshot.type = type;
     entitySnapshot.color = color;
     entitySnapshot.size = size;
+    entitySnapshot.radius = radius;
+    entitySnapshot.drag = drag;
     entitySnapshot.speed = speed;
     entitySnapshot.velocity = velocity;
     entitySnapshot.position = position;
@@ -44,6 +46,9 @@ void Entity::ApplyStateInterpolated(const EntitySnapshot &a, const EntitySnapsho
     size.x = LERP(a.size.x, b.size.x, (float)alpha);
     size.y = LERP(a.size.y, b.size.y, (float)alpha);
 
+    radius = LERP(a.radius, b.radius, (float)alpha);
+
+    drag = LERP(a.drag, b.drag, (float)alpha);
     speed = LERP(a.speed, b.speed, (float)alpha);
 
     velocity.x = LERP(a.velocity.x, b.velocity.x, (float)alpha);
@@ -55,6 +60,10 @@ void Entity::ApplyStateInterpolated(const EntitySnapshot &a, const EntitySnapsho
 
 // TODO: Refactor out into drawrectangle or some shit
 void Entity::Draw(const Font &font, int clientIdx, float scale) {
+    if (!color.a) {
+        return;
+    }
+
 #if 1
     // Scale
     float sx = size.x * scale;

@@ -11,6 +11,8 @@ struct EntitySnapshot {
     EntityType  type       {};
     Color       color      {};
     Vector2     size       {};
+    float       radius     {};
+    float       drag       {};
     float       speed      {};
     Vector2     velocity   {};
     Vector2     position   {};
