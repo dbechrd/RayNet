@@ -28,6 +28,8 @@ struct Tilemap {
     void Free(void);
     ~Tilemap();
 
+    Err HexifyFile(const char *filename);
+    Err MakeBackup(const char *filename);
     Err Save(const char *filename);
     Err Load(const char *filename);
     Tile At(int x, int y);

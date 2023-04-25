@@ -109,10 +109,26 @@ int ServerStart(Server *server)
     config.channel[CHANNEL_U_ENTITY_SNAPSHOT].type = yojimbo::CHANNEL_TYPE_UNRELIABLE_UNORDERED;
     config.channel[CHANNEL_R_ENTITY_DESPAWN].type = yojimbo::CHANNEL_TYPE_RELIABLE_ORDERED;
 
+    // Loopback interface
+    //yojimbo::Address address("127.0.0.1", SV_PORT);
+    //yojimbo::Address address("::1", SV_PORT);
+
+    // Any interface
+    //yojimbo::Address address("0.0.0.0", SV_PORT);
+    //yojimbo::Address address("::", SV_PORT);
+
+    //yojimbo::Address address("192.168.0.143", SV_PORT);
+    yojimbo::Address address("68.9.219.64", SV_PORT);
+    //yojimbo::Address address("slime.theprogrammingjunkie.com", SV_PORT);
+
+    if (!address.IsValid()) {
+        printf("yj: Invalid address\n");
+        return -1;
+    }
     server->yj_server = new yojimbo::Server(
         yojimbo::GetDefaultAllocator(),
         privateKey,
-        yojimbo::Address("127.0.0.1", SV_PORT),
+        address,
         config,
         server->adapter,
         GetTime()
@@ -446,9 +462,15 @@ void Fill(Tilemap &map, int x, int y, int tileDefId)
 static Sound sndSoftTick;
 static Sound sndHardTick;
 
-bool UIButton(Font font, const char *text, Vector2 &uiCursor)
+struct UIState {
+    bool hover;
+    bool down;
+    bool clicked;
+};
+
+UIState UIButton(Font font, const char *text, Vector2 uiPosition, Vector2 &uiCursor)
 {
-    const Vector2 margin{ 8, 8 };
+    Vector2 position = Vector2Add(uiPosition, uiCursor);
     const Vector2 pad{ 8, 1 };
     const float cornerRoundness = 0.2f;
     const float cornerSegments = 4;
@@ -460,8 +482,8 @@ bool UIButton(Font font, const char *text, Vector2 &uiCursor)
     buttonSize.y += pad.y * 2;
 
     Rectangle buttonRect = {
-        uiCursor.x - lineThick.x,
-        uiCursor.y - lineThick.y,
+        position.x - lineThick.x,
+        position.y - lineThick.y,
         buttonSize.x + lineThick.x * 2,
         buttonSize.y + lineThick.y * 2
     };
@@ -475,33 +497,31 @@ bool UIButton(Font font, const char *text, Vector2 &uiCursor)
     static const char *prevHover = 0;
 
     Color color = BLUE;
-    bool hover = false;
-    bool down = false;
-    bool clicked = false;
+    UIState state{};
     if (dlb_CheckCollisionPointRec(GetMousePosition(), buttonRect)) {
-        hover = true;
+        state.hover = true;
         color = SKYBLUE;
         if (IsMouseButtonDown(MOUSE_BUTTON_LEFT)) {
-            down = true;
+            state.down = true;
             color = DARKBLUE;
         } else if (IsMouseButtonReleased(MOUSE_BUTTON_LEFT)) {
-            clicked = true;
+            state.clicked = true;
         }
     }
 
-    if (clicked) {
+    if (state.clicked) {
         PlaySound(sndHardTick);
-    } else if (hover && text != prevHover) {
+    } else if (state.hover && text != prevHover) {
         PlaySound(sndSoftTick);
         prevHover = text;
     }
 
-    float yOffset = (down ? 0 : -lineThick.y * 2);
-    DrawRectangleRounded({ uiCursor.x, uiCursor.y + yOffset, buttonSize.x, buttonSize.y }, cornerRoundness, cornerSegments, color);
-    DrawTextShadowEx(font, text, { uiCursor.x + pad.x, uiCursor.y + pad.y + yOffset }, font.baseSize, WHITE);
+    float yOffset = (state.down ? 0 : -lineThick.y * 2);
+    DrawRectangleRounded({ position.x, position.y + yOffset, buttonSize.x, buttonSize.y }, cornerRoundness, cornerSegments, color);
+    DrawTextShadowEx(font, text, { position.x + pad.x, position.y + pad.y + yOffset }, font.baseSize, WHITE);
 
-    uiCursor.x += buttonSize.x + margin.x;
-    return clicked;
+    uiCursor.x += buttonSize.x;
+    return state;
 }
 
 void Play(Server &server)
@@ -538,6 +558,10 @@ void Play(Server &server)
     double frameDtSmooth = 60;
 
     bool editorActive = false;
+    const Vector2 uiMargin{ 8, 8 };
+    const Vector2 uiPadding{ 8, 8 };
+    const Vector2 uiPosition{ 380, 8 };
+    const Rectangle editorRect{ uiPosition.x, uiPosition.y, 800, 80 };
 
     while (!WindowShouldClose())
     {
@@ -615,43 +639,20 @@ void Play(Server &server)
         BeginDrawing();
         ClearBackground(BROWN);
 
-        // [Editor] Tile selector (collision test)
-        static int prevTileDefHovered = -1;
-        int tileDefHovered = -1;
-
-        if (editorActive) {
-            const bool editorPickTileDef = IsMouseButtonPressed(MOUSE_BUTTON_LEFT);
-
-            for (int i = 0; i < server.world->map.tileDefCount; i++) {
-                Vector2 screenPos = { 360.0f + i * TILE_W + i * 2, 38.0f };
-                Rectangle tileDefRectScreen{ screenPos.x, screenPos.y, TILE_W, TILE_W };
-                bool hover = dlb_CheckCollisionPointRec(GetMousePosition(), tileDefRectScreen);
-                if (hover) {
-                    tileDefHovered = i;
-                    if (editorPickTileDef) {
-                        PlaySound(sndHardTick);
-                        cursor.tileDefId = i;
-                    } else if (tileDefHovered != prevTileDefHovered) {
-                        PlaySound(sndSoftTick);
-                    }
-                    prevTileDefHovered = tileDefHovered;
-                    break;
-                }
-            }
-        }
-
         BeginMode2D(camera2d);
 
         server.world->map.Draw(camera2d);
 
+        const bool editorHovered = dlb_CheckCollisionPointRec(GetMousePosition(), editorRect);
+
         // [Editor] Tile actions and hover highlight
-        if (editorActive) {
+        if (editorActive && !editorHovered) {
             const bool editorPlaceTile = IsMouseButtonDown(MOUSE_BUTTON_LEFT);
             const bool editorPickTile = IsMouseButtonDown(MOUSE_BUTTON_MIDDLE);
             const bool editorFillTile = IsKeyPressed(KEY_F);
 
             Tile hoveredTile;
-            bool hoveringTile = tileDefHovered < 0 && map.AtWorld((int32_t)cursorWorldPos.x, (int32_t)cursorWorldPos.y, hoveredTile);
+            bool hoveringTile = map.AtWorld((int32_t)cursorWorldPos.x, (int32_t)cursorWorldPos.y, hoveredTile);
             if (hoveringTile) {
                 Tilemap::Coord coord{};
                 bool validCoord = map.WorldToTileIndex(cursorWorldPos.x, cursorWorldPos.y, coord);
@@ -665,10 +666,11 @@ void Play(Server &server)
                     Fill(map, coord.x, coord.y, cursor.tileDefId);
                 }
 
-                DrawRectangleLines(coord.x * TILE_W, coord.y * TILE_W, TILE_W, TILE_W, WHITE);
+                DrawRectangleLinesEx({ (float)coord.x * TILE_W, (float)coord.y * TILE_W, TILE_W, TILE_W }, 2, WHITE);
             }
         }
 
+        // [Debug] Draw colliders
         for (int entityId = 0; entityId < SV_MAX_ENTITIES; entityId++) {
             Entity &entity = server.world->entities[entityId];
             if (entity.type) {
@@ -728,18 +730,23 @@ void Play(Server &server)
 
         // [Editor] Action Bar
         if (editorActive) {
-            float x = 300;
-            float y = 8;
-            float pad = 4;
+            DrawRectangleRounded(editorRect, 0.2f, 6, { 210, 203, 190, 255 });
+            DrawRectangleRoundedLines(editorRect, 0.2f, 6, 2.0f, BLACK);
 
-            Vector2 uiCursor{ 360, 8 };
-            if (UIButton(fntHackBold20, "Save", uiCursor)) {
+            Vector2 uiCursor = uiMargin;
+
+            UIState saveButton = UIButton(fntHackBold20, "Save", uiPosition, uiCursor);
+            if (saveButton.clicked) {
                 if (map.Save(LEVEL_001) != RN_SUCCESS) {
                     // TODO: Display error message on screen for N seconds or
                     // until dismissed
                 }
             }
-            if (UIButton(fntHackBold20, "Load", uiCursor)) {
+
+            uiCursor.x += uiPadding.x;
+
+            UIState loadButton = UIButton(fntHackBold20, "Load", uiPosition, uiCursor);
+            if (loadButton.clicked) {
                 Err err = map.Load(LEVEL_001);
                 if (err != RN_SUCCESS) {
                     printf("Failed to load map with code %d\n", err);
@@ -749,16 +756,54 @@ void Play(Server &server)
                 }
             }
 
-            // Tile selector
+            uiCursor.x = uiMargin.x;
+            uiCursor.y += 30.0f;  // TODO: Calculate MAX(button.height) + pad.y
+
+            // [Editor] Tile selector
+            const bool editorPickTileDef = IsMouseButtonPressed(MOUSE_BUTTON_LEFT);
+
+            DrawRectangle(
+                uiPosition.x + uiCursor.x - 2,
+                uiPosition.y + uiCursor.y - 2,
+                server.world->map.tileDefCount * TILE_W + server.world->map.tileDefCount * 2 + 2,
+                TILE_W + 4,
+                BLACK
+            );
+
             for (int i = 0; i < server.world->map.tileDefCount; i++) {
                 TileDef &tileDef = server.world->map.tileDefs[i];
-                Vector2 screenPos = { 360.0f + i * TILE_W + i * 2, 38.0f };
                 Rectangle texRect{ (float)tileDef.x, (float)tileDef.y, TILE_W, TILE_W };
+                Vector2 screenPos = {
+                    uiPosition.x + uiCursor.x + i * TILE_W + i * 2,
+                    uiPosition.y + uiCursor.y
+                };
+
+                Rectangle tileDefRectScreen{ screenPos.x, screenPos.y, TILE_W, TILE_W };
+                bool hover = dlb_CheckCollisionPointRec(GetMousePosition(), tileDefRectScreen);
+                if (hover) {
+                    static int prevTileDefHovered = -1;
+                    if (editorPickTileDef) {
+                        PlaySound(sndHardTick);
+                        cursor.tileDefId = i;
+                    } else if (i != prevTileDefHovered) {
+                        PlaySound(sndSoftTick);
+                    }
+                    prevTileDefHovered = i;
+                }
+
                 DrawTextureRec(server.world->map.texture, texRect, screenPos, WHITE);
-                if (i == cursor.tileDefId) {
-                    DrawRectangleLines(screenPos.x, screenPos.y, TILE_W, TILE_W, YELLOW);
-                } else if (i == tileDefHovered) {
-                    DrawRectangleLines(screenPos.x, screenPos.y, TILE_W, TILE_W, WHITE);
+                const int outlinePad = 1;
+                if (i == cursor.tileDefId || hover) {
+                    DrawRectangleLinesEx(
+                        {
+                            screenPos.x - outlinePad,
+                            screenPos.y - outlinePad,
+                            TILE_W + outlinePad * 2,
+                            TILE_W + outlinePad * 2
+                        },
+                        2,
+                        i == cursor.tileDefId ? YELLOW : WHITE
+                    );
                 }
             }
         }
@@ -785,7 +830,7 @@ void Play(Server &server)
 #define DRAW_TEXT(label, fmt, ...) \
                 DRAW_TEXT_MEASURE((Rectangle *)0, label, fmt, __VA_ARGS__)
 
-            DRAW_TEXT((const char *)0, "%.2f fps (%.2f ms) (vsync=%s)", 1.0 / frameDt, frameDt, IsWindowState(FLAG_VSYNC_HINT) ? "on" : "off");
+            DRAW_TEXT((const char *)0, "%.2f fps (%.2f ms) (vsync=%s)", 1.0 / frameDt, frameDt * 1000.0, IsWindowState(FLAG_VSYNC_HINT) ? "on" : "off");
             DRAW_TEXT("time", "%.02f", server.yj_server->GetTime());
             DRAW_TEXT("tick", "%" PRIu64, server.tick);
             DRAW_TEXT("tickAccum", "%.02f", server.tickAccum);

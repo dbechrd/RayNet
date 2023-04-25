@@ -27,10 +27,11 @@ struct Client {
     ClientWorld *world{};
 };
 
-void ClientTryConnect(Client *client, double now)
+int ClientTryConnect(Client *client, double now)
 {
     if (!client->yj_client->IsDisconnected()) {
-        return;
+        printf("yj: client already connected, disconnect first\n");
+        return -1;
     }
 
     uint8_t privateKey[yojimbo::KeyBytes];
@@ -40,12 +41,21 @@ void ClientTryConnect(Client *client, double now)
     yojimbo::random_bytes((uint8_t *)&clientId, 8);
     printf("yj: client id is %.16" PRIx64 "\n", clientId);
 
-    yojimbo::Address serverAddress("127.0.0.1", SV_PORT);
+    //yojimbo::Address serverAddress("127.0.0.1", SV_PORT);
+    //yojimbo::Address serverAddress("192.168.0.143", SV_PORT);
+    yojimbo::Address serverAddress("68.9.219.64", SV_PORT);
+    //yojimbo::Address serverAddress("slime.theprogrammingjunkie.com", SV_PORT);
+
+    if (!serverAddress.IsValid()) {
+        printf("yj: invalid address\n");
+        return -1;
+    }
 
     client->yj_client->InsecureConnect(privateKey, clientId, serverAddress);
     client->world = new ClientWorld;
     client->world->camera2d.zoom = 1.0f;
     client->world->map.Load(LEVEL_001);
+    return 0;
 }
 
 void ClientStart(Client *client, double now)
@@ -72,7 +82,9 @@ void ClientStart(Client *client, double now)
         now
     );
 
-    ClientTryConnect(client, now);
+    if (ClientTryConnect(client, now) < 0) {
+        printf("Failed to connect to server\n");
+    }
 #if 0
     char addressString[256];
     client->GetAddress().ToString(addressString, sizeof(addressString));
@@ -448,7 +460,7 @@ int main(int argc, char *argv[])
             #define DRAW_TEXT(label, fmt, ...) \
                 DRAW_TEXT_MEASURE((Rectangle *)0, label, fmt, __VA_ARGS__)
 
-            DRAW_TEXT("frameDt", "%.2f fps (%.2f ms) (vsync=%s)", 1.0 / frameDt, frameDt, IsWindowState(FLAG_VSYNC_HINT) ? "on" : "off");
+            DRAW_TEXT("frameDt", "%.2f fps (%.2f ms) (vsync=%s)", 1.0 / frameDt, frameDt * 1000.0, IsWindowState(FLAG_VSYNC_HINT) ? "on" : "off");
             DRAW_TEXT("serverTime", "%.2f (%s%.2f)", serverNow, client->clientTimeDeltaVsServer > 0 ? "+" : "", client->clientTimeDeltaVsServer);
             DRAW_TEXT("localTime", "%.2f", now);
             DRAW_TEXT("cursor", "%d, %d", GetMouseX(), GetMouseY());
