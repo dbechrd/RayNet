@@ -247,14 +247,6 @@ int main(int argc, char *argv[])
         bool doNetTick = client->netTickAccum >= SV_TICK_DT;
 
         //--------------------
-        // Accmulate input every frame
-        client->controller.cmdAccum.north |= IsKeyDown(KEY_W);
-        client->controller.cmdAccum.west  |= IsKeyDown(KEY_A);
-        client->controller.cmdAccum.south |= IsKeyDown(KEY_S);
-        client->controller.cmdAccum.east  |= IsKeyDown(KEY_D);
-        client->controller.cmdAccum.fire  |= IsMouseButtonPressed(MOUSE_LEFT_BUTTON);
-
-        //--------------------
         // Input
         if (IsKeyPressed(KEY_V)) {
             bool isFullScreen = IsWindowState(FLAG_FULLSCREEN_MODE);
@@ -279,6 +271,23 @@ int main(int argc, char *argv[])
         }
         if (IsKeyPressed(KEY_H)) {
             histogram.paused = !histogram.paused;
+        }
+
+        //--------------------
+        // Accmulate input every frame
+        if (client->yj_client->IsConnected()) {
+            Entity &localPlayer = client->world->entities[client->yj_client->GetClientIndex()];
+
+            client->controller.cmdAccum.north |= IsKeyDown(KEY_W);
+            client->controller.cmdAccum.west |= IsKeyDown(KEY_A);
+            client->controller.cmdAccum.south |= IsKeyDown(KEY_S);
+            client->controller.cmdAccum.east |= IsKeyDown(KEY_D);
+            client->controller.cmdAccum.fire |= IsMouseButtonPressed(MOUSE_LEFT_BUTTON);
+
+            Vector2 cursorWorldPos = GetScreenToWorld2D(GetMousePosition(), client->world->camera2d);
+            Vector2 facing = Vector2Subtract(cursorWorldPos, localPlayer.position);
+            facing = Vector2Normalize(facing);
+            client->controller.cmdAccum.facing = facing;
         }
 
         //--------------------

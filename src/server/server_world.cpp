@@ -16,6 +16,7 @@ uint32_t ServerWorld::MakeEntity(EntityType entityType) {
         e.freelist_next = 0;
 
         e.type = entityType;
+        e.spawnedAt = GetTime();
     }
     return entityId;
 }

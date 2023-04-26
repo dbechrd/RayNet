@@ -46,6 +46,8 @@
 #define CL_DBG_SNAPSHOT_IDS    0
 #define CL_DBG_TILE_CULLING    0
 #define CL_DBG_CIRCLE_VS_REC   0
+#define CL_DBG_COLLIDERS       0
+#define CL_DBG_FORCE_ACCUM     0
 
 // Shared types
 

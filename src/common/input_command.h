@@ -1,4 +1,5 @@
 #pragma once
+#include "common.h"
 
 struct InputCmd {
     uint32_t seq;
@@ -7,6 +8,7 @@ struct InputCmd {
     bool south;
     bool east;
     bool fire;
+    Vector2 facing;
 
     Vector2 GenerateMoveForce(float speed) const
     {

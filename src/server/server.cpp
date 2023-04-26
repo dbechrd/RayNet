@@ -175,7 +175,7 @@ void ServerProcessMessages(Server &server)
     }
 }
 
-void tick_player(Server &server, uint32_t entityId, double dt)
+void tick_player(Server &server, uint32_t entityId, double now, double dt)
 {
     Entity &ePlayer = server.world->entities[entityId];
     if (!server.yj_server->IsClientConnected(ePlayer.index)) {
@@ -204,8 +204,15 @@ void tick_player(Server &server, uint32_t entityId, double dt)
                 Entity &eBullet = server.world->entities[idBullet];
                 eBullet.color = ORANGE;
                 eBullet.size = { 5, 5 };
-                eBullet.position = { ePlayer.position.x, ePlayer.position.y };
-                eBullet.velocity = { (float)GetRandomValue(800, 1000), (float)GetRandomValue(0, -200) };
+                eBullet.position = { ePlayer.position.x, ePlayer.position.y - 32 };
+                // Shoot in facing direction
+                Vector2 direction = Vector2Scale(inputCmd->facing, 100);
+                // Add a bit of random spread
+                direction.x += GetRandomValue(-20, 20);
+                direction.y += GetRandomValue(-20, 20);
+                direction = Vector2Normalize(direction);
+                // Random speed
+                eBullet.velocity = Vector2Scale(direction, 400); //GetRandomValue(800, 1000));
                 eBullet.drag = 0.02f;
             }
         }
@@ -214,77 +221,64 @@ void tick_player(Server &server, uint32_t entityId, double dt)
     ePlayer.Tick(SV_TICK_DT);
 }
 
-void tick_bot(Server &server, uint32_t entityId, double dt)
+void tick_bot(Server &server, uint32_t entityId, double now, double dt)
 {
-    static const Vector2 points[] = {
-        { 554, 347 },
-        { 598, 408 },
-        { 673, 450 },
-        { 726, 480 },
-        { 767, 535 },
-        { 813, 595 },
-        { 888, 621 },
-        { 952, 598 },
-        { 990, 553 },
-        { 1011, 490 },
-        { 988, 426 },
-        { 949, 368 },
-        { 905, 316 },
-        { 857, 260 },
-        { 801, 239 },
-        { 757, 267 },
-        { 702, 295 },
-        { 641, 274 },
-        { 591, 258 },
-        { 546, 289 }
-    };
-    static int targetIdx = 0;
+    Entity &entity = server.world->entities[entityId];
+    EntityBot &bot = entity.data.bot;
+    AiPathNode *aiPathNode = server.world->map.GetPathNode(bot.pathId, bot.pathNodeIndexTarget);
 
-    Entity &eBot = server.world->entities[entityId];
-    Vector2 target = points[targetIdx];
-    if (fabsf(eBot.position.x - points[targetIdx].x) < 10 &&
-        fabsf((eBot.position.y - eBot.size.y / 2) - points[targetIdx].y) < 10) {
-        targetIdx++;
-        targetIdx = (targetIdx + 1) % 20;
+    Vector2 target = aiPathNode->pos;
+    Vector2 toTarget = Vector2Subtract(target, entity.position);
+    if (Vector2LengthSqr(toTarget) < 10*10) {
+        if (bot.pathNodeIndexTarget != bot.pathNodeIndexPrev) {
+            // Arrived at a new node
+            bot.pathNodeIndexPrev = bot.pathNodeIndexTarget;
+            bot.pathNodeArrivedAt = now;
+        }
+        if (now - bot.pathNodeArrivedAt > aiPathNode->waitFor) {
+            // Been at node long enough, move on
+            bot.pathNodeIndexTarget = server.world->map.GetNextPathNodeIndex(bot.pathId, bot.pathNodeIndexTarget);
+        }
     }
 
+#if 0
     InputCmd aiCmd{};
     if (eBot.position.x < target.x) {
         aiCmd.east = true;
     } else if (eBot.position.x > target.x) {
         aiCmd.west = true;
     }
-    if (eBot.position.y - eBot.size.y / 2 < target.y) {
+    if (eBot.position.y < target.y) {
         aiCmd.south = true;
-    } else if (eBot.position.y - eBot.size.y / 2 > target.y) {
+    } else if (eBot.position.y > target.y) {
         aiCmd.north = true;
     }
 
     Vector2 moveForce = aiCmd.GenerateMoveForce(eBot.speed);
-    eBot.ApplyForce(moveForce);
+#else
+    if (bot.pathNodeIndexTarget != bot.pathNodeIndexPrev) {
+        Vector2 moveForce = toTarget;
+        moveForce = Vector2Normalize(moveForce);
+        moveForce = Vector2Scale(moveForce, entity.speed);
+        entity.ApplyForce(moveForce);
+    }
+#endif
 
-    eBot.Tick(SV_TICK_DT);
+    entity.Tick(SV_TICK_DT);
 }
 
-void tick_projectile(Server &server, uint32_t entityId, double dt)
+void tick_projectile(Server &server, uint32_t entityId, double now, double dt)
 {
     Entity &eProjectile = server.world->entities[entityId];
-    eProjectile.ApplyForce({ 0, 5 });
+    //eProjectile.ApplyForce({ 0, 5 });
     eProjectile.Tick(dt);
 
-    if (eProjectile.velocity.x < 100 && eProjectile.velocity.y < 100) {
-        server.world->DespawnEntity(entityId);
-    } else if (
-        eProjectile.position.x < -eProjectile.size.x ||
-        eProjectile.position.x > WINDOW_WIDTH ||
-        eProjectile.position.y < -eProjectile.size.y ||
-        eProjectile.position.y > WINDOW_HEIGHT)
-    {
+    if (now - eProjectile.spawnedAt > 1.0 || Vector2LengthSqr(eProjectile.velocity) < 100*100) {
         server.world->DespawnEntity(entityId);
     }
 }
 
-typedef void (*EntityTicker)(Server &server, uint32_t entityId, double dt);
+typedef void (*EntityTicker)(Server &server, uint32_t entityId, double now, double dt);
 static EntityTicker entity_ticker[Entity_Count] = {
     0,
     tick_player,
@@ -292,7 +286,7 @@ static EntityTicker entity_ticker[Entity_Count] = {
     tick_projectile,
 };
 
-void ServerTick(Server &server)
+void ServerTick(Server &server, double now)
 {
     // Tick entites
     for (int entityId = 0; entityId < SV_MAX_ENTITIES; entityId++) {
@@ -301,7 +295,9 @@ void ServerTick(Server &server)
             continue;
         }
 
-        entity_ticker[entity.type](server, entityId, SV_TICK_DT);
+        // TODO(dlb): Where should this live?
+        entity.forceAccum = {};
+        entity_ticker[entity.type](server, entityId, now, SV_TICK_DT);
         server.world->map.ResolveEntityTerrainCollisions(entity);
     }
 
@@ -385,7 +381,7 @@ void ServerUpdate(Server &server, double now)
 
     bool hasDelta = false;
     while (server.tickAccum >= SV_TICK_DT) {
-        ServerTick(server);
+        ServerTick(server, now);
         server.tickAccum -= SV_TICK_DT;
         hasDelta = true;
     }
@@ -539,6 +535,26 @@ void Play(Server &server)
         // until dismissed
     }
 
+    //-----------------
+    // Bots
+#if 1
+    uint32_t eid_bot1 = server.world->MakeEntity(Entity_Bot);
+    if (eid_bot1) {
+        Entity &entity = server.world->entities[eid_bot1];
+        EntityBot &bot = entity.data.bot;
+        bot.pathId = 0;
+
+        entity.type = Entity_Bot;
+        entity.color = DARKPURPLE;
+        entity.size = { 32, 64 };
+        entity.radius = 10;
+        entity.position = server.world->map.GetPathNode(bot.pathId, 0)->pos;
+        entity.speed = 30;
+        entity.drag = 8.0f;
+    }
+#endif
+    //-----------------
+
     Camera2D &camera2d = server.world->camera2d;
     Tilemap &map = server.world->map;
 
@@ -563,6 +579,8 @@ void Play(Server &server)
     const Vector2 uiPosition{ 380, 8 };
     const Rectangle editorRect{ uiPosition.x, uiPosition.y, 800, 80 };
 
+    SetExitKey(0);
+
     while (!WindowShouldClose())
     {
         const double now = GetTime();
@@ -573,6 +591,8 @@ void Play(Server &server)
         server.tickAccum += frameDt;
 
         bool doNetTick = server.tickAccum >= SV_TICK_DT;
+
+        bool escape = IsKeyPressed(KEY_ESCAPE);
 
         if (IsKeyPressed(KEY_H)) {
             histogram.paused = !histogram.paused;
@@ -603,8 +623,7 @@ void Play(Server &server)
 
             // Zoom based on mouse wheel
             float wheel = GetMouseWheelMove();
-            if (wheel != 0)
-            {
+            if (wheel != 0) {
                 // Get the world point that is under the mouse
                 Vector2 mouseWorldPos = GetScreenToWorld2D(GetMousePosition(), camera2d);
 
@@ -622,9 +641,9 @@ void Play(Server &server)
                 if (camera2d.zoom < zoomIncrement) camera2d.zoom = zoomIncrement;
             }
         } else {
-            camera2d.offset = {};
-            camera2d.target = {};
-            camera2d.zoom = 1;
+            //camera2d.offset = {};
+            //camera2d.target = {};
+            //camera2d.zoom = 1;
         }
 
         const Vector2 cursorWorldPos = GetScreenToWorld2D({ (float)GetMouseX(), (float)GetMouseY() }, camera2d);
@@ -641,7 +660,82 @@ void Play(Server &server)
 
         BeginMode2D(camera2d);
 
+        // [World] Tilemap
         server.world->map.Draw(camera2d);
+
+        // [World][Editor] Paths
+
+        // Draw path edges
+        for (uint32_t pathId = 0; pathId < server.world->map.pathCount; pathId++) {
+            AiPath *path = server.world->map.GetPath(pathId);
+            for (uint32_t pathNodeIndex = 0; pathNodeIndex < path->pathNodeIndexCount; pathNodeIndex++) {
+                uint32_t nextPathNodeIndex = server.world->map.GetNextPathNodeIndex(pathId, pathNodeIndex);
+                AiPathNode *pathNode = server.world->map.GetPathNode(pathId, pathNodeIndex);
+                AiPathNode *nextPathNode = server.world->map.GetPathNode(pathId, nextPathNodeIndex);
+                DrawLine(
+                    pathNode->pos.x, pathNode->pos.y,
+                    nextPathNode->pos.x, nextPathNode->pos.y,
+                    LIGHTGRAY
+                );
+            }
+        }
+
+        static struct PathNodeDrag {
+            bool active;
+            uint32_t pathId;
+            uint32_t pathNodeIndex;
+            Vector2 startPosition;
+        } aiPathNodeDrag{};
+
+        // Draw path nodes
+        const float pathRectRadius = 5;
+        for (uint32_t pathId = 0; pathId < server.world->map.pathCount; pathId++) {
+            AiPath *aipath = server.world->map.GetPath(pathId);
+            for (uint32_t pathNodeIndex = 0; pathNodeIndex < aipath->pathNodeIndexCount; pathNodeIndex++) {
+                AiPathNode *aiPathNode = server.world->map.GetPathNode(pathId, pathNodeIndex);
+
+                Rectangle nodeRect{
+                    aiPathNode->pos.x - pathRectRadius,
+                    aiPathNode->pos.y - pathRectRadius,
+                    pathRectRadius * 2,
+                    pathRectRadius * 2
+                };
+
+                Color color = aiPathNode->waitFor ? BLUE : RED;
+                bool hover = dlb_CheckCollisionPointRec(cursorWorldPos, nodeRect);
+                if (hover) {
+                    color = aiPathNode->waitFor ? SKYBLUE : PINK;
+                    bool down = IsMouseButtonDown(MOUSE_BUTTON_LEFT);
+                    if (down) {
+                        color = aiPathNode->waitFor ? DARKBLUE : MAROON;
+                        if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
+                            aiPathNodeDrag.active = true;
+                            aiPathNodeDrag.pathId = pathId;
+                            aiPathNodeDrag.pathNodeIndex = pathNodeIndex;
+                            aiPathNodeDrag.startPosition = aiPathNode->pos;
+                        } else if (escape) {
+                            aiPathNode->pos = aiPathNodeDrag.startPosition;
+                            aiPathNodeDrag = {};
+                            escape = false;
+                        }
+                    } else {
+                        aiPathNodeDrag = {};
+                    }
+                }
+                DrawRectangleRec(nodeRect, color);
+            }
+        }
+
+        // NOTE(dlb): I could rewrite the loop above again below to have draw happen
+        // after drag update.. but meh. I don't wanna duplicate code, so dragging nodes
+        // will have 1 frame of delay. :(
+        if (aiPathNodeDrag.active) {
+            Vector2 newNodePos = cursorWorldPos;
+            Vector2SubtractValue(newNodePos, pathRectRadius);
+            AiPath *aiPath = server.world->map.GetPath(aiPathNodeDrag.pathId);
+            AiPathNode *aiPathNode = server.world->map.GetPathNode(aiPathNodeDrag.pathId, aiPathNodeDrag.pathNodeIndex);
+            aiPathNode->pos = newNodePos;
+        }
 
         const bool editorHovered = dlb_CheckCollisionPointRec(GetMousePosition(), editorRect);
 
@@ -670,14 +764,27 @@ void Play(Server &server)
             }
         }
 
-        // [Debug] Draw colliders
         for (int entityId = 0; entityId < SV_MAX_ENTITIES; entityId++) {
             Entity &entity = server.world->entities[entityId];
             if (entity.type) {
                 entity.Draw(fntHackBold20, entityId, 1);
+#if CL_DBG_COLLIDERS
+                // [Debug] Draw colliders
                 if (entity.radius) {
                     DrawCircle(entity.position.x, entity.position.y, entity.radius, entity.colliding ? Fade(RED, 0.5) : Fade(GRAY, 0.5));
                 }
+#endif
+#if CL_DBG_FORCE_ACCUM
+                // [Debug] Draw force vectors
+                if (Vector2LengthSqr(entity.forceAccum)) {
+                    DrawLineEx(
+                        { entity.position.x, entity.position.y },
+                        { entity.position.x + entity.forceAccum.x, entity.position.y + entity.forceAccum.y },
+                        2,
+                        YELLOW
+                    );
+                }
+#endif
             }
         }
 
@@ -770,7 +877,7 @@ void Play(Server &server)
                 BLACK
             );
 
-            for (int i = 0; i < server.world->map.tileDefCount; i++) {
+            for (uint32_t i = 0; i < server.world->map.tileDefCount; i++) {
                 TileDef &tileDef = server.world->map.tileDefs[i];
                 Rectangle texRect{ (float)tileDef.x, (float)tileDef.y, TILE_W, TILE_W };
                 Vector2 screenPos = {
@@ -873,6 +980,11 @@ void Play(Server &server)
         histogram.Draw(8, 8);
         EndDrawing();
         yojimbo_sleep(0.001);
+
+        // Nobody else handled it, so user probably wants to quit
+        if (escape) {
+            CloseWindow();
+        }
     }
 
     UnloadFont(fntHackBold20);
@@ -937,23 +1049,6 @@ int main(int argc, char *argv[])
         return -1;
     }
 
-    //-----------------
-    // Bots
-#if 1
-    uint32_t eid_bot1 = server->world->MakeEntity(Entity_Bot);
-    if (eid_bot1) {
-        Entity &bot1 = server->world->entities[eid_bot1];
-        bot1.type = Entity_Bot;
-        bot1.color = DARKPURPLE;
-        bot1.size = { 32, 64 };
-        bot1.radius = 10;
-        bot1.position = { 200, 200 };
-        bot1.speed = 30;
-        bot1.drag = 8.0f;
-    }
-#endif
-    //-----------------
-
     Play(*server);
 
     //--------------------
@@ -963,7 +1058,6 @@ int main(int argc, char *argv[])
     delete server;
     server = {};
     ShutdownYojimbo();
-    CloseWindow();
     CloseAudioDevice();
     return 0;
 }

@@ -2,7 +2,7 @@
 #include "collision.h"
 #include <ctime>
 
-static TileDef hardcodedTiles32TileDefs[] = {
+static TileDef v2TileDefs[] = {
 #define TILEDEF(y, x, collide) { x * (TILE_W + 2) + 1, y * (TILE_W + 2) + 1, collide }
     TILEDEF(0, 0, 0),  // void
     TILEDEF(0, 1, 0),  // bright grass
@@ -27,38 +27,46 @@ static TileDef hardcodedTiles32TileDefs[] = {
 #undef TILEDEF
 };
 
-Err Tilemap::Alloc(int version, int width, int height, const char *texturePath)
-{
-    version = 1;
-    if (width <= 0 || height <= 0 || width > 128 || height > 128) {
-        return RN_INVALID_SIZE;
-    }
+static AiPathNode v2HardcodedAiPathNodes[] = {
+    { 554, 347 + 800, 0 },
+    { 598, 408 + 800, 0 },
+    { 673, 450 + 800, 0 },
+    { 726, 480 + 800, 0 },
+    { 767, 535 + 800, 3 },
+    { 813, 595 + 800, 0 },
+    { 888, 621 + 800, 0 },
+    { 952, 598 + 800, 0 },
+    { 990, 553 + 800, 0 },
+    { 999, 490 + 800, 0 },
+    { 988, 426 + 800, 0 },
+    { 949, 368 + 800, 0 },
+    { 905, 316 + 800, 1 },
+    { 857, 260 + 800, 0 },
+    { 801, 239 + 800, 0 },
+    { 757, 267 + 800, 0 },
+    { 702, 295 + 800, 2 },
+    { 641, 274 + 800, 0 },
+    { 591, 258 + 800, 0 },
+    { 546, 289 + 800, 0 }
+};
 
-    if (!texturePath) {
-        return RN_INVALID_PATH;
-    }
-    texture = LoadTexture(texturePath);
-    if (!texture.width) {
-        return RN_BAD_FILE_READ;
-    }
+static uint32_t v2HardcodedAiPathNodeIndices[] = {
+    0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19
+};
 
-    // TODO: Load this from somewhere... a tilemap.dat file or something.
-    tileDefCount = ARRAY_SIZE(hardcodedTiles32TileDefs);
-    tileDefs = hardcodedTiles32TileDefs;
-
-    tiles = (Tile *)calloc((size_t)width * height, sizeof(*tiles));
-    if (!tiles) {
-        return RN_BAD_ALLOC;
-    }
-
-    return RN_SUCCESS;
-}
+static AiPath v2HardcodedAiPaths[] = {
+    { 0, 20 }
+};
 
 void Tilemap::Free(void)
 {
     UnloadTexture(texture);
     free(texturePath);
+    free(tileDefs);
     free(tiles);
+    free(pathNodes);
+    free(pathNodeIndices);
+    free(paths);
 }
 
 Tilemap::~Tilemap(void)
@@ -166,23 +174,67 @@ Err Tilemap::Save(const char *filename)
     if (err) return err;
 
     FILE *file = fopen(filename, "w");
-    if (!file) {
-        return RN_BAD_FILE_WRITE;
-    }
+    do {
+        if (!file) {
+            return RN_BAD_FILE_WRITE;
+        }
 
-    assert(width);
-    assert(height);
-    assert(texturePath);
-    assert(tiles);
+        assert(texturePath);
+        assert(tileDefCount);
+        assert(width);
+        assert(height);
+        assert(pathNodeCount);
+        assert(pathNodeIndexCount);
+        assert(pathCount);
 
-    fwrite(&MAGIC, sizeof(MAGIC), 1, file);
-    fwrite(&VERSION, sizeof(VERSION), 1, file);
-    uint32_t texturePathLen = (uint32_t)strlen(texturePath);
-    fwrite(&texturePathLen, sizeof(texturePathLen), 1, file);
-    fwrite(texturePath, sizeof(*texturePath), texturePathLen, file);
-    fwrite(&width, sizeof(width), 1, file);
-    fwrite(&height, sizeof(height), 1, file);
-    fwrite(tiles, sizeof(*tiles), (size_t)width * height, file);
+        assert(tileDefs);
+        assert(tiles);
+        assert(pathNodes);
+        assert(pathNodeIndices);
+        assert(paths);
+
+        fwrite(&MAGIC, sizeof(MAGIC), 1, file);
+        fwrite(&VERSION, sizeof(VERSION), 1, file);
+        fwrite(&texturePathLen, sizeof(texturePathLen), 1, file);
+        fwrite(texturePath, sizeof(*texturePath), texturePathLen, file);
+        fwrite(&tileDefCount, sizeof(tileDefCount), 1, file);
+        fwrite(&width, sizeof(width), 1, file);
+        fwrite(&height, sizeof(height), 1, file);
+        fwrite(&pathNodeCount, sizeof(pathNodeCount), 1, file);
+        fwrite(&pathNodeIndexCount, sizeof(pathNodeIndexCount), 1, file);
+        fwrite(&pathCount, sizeof(pathCount), 1, file);
+
+        for (uint32_t i = 0; i < tileDefCount; i++) {
+            TileDef &tileDef = tileDefs[i];
+            fwrite(&tileDef.x, sizeof(tileDef.x), 1, file);
+            fwrite(&tileDef.y, sizeof(tileDef.y), 1, file);
+            fwrite(&tileDef.collide, sizeof(tileDef.collide), 1, file);
+        }
+
+        const uint32_t tileCount = width * height;
+        for (uint32_t i = 0; i < tileCount; i++) {
+            Tile &tile = tiles[i];
+            fwrite(&tiles[i], sizeof(tiles[i]), 1, file);
+        }
+
+        for (uint32_t i = 0; i < pathNodeCount; i++) {
+            AiPathNode &aiPathNode = pathNodes[i];
+            fwrite(&aiPathNode.pos.x, sizeof(aiPathNode.pos.x), 1, file);
+            fwrite(&aiPathNode.pos.y, sizeof(aiPathNode.pos.y), 1, file);
+            fwrite(&aiPathNode.waitFor, sizeof(aiPathNode.waitFor), 1, file);
+        }
+
+        for (uint32_t i = 0; i < pathNodeIndexCount; i++) {
+            uint32_t &aiPathNodeIndex = pathNodeIndices[i];
+            fwrite(&aiPathNodeIndex, sizeof(aiPathNodeIndex), 1, file);
+        }
+
+        for (uint32_t i = 0; i < pathCount; i++) {
+            AiPath &aiPath = paths[i];
+            fwrite(&aiPath.pathNodeIndexOffset, sizeof(aiPath.pathNodeIndexOffset), 1, file);
+            fwrite(&aiPath.pathNodeIndexCount, sizeof(aiPath.pathNodeIndexCount), 1, file);
+        }
+    } while (0);
 
     fclose(file);
     return RN_SUCCESS;
@@ -210,7 +262,6 @@ Err Tilemap::Load(const char *filename)
         fread(&version, sizeof(version), 1, file);
 
         if (version >= 2) {
-            uint32_t texturePathLen = 0;
             fread(&texturePathLen, sizeof(texturePathLen), 1, file);
             if (!texturePathLen || texturePathLen > 1024) {
                 err = RN_INVALID_PATH; break;
@@ -222,12 +273,12 @@ Err Tilemap::Load(const char *filename)
             fread(texturePath, sizeof(*texturePath), texturePathLen, file);
         } else {
             const char *v1_texturePath = "resources/tiles32.png";
-            const size_t v1_texturePathLen = strlen(v1_texturePath);
-            texturePath = (char *)calloc(v1_texturePathLen + 1, sizeof(*v1_texturePath));
+            texturePathLen = (uint32_t)strlen(v1_texturePath);
+            texturePath = (char *)calloc(texturePathLen, sizeof(*texturePath));
             if (!texturePath) {
                 err = RN_BAD_ALLOC; break;
             }
-            strncpy(texturePath, v1_texturePath, v1_texturePathLen);
+            strncpy(texturePath, v1_texturePath, texturePathLen);
         }
 
         texture = LoadTexture(texturePath);
@@ -235,51 +286,139 @@ Err Tilemap::Load(const char *filename)
             err = RN_BAD_FILE_READ; break;
         }
 
-        // TODO: Load this from somewhere... a tilemap.dat file or something.
-        tileDefCount = ARRAY_SIZE(hardcodedTiles32TileDefs);
-        tileDefs = hardcodedTiles32TileDefs;
+        if (version >= 3) {
+            fread(&tileDefCount, sizeof(tileDefCount), 1, file);
+        } else {
+            tileDefCount = ARRAY_SIZE(v2TileDefs);
+        }
 
-        int oldWidth = width;
-        int oldHeight = height;
         fread(&width, sizeof(width), 1, file);
         fread(&height, sizeof(height), 1, file);
         if (!width || !height) {
             err = RN_INVALID_SIZE; break;
         }
 
-        const size_t tileCount = (size_t)width * height;
+        if (version >= 3) {
+            fread(&pathNodeCount, sizeof(pathNodeCount), 1, file);
+            fread(&pathNodeIndexCount, sizeof(pathNodeIndexCount), 1, file);
+            fread(&pathCount, sizeof(pathCount), 1, file);
+        } else {
+            pathNodeCount = ARRAY_SIZE(v2HardcodedAiPathNodes);
+            pathNodeIndexCount = ARRAY_SIZE(v2HardcodedAiPathNodeIndices);
+            pathCount = ARRAY_SIZE(v2HardcodedAiPaths);
+        }
+
+        tileDefs = (TileDef *)calloc(tileDefCount, sizeof(*tileDefs));
+        if (!tileDefs) {
+            err = RN_BAD_ALLOC; break;
+        }
+
+        if (version >= 3) {
+            for (uint32_t i = 0; i < tileDefCount; i++) {
+                TileDef &dst = tileDefs[i];
+                fread(&dst.x, sizeof(dst.x), 1, file);
+                fread(&dst.y, sizeof(dst.y), 1, file);
+                fread(&dst.collide, sizeof(dst.collide), 1, file);
+            }
+        } else {
+            for (uint32_t i = 0; i < tileDefCount; i++) {
+                TileDef &src = v2TileDefs[i];
+                TileDef &dst = tileDefs[i];
+                dst.x = src.x;
+                dst.y = src.y;
+                dst.collide = src.collide;
+            }
+        }
+
+        const uint32_t tileCount = width * height;
         tiles = (Tile *)calloc(tileCount, sizeof(*tiles));
         if (!tiles) {
             err = RN_BAD_ALLOC; break;
         }
-        fread(tiles, sizeof(*tiles), tileCount, file);
+        for (uint32_t i = 0; i < tileCount; i++) {
+            Tile &tile = tiles[i];
+            fread(&tiles[i], sizeof(tiles[i]), 1, file);
+        }
+
+
+        pathNodes = (AiPathNode *)calloc(pathNodeCount, sizeof(*pathNodes));
+        if (!pathNodes) {
+            err = RN_BAD_ALLOC; break;
+        }
+        if (version >= 3) {
+            for (uint32_t i = 0; i < pathNodeCount; i++) {
+                AiPathNode &aiPathNode = pathNodes[i];
+                fread(&aiPathNode.pos.x, sizeof(aiPathNode.pos.x), 1, file);
+                fread(&aiPathNode.pos.y, sizeof(aiPathNode.pos.y), 1, file);
+                fread(&aiPathNode.waitFor, sizeof(aiPathNode.waitFor), 1, file);
+            }
+        } else {
+            for (uint32_t i = 0; i < pathNodeCount; i++) {
+                AiPathNode &aiPathNode = pathNodes[i];
+                aiPathNode.pos.x = v2HardcodedAiPathNodes[i].pos.x;
+                aiPathNode.pos.y = v2HardcodedAiPathNodes[i].pos.y;
+                aiPathNode.waitFor = v2HardcodedAiPathNodes[i].waitFor;
+            }
+        }
+
+        pathNodeIndices = (uint32_t *)calloc(pathNodeIndexCount, sizeof(*pathNodeIndices));
+        if (!pathNodeIndices) {
+            err = RN_BAD_ALLOC; break;
+        }
+        if (version >= 3) {
+            for (uint32_t i = 0; i < pathNodeIndexCount; i++) {
+                uint32_t &aiPathNodeIndex = pathNodeIndices[i];
+                fread(&aiPathNodeIndex, sizeof(aiPathNodeIndex), 1, file);
+            }
+        } else {
+            for (uint32_t i = 0; i < pathNodeIndexCount; i++) {
+                uint32_t &aiPathNodeIndex = pathNodeIndices[i];
+                aiPathNodeIndex = v2HardcodedAiPathNodeIndices[i];
+            }
+        }
+
+        paths = (AiPath *)calloc(pathCount, sizeof(*paths));
+        if (!paths) {
+            err = RN_BAD_ALLOC; break;
+        }
+        if (version >= 3) {
+            for (uint32_t i = 0; i < pathCount; i++) {
+                AiPath &aiPath = paths[i];
+                fread(&aiPath.pathNodeIndexOffset, sizeof(aiPath.pathNodeIndexOffset), 1, file);
+                fread(&aiPath.pathNodeIndexCount, sizeof(aiPath.pathNodeIndexCount), 1, file);
+            }
+        } else {
+            for (uint32_t i = 0; i < pathCount; i++) {
+                AiPath &aiPath = paths[i];
+                aiPath.pathNodeIndexOffset = v2HardcodedAiPaths[i].pathNodeIndexOffset;
+                aiPath.pathNodeIndexCount = v2HardcodedAiPaths[i].pathNodeIndexCount;
+            }
+        }
     } while (0);
 
     if (file) fclose(file);
     return err;
 }
 
-Tile Tilemap::At(int x, int y)
+Tile Tilemap::At(uint32_t x, uint32_t y)
 {
-    assert(x >= 0);
-    assert(y >= 0);
     assert(x < width);
     assert(y < height);
     return tiles[y * width + x];
 }
 
-bool Tilemap::AtTry(int x, int y, Tile &tile)
+bool Tilemap::AtTry(uint32_t x, uint32_t y, Tile &tile)
 {
-    if (x >= 0 && y >= 0 && x < width && y < height) {
+    if (x < width && y < height) {
         tile = At(x, y);
         return true;
     }
     return false;
 }
 
-bool Tilemap::WorldToTileIndex(int world_x, int world_y, Coord &coord)
+bool Tilemap::WorldToTileIndex(uint32_t world_x, uint32_t world_y, Coord &coord)
 {
-    if (world_x >= 0 && world_y >= 0 && world_x < width * TILE_W && world_y < height * TILE_W) {
+    if (world_x < width * TILE_W && world_y < height * TILE_W) {
         coord.x = world_x / TILE_W;
         coord.y = world_y / TILE_W;
         return true;
@@ -287,7 +426,7 @@ bool Tilemap::WorldToTileIndex(int world_x, int world_y, Coord &coord)
     return false;
 }
 
-bool Tilemap::AtWorld(int world_x, int world_y, Tile &tile)
+bool Tilemap::AtWorld(uint32_t world_x, uint32_t world_y, Tile &tile)
 {
     Coord coord{};
     if (WorldToTileIndex(world_x, world_y, coord)) {
@@ -297,10 +436,8 @@ bool Tilemap::AtWorld(int world_x, int world_y, Tile &tile)
     return false;
 }
 
-void Tilemap::Set(int x, int y, Tile tile)
+void Tilemap::Set(uint32_t x, uint32_t y, Tile tile)
 {
-    assert(x >= 0);
-    assert(y >= 0);
     assert(x < width);
     assert(y < height);
     tiles[y * width + x] = tile;

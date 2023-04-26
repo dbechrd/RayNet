@@ -64,7 +64,6 @@ void Entity::Draw(const Font &font, int clientIdx, float scale) {
         return;
     }
 
-#if 1
     // Scale
     float sx = size.x * scale;
     float sy = size.y * scale;
@@ -73,6 +72,7 @@ void Entity::Draw(const Font &font, int clientIdx, float scale) {
     float x = position.x;
     float y = position.y - (size.y - sy) / 2;
 
+#if 0
 #if 1
     DrawRectanglePro(
         { x, y, sx, sy },
@@ -81,6 +81,7 @@ void Entity::Draw(const Font &font, int clientIdx, float scale) {
         color
     );
 #else
+    // Windows Logo
     DrawRectanglePro(
         { x, y, sx, sy },
         { sx / 2, sy },
@@ -116,7 +117,7 @@ void Entity::Draw(const Font &font, int clientIdx, float scale) {
 
 #else
     DrawRectangleRounded(
-        { position.x, position.y, size.x, size.y },
+        { x - sx / 2, y - sy, sx, sy },
         0.5f,
         4,
         color
@@ -124,12 +125,12 @@ void Entity::Draw(const Font &font, int clientIdx, float scale) {
 #endif
 
 #if CL_DBG_SNAPSHOT_IDS
-    const char *str = TextFormat("%d", clientIdx);
+    const char *str = TextFormat("Bob #%d", clientIdx);
     Vector2 strSize = MeasureTextEx(font, str, (float)font.baseSize, 1.0f);
     DrawTextShadowEx(font, str,
         {
             position.x - strSize.x / 2,
-            position.y - strSize.y
+            position.y - sy - strSize.y
         },
         (float)font.baseSize, RAYWHITE
     );
