@@ -238,20 +238,28 @@ void tick_bot(Server &server, uint32_t entityId, double now, double dt)
 {
     Entity &entity = server.world->entities[entityId];
     EntityBot &bot = entity.data.bot;
-    AiPathNode *aiPathNode = server.world->map.GetPathNode(bot.pathId, bot.pathNodeIndexTarget);
+    AiPathNode *aiPathNode = server.world->map.GetPathNode(bot.pathId, bot.pathNodeTarget);
 
     Vector2 target = aiPathNode->pos;
     Vector2 toTarget = Vector2Subtract(target, entity.position);
     if (Vector2LengthSqr(toTarget) < 10*10) {
-        if (bot.pathNodeIndexTarget != bot.pathNodeIndexPrev) {
+        if (bot.pathNodeLastArrivedAt != bot.pathNodeTarget) {
             // Arrived at a new node
-            bot.pathNodeIndexPrev = bot.pathNodeIndexTarget;
+            bot.pathNodeLastArrivedAt = bot.pathNodeTarget;
             bot.pathNodeArrivedAt = now;
         }
         if (now - bot.pathNodeArrivedAt > aiPathNode->waitFor) {
             // Been at node long enough, move on
-            bot.pathNodeIndexTarget = server.world->map.GetNextPathNodeIndex(bot.pathId, bot.pathNodeIndexTarget);
+            bot.pathNodeTarget = server.world->map.GetNextPathNodeIndex(bot.pathId, bot.pathNodeTarget);
         }
+    } else {
+        bot.pathNodeLastArrivedAt = 0;
+        bot.pathNodeArrivedAt = 0;
+
+        Vector2 moveForce = toTarget;
+        moveForce = Vector2Normalize(moveForce);
+        moveForce = Vector2Scale(moveForce, entity.speed);
+        entity.ApplyForce(moveForce);
     }
 
 #if 0
@@ -269,12 +277,7 @@ void tick_bot(Server &server, uint32_t entityId, double now, double dt)
 
     Vector2 moveForce = aiCmd.GenerateMoveForce(eBot.speed);
 #else
-    if (bot.pathNodeIndexTarget != bot.pathNodeIndexPrev) {
-        Vector2 moveForce = toTarget;
-        moveForce = Vector2Normalize(moveForce);
-        moveForce = Vector2Scale(moveForce, entity.speed);
-        entity.ApplyForce(moveForce);
-    }
+
 #endif
 
     entity.Tick(SV_TICK_DT);
@@ -1024,7 +1027,7 @@ int main(int argc, char *argv[])
     srand((unsigned int)GetTime());
 
     //SetWindowState(FLAG_VSYNC_HINT);
-    SetWindowState(FLAG_WINDOW_RESIZABLE);
+    //SetWindowState(FLAG_WINDOW_RESIZABLE);
 
     Image icon = LoadImage("resources/server.png");
     SetWindowIcon(icon);

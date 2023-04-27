@@ -224,7 +224,7 @@ int main(int argc, char *argv[])
 
     InitWindow(WINDOW_WIDTH, WINDOW_HEIGHT, "RayNet Client");
     SetWindowState(FLAG_VSYNC_HINT);  // Gahhhhhh Windows fucking sucks at this
-    SetWindowState(FLAG_WINDOW_RESIZABLE);
+    //SetWindowState(FLAG_WINDOW_RESIZABLE);
     //SetWindowState(FLAG_FULLSCREEN_MODE);
 
     Image icon = LoadImage("resources/client.png");

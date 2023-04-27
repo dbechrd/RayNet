@@ -13,8 +13,8 @@ enum EntityType {
 
 struct EntityBot {
     uint32_t pathId = 0;  // TODO: Entity should remember which path it follows somehow
-    int pathNodeIndexPrev = 0;
-    int pathNodeIndexTarget = 0;
+    int pathNodeLastArrivedAt = 0;
+    int pathNodeTarget = 0;
     double pathNodeArrivedAt = 0;
 };
 
