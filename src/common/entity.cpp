@@ -1,18 +1,64 @@
 #include "entity.h"
 
+void Entity::Serialize(uint32_t entityId, EntitySpawnEvent &entitySpawnEvent, double serverTime, uint32_t lastProcessedInputCmd)
+{
+    entitySpawnEvent.serverTime = serverTime;
+    entitySpawnEvent.lastProcessedInputCmd = lastProcessedInputCmd;
+    entitySpawnEvent.id = entityId;
+    entitySpawnEvent.type = type;
+    entitySpawnEvent.color = color;
+    entitySpawnEvent.size = size;
+    entitySpawnEvent.radius = radius;
+    entitySpawnEvent.drag = drag;
+    entitySpawnEvent.speed = speed;
+    entitySpawnEvent.velocity = velocity;
+    entitySpawnEvent.position = position;
+}
+
 void Entity::Serialize(uint32_t entityId, EntitySnapshot &entitySnapshot, double serverTime, uint32_t lastProcessedInputCmd)
 {
     entitySnapshot.serverTime = serverTime;
     entitySnapshot.lastProcessedInputCmd = lastProcessedInputCmd;
     entitySnapshot.id = entityId;
     entitySnapshot.type = type;
-    entitySnapshot.color = color;
-    entitySnapshot.size = size;
-    entitySnapshot.radius = radius;
-    entitySnapshot.drag = drag;
-    entitySnapshot.speed = speed;
     entitySnapshot.velocity = velocity;
     entitySnapshot.position = position;
+}
+
+void Entity::ApplySpawnEvent(const EntitySpawnEvent &e)
+{
+    type = e.type;
+    color = e.color;
+    size = e.size;
+    radius = e.radius;
+    drag = e.drag;
+    speed = e.speed;
+    velocity = e.velocity;
+    position = e.position;
+}
+
+void Entity::ApplyStateInterpolated(const EntitySnapshot &a, const EntitySnapshot &b, double alpha)
+{
+    type = b.type;
+
+    /*color.r = LERP(a.color.r, b.color.r, (float)alpha);
+    color.g = LERP(a.color.g, b.color.g, (float)alpha);
+    color.b = LERP(a.color.b, b.color.b, (float)alpha);
+    color.a = LERP(a.color.a, b.color.a, (float)alpha);
+
+    size.x = LERP(a.size.x, b.size.x, (float)alpha);
+    size.y = LERP(a.size.y, b.size.y, (float)alpha);
+
+    radius = LERP(a.radius, b.radius, (float)alpha);
+
+    drag = LERP(a.drag, b.drag, (float)alpha);
+    speed = LERP(a.speed, b.speed, (float)alpha);*/
+
+    velocity.x = LERP(a.velocity.x, b.velocity.x, (float)alpha);
+    velocity.y = LERP(a.velocity.y, b.velocity.y, (float)alpha);
+
+    position.x = LERP(a.position.x, b.position.x, (float)alpha);
+    position.y = LERP(a.position.y, b.position.y, (float)alpha);
 }
 
 void Entity::ApplyForce(Vector2 force)
@@ -34,28 +80,10 @@ void Entity::Tick(double dt)
     position.y += velocity.y * dt;
 }
 
-void Entity::ApplyStateInterpolated(const EntitySnapshot &a, const EntitySnapshot &b, double alpha)
+Rectangle Entity::GetRect(void)
 {
-    type = b.type;
-
-    color.r = LERP(a.color.r, b.color.r, (float)alpha);
-    color.g = LERP(a.color.g, b.color.g, (float)alpha);
-    color.b = LERP(a.color.b, b.color.b, (float)alpha);
-    color.a = LERP(a.color.a, b.color.a, (float)alpha);
-
-    size.x = LERP(a.size.x, b.size.x, (float)alpha);
-    size.y = LERP(a.size.y, b.size.y, (float)alpha);
-
-    radius = LERP(a.radius, b.radius, (float)alpha);
-
-    drag = LERP(a.drag, b.drag, (float)alpha);
-    speed = LERP(a.speed, b.speed, (float)alpha);
-
-    velocity.x = LERP(a.velocity.x, b.velocity.x, (float)alpha);
-    velocity.y = LERP(a.velocity.y, b.velocity.y, (float)alpha);
-
-    position.x = LERP(a.position.x, b.position.x, (float)alpha);
-    position.y = LERP(a.position.y, b.position.y, (float)alpha);
+    Rectangle rect{ position.x - size.x / 2, position.y - size.y, size.x, size.y };
+    return rect;
 }
 
 // TODO: Refactor out into drawrectangle or some shit

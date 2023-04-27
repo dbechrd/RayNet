@@ -37,14 +37,18 @@ struct Entity {
 
     // TODO(dlb): Could be a pointer, or could be a type + index into another pool
     union {
-        EntityBot bot{};
+        EntityBot bot;
     } data;
 
     uint32_t freelist_next;
 
+    void Serialize(uint32_t entityId, EntitySpawnEvent &entitySpawnEvent, double serverTime, uint32_t lastProcessedInputCmd);
     void Serialize(uint32_t entityId, EntitySnapshot &entitySnapshot, double serverTime, uint32_t lastProcessedInputCmd);
+    void ApplySpawnEvent(const EntitySpawnEvent &spawnEvent);
+    void ApplyStateInterpolated(const EntitySnapshot &a, const EntitySnapshot &b, double alpha);
+
     void ApplyForce(Vector2 force);
     void Tick(double dt);
-    void ApplyStateInterpolated(const EntitySnapshot &a, const EntitySnapshot &b, double alpha);
+    Rectangle GetRect(void);
     void Draw(const Font &font, int clientIdx, float scale);
 };

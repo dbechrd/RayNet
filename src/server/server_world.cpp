@@ -8,31 +8,57 @@ ServerWorld::ServerWorld()
     }
 }
 
-uint32_t ServerWorld::MakeEntity(EntityType entityType) {
+uint32_t ServerWorld::CreateEntity(EntityType entityType)
+{
     uint32_t entityId = freelist_head;
     if (freelist_head) {
         Entity &e = entities[freelist_head];
         freelist_head = e.freelist_next;
         e.freelist_next = 0;
-
         e.type = entityType;
-        e.spawnedAt = GetTime();
     }
     return entityId;
 }
 
-void ServerWorld::DespawnEntity(uint32_t entityId) {
+void ServerWorld::SpawnEntity(uint32_t entityId, double now)
+{
     if (entityId < SV_MAX_ENTITIES) {
         Entity &entity = entities[entityId];
         if (entity.type) {
-            entity.despawnedAt = GetTime();
+            entity.spawnedAt = now;
         }
     } else {
         printf("error: entityId %u out of range\n", entityId);
     }
 }
 
-void ServerWorld::DestroyEntity(uint32_t entityId) {
+Entity *ServerWorld::GetEntity(uint32_t entityId)
+{
+    if (entityId < SV_MAX_ENTITIES) {
+        Entity &entity = entities[entityId];
+        if (entity.type) {
+            return &entity;
+        }
+    } else {
+        printf("error: entityId %u out of range\n", entityId);
+    }
+    return 0;
+}
+
+void ServerWorld::DespawnEntity(uint32_t entityId, double now)
+{
+    if (entityId < SV_MAX_ENTITIES) {
+        Entity &entity = entities[entityId];
+        if (entity.type) {
+            entity.despawnedAt = now;
+        }
+    } else {
+        printf("error: entityId %u out of range\n", entityId);
+    }
+}
+
+void ServerWorld::DestroyEntity(uint32_t entityId)
+{
     if (entityId < SV_MAX_ENTITIES) {
         Entity &entity = entities[entityId];
         if (entity.type) {

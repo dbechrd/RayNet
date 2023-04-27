@@ -14,15 +14,6 @@ struct Msg_S_EntitySnapshot : public yojimbo::Message
         entitySnapshot.type = (EntityType)type;
         serialize_double(stream, entitySnapshot.serverTime);
         serialize_uint32(stream, entitySnapshot.lastProcessedInputCmd);
-        serialize_bits(stream, entitySnapshot.color.r, 8);
-        serialize_bits(stream, entitySnapshot.color.g, 8);
-        serialize_bits(stream, entitySnapshot.color.b, 8);
-        serialize_bits(stream, entitySnapshot.color.a, 8);
-        serialize_float(stream, entitySnapshot.size.x);
-        serialize_float(stream, entitySnapshot.size.y);
-        serialize_float(stream, entitySnapshot.radius);
-        serialize_float(stream, entitySnapshot.drag);
-        serialize_float(stream, entitySnapshot.speed);
         serialize_float(stream, entitySnapshot.velocity.x);
         serialize_float(stream, entitySnapshot.velocity.y);
         serialize_float(stream, entitySnapshot.position.x);

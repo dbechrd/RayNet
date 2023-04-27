@@ -4,7 +4,8 @@
 #include "../common/tilemap.h"
 
 struct ServerPlayer {
-    uint32_t clientIdx      {};  // yj_client index
+    //uint32_t clientIdx      {};  // yj_client index
+    double   joinedAt       {};
     bool     needsClockSync {};
     uint32_t entityId       {};
     uint32_t lastInputSeq   {};  // sequence number of last input command we processed
@@ -19,7 +20,9 @@ struct ServerWorld {
     uint32_t freelist_head = SV_MAX_PLAYERS;
 
     ServerWorld();
-    uint32_t MakeEntity(EntityType entityType);
-    void DespawnEntity(uint32_t entityId);
+    uint32_t CreateEntity(EntityType entityType);
+    void SpawnEntity(uint32_t entityId, double now);
+    Entity *GetEntity(uint32_t entityId);
+    void DespawnEntity(uint32_t entityId, double now);
     void DestroyEntity(uint32_t entityId);
 };

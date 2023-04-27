@@ -69,10 +69,10 @@ void ClientStart(Client *client, double now)
 
     yojimbo::ClientServerConfig config{};
     config.numChannels = CHANNEL_COUNT;
-    config.channel[CHANNEL_R_CLOCK_SYNC].type = yojimbo::CHANNEL_TYPE_RELIABLE_ORDERED;
-    config.channel[CHANNEL_U_INPUT_COMMANDS].type = yojimbo::CHANNEL_TYPE_UNRELIABLE_UNORDERED;
+    config.channel[CHANNEL_R_CLOCK_SYNC     ].type = yojimbo::CHANNEL_TYPE_RELIABLE_ORDERED;
+    config.channel[CHANNEL_U_INPUT_COMMANDS ].type = yojimbo::CHANNEL_TYPE_UNRELIABLE_UNORDERED;
+    config.channel[CHANNEL_R_ENTITY_EVENT   ].type = yojimbo::CHANNEL_TYPE_RELIABLE_ORDERED;
     config.channel[CHANNEL_U_ENTITY_SNAPSHOT].type = yojimbo::CHANNEL_TYPE_UNRELIABLE_UNORDERED;
-    config.channel[CHANNEL_R_ENTITY_DESPAWN].type = yojimbo::CHANNEL_TYPE_RELIABLE_ORDERED;
 
     client->yj_client = new yojimbo::Client(
         yojimbo::GetDefaultAllocator(),
@@ -94,12 +94,31 @@ void ClientStart(Client *client, double now)
 
 void ClientSendInput(Client *client, const Controller &controller)
 {
-    Msg_C_InputCommands *message = (Msg_C_InputCommands *)client->yj_client->CreateMessage(MSG_C_INPUT_COMMANDS);
-    if (message) {
-        message->cmdQueue = controller.cmdQueue;
-        client->yj_client->SendMessage(CHANNEL_U_INPUT_COMMANDS, message);
+    if (client->yj_client->CanSendMessage(MSG_C_INPUT_COMMANDS)) {
+        Msg_C_InputCommands *message = (Msg_C_InputCommands *)client->yj_client->CreateMessage(MSG_C_INPUT_COMMANDS);
+        if (message) {
+            message->cmdQueue = controller.cmdQueue;
+            client->yj_client->SendMessage(CHANNEL_U_INPUT_COMMANDS, message);
+        } else {
+            printf("Failed to create INPUT_COMMANDS message.\n");
+        }
     } else {
-        printf("Failed to create INPUT_COMMANDS message.\n");
+        printf("Outgoing INPUT_COMMANDS channel message queue is full.\n");
+    }
+}
+
+void ClientSendEntityInteract(Client *client, uint32_t entityId)
+{
+    if (client->yj_client->CanSendMessage(MSG_C_ENTITY_INTERACT)) {
+        Msg_C_EntityInteract *message = (Msg_C_EntityInteract *)client->yj_client->CreateMessage(MSG_C_ENTITY_INTERACT);
+        if (message) {
+            message->entityId = entityId;
+            client->yj_client->SendMessage(MSG_C_ENTITY_INTERACT, message);
+        } else {
+            printf("Failed to create ENTITY_INTERACT message.\n");
+        }
+    } else {
+        printf("Outgoing ENTITY_INTERACT channel message queue is full.\n");
     }
 }
 
@@ -116,6 +135,13 @@ void ClientProcessMessages(Client *client, double now)
                     client->yj_client->GetNetworkInfo(netInfo);
                     const double approxServerNow = msgClockSync->serverTime + netInfo.RTT / 2000;
                     client->clientTimeDeltaVsServer = now - approxServerNow;
+                    break;
+                }
+                case MSG_S_ENTITY_SPAWN:
+                {
+                    Msg_S_EntitySpawn *msgEntitySpawn = (Msg_S_EntitySpawn *)message;
+                    Entity &entity = client->world->entities[msgEntitySpawn->entitySpawnEvent.id];
+                    entity.ApplySpawnEvent(msgEntitySpawn->entitySpawnEvent);
                     break;
                 }
                 case MSG_S_ENTITY_SNAPSHOT:
@@ -273,6 +299,8 @@ int main(int argc, char *argv[])
             histogram.paused = !histogram.paused;
         }
 
+        Vector2 cursorWorldPos{};
+
         //--------------------
         // Accmulate input every frame
         if (client->yj_client->IsConnected()) {
@@ -284,7 +312,7 @@ int main(int argc, char *argv[])
             client->controller.cmdAccum.east |= IsKeyDown(KEY_D);
             client->controller.cmdAccum.fire |= IsMouseButtonPressed(MOUSE_LEFT_BUTTON);
 
-            Vector2 cursorWorldPos = GetScreenToWorld2D(GetMousePosition(), client->world->camera2d);
+            cursorWorldPos = GetScreenToWorld2D(GetMousePosition(), client->world->camera2d);
             Vector2 facing = Vector2Subtract(cursorWorldPos, localPlayer.position);
             facing = Vector2Normalize(facing);
             client->controller.cmdAccum.facing = facing;
@@ -396,6 +424,7 @@ int main(int argc, char *argv[])
             BeginMode2D(client->world->camera2d);
             client->world->map.Draw(client->world->camera2d);
 
+            cursorWorldPos = GetScreenToWorld2D(GetMousePosition(), client->world->camera2d);
             for (uint32_t entityId = 0; entityId < SV_MAX_ENTITIES; entityId++) {
                 Entity &entity = client->world->entities[entityId];
                 if (entity.type == Entity_None) {
@@ -403,11 +432,12 @@ int main(int argc, char *argv[])
                 }
                 EntityGhost &ghost = client->world->ghosts[entityId];
 
-                // TODO: Move this to DRAW_TEXT in the tree view if we need it
-                //printf("client %d snapshot %d\n", clientIdx, snapshotBIdx);
                 if (CL_DBG_SNAPSHOT_SHADOWS) {
                     Entity ghostInstance = client->world->entities[entityId];
                     for (int i = 0; i < ghost.snapshots.size(); i++) {
+                        if (!ghost.snapshots[i].serverTime) {
+                            continue;
+                        }
                         ghostInstance.ApplyStateInterpolated(ghost.snapshots[i], ghost.snapshots[i], 0.0);
                         ghostInstance.color = Fade(GRAY, 0.5);
 
@@ -445,7 +475,16 @@ int main(int argc, char *argv[])
 #endif
                 }
 
+                const Color origColor = entity.color;
+                if (dlb_CheckCollisionPointRec(cursorWorldPos, entity.GetRect())) {
+                    entity.color = ColorBrightness(entity.color, 0.2f);
+                    bool down = IsMouseButtonPressed(MOUSE_BUTTON_LEFT);
+                    if (down) {
+                        ClientSendEntityInteract(client, entityId);
+                    }
+                }
                 entity.Draw(fntHackBold20, entityId, 1);
+                entity.color = origColor;
             }
 
             EndMode2D();
@@ -473,6 +512,7 @@ int main(int argc, char *argv[])
             DRAW_TEXT("serverTime", "%.2f (%s%.2f)", serverNow, client->clientTimeDeltaVsServer > 0 ? "+" : "", client->clientTimeDeltaVsServer);
             DRAW_TEXT("localTime", "%.2f", now);
             DRAW_TEXT("cursor", "%d, %d", GetMouseX(), GetMouseY());
+            DRAW_TEXT("cursor", "%d, %d (world: %.f, %.f)", GetMouseX(), GetMouseY(), cursorWorldPos.x, cursorWorldPos.y);
 
             const char *clientStateStr = "unknown";
             yojimbo::ClientState clientState = client->yj_client->GetClientState();

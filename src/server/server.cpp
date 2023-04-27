@@ -29,6 +29,7 @@ struct Server {
     uint64_t tick{};
     double tickAccum{};
     double lastTickedAt{};
+    double now{};
 
     ServerWorld *world{};
 
@@ -36,6 +37,7 @@ struct Server {
     {
         ServerPlayer &serverPlayer = world->players[clientIdx];
         serverPlayer.needsClockSync = true;
+        serverPlayer.joinedAt = now;
         serverPlayer.entityId = clientIdx;  // TODO alloc index, or keep all clients in lower indices??
 
         static const Color colors[]{
@@ -50,9 +52,10 @@ struct Server {
         entity.color = colors[clientIdx % (sizeof(colors) / sizeof(colors[0]))];
         entity.size = { 32, 64 };
         entity.radius = 10;
-        entity.position = { 100, 100 };
+        entity.position = { 680, 1390 };
         entity.speed = 100;
         entity.drag = 8.0f;
+        world->SpawnEntity(entity.index, now);
     }
 
     void OnClientLeave(int clientIdx)
@@ -104,10 +107,10 @@ int ServerStart(Server *server)
 
     yojimbo::ClientServerConfig config{};
     config.numChannels = CHANNEL_COUNT;
-    config.channel[CHANNEL_R_CLOCK_SYNC].type = yojimbo::CHANNEL_TYPE_RELIABLE_ORDERED;
-    config.channel[CHANNEL_U_INPUT_COMMANDS].type = yojimbo::CHANNEL_TYPE_UNRELIABLE_UNORDERED;
+    config.channel[CHANNEL_R_CLOCK_SYNC     ].type = yojimbo::CHANNEL_TYPE_RELIABLE_ORDERED;
+    config.channel[CHANNEL_U_INPUT_COMMANDS ].type = yojimbo::CHANNEL_TYPE_UNRELIABLE_UNORDERED;
+    config.channel[CHANNEL_R_ENTITY_EVENT   ].type = yojimbo::CHANNEL_TYPE_RELIABLE_ORDERED;
     config.channel[CHANNEL_U_ENTITY_SNAPSHOT].type = yojimbo::CHANNEL_TYPE_UNRELIABLE_UNORDERED;
-    config.channel[CHANNEL_R_ENTITY_DESPAWN].type = yojimbo::CHANNEL_TYPE_RELIABLE_ORDERED;
 
     // Loopback interface
     //yojimbo::Address address("127.0.0.1", SV_PORT);
@@ -167,6 +170,15 @@ void ServerProcessMessages(Server &server)
                         server.world->players[clientIdx].inputQueue = msgPlayerInput->cmdQueue;
                         break;
                     }
+                    case MSG_C_ENTITY_INTERACT:
+                    {
+                        Msg_C_EntityInteract *msgEntityInteract = (Msg_C_EntityInteract *)message;
+                        Entity *entity = server.world->GetEntity(msgEntityInteract->entityId);
+                        if (entity) {
+                            entity->position.x += 50;
+                        }
+                        break;
+                    }
                 }
                 server.yj_server->ReleaseMessage(clientIdx, message);
                 message = server.yj_server->ReceiveMessage(clientIdx, channelIdx);
@@ -199,7 +211,7 @@ void tick_player(Server &server, uint32_t entityId, double now, double dt)
         ePlayer.ApplyForce(moveForce);
 
         if (inputCmd->fire) {
-            uint32_t idBullet = server.world->MakeEntity(Entity_Projectile);
+            uint32_t idBullet = server.world->CreateEntity(Entity_Projectile);
             if (idBullet) {
                 Entity &eBullet = server.world->entities[idBullet];
                 eBullet.color = ORANGE;
@@ -214,6 +226,7 @@ void tick_player(Server &server, uint32_t entityId, double now, double dt)
                 // Random speed
                 eBullet.velocity = Vector2Scale(direction, 400); //GetRandomValue(800, 1000));
                 eBullet.drag = 0.02f;
+                server.world->SpawnEntity(idBullet, now);
             }
         }
     }
@@ -274,7 +287,7 @@ void tick_projectile(Server &server, uint32_t entityId, double now, double dt)
     eProjectile.Tick(dt);
 
     if (now - eProjectile.spawnedAt > 1.0 || Vector2LengthSqr(eProjectile.velocity) < 100*100) {
-        server.world->DespawnEntity(entityId);
+        server.world->DespawnEntity(entityId, now);
     }
 }
 
@@ -286,8 +299,28 @@ static EntityTicker entity_ticker[Entity_Count] = {
     tick_projectile,
 };
 
-void ServerTick(Server &server, double now)
+void ServerTick(Server &server)
 {
+    // Spawn entities
+    static uint32_t eid_bot1 = 0;
+    if (!eid_bot1) {
+        eid_bot1 = server.world->CreateEntity(Entity_Bot);
+        if (eid_bot1) {
+            Entity &entity = server.world->entities[eid_bot1];
+            EntityBot &bot = entity.data.bot;
+            bot.pathId = 0;
+
+            entity.type = Entity_Bot;
+            entity.color = DARKPURPLE;
+            entity.size = { 32, 64 };
+            entity.radius = 10;
+            entity.position = server.world->map.GetPathNode(bot.pathId, 0)->pos;
+            entity.speed = 30;
+            entity.drag = 8.0f;
+            server.world->SpawnEntity(eid_bot1, server.now);
+        }
+    }
+
     // Tick entites
     for (int entityId = 0; entityId < SV_MAX_ENTITIES; entityId++) {
         Entity &entity = server.world->entities[entityId];
@@ -297,7 +330,7 @@ void ServerTick(Server &server, double now)
 
         // TODO(dlb): Where should this live?
         entity.forceAccum = {};
-        entity_ticker[entity.type](server, entityId, now, SV_TICK_DT);
+        entity_ticker[entity.type](server, entityId, server.now, SV_TICK_DT);
         server.world->map.ResolveEntityTerrainCollisions(entity);
     }
 
@@ -312,9 +345,6 @@ void ServerSendClientSnapshots(Server &server)
         if (!server.yj_server->IsClientConnected(clientIdx)) {
             continue;
         }
-        if (!server.yj_server->CanSendMessage(clientIdx, CHANNEL_U_ENTITY_SNAPSHOT)) {
-            continue;
-        }
 
         // TODO: Send only the world state that's relevant to this particular client
         for (int entityId = 0; entityId < SV_MAX_ENTITIES; entityId++) {
@@ -324,17 +354,29 @@ void ServerSendClientSnapshots(Server &server)
             }
 
             ServerPlayer &serverPlayer = server.world->players[clientIdx];
-            if (entity.despawnedAt) {
-                Msg_S_EntityDespawn *msg = (Msg_S_EntityDespawn *)server.yj_server->CreateMessage(clientIdx, MSG_S_ENTITY_DESPAWN);
-                if (msg) {
-                    msg->entityId = entityId;
-                    server.yj_server->SendMessage(clientIdx, CHANNEL_R_ENTITY_DESPAWN, msg);
+            if ((serverPlayer.joinedAt == server.now || entity.spawnedAt == server.now) && !entity.despawnedAt) {
+                if (server.yj_server->CanSendMessage(clientIdx, CHANNEL_R_ENTITY_EVENT)) {
+                    Msg_S_EntitySpawn *msg = (Msg_S_EntitySpawn *)server.yj_server->CreateMessage(clientIdx, MSG_S_ENTITY_SPAWN);
+                    if (msg) {
+                        entity.Serialize(entityId, msg->entitySpawnEvent, server.lastTickedAt, serverPlayer.lastInputSeq);
+                        server.yj_server->SendMessage(clientIdx, CHANNEL_R_ENTITY_EVENT, msg);
+                    }
                 }
-            } else {
-                Msg_S_EntitySnapshot *msg = (Msg_S_EntitySnapshot *)server.yj_server->CreateMessage(clientIdx, MSG_S_ENTITY_SNAPSHOT);
-                if (msg) {
-                    entity.Serialize(entityId, msg->entitySnapshot, server.lastTickedAt, serverPlayer.lastInputSeq);
-                    server.yj_server->SendMessage(clientIdx, CHANNEL_U_ENTITY_SNAPSHOT, msg);
+            } else if (entity.despawnedAt == server.now) {
+                if (server.yj_server->CanSendMessage(clientIdx, CHANNEL_R_ENTITY_EVENT)) {
+                    Msg_S_EntityDespawn *msg = (Msg_S_EntityDespawn *)server.yj_server->CreateMessage(clientIdx, MSG_S_ENTITY_DESPAWN);
+                    if (msg) {
+                        msg->entityId = entityId;
+                        server.yj_server->SendMessage(clientIdx, CHANNEL_R_ENTITY_EVENT, msg);
+                    }
+                }
+            } else if (!entity.despawnedAt) {
+                if (server.yj_server->CanSendMessage(clientIdx, CHANNEL_U_ENTITY_SNAPSHOT)) {
+                    Msg_S_EntitySnapshot *msg = (Msg_S_EntitySnapshot *)server.yj_server->CreateMessage(clientIdx, MSG_S_ENTITY_SNAPSHOT);
+                    if (msg) {
+                        entity.Serialize(entityId, msg->entitySnapshot, server.lastTickedAt, serverPlayer.lastInputSeq);
+                        server.yj_server->SendMessage(clientIdx, CHANNEL_U_ENTITY_SNAPSHOT, msg);
+                    }
                 }
             }
         }
@@ -370,18 +412,18 @@ void ServerSendClockSync(Server &server)
     }
 }
 
-void ServerUpdate(Server &server, double now)
+void ServerUpdate(Server &server)
 {
     if (!server.yj_server->IsRunning())
         return;
 
-    server.yj_server->AdvanceTime(now);
+    server.yj_server->AdvanceTime(server.now);
     server.yj_server->ReceivePackets();
     ServerProcessMessages(server);
 
     bool hasDelta = false;
     while (server.tickAccum >= SV_TICK_DT) {
-        ServerTick(server, now);
+        ServerTick(server);
         server.tickAccum -= SV_TICK_DT;
         hasDelta = true;
     }
@@ -535,26 +577,6 @@ void Play(Server &server)
         // until dismissed
     }
 
-    //-----------------
-    // Bots
-#if 1
-    uint32_t eid_bot1 = server.world->MakeEntity(Entity_Bot);
-    if (eid_bot1) {
-        Entity &entity = server.world->entities[eid_bot1];
-        EntityBot &bot = entity.data.bot;
-        bot.pathId = 0;
-
-        entity.type = Entity_Bot;
-        entity.color = DARKPURPLE;
-        entity.size = { 32, 64 };
-        entity.radius = 10;
-        entity.position = server.world->map.GetPathNode(bot.pathId, 0)->pos;
-        entity.speed = 30;
-        entity.drag = 8.0f;
-    }
-#endif
-    //-----------------
-
     Camera2D &camera2d = server.world->camera2d;
     Tilemap &map = server.world->map;
 
@@ -583,10 +605,10 @@ void Play(Server &server)
 
     while (!WindowShouldClose())
     {
-        const double now = GetTime();
-        frameDt = MIN(now - frameStart, SV_TICK_DT * 3);  // arbitrary limit for now
+        server.now = GetTime();
+        frameDt = MIN(server.now - frameStart, SV_TICK_DT * 3);  // arbitrary limit for now
         frameDtSmooth = LERP(frameDtSmooth, frameDt, 0.1);
-        frameStart = now;
+        frameStart = server.now;
 
         server.tickAccum += frameDt;
 
@@ -650,7 +672,7 @@ void Play(Server &server)
 
         while (server.tickAccum >= SV_TICK_DT) {
             //printf("[%.2f][%.2f] ServerUpdate %d\n", server.tickAccum, now, (int)server.tick);
-            ServerUpdate(server, now);
+            ServerUpdate(server);
         }
 
         //--------------------
