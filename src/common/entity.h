@@ -11,11 +11,15 @@ enum EntityType {
     Entity_Count,
 };
 
+struct EntityPlayer {
+    uint32_t playerId{};
+};
+
 struct EntityBot {
-    uint32_t pathId = 0;  // TODO: Entity should remember which path it follows somehow
-    int pathNodeLastArrivedAt = 0;
-    int pathNodeTarget = 0;
-    double pathNodeArrivedAt = 0;
+    uint32_t pathId{};  // TODO: Entity should remember which path it follows somehow
+    int pathNodeLastArrivedAt{};
+    int pathNodeTarget{};
+    double pathNodeArrivedAt{};
 };
 
 struct Entity {
@@ -23,7 +27,6 @@ struct Entity {
     double spawnedAt;
     double despawnedAt;
 
-    uint32_t index;  // pool index?
     Color color;
     Vector2 size;
     float radius;    // collision
@@ -37,18 +40,18 @@ struct Entity {
 
     // TODO(dlb): Could be a pointer, or could be a type + index into another pool
     union {
+        EntityPlayer player{};
         EntityBot bot;
     } data;
 
     uint32_t freelist_next;
 
-    void Serialize(uint32_t entityId, EntitySpawnEvent &entitySpawnEvent, double serverTime, uint32_t lastProcessedInputCmd);
+    void Serialize(uint32_t entityId, EntitySpawnEvent &entitySpawnEvent, double serverTime);
     void Serialize(uint32_t entityId, EntitySnapshot &entitySnapshot, double serverTime, uint32_t lastProcessedInputCmd);
     void ApplySpawnEvent(const EntitySpawnEvent &spawnEvent);
     void ApplyStateInterpolated(const EntitySnapshot &a, const EntitySnapshot &b, double alpha);
-
     void ApplyForce(Vector2 force);
-    void Tick(double dt);
+    void Tick(double now, double dt);
     Rectangle GetRect(void);
     void Draw(const Font &font, int clientIdx, float scale);
 };

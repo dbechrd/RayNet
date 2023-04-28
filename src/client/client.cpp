@@ -1,33 +1,14 @@
 #include "../common/shared_lib.h"
 #include "../common/histogram.h"
 #include "client_world.h"
+#include "game_client.h"
 #include <deque>
 #include <time.h>
 
 static bool CL_DBG_SNAPSHOT_SHADOWS = true;
+Font fntHackBold20;
 
-struct Controller {
-    int nextSeq {};  // next input command sequence number to use
-
-    InputCmd cmdAccum{};         // accumulate input until we're ready to sample
-    double sampleInputAccum{};   // when this fills up, we are due to sample again
-    double lastInputSampleAt{};  // time we last sampled accumulator
-    double lastCommandSentAt{};  // time we last sent inputs to the server
-    RingBuffer<InputCmd, CL_SEND_INPUT_COUNT> cmdQueue{};  // queue of last N input samples
-};
-
-struct Client {
-    NetAdapter adapter;
-    yojimbo::Client *yj_client{};
-    double clientTimeDeltaVsServer{};  // how far ahead/behind client clock is
-    double netTickAccum{};             // when this fills up, a net tick is due
-    double lastNetTick{};              // for fixed-step networking updates
-
-    Controller controller;
-    ClientWorld *world{};
-};
-
-int ClientTryConnect(Client *client, double now)
+int ClientTryConnect(GameClient *client)
 {
     if (!client->yj_client->IsDisconnected()) {
         printf("yj: client already connected, disconnect first\n");
@@ -58,7 +39,7 @@ int ClientTryConnect(Client *client, double now)
     return 0;
 }
 
-void ClientStart(Client *client, double now)
+void ClientStart(GameClient *client)
 {
     if (!InitializeYojimbo()) {
         printf("yj: error: failed to initialize Yojimbo!\n");
@@ -79,10 +60,10 @@ void ClientStart(Client *client, double now)
         yojimbo::Address("0.0.0.0"),
         config,
         client->adapter,
-        now
+        client->now
     );
 
-    if (ClientTryConnect(client, now) < 0) {
+    if (ClientTryConnect(client) < 0) {
         printf("Failed to connect to server\n");
     }
 #if 0
@@ -92,7 +73,7 @@ void ClientStart(Client *client, double now)
 #endif
 }
 
-void ClientSendInput(Client *client, const Controller &controller)
+void ClientSendInput(GameClient *client, const Controller &controller)
 {
     if (client->yj_client->CanSendMessage(MSG_C_INPUT_COMMANDS)) {
         Msg_C_InputCommands *message = (Msg_C_InputCommands *)client->yj_client->CreateMessage(MSG_C_INPUT_COMMANDS);
@@ -107,7 +88,7 @@ void ClientSendInput(Client *client, const Controller &controller)
     }
 }
 
-void ClientSendEntityInteract(Client *client, uint32_t entityId)
+void ClientSendEntityInteract(GameClient *client, uint32_t entityId)
 {
     if (client->yj_client->CanSendMessage(MSG_C_ENTITY_INTERACT)) {
         Msg_C_EntityInteract *message = (Msg_C_EntityInteract *)client->yj_client->CreateMessage(MSG_C_ENTITY_INTERACT);
@@ -122,7 +103,7 @@ void ClientSendEntityInteract(Client *client, uint32_t entityId)
     }
 }
 
-void ClientProcessMessages(Client *client, double now)
+void ClientProcessMessages(GameClient *client)
 {
     for (int channelIdx = 0; channelIdx < CHANNEL_COUNT; channelIdx++) {
         yojimbo::Message *message = client->yj_client->ReceiveMessage(channelIdx);
@@ -134,23 +115,7 @@ void ClientProcessMessages(Client *client, double now)
                     yojimbo::NetworkInfo netInfo{};
                     client->yj_client->GetNetworkInfo(netInfo);
                     const double approxServerNow = msgClockSync->serverTime + netInfo.RTT / 2000;
-                    client->clientTimeDeltaVsServer = now - approxServerNow;
-                    break;
-                }
-                case MSG_S_ENTITY_SPAWN:
-                {
-                    Msg_S_EntitySpawn *msgEntitySpawn = (Msg_S_EntitySpawn *)message;
-                    Entity &entity = client->world->entities[msgEntitySpawn->entitySpawnEvent.id];
-                    entity.ApplySpawnEvent(msgEntitySpawn->entitySpawnEvent);
-                    break;
-                }
-                case MSG_S_ENTITY_SNAPSHOT:
-                {
-                    Msg_S_EntitySnapshot *msgEntitySnapshot = (Msg_S_EntitySnapshot *)message;
-                    Entity &entity = client->world->entities[msgEntitySnapshot->entitySnapshot.id];
-                    entity.type = msgEntitySnapshot->entitySnapshot.type;
-                    EntityGhost &ghost = client->world->ghosts[msgEntitySnapshot->entitySnapshot.id];
-                    ghost.snapshots.push(msgEntitySnapshot->entitySnapshot);
+                    client->clientTimeDeltaVsServer = client->now - approxServerNow;
                     break;
                 }
                 case MSG_S_ENTITY_DESPAWN:
@@ -162,6 +127,40 @@ void ClientProcessMessages(Client *client, double now)
                     ghost.snapshots = {};
                     break;
                 }
+                case MSG_S_ENTITY_SAY:
+                {
+                    Msg_S_EntitySay *msgEntitySay = (Msg_S_EntitySay *)message;
+                    Entity &entity = client->world->entities[msgEntitySay->entityId];
+                    if (msgEntitySay->messageLength > 0 && msgEntitySay->messageLength <= SV_MAX_ENTITY_SAY_MSG_LEN) {
+                        client->world->CreateDialog(
+                            msgEntitySay->entityId,
+                            msgEntitySay->messageLength,
+                            msgEntitySay->message,
+                            client->now
+                        );
+                    } else {
+                        printf("Wtf dis server smokin'? Sent entity say message of length %u but max is %u\n",
+                            msgEntitySay->messageLength,
+                            SV_MAX_ENTITY_SAY_MSG_LEN);
+                    }
+                    break;
+                }
+                case MSG_S_ENTITY_SNAPSHOT:
+                {
+                    Msg_S_EntitySnapshot *msgEntitySnapshot = (Msg_S_EntitySnapshot *)message;
+                    Entity &entity = client->world->entities[msgEntitySnapshot->entitySnapshot.id];
+                    entity.type = msgEntitySnapshot->entitySnapshot.type;
+                    EntityGhost &ghost = client->world->ghosts[msgEntitySnapshot->entitySnapshot.id];
+                    ghost.snapshots.push(msgEntitySnapshot->entitySnapshot);
+                    break;
+                }
+                case MSG_S_ENTITY_SPAWN:
+                {
+                    Msg_S_EntitySpawn *msgEntitySpawn = (Msg_S_EntitySpawn *)message;
+                    Entity &entity = client->world->entities[msgEntitySpawn->entitySpawnEvent.id];
+                    entity.ApplySpawnEvent(msgEntitySpawn->entitySpawnEvent);
+                    break;
+                }
             }
             client->yj_client->ReleaseMessage(message);
             message = client->yj_client->ReceiveMessage(channelIdx);
@@ -169,10 +168,10 @@ void ClientProcessMessages(Client *client, double now)
     }
 }
 
-void ClientUpdate(Client *client, double now)
+void ClientUpdate(GameClient *client)
 {
     // NOTE(dlb): This sends keepalive packets
-    client->yj_client->AdvanceTime(now);
+    client->yj_client->AdvanceTime(client->now);
 
     // TODO(dlb): Is it a good idea / necessary to receive packets every frame,
     // rather than at a fixed rate? It seems like it is... right!?
@@ -181,32 +180,33 @@ void ClientUpdate(Client *client, double now)
         return;
     }
 
-    ClientProcessMessages(client, now);
+    ClientProcessMessages(client);
 
     // Sample accumulator once per server tick and push command into command queue
     if (client->controller.sampleInputAccum >= CL_SAMPLE_INPUT_DT) {
         client->controller.cmdAccum.seq = ++client->controller.nextSeq;
         client->controller.cmdQueue.push(client->controller.cmdAccum);
         client->controller.cmdAccum = {};
-        client->controller.lastInputSampleAt = now;
+        client->controller.lastInputSampleAt = client->now;
         client->controller.sampleInputAccum -= CL_SAMPLE_INPUT_DT;
     }
 
     // Send rolled up input at fixed interval
-    if (now - client->controller.lastCommandSentAt >= CL_SEND_INPUT_DT) {
+    if (client->now - client->controller.lastCommandSentAt >= CL_SEND_INPUT_DT) {
         ClientSendInput(client, client->controller);
-        client->controller.lastCommandSentAt = now;
+        client->controller.lastCommandSentAt = client->now;
     }
 
     client->yj_client->SendPackets();
 }
 
-void ClientStop(Client *client)
+void ClientStop(GameClient *client)
 {
     client->yj_client->Disconnect();
     client->clientTimeDeltaVsServer = 0;
     client->netTickAccum = 0;
     client->lastNetTick = 0;
+    client->now = 0;
 
     client->controller = {};
     delete client->world;
@@ -249,12 +249,13 @@ int main(int argc, char *argv[])
     );
 #endif
 
-    Font fntHackBold20 = LoadFontEx(FONT_PATH, FONT_SIZE, 0, 0);
+    fntHackBold20 = LoadFontEx(FONT_PATH, FONT_SIZE, 0, 0);
 
     //--------------------
     // Client
-    Client *client = new Client;
-    ClientStart(client, startedAt);
+    GameClient *client = new GameClient;
+    client->now = GetTime();
+    ClientStart(client);
 
     Histogram histogram{};
     double frameStart = GetTime();
@@ -263,10 +264,10 @@ int main(int argc, char *argv[])
 
     while (!WindowShouldClose())
     {
-        const double now = GetTime();
-        frameDt = MIN(now - frameStart, SV_TICK_DT);  // arbitrary limit for now
+        client->now = GetTime();
+        frameDt = MIN(client->now - frameStart, SV_TICK_DT);  // arbitrary limit for now
         frameDtSmooth = LERP(frameDtSmooth, frameDt, 0.1);
-        frameStart = now;
+        frameStart = client->now;
 
         client->controller.sampleInputAccum += frameDt;
         client->netTickAccum += frameDt;
@@ -287,7 +288,7 @@ int main(int argc, char *argv[])
         }
 
         if (IsKeyPressed(KEY_C)) {
-            ClientTryConnect(client, now);
+            ClientTryConnect(client);
         }
         if (IsKeyPressed(KEY_X)) {
             ClientStop(client);
@@ -304,7 +305,7 @@ int main(int argc, char *argv[])
         //--------------------
         // Accmulate input every frame
         if (client->yj_client->IsConnected()) {
-            Entity &localPlayer = client->world->entities[client->yj_client->GetClientIndex()];
+            Entity &localPlayer = client->world->entities[client->LocalPlayerEntityId()];
 
             client->controller.cmdAccum.north |= IsKeyDown(KEY_W);
             client->controller.cmdAccum.west |= IsKeyDown(KEY_A);
@@ -321,88 +322,17 @@ int main(int argc, char *argv[])
         //--------------------
         // Networking
         if (doNetTick) {
-            ClientUpdate(client, now);
-            client->lastNetTick = now;
+            ClientUpdate(client);
+            client->lastNetTick = client->now;
             client->netTickAccum -= SV_TICK_DT;
         }
-        const double serverNow = now - client->clientTimeDeltaVsServer;
 
         //--------------------
         // Update
         histogram.Push(frameDtSmooth, doNetTick ? GREEN : RAYWHITE);
 
         if (client->yj_client->IsConnected()) {
-            for (uint32_t entityId = 0; entityId < SV_MAX_ENTITIES; entityId++) {
-                Entity &entity = client->world->entities[entityId];
-                if (entity.type == Entity_None) {
-                    continue;
-                }
-                EntityGhost &ghost = client->world->ghosts[entityId];
-
-                // Local player
-                if (entityId == client->yj_client->GetClientIndex()) {
-                    uint32_t lastProcessedInputCmd = 0;
-
-                    // Apply latest snapshot
-                    if (ghost.snapshots.size()) {
-                        const EntitySnapshot &latestSnapshot = ghost.snapshots.newest();
-                        entity.ApplyStateInterpolated(ghost.snapshots.newest(), ghost.snapshots.newest(), 0);
-                        lastProcessedInputCmd = latestSnapshot.lastProcessedInputCmd;
-                    }
-
-    #if CL_CLIENT_SIDE_PREDICT
-                    // Apply unacked input
-                    const double cmdAccumDt = now - client->controller.lastInputSampleAt;
-                    for (size_t cmdIndex = 0; cmdIndex < client->controller.cmdQueue.size(); cmdIndex++) {
-                        InputCmd &inputCmd = client->controller.cmdQueue[cmdIndex];
-                        if (inputCmd.seq > lastProcessedInputCmd) {
-                            entity.ApplyForce(inputCmd.GenerateMoveForce(entity.speed));
-                            entity.Tick(SV_TICK_DT);
-                            client->world->map.ResolveEntityTerrainCollisions(entity);
-                        }
-                    }
-                    //entity.Tick(&client->controller.cmdAccum, cmdAccumDt);
-    #endif
-
-                    // Check for ignored input packets
-                    uint32_t oldestInput = client->controller.cmdQueue.oldest().seq;
-                    if (oldestInput > lastProcessedInputCmd + 1) {
-                        //printf(" localPlayer: %d inputs dropped\n", oldestInput - lastProcessedInputCmd - 1);
-                    }
-                } else {
-                    // TODO(dlb): Find snapshots nearest to (GetTime() - clientTimeDeltaVsServer)
-                    const double renderAt = serverNow - SV_TICK_DT;
-
-                    size_t snapshotBIdx = 0;
-                    while (snapshotBIdx < ghost.snapshots.size()
-                        && ghost.snapshots[snapshotBIdx].serverTime <= renderAt)
-                    {
-                        snapshotBIdx++;
-                    }
-
-                    const EntitySnapshot *snapshotA = 0;
-                    const EntitySnapshot *snapshotB = 0;
-
-                    if (snapshotBIdx <= 0) {
-                        snapshotA = &ghost.snapshots.oldest();
-                        snapshotB = &ghost.snapshots.oldest();
-                    } else if (snapshotBIdx >= CL_SNAPSHOT_COUNT) {
-                        snapshotA = &ghost.snapshots.newest();
-                        snapshotB = &ghost.snapshots.newest();
-                    } else {
-                        snapshotA = &ghost.snapshots[snapshotBIdx - 1];
-                        snapshotB = &ghost.snapshots[snapshotBIdx];
-                    }
-
-                    float alpha = 0;
-                    if (snapshotB != snapshotA) {
-                        alpha = (renderAt - snapshotA->serverTime) /
-                            (snapshotB->serverTime - snapshotA->serverTime);
-                    }
-
-                    entity.ApplyStateInterpolated(*snapshotA, *snapshotB, alpha);
-                }
-            }
+            client->world->Update(*client);
         }
 
         //--------------------
@@ -416,14 +346,18 @@ int main(int argc, char *argv[])
             // TODO: Move update code out of draw code and update local player's
             // position before using it to determine camera location... doh!
             {
-                Entity &localPlayer = client->world->entities[client->yj_client->GetClientIndex()];
+                Entity &localPlayer = client->world->entities[client->LocalPlayerEntityId()];
                 client->world->camera2d.offset = { (float)GetScreenWidth()/2, (float)GetScreenHeight()/2 };
                 client->world->camera2d.target = { localPlayer.position.x, localPlayer.position.y };
             }
 
+            //--------------------
+            // Draw the map
             BeginMode2D(client->world->camera2d);
             client->world->map.Draw(client->world->camera2d);
 
+            //--------------------
+            // Draw the entities
             cursorWorldPos = GetScreenToWorld2D(GetMousePosition(), client->world->camera2d);
             for (uint32_t entityId = 0; entityId < SV_MAX_ENTITIES; entityId++) {
                 Entity &entity = client->world->entities[entityId];
@@ -447,7 +381,7 @@ int main(int argc, char *argv[])
 
 #if CL_CLIENT_SIDE_PREDICT
                     // NOTE(dlb): These aren't actually snapshot shadows, they're client-side prediction shadows
-                    if (entityId == client->yj_client->GetClientIndex()) {
+                    if (entityId == client->LocalPlayerEntityId()) {
                         Entity predictionInstance = client->world->entities[entityId];
 
                         uint32_t lastProcessedInputCmd = 0;
@@ -460,12 +394,12 @@ int main(int argc, char *argv[])
                         //predictionInstance.color = Fade(SKYBLUE, 0.5);
                         predictionInstance.color = Fade(DARKGRAY, 0.5);
 
-                        const double cmdAccumDt = now - client->controller.lastInputSampleAt;
+                        //const double cmdAccumDt = client->now - client->controller.lastInputSampleAt;
                         for (size_t cmdIndex = 0; cmdIndex < client->controller.cmdQueue.size(); cmdIndex++) {
                             InputCmd &inputCmd = client->controller.cmdQueue[cmdIndex];
                             if (inputCmd.seq > lastProcessedInputCmd) {
                                 predictionInstance.ApplyForce(inputCmd.GenerateMoveForce(predictionInstance.speed));
-                                predictionInstance.Tick(SV_TICK_DT);
+                                predictionInstance.Tick(client->now, SV_TICK_DT);
                                 client->world->map.ResolveEntityTerrainCollisions(predictionInstance);
                                 predictionInstance.Draw(fntHackBold20, inputCmd.seq, 1);
                             }
@@ -486,6 +420,10 @@ int main(int argc, char *argv[])
                 entity.Draw(fntHackBold20, entityId, 1);
                 entity.color = origColor;
             }
+
+            //--------------------
+            // Draw the dialogs
+            client->world->Draw();
 
             EndMode2D();
         }
@@ -509,8 +447,8 @@ int main(int argc, char *argv[])
                 DRAW_TEXT_MEASURE((Rectangle *)0, label, fmt, __VA_ARGS__)
 
             DRAW_TEXT("frameDt", "%.2f fps (%.2f ms) (vsync=%s)", 1.0 / frameDt, frameDt * 1000.0, IsWindowState(FLAG_VSYNC_HINT) ? "on" : "off");
-            DRAW_TEXT("serverTime", "%.2f (%s%.2f)", serverNow, client->clientTimeDeltaVsServer > 0 ? "+" : "", client->clientTimeDeltaVsServer);
-            DRAW_TEXT("localTime", "%.2f", now);
+            DRAW_TEXT("serverTime", "%.2f (%s%.2f)", client->ServerNow(), client->clientTimeDeltaVsServer > 0 ? "+" : "", client->clientTimeDeltaVsServer);
+            DRAW_TEXT("localTime", "%.2f", client->now);
             DRAW_TEXT("cursor", "%d, %d", GetMouseX(), GetMouseY());
             DRAW_TEXT("cursor", "%d, %d (world: %.f, %.f)", GetMouseX(), GetMouseY(), cursorWorldPos.x, cursorWorldPos.y);
 

@@ -1,9 +1,8 @@
 #include "entity.h"
 
-void Entity::Serialize(uint32_t entityId, EntitySpawnEvent &entitySpawnEvent, double serverTime, uint32_t lastProcessedInputCmd)
+void Entity::Serialize(uint32_t entityId, EntitySpawnEvent &entitySpawnEvent, double serverTime)
 {
     entitySpawnEvent.serverTime = serverTime;
-    entitySpawnEvent.lastProcessedInputCmd = lastProcessedInputCmd;
     entitySpawnEvent.id = entityId;
     entitySpawnEvent.type = type;
     entitySpawnEvent.color = color;
@@ -67,7 +66,7 @@ void Entity::ApplyForce(Vector2 force)
     forceAccum.y += force.y;
 }
 
-void Entity::Tick(double dt)
+void Entity::Tick(double now, double dt)
 {
     velocity.x += forceAccum.x;
     velocity.y += forceAccum.y;

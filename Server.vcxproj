@@ -14,6 +14,7 @@
     <ClCompile Include="include\tracy\TracyClient.cpp" />
     <ClCompile Include="src\common\histogram.cpp" />
     <ClCompile Include="src\common\shared_lib.cpp" />
+    <ClCompile Include="src\server\game_server.cpp" />
     <ClCompile Include="src\server\server.cpp" />
     <ClCompile Include="src\server\server_world.cpp" />
   </ItemGroup>
@@ -22,6 +23,10 @@
   </ItemGroup>
   <ItemGroup>
     <Image Include="res\server.ico" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="src\server\game_server.h" />
+    <ClInclude Include="src\server\server_world.h" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>16.0</VCProjectVersion>

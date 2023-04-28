@@ -13,6 +13,7 @@
   <ItemGroup>
     <ClCompile Include="include\tracy\TracyClient.cpp" />
     <ClCompile Include="src\client\client.cpp" />
+    <ClCompile Include="src\client\client_world.cpp" />
     <ClCompile Include="src\common\common.cpp" />
     <ClCompile Include="src\common\histogram.cpp" />
     <ClCompile Include="src\common\shared_lib.cpp" />
@@ -24,6 +25,8 @@
     <ResourceCompile Include="src\client\Client.rc" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="src\client\client_world.h" />
+    <ClInclude Include="src\client\game_client.h" />
     <ClInclude Include="src\common\histogram.h" />
   </ItemGroup>
   <PropertyGroup Label="Globals">

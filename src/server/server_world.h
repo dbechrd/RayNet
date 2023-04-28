@@ -3,6 +3,8 @@
 #include "../common/entity.h"
 #include "../common/tilemap.h"
 
+struct GameServer;
+
 struct ServerPlayer {
     //uint32_t clientIdx      {};  // yj_client index
     double   joinedAt       {};
@@ -16,13 +18,14 @@ struct ServerWorld {
     Camera2D camera2d{};
     Tilemap map{};
     Entity entities[SV_MAX_ENTITIES]{};
+    uint32_t entity_freelist;
     ServerPlayer players[SV_MAX_PLAYERS]{};
-    uint32_t freelist_head = SV_MAX_PLAYERS;
 
     ServerWorld();
+    uint32_t GetPlayerEntityId(uint32_t clientIdx);
     uint32_t CreateEntity(EntityType entityType);
-    void SpawnEntity(uint32_t entityId, double now);
+    void SpawnEntity(GameServer &server, uint32_t entityId);
     Entity *GetEntity(uint32_t entityId);
-    void DespawnEntity(uint32_t entityId, double now);
+    void DespawnEntity(GameServer &server, uint32_t entityId);
     void DestroyEntity(uint32_t entityId);
 };

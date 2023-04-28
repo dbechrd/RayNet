@@ -6,6 +6,7 @@
     <ClCompile Include="include\tracy\TracyClient.cpp" />
     <ClCompile Include="src\common\common.cpp" />
     <ClCompile Include="src\common\histogram.cpp" />
+    <ClCompile Include="src\client\client_world.cpp" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="res\client.ico" />
@@ -15,5 +16,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\common\histogram.h" />
+    <ClInclude Include="src\client\game_client.h" />
+    <ClInclude Include="src\client\client_world.h" />
   </ItemGroup>
 </Project>
