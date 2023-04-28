@@ -76,10 +76,10 @@ void ClientStart(GameClient *client)
 void ClientSendInput(GameClient *client, const Controller &controller)
 {
     if (client->yj_client->CanSendMessage(MSG_C_INPUT_COMMANDS)) {
-        Msg_C_InputCommands *message = (Msg_C_InputCommands *)client->yj_client->CreateMessage(MSG_C_INPUT_COMMANDS);
-        if (message) {
-            message->cmdQueue = controller.cmdQueue;
-            client->yj_client->SendMessage(CHANNEL_U_INPUT_COMMANDS, message);
+        Msg_C_InputCommands *msg = (Msg_C_InputCommands *)client->yj_client->CreateMessage(MSG_C_INPUT_COMMANDS);
+        if (msg) {
+            msg->cmdQueue = controller.cmdQueue;
+            client->yj_client->SendMessage(CHANNEL_U_INPUT_COMMANDS, msg);
         } else {
             printf("Failed to create INPUT_COMMANDS message.\n");
         }
@@ -91,10 +91,10 @@ void ClientSendInput(GameClient *client, const Controller &controller)
 void ClientSendEntityInteract(GameClient *client, uint32_t entityId)
 {
     if (client->yj_client->CanSendMessage(MSG_C_ENTITY_INTERACT)) {
-        Msg_C_EntityInteract *message = (Msg_C_EntityInteract *)client->yj_client->CreateMessage(MSG_C_ENTITY_INTERACT);
-        if (message) {
-            message->entityId = entityId;
-            client->yj_client->SendMessage(MSG_C_ENTITY_INTERACT, message);
+        Msg_C_EntityInteract *msg = (Msg_C_EntityInteract *)client->yj_client->CreateMessage(MSG_C_ENTITY_INTERACT);
+        if (msg) {
+            msg->entityId = entityId;
+            client->yj_client->SendMessage(MSG_C_ENTITY_INTERACT, msg);
         } else {
             printf("Failed to create ENTITY_INTERACT message.\n");
         }
@@ -103,67 +103,83 @@ void ClientSendEntityInteract(GameClient *client, uint32_t entityId)
     }
 }
 
+void ClientSendTileInteract(GameClient *client, uint32_t x, uint32_t y)
+{
+    if (client->yj_client->CanSendMessage(MSG_C_TILE_INTERACT)) {
+        Msg_C_TileInteract *msg = (Msg_C_TileInteract *)client->yj_client->CreateMessage(MSG_C_TILE_INTERACT);
+        if (msg) {
+            msg->x = x;
+            msg->y = y;
+            client->yj_client->SendMessage(MSG_C_TILE_INTERACT, msg);
+        } else {
+            printf("Failed to create TILE_INTERACT message.\n");
+        }
+    } else {
+        printf("Outgoing TILE_INTERACT channel message queue is full.\n");
+    }
+}
+
 void ClientProcessMessages(GameClient *client)
 {
     for (int channelIdx = 0; channelIdx < CHANNEL_COUNT; channelIdx++) {
-        yojimbo::Message *message = client->yj_client->ReceiveMessage(channelIdx);
-        while (message) {
-            switch (message->GetType()) {
+        yojimbo::Message *yjMsg = client->yj_client->ReceiveMessage(channelIdx);
+        while (yjMsg) {
+            switch (yjMsg->GetType()) {
                 case MSG_S_CLOCK_SYNC:
                 {
-                    Msg_S_ClockSync *msgClockSync = (Msg_S_ClockSync *)message;
+                    Msg_S_ClockSync *msg = (Msg_S_ClockSync *)yjMsg;
                     yojimbo::NetworkInfo netInfo{};
                     client->yj_client->GetNetworkInfo(netInfo);
-                    const double approxServerNow = msgClockSync->serverTime + netInfo.RTT / 2000;
+                    const double approxServerNow = msg->serverTime + netInfo.RTT / 2000;
                     client->clientTimeDeltaVsServer = client->now - approxServerNow;
                     break;
                 }
                 case MSG_S_ENTITY_DESPAWN:
                 {
-                    Msg_S_EntityDespawn *msgEntityDespawn = (Msg_S_EntityDespawn *)message;
-                    Entity &entity = client->world->entities[msgEntityDespawn->entityId];
+                    Msg_S_EntityDespawn *msg = (Msg_S_EntityDespawn *)yjMsg;
+                    Entity &entity = client->world->entities[msg->entityId];
                     entity = {};
-                    EntityGhost &ghost = client->world->ghosts[msgEntityDespawn->entityId];
+                    EntityGhost &ghost = client->world->ghosts[msg->entityId];
                     ghost.snapshots = {};
                     break;
                 }
                 case MSG_S_ENTITY_SAY:
                 {
-                    Msg_S_EntitySay *msgEntitySay = (Msg_S_EntitySay *)message;
-                    Entity &entity = client->world->entities[msgEntitySay->entityId];
-                    if (msgEntitySay->messageLength > 0 && msgEntitySay->messageLength <= SV_MAX_ENTITY_SAY_MSG_LEN) {
+                    Msg_S_EntitySay *msg = (Msg_S_EntitySay *)yjMsg;
+                    Entity &entity = client->world->entities[msg->entityId];
+                    if (msg->messageLength > 0 && msg->messageLength <= SV_MAX_ENTITY_SAY_MSG_LEN) {
                         client->world->CreateDialog(
-                            msgEntitySay->entityId,
-                            msgEntitySay->messageLength,
-                            msgEntitySay->message,
+                            msg->entityId,
+                            msg->messageLength,
+                            msg->message,
                             client->now
                         );
                     } else {
                         printf("Wtf dis server smokin'? Sent entity say message of length %u but max is %u\n",
-                            msgEntitySay->messageLength,
+                            msg->messageLength,
                             SV_MAX_ENTITY_SAY_MSG_LEN);
                     }
                     break;
                 }
                 case MSG_S_ENTITY_SNAPSHOT:
                 {
-                    Msg_S_EntitySnapshot *msgEntitySnapshot = (Msg_S_EntitySnapshot *)message;
-                    Entity &entity = client->world->entities[msgEntitySnapshot->entitySnapshot.id];
-                    entity.type = msgEntitySnapshot->entitySnapshot.type;
-                    EntityGhost &ghost = client->world->ghosts[msgEntitySnapshot->entitySnapshot.id];
-                    ghost.snapshots.push(msgEntitySnapshot->entitySnapshot);
+                    Msg_S_EntitySnapshot *msg = (Msg_S_EntitySnapshot *)yjMsg;
+                    Entity &entity = client->world->entities[msg->entitySnapshot.id];
+                    entity.type = msg->entitySnapshot.type;
+                    EntityGhost &ghost = client->world->ghosts[msg->entitySnapshot.id];
+                    ghost.snapshots.push(msg->entitySnapshot);
                     break;
                 }
                 case MSG_S_ENTITY_SPAWN:
                 {
-                    Msg_S_EntitySpawn *msgEntitySpawn = (Msg_S_EntitySpawn *)message;
-                    Entity &entity = client->world->entities[msgEntitySpawn->entitySpawnEvent.id];
-                    entity.ApplySpawnEvent(msgEntitySpawn->entitySpawnEvent);
+                    Msg_S_EntitySpawn *msg = (Msg_S_EntitySpawn *)yjMsg;
+                    Entity &entity = client->world->entities[msg->entitySpawnEvent.id];
+                    entity.ApplySpawnEvent(msg->entitySpawnEvent);
                     break;
                 }
             }
-            client->yj_client->ReleaseMessage(message);
-            message = client->yj_client->ReceiveMessage(channelIdx);
+            client->yj_client->ReleaseMessage(yjMsg);
+            yjMsg = client->yj_client->ReceiveMessage(channelIdx);
         };
     }
 }
@@ -311,12 +327,21 @@ int main(int argc, char *argv[])
             client->controller.cmdAccum.west |= IsKeyDown(KEY_A);
             client->controller.cmdAccum.south |= IsKeyDown(KEY_S);
             client->controller.cmdAccum.east |= IsKeyDown(KEY_D);
-            client->controller.cmdAccum.fire |= IsMouseButtonPressed(MOUSE_LEFT_BUTTON);
+            //client->controller.cmdAccum.fire |= IsMouseButtonPressed(MOUSE_LEFT_BUTTON);
 
             cursorWorldPos = GetScreenToWorld2D(GetMousePosition(), client->world->camera2d);
             Vector2 facing = Vector2Subtract(cursorWorldPos, localPlayer.position);
             facing = Vector2Normalize(facing);
             client->controller.cmdAccum.facing = facing;
+        }
+
+        if (client->yj_client->IsConnected()) {
+            if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
+                Tilemap::Coord coord{};
+                if (client->world->map.WorldToTileIndex(cursorWorldPos.x, cursorWorldPos.y, coord)) {
+                    ClientSendTileInteract(client, coord.x, coord.y);
+                }
+            }
         }
 
         //--------------------

@@ -118,7 +118,7 @@ void tick_projectile(GameServer &server, uint32_t entityId, double dt)
     //eProjectile.ApplyForce({ 0, 5 });
     eProjectile.Tick(server.now, dt);
 
-    if (server.now - eProjectile.spawnedAt > 1.0 || Vector2LengthSqr(eProjectile.velocity) < 100 * 100) {
+    if (server.now - eProjectile.spawnedAt > 1.0) {
         server.world->DespawnEntity(server, entityId);
     }
 }
@@ -337,28 +337,47 @@ void GameServer::ProcessMessages(void)
         }
 
         for (int channelIdx = 0; channelIdx < CHANNEL_COUNT; channelIdx++) {
-            yojimbo::Message *message = yj_server->ReceiveMessage(clientIdx, channelIdx);
-            while (message) {
-                switch (message->GetType()) {
-                    case MSG_C_INPUT_COMMANDS:
-                    {
-                        Msg_C_InputCommands *msgPlayerInput = (Msg_C_InputCommands *)message;
-                        world->players[clientIdx].inputQueue = msgPlayerInput->cmdQueue;
-                        break;
-                    }
+            yojimbo::Message *yjMsg = yj_server->ReceiveMessage(clientIdx, channelIdx);
+            while (yjMsg) {
+                switch (yjMsg->GetType()) {
                     case MSG_C_ENTITY_INTERACT:
                     {
-                        Msg_C_EntityInteract *msgEntityInteract = (Msg_C_EntityInteract *)message;
-                        Entity *entity = world->GetEntity(msgEntityInteract->entityId);
+                        Msg_C_EntityInteract *msg = (Msg_C_EntityInteract *)yjMsg;
+                        Entity *entity = world->GetEntity(msg->entityId);
                         if (entity && entity->type == Entity_Bot) {
-                            const char *msg = "Hello, friend! My name is Bob #8.";
-                            SendEntitySay(clientIdx, msgEntityInteract->entityId, (uint32_t)strlen(msg), msg);
+                            const char *text = TextFormat("Bob says: TPS is %d", (int)(1.0/SV_TICK_DT));
+                            SendEntitySay(clientIdx, msg->entityId, (uint32_t)strlen(text), text);
+                        }
+                        break;
+                    }
+                    case MSG_C_INPUT_COMMANDS:
+                    {
+                        Msg_C_InputCommands *msg = (Msg_C_InputCommands *)yjMsg;
+                        world->players[clientIdx].inputQueue = msg->cmdQueue;
+                        break;
+                    }
+                    case MSG_C_TILE_INTERACT:
+                    {
+                        Msg_C_TileInteract *msg = (Msg_C_TileInteract *)yjMsg;
+                        Tile tile{};
+                        if (world->map.AtTry(msg->x, msg->y, tile)) {
+                            uint32_t idLabel = world->CreateEntity(Entity_Projectile);
+                            if (idLabel) {
+                                Entity &eLabel = world->entities[idLabel];
+                                eLabel.color = SKYBLUE;
+                                eLabel.size = { 5, 5 };
+                                eLabel.position = { (float)msg->x * TILE_W, (float)msg->y * TILE_W };
+                                world->SpawnEntity(*this, idLabel);
+
+                                const char *text = TextFormat("Tile type is %u", tile);
+                                SendEntitySay(clientIdx, idLabel, (uint32_t)strlen(text), text);
+                            }
                         }
                         break;
                     }
                 }
-                yj_server->ReleaseMessage(clientIdx, message);
-                message = yj_server->ReceiveMessage(clientIdx, channelIdx);
+                yj_server->ReleaseMessage(clientIdx, yjMsg);
+                yjMsg = yj_server->ReceiveMessage(clientIdx, channelIdx);
             }
         }
     }

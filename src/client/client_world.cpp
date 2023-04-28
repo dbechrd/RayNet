@@ -138,10 +138,10 @@ void ClientWorld::DrawDialog(Dialog &dialog, Vector2 bottomCenter)
         msgSize.x + bgPad.x * 2,
         msgSize.y + bgPad.y * 2
     };
-    DrawRectangleRounded(msgBgRect, 0.2f, 6, ASESPRITE_BEIGE);
-    DrawRectangleRoundedLines(msgBgRect, 0.2f, 6, 2.0f, BLACK);
-    DrawTextEx(fntHackBold20, dialog.message, msgPos, FONT_SIZE, 1.0f, BLACK);
-    //DrawTextShadowEx(fntHackBold20, dialog.message, msgPos, FONT_SIZE, WHITE);
+    DrawRectangleRounded(msgBgRect, 0.2f, 6, Fade(BLACK, 0.5));
+    //DrawRectangleRoundedLines(msgBgRect, 0.2f, 6, 1.0f, RAYWHITE);
+    DrawTextEx(fntHackBold20, dialog.message, msgPos, FONT_SIZE, 1.0f, RAYWHITE);
+    //DrawTextShadowEx(fntHackBold20, dialog.message, msgPos, FONT_SIZE, RAYWHITE);
 }
 
 void ClientWorld::DrawDialogs(void)

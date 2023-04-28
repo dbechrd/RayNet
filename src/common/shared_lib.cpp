@@ -7,8 +7,8 @@
 void DrawTextShadowEx(Font font, const char *text, Vector2 pos, float fontSize, Color color)
 {
     Vector2 shadowPos = pos;
-    shadowPos.x += 2;
-    shadowPos.y += 2;
+    shadowPos.x += 1;
+    shadowPos.y += 1;
 
     //DrawRectangle(windowWidth / 2 - textSize.x / 2, 370, textSize.x, textSize.y, WHITE);
     DrawTextEx(font, text, shadowPos, fontSize, 1, BLACK);
