@@ -15,6 +15,7 @@
     <ClCompile Include="src\common\common.cpp" />
     <ClCompile Include="src\common\histogram.cpp" />
     <ClCompile Include="src\common\shared_lib.cpp" />
+    <ClCompile Include="src\common\ui\ui.cpp" />
     <ClCompile Include="src\server\game_server.cpp" />
     <ClCompile Include="src\server\server.cpp" />
     <ClCompile Include="src\server\server_world.cpp" />
@@ -26,6 +27,7 @@
     <Image Include="res\server.ico" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="src\common\ui\ui.h" />
     <ClInclude Include="src\server\game_server.h" />
     <ClInclude Include="src\server\server_world.h" />
   </ItemGroup>

@@ -36,4 +36,16 @@ struct GameClient {
         }
         return 0;
     }
+
+    Entity *LocalPlayer(void) {
+        Entity *localPlayer = 0;
+        uint32_t eid = LocalPlayerEntityId();
+        if (eid) {
+            localPlayer = &world->entities[eid];
+            if (localPlayer->type == Entity_Player) {
+                return localPlayer;
+            }
+        }
+        return 0;
+    }
 };

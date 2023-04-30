@@ -1,5 +1,6 @@
 #include "../common/shared_lib.h"
 #include "../common/histogram.h"
+#include "../common/ui/ui.h"
 #include "server_world.h"
 #include "game_server.h"
 #include <stack>
@@ -60,81 +61,18 @@ void Fill(Tilemap &map, int x, int y, int tileDefId)
     }
 }
 
-static Sound sndSoftTick;
-static Sound sndHardTick;
-
-struct UIState {
-    bool hover;
-    bool down;
-    bool clicked;
-};
-
-UIState UIButton(Font font, const char *text, Vector2 uiPosition, Vector2 &uiCursor)
-{
-    Vector2 position = Vector2Add(uiPosition, uiCursor);
-    const Vector2 pad{ 8, 1 };
-    const float cornerRoundness = 0.2f;
-    const float cornerSegments = 4;
-    const Vector2 lineThick{ 1.0f, 1.0f };
-
-    Vector2 textSize = MeasureTextEx(font, text, font.baseSize, 1.0f);
-    Vector2 buttonSize = textSize;
-    buttonSize.x += pad.x * 2;
-    buttonSize.y += pad.y * 2;
-
-    Rectangle buttonRect = {
-        position.x - lineThick.x,
-        position.y - lineThick.y,
-        buttonSize.x + lineThick.x * 2,
-        buttonSize.y + lineThick.y * 2
-    };
-    if (lineThick.x || lineThick.y) {
-        DrawRectangleRounded(
-            buttonRect,
-            cornerRoundness, cornerSegments, BLACK
-        );
-    }
-
-    static const char *prevHover = 0;
-
-    Color color = BLUE;
-    UIState state{};
-    if (dlb_CheckCollisionPointRec(GetMousePosition(), buttonRect)) {
-        state.hover = true;
-        color = SKYBLUE;
-        if (IsMouseButtonDown(MOUSE_BUTTON_LEFT)) {
-            state.down = true;
-            color = DARKBLUE;
-        } else if (IsMouseButtonReleased(MOUSE_BUTTON_LEFT)) {
-            state.clicked = true;
-        }
-    }
-
-    if (state.clicked) {
-        PlaySound(sndHardTick);
-    } else if (state.hover && text != prevHover) {
-        PlaySound(sndSoftTick);
-        prevHover = text;
-    }
-
-    float yOffset = (state.down ? 0 : -lineThick.y * 2);
-    DrawRectangleRounded({ position.x, position.y + yOffset, buttonSize.x, buttonSize.y }, cornerRoundness, cornerSegments, color);
-    DrawTextShadowEx(font, text, { position.x + pad.x, position.y + pad.y + yOffset }, font.baseSize, WHITE);
-
-    uiCursor.x += buttonSize.x;
-    return state;
-}
-
 Err Play(GameServer &server)
 {
     Err err = RN_SUCCESS;
 
-    sndSoftTick = LoadSound("resources/soft_tick.wav");
-    sndHardTick = LoadSound("resources/hard_tick.wav");
-
     err = InitCommon();
     if (err) {
         printf("Failed to load common resources\n");
+    }
+
+    err = InitUI();
+    if (err) {
+        printf("Failed to load UI resources\n");
     }
 
     err = server.world->map.Load(LEVEL_001);
@@ -583,6 +521,7 @@ Err Play(GameServer &server)
         }
     }
 
+    FreeUI();
     FreeCommon();
     return err;
 }

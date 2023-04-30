@@ -8,6 +8,7 @@
     <ClCompile Include="src\common\histogram.cpp" />
     <ClCompile Include="src\server\game_server.cpp" />
     <ClCompile Include="src\common\common.cpp" />
+    <ClCompile Include="src\common\ui\ui.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="src\server\Server.rc" />
@@ -18,5 +19,6 @@
   <ItemGroup>
     <ClInclude Include="src\server\game_server.h" />
     <ClInclude Include="src\server\server_world.h" />
+    <ClInclude Include="src\common\ui\ui.h" />
   </ItemGroup>
 </Project>

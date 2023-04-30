@@ -1,5 +1,6 @@
 #include "../common/shared_lib.h"
 #include "../common/histogram.h"
+#include "../common/ui/ui.h"
 #include "client_world.h"
 #include "game_client.h"
 #include <deque>
@@ -271,6 +272,11 @@ int main(int argc, char *argv[])
         printf("Failed to load common resources\n");
     }
 
+    err = InitUI();
+    if (err) {
+        printf("Failed to load UI resources\n");
+    }
+
     //--------------------
     // Client
     GameClient *client = new GameClient;
@@ -324,9 +330,8 @@ int main(int argc, char *argv[])
 
         //--------------------
         // Accmulate input every frame
-        if (client->yj_client->IsConnected()) {
-            Entity &localPlayer = client->world->entities[client->LocalPlayerEntityId()];
-
+        Entity *localPlayer = client->LocalPlayer();
+        if (localPlayer) {
             client->controller.cmdAccum.north |= IsKeyDown(KEY_W);
             client->controller.cmdAccum.west |= IsKeyDown(KEY_A);
             client->controller.cmdAccum.south |= IsKeyDown(KEY_S);
@@ -334,7 +339,7 @@ int main(int argc, char *argv[])
             client->controller.cmdAccum.fire |= IsMouseButtonPressed(MOUSE_LEFT_BUTTON);
 
             cursorWorldPos = GetScreenToWorld2D(GetMousePosition(), client->world->camera2d);
-            Vector2 facing = Vector2Subtract(cursorWorldPos, localPlayer.position);
+            Vector2 facing = Vector2Subtract(cursorWorldPos, localPlayer->position);
             facing = Vector2Normalize(facing);
             client->controller.cmdAccum.facing = facing;
         }
@@ -369,16 +374,14 @@ int main(int argc, char *argv[])
         BeginDrawing();
         ClearBackground(CLITERAL(Color){ 20, 60, 30, 255 });
 
-        if (client->yj_client->IsConnected()) {
+        localPlayer = client->LocalPlayer();
+        if (localPlayer) {
             //--------------------
             // Camera
             // TODO: Move update code out of draw code and update local player's
             // position before using it to determine camera location... doh!
-            {
-                Entity &localPlayer = client->world->entities[client->LocalPlayerEntityId()];
-                client->world->camera2d.offset = { (float)GetScreenWidth()/2, (float)GetScreenHeight()/2 };
-                client->world->camera2d.target = { localPlayer.position.x, localPlayer.position.y };
-            }
+            client->world->camera2d.offset = { (float)GetScreenWidth()/2, (float)GetScreenHeight()/2 };
+            client->world->camera2d.target = { localPlayer->position.x, localPlayer->position.y };
 
             //--------------------
             // Draw the map
@@ -455,6 +458,19 @@ int main(int argc, char *argv[])
             client->world->Draw();
 
             EndMode2D();
+        } else {
+            Vector2 uiPosition{ screenSize.x / 2, screenSize.y / 2 };
+            Vector2 uiCursor{};
+            if (client->yj_client->IsConnected()) {
+                DrawTextShadowEx(fntHackBold20, "Loading...", uiPosition, FONT_SIZE, WHITE);
+            } else if (client->yj_client->IsConnecting()) {
+                DrawTextShadowEx(fntHackBold20, "Connecting...", uiPosition, FONT_SIZE, WHITE);
+            } else {
+                UIState connectButton = UIButton(fntHackBold20, "Connect", uiPosition, uiCursor);
+                if (connectButton.clicked) {
+                    ClientTryConnect(client);
+                }
+            }
         }
 
         {
@@ -530,6 +546,7 @@ int main(int argc, char *argv[])
     delete client;
     ShutdownYojimbo();
 
+    FreeUI();
     FreeCommon();
     CloseWindow();
 
