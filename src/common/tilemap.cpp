@@ -266,7 +266,7 @@ Err Tilemap::Load(const char *filename)
             if (!texturePathLen || texturePathLen > 1024) {
                 err = RN_INVALID_PATH; break;
             }
-            texturePath = (char *)calloc(texturePathLen + 1, sizeof(*texturePath));
+            texturePath = (char *)calloc((size_t)texturePathLen + 1, sizeof(*texturePath));
             if (!texturePath) {
                 err = RN_BAD_ALLOC; break;
             }

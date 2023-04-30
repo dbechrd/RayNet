@@ -6,7 +6,6 @@
 #include <time.h>
 
 static bool CL_DBG_SNAPSHOT_SHADOWS = true;
-Font fntHackBold20;
 
 int ClientTryConnect(GameClient *client)
 {
@@ -232,6 +231,8 @@ void ClientStop(GameClient *client)
 int main(int argc, char *argv[])
 //int __stdcall WinMain(void *hInstance, void *hPrevInstance, char *pCmdLine, int nCmdShow)
 {
+    Err err = RN_SUCCESS;
+
     //SetTraceLogLevel(LOG_WARNING);
 
     const double startedAt = GetTime();
@@ -239,7 +240,7 @@ int main(int argc, char *argv[])
     srand((unsigned int)startedAt);
 
     InitWindow(WINDOW_WIDTH, WINDOW_HEIGHT, "RayNet Client");
-    SetWindowState(FLAG_VSYNC_HINT);  // Gahhhhhh Windows fucking sucks at this
+    //SetWindowState(FLAG_VSYNC_HINT);  // Gahhhhhh Windows fucking sucks at this
     //SetWindowState(FLAG_WINDOW_RESIZABLE);
     //SetWindowState(FLAG_FULLSCREEN_MODE);
 
@@ -265,7 +266,10 @@ int main(int argc, char *argv[])
     );
 #endif
 
-    fntHackBold20 = LoadFontEx(FONT_PATH, FONT_SIZE, 0, 0);
+    err = InitCommon();
+    if (err) {
+        printf("Failed to load common resources\n");
+    }
 
     //--------------------
     // Client
@@ -327,7 +331,7 @@ int main(int argc, char *argv[])
             client->controller.cmdAccum.west |= IsKeyDown(KEY_A);
             client->controller.cmdAccum.south |= IsKeyDown(KEY_S);
             client->controller.cmdAccum.east |= IsKeyDown(KEY_D);
-            //client->controller.cmdAccum.fire |= IsMouseButtonPressed(MOUSE_LEFT_BUTTON);
+            client->controller.cmdAccum.fire |= IsMouseButtonPressed(MOUSE_LEFT_BUTTON);
 
             cursorWorldPos = GetScreenToWorld2D(GetMousePosition(), client->world->camera2d);
             Vector2 facing = Vector2Subtract(cursorWorldPos, localPlayer.position);
@@ -526,8 +530,8 @@ int main(int argc, char *argv[])
     delete client;
     ShutdownYojimbo();
 
-    UnloadFont(fntHackBold20);
+    FreeCommon();
     CloseWindow();
 
-    return 0;
+    return err;
 }

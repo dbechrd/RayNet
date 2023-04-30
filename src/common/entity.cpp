@@ -99,6 +99,9 @@ void Entity::Draw(const Font &font, int clientIdx, float scale) {
     float x = position.x;
     float y = position.y - (size.y - sy) / 2;
 
+    if (type == Entity_Bot) {
+        DrawTextureV(texYikes, { position.x - texYikes.width / 2, position.y - texYikes.height }, WHITE);
+    } else {
 #if 0
 #if 1
     DrawRectanglePro(
@@ -150,6 +153,7 @@ void Entity::Draw(const Font &font, int clientIdx, float scale) {
         color
     );
 #endif
+    }
 
 #if CL_DBG_SNAPSHOT_IDS
     const char *str = TextFormat("Bob #%d", clientIdx);

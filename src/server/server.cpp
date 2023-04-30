@@ -5,8 +5,6 @@
 #include <stack>
 #include <cassert>
 
-Font fntHackBold20;
-
 struct Cursor {
     int tileDefId;
 } cursor{};
@@ -127,15 +125,20 @@ UIState UIButton(Font font, const char *text, Vector2 uiPosition, Vector2 &uiCur
     return state;
 }
 
-void Play(GameServer &server)
+Err Play(GameServer &server)
 {
+    Err err = RN_SUCCESS;
+
     sndSoftTick = LoadSound("resources/soft_tick.wav");
     sndHardTick = LoadSound("resources/hard_tick.wav");
 
-    fntHackBold20 = LoadFontEx(FONT_PATH, FONT_SIZE, 0, 0);
+    err = InitCommon();
+    if (err) {
+        printf("Failed to load common resources\n");
+    }
 
-    Err err = server.world->map.Load(LEVEL_001);
-    if (err != RN_SUCCESS) {
+    err = server.world->map.Load(LEVEL_001);
+    if (err) {
         printf("Failed to load map with code %d\n", err);
         assert(!"oops");
         // TODO: Display error message on screen for N seconds or
@@ -290,8 +293,10 @@ void Play(GameServer &server)
 
                 Color color = aiPathNode->waitFor ? BLUE : RED;
                 bool hover = dlb_CheckCollisionPointRec(cursorWorldPos, nodeRect);
-                if (hover) {
-                    color = aiPathNode->waitFor ? SKYBLUE : PINK;
+                if (hover || (aiPathNodeDrag.active && aiPathNodeDrag.pathNodeIndex == pathNodeIndex)) {
+                    if (hover) {
+                        color = aiPathNode->waitFor ? SKYBLUE : PINK;
+                    }
                     bool down = IsMouseButtonDown(MOUSE_BUTTON_LEFT);
                     if (down) {
                         color = aiPathNode->waitFor ? DARKBLUE : MAROON;
@@ -318,6 +323,10 @@ void Play(GameServer &server)
         // will have 1 frame of delay. :(
         if (aiPathNodeDrag.active) {
             Vector2 newNodePos = cursorWorldPos;
+            if (IsKeyDown(KEY_LEFT_SHIFT)) {
+                newNodePos.x = roundf(newNodePos.x / 8) * 8;
+                newNodePos.y = roundf(newNodePos.y / 8) * 8;
+            }
             Vector2SubtractValue(newNodePos, pathRectRadius);
             AiPath *aiPath = server.world->map.GetPath(aiPathNodeDrag.pathId);
             AiPathNode *aiPathNode = server.world->map.GetPathNode(aiPathNodeDrag.pathId, aiPathNodeDrag.pathNodeIndex);
@@ -574,12 +583,14 @@ void Play(GameServer &server)
         }
     }
 
-    UnloadFont(fntHackBold20);
+    FreeCommon();
+    return err;
 }
 
 int main(int argc, char *argv[])
 //int __stdcall WinMain(void *hInstance, void *hPrevInstance, char *pCmdLine, int nCmdShow)
 {
+    Err err = RN_SUCCESS;
     //SetTraceLogLevel(LOG_WARNING);
 
     InitAudioDevice();
@@ -633,7 +644,7 @@ int main(int argc, char *argv[])
 
     //--------------------
     // Start the server
-    Err err = server->Start();
+    err = server->Start();
     if (err) {
         printf("error: failed to start server\n");
         return err;
@@ -641,7 +652,7 @@ int main(int argc, char *argv[])
 
     //--------------------
     // Play the game
-    Play(*server);
+    err = Play(*server);
 
     //--------------------
     // Cleanup
@@ -651,5 +662,6 @@ int main(int argc, char *argv[])
     server = {};
     ShutdownYojimbo();
     CloseAudioDevice();
-    return 0;
+
+    return err;
 }

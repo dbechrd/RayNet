@@ -2,7 +2,9 @@
 
 #include "raylib/raylib.h"
 #include "raylib/raymath.h"
+#pragma warning(push, 0)
 #include "yojimbo.h"
+#pragma warning(pop)
 #include <cassert>
 
 // Stuff that probably shouldn't be here
@@ -68,8 +70,13 @@ enum Err {
     RN_INVALID_PATH     = -6,
     RN_NET_INIT_FAILED  = -7,
     RN_INVALID_ADDRESS  = -8,
+    RN_RAYLIB_ERROR     = -9,
 };
 
 // Dumb stuff that should get a resource manager or wutevs
 
 extern Font fntHackBold20;
+extern Texture texYikes;
+
+Err InitCommon(void);
+void FreeCommon(void);

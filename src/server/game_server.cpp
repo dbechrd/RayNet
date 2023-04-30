@@ -345,7 +345,7 @@ void GameServer::ProcessMessages(void)
                         Msg_C_EntityInteract *msg = (Msg_C_EntityInteract *)yjMsg;
                         Entity *entity = world->GetEntity(msg->entityId);
                         if (entity && entity->type == Entity_Bot) {
-                            const char *text = TextFormat("Bob says: TPS is %d", (int)(1.0/SV_TICK_DT));
+                            const char *text = TextFormat("Lily says: TPS is %d", (int)(1.0/SV_TICK_DT));
                             SendEntitySay(clientIdx, msg->entityId, (uint32_t)strlen(text), text);
                         }
                         break;
@@ -361,6 +361,9 @@ void GameServer::ProcessMessages(void)
                         Msg_C_TileInteract *msg = (Msg_C_TileInteract *)yjMsg;
                         Tile tile{};
                         if (world->map.AtTry(msg->x, msg->y, tile)) {
+                            world->map.Set(msg->x, msg->y, 0);
+                            // TODO: If player is currently holding the magic tile inspector tool
+#if 0
                             uint32_t idLabel = world->CreateEntity(Entity_Projectile);
                             if (idLabel) {
                                 Entity &eLabel = world->entities[idLabel];
@@ -372,6 +375,7 @@ void GameServer::ProcessMessages(void)
                                 const char *text = TextFormat("Tile type is %u", tile);
                                 SendEntitySay(clientIdx, idLabel, (uint32_t)strlen(text), text);
                             }
+#endif
                         }
                         break;
                     }
@@ -399,7 +403,7 @@ void GameServer::Tick(void)
             entity.size = { 32, 64 };
             entity.radius = 10;
             entity.position = world->map.GetPathNode(bot.pathId, 0)->pos;
-            entity.speed = 30;
+            entity.speed = 10;
             entity.drag = 8.0f;
             world->SpawnEntity(*this, eid_bot1);
         }

@@ -12,6 +12,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="include\tracy\TracyClient.cpp" />
+    <ClCompile Include="src\common\common.cpp" />
     <ClCompile Include="src\common\histogram.cpp" />
     <ClCompile Include="src\common\shared_lib.cpp" />
     <ClCompile Include="src\server\game_server.cpp" />
@@ -75,10 +76,9 @@
       <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard_C>stdc17</LanguageStandard_C>
-      <LanguageStandard>stdcpplatest</LanguageStandard>
+      <LanguageStandard>stdcpp20</LanguageStandard>
       <AdditionalIncludeDirectories>include</AdditionalIncludeDirectories>
       <StringPooling>true</StringPooling>
-      <WarningLevel>Level3</WarningLevel>
       <DebugInformationFormat>OldStyle</DebugInformationFormat>
     </ClCompile>
     <Link>
@@ -97,10 +97,9 @@
       <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard_C>stdc17</LanguageStandard_C>
-      <LanguageStandard>stdcpplatest</LanguageStandard>
+      <LanguageStandard>stdcpp20</LanguageStandard>
       <AdditionalIncludeDirectories>include</AdditionalIncludeDirectories>
       <StringPooling>true</StringPooling>
-      <WarningLevel>Level3</WarningLevel>
       <ExceptionHandling>false</ExceptionHandling>
     </ClCompile>
     <Link>

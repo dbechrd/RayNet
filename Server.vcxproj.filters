@@ -7,6 +7,7 @@
     <ClCompile Include="include\tracy\TracyClient.cpp" />
     <ClCompile Include="src\common\histogram.cpp" />
     <ClCompile Include="src\server\game_server.cpp" />
+    <ClCompile Include="src\common\common.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="src\server\Server.rc" />
