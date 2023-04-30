@@ -43,8 +43,8 @@ void ClientWorld::UpdateEntities(GameClient &client)
             uint32_t lastProcessedInputCmd = 0;
 
             // Apply latest snapshot
-            if (ghost.snapshots.size()) {
-                const EntitySnapshot &latestSnapshot = ghost.snapshots.newest();
+            const EntitySnapshot &latestSnapshot = ghost.snapshots.newest();
+            if (latestSnapshot.serverTime) {
                 entity.ApplyStateInterpolated(ghost.snapshots.newest(), ghost.snapshots.newest(), 0);
                 lastProcessedInputCmd = latestSnapshot.lastProcessedInputCmd;
             }
@@ -109,7 +109,12 @@ void ClientWorld::RemoveExpiredDialogs(GameClient &gameClient)
     for (int i = 0; i < ARRAY_SIZE(dialogs); i++) {
         Dialog &dialog = dialogs[i];
         Entity &entity = entities[dialog.entityId];
-        if (!entity.type || gameClient.now - dialog.spawnedAt > CL_DIALOG_DURATION) {
+        if (!entity.type || entity.despawnedAt) {
+            continue;
+        }
+
+        const double duration = CL_DIALOG_DURATION_MIN + CL_DIALOG_DURATION_PER_CHAR * dialog.messageLength;
+        if (gameClient.now - dialog.spawnedAt > duration) {
             free(dialogs[i].message);
             dialogs[i] = {};
         }

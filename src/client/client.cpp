@@ -164,8 +164,6 @@ void ClientProcessMessages(GameClient *client)
                 case MSG_S_ENTITY_SNAPSHOT:
                 {
                     Msg_S_EntitySnapshot *msg = (Msg_S_EntitySnapshot *)yjMsg;
-                    Entity &entity = client->world->entities[msg->entitySnapshot.id];
-                    entity.type = msg->entitySnapshot.type;
                     EntityGhost &ghost = client->world->ghosts[msg->entitySnapshot.id];
                     ghost.snapshots.push(msg->entitySnapshot);
                     break;
@@ -374,6 +372,8 @@ int main(int argc, char *argv[])
         BeginDrawing();
         ClearBackground(CLITERAL(Color){ 20, 60, 30, 255 });
 
+        uint32_t hoveredEntityId = 0;
+
         localPlayer = client->LocalPlayer();
         if (localPlayer) {
             //--------------------
@@ -417,9 +417,9 @@ int main(int argc, char *argv[])
                         Entity predictionInstance = client->world->entities[entityId];
 
                         uint32_t lastProcessedInputCmd = 0;
-                        if (ghost.snapshots.size()) {
-                            const EntitySnapshot &latestSnapshot = ghost.snapshots.newest();
-                            predictionInstance.ApplyStateInterpolated(ghost.snapshots.newest(), ghost.snapshots.newest(), 0);
+                        const EntitySnapshot &latestSnapshot = ghost.snapshots.newest();
+                        if (latestSnapshot.serverTime) {
+                            predictionInstance.ApplyStateInterpolated(latestSnapshot, latestSnapshot, 0);
                             lastProcessedInputCmd = latestSnapshot.lastProcessedInputCmd;
                         }
 
@@ -442,12 +442,14 @@ int main(int argc, char *argv[])
                 }
 
                 const Color origColor = entity.color;
-                if (dlb_CheckCollisionPointRec(cursorWorldPos, entity.GetRect())) {
+                bool hover = dlb_CheckCollisionPointRec(cursorWorldPos, entity.GetRect());
+                if (hover) {
                     entity.color = ColorBrightness(entity.color, 0.2f);
                     bool down = IsMouseButtonPressed(MOUSE_BUTTON_LEFT);
                     if (down) {
                         ClientSendEntityInteract(client, entityId);
                     }
+                    hoveredEntityId = entityId;
                 }
                 entity.Draw(fntHackBold20, entityId, 1);
                 entity.color = origColor;
@@ -471,6 +473,11 @@ int main(int argc, char *argv[])
                     ClientTryConnect(client);
                 }
             }
+        }
+
+        if (hoveredEntityId) {
+            Entity &entity = client->world->entities[hoveredEntityId];
+            entity.DrawHoverInfo();
         }
 
         {

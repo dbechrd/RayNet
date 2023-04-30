@@ -8,16 +8,28 @@ struct Msg_S_EntitySnapshot : public yojimbo::Message
 
     template <typename Stream> bool Serialize(Stream &stream)
     {
-        serialize_uint32(stream, entitySnapshot.id);
-        uint32_t type = (uint32_t)entitySnapshot.type;
-        serialize_uint32(stream, type);
-        entitySnapshot.type = (EntityType)type;
         serialize_double(stream, entitySnapshot.serverTime);
         serialize_uint32(stream, entitySnapshot.lastProcessedInputCmd);
-        serialize_float(stream, entitySnapshot.velocity.x);
-        serialize_float(stream, entitySnapshot.velocity.y);
-        serialize_float(stream, entitySnapshot.position.x);
-        serialize_float(stream, entitySnapshot.position.y);
+        serialize_uint32(stream, entitySnapshot.id);
+
+        serialize_uint32(stream, (uint32_t &)entitySnapshot.entity.type);
+        serialize_float(stream, entitySnapshot.entity.velocity.x);
+        serialize_float(stream, entitySnapshot.entity.velocity.y);
+        serialize_float(stream, entitySnapshot.entity.position.x);
+        serialize_float(stream, entitySnapshot.entity.position.y);
+        switch (entitySnapshot.entity.type) {
+            case Entity_Player: {
+                serialize_varint32(stream, entitySnapshot.entity.data.player.life.maxHealth);
+                serialize_varint32(stream, entitySnapshot.entity.data.player.life.health);
+                break;
+            }
+            case Entity_Bot: {
+                serialize_varint32(stream, entitySnapshot.entity.data.bot.life.maxHealth);
+                serialize_varint32(stream, entitySnapshot.entity.data.bot.life.health);
+                break;
+            }
+        }
+
         return true;
     }
 

@@ -1,64 +1,125 @@
 #include "entity.h"
 
+#define SPAWN_PROP(prop) entitySpawnEvent.entity.prop = prop;
 void Entity::Serialize(uint32_t entityId, EntitySpawnEvent &entitySpawnEvent, double serverTime)
 {
     entitySpawnEvent.serverTime = serverTime;
     entitySpawnEvent.id = entityId;
-    entitySpawnEvent.type = type;
-    entitySpawnEvent.color = color;
-    entitySpawnEvent.size = size;
-    entitySpawnEvent.radius = radius;
-    entitySpawnEvent.drag = drag;
-    entitySpawnEvent.speed = speed;
-    entitySpawnEvent.velocity = velocity;
-    entitySpawnEvent.position = position;
-}
 
+    SPAWN_PROP(type);
+    SPAWN_PROP(color);
+    SPAWN_PROP(size);
+    SPAWN_PROP(radius);
+    SPAWN_PROP(drag);
+    SPAWN_PROP(speed);
+    SPAWN_PROP(velocity);
+    SPAWN_PROP(position);
+    switch (type) {
+        case Entity_Player: {
+            SPAWN_PROP(data.player.life.maxHealth);
+            SPAWN_PROP(data.player.life.health);
+            break;
+        }
+        case Entity_Bot: {
+            SPAWN_PROP(data.bot.life.maxHealth);
+            SPAWN_PROP(data.bot.life.health);
+            break;
+        }
+    }
+}
+#undef SPAWN_PROP
+
+#define SNAPSHOT_PROP(prop) entitySnapshot.entity.prop = prop;
 void Entity::Serialize(uint32_t entityId, EntitySnapshot &entitySnapshot, double serverTime, uint32_t lastProcessedInputCmd)
 {
     entitySnapshot.serverTime = serverTime;
     entitySnapshot.lastProcessedInputCmd = lastProcessedInputCmd;
     entitySnapshot.id = entityId;
-    entitySnapshot.type = type;
-    entitySnapshot.velocity = velocity;
-    entitySnapshot.position = position;
-}
 
-void Entity::ApplySpawnEvent(const EntitySpawnEvent &e)
+    SNAPSHOT_PROP(type);
+    SNAPSHOT_PROP(velocity);
+    SNAPSHOT_PROP(position);
+    switch (type) {
+        case Entity_Player: {
+            SNAPSHOT_PROP(data.player.life.maxHealth);
+            SNAPSHOT_PROP(data.player.life.health);
+            break;
+        }
+        case Entity_Bot: {
+            SNAPSHOT_PROP(data.bot.life.maxHealth);
+            SNAPSHOT_PROP(data.bot.life.health);
+            break;
+        }
+    }
+}
+#undef SNAPSHOT_PROP
+
+#define APPLY_PROP(prop) prop = entitySpawnEvent.entity.prop;
+void Entity::ApplySpawnEvent(const EntitySpawnEvent &entitySpawnEvent)
 {
-    type = e.type;
-    color = e.color;
-    size = e.size;
-    radius = e.radius;
-    drag = e.drag;
-    speed = e.speed;
-    velocity = e.velocity;
-    position = e.position;
+    APPLY_PROP(type);
+    APPLY_PROP(color);
+    APPLY_PROP(size);
+    APPLY_PROP(radius);
+    APPLY_PROP(drag);
+    APPLY_PROP(speed);
+    APPLY_PROP(velocity);
+    APPLY_PROP(position);
+    switch (type) {
+        case Entity_Player: {
+            APPLY_PROP(data.player.life.maxHealth);
+            APPLY_PROP(data.player.life.health);
+            break;
+        }
+        case Entity_Bot: {
+            APPLY_PROP(data.bot.life.maxHealth);
+            APPLY_PROP(data.bot.life.health);
+            break;
+        }
+    }
 }
+#undef APPLY_PROP
 
+#define LERP_PROP(prop) prop = LERP(a.entity.prop, b.entity.prop, (float)alpha);
 void Entity::ApplyStateInterpolated(const EntitySnapshot &a, const EntitySnapshot &b, double alpha)
 {
-    type = b.type;
+#if 0
+    color.r = LERP(a.entity.color.r, b.entity.color.r, (float)alpha);
+    color.g = LERP(a.entity.color.g, b.entity.color.g, (float)alpha);
+    color.b = LERP(a.entity.color.b, b.entity.color.b, (float)alpha);
+    color.a = LERP(a.entity.color.a, b.entity.color.a, (float)alpha);
 
-    /*color.r = LERP(a.color.r, b.color.r, (float)alpha);
-    color.g = LERP(a.color.g, b.color.g, (float)alpha);
-    color.b = LERP(a.color.b, b.color.b, (float)alpha);
-    color.a = LERP(a.color.a, b.color.a, (float)alpha);
+    size.x = LERP(a.entity.size.x, b.entity.size.x, (float)alpha);
+    size.y = LERP(a.entity.size.y, b.entity.size.y, (float)alpha);
 
-    size.x = LERP(a.size.x, b.size.x, (float)alpha);
-    size.y = LERP(a.size.y, b.size.y, (float)alpha);
+    radius = LERP(a.entity.radius, b.entity.radius, (float)alpha);
 
-    radius = LERP(a.radius, b.radius, (float)alpha);
+    drag = LERP(a.entity.drag, b.entity.drag, (float)alpha);
+    speed = LERP(a.entity.speed, b.entity.speed, (float)alpha);
+#endif
+    LERP_PROP(velocity.x);
+    LERP_PROP(velocity.y);
+    LERP_PROP(position.x);
+    LERP_PROP(position.y);
+    switch (type) {
+        case Entity_Player: {
+            LERP_PROP(data.player.life.maxHealth);
+            LERP_PROP(data.player.life.health);
+            break;
+        }
+        case Entity_Bot: {
+            LERP_PROP(data.bot.life.maxHealth);
+            LERP_PROP(data.bot.life.health);
 
-    drag = LERP(a.drag, b.drag, (float)alpha);
-    speed = LERP(a.speed, b.speed, (float)alpha);*/
+            if (data.bot.life.health > 100) {
+                __debugbreak();
+            }
 
-    velocity.x = LERP(a.velocity.x, b.velocity.x, (float)alpha);
-    velocity.y = LERP(a.velocity.y, b.velocity.y, (float)alpha);
-
-    position.x = LERP(a.position.x, b.position.x, (float)alpha);
-    position.y = LERP(a.position.y, b.position.y, (float)alpha);
+            break;
+        }
+    }
 }
+#undef LERP_PROP
 
 void Entity::ApplyForce(Vector2 force)
 {
@@ -83,6 +144,53 @@ Rectangle Entity::GetRect(void)
 {
     Rectangle rect{ position.x - size.x / 2, position.y - size.y, size.x, size.y };
     return rect;
+}
+
+EntityLife *Entity::GetLife(void)
+{
+    EntityLife *life = 0;
+    switch (type) {
+        case Entity_Player: {
+            life = &data.player.life;
+            break;
+        }
+        case Entity_Bot: {
+            life = &data.bot.life;
+            break;
+        }
+    }
+    return life;
+}
+
+void Entity::DrawHoverInfo(void)
+{
+    EntityLife *life = GetLife();
+
+    if (life && life->maxHealth) {
+#if 0
+        Rectangle hpBar{
+            position.x - maxHealth / 2,
+            position.y - size.y - 10,
+            maxHealth,
+            10
+        };
+#else
+        Rectangle hpBar{
+            (float)GetScreenWidth() / 2 - life->maxHealth / 2,
+            20.0f,
+            (float)life->maxHealth,
+            10.0f
+        };
+#endif
+        DrawRectangleRec(hpBar, GRAY);
+        hpBar.width = life->health;
+        DrawRectangleRec(hpBar, MAROON);
+        hpBar.x -= 1;
+        hpBar.y -= 1;
+        hpBar.width = life->maxHealth + 2;
+        hpBar.height += 2;
+        DrawRectangleLinesEx(hpBar, 1, BLACK);
+    }
 }
 
 // TODO: Refactor out into drawrectangle or some shit

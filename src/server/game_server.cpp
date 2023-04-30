@@ -1,6 +1,9 @@
 #include "game_server.h"
 #include "../common/shared_lib.h"
 
+Rectangle lastCollisionA{};
+Rectangle lastCollisionB{};
+
 GameServerNetAdapter::GameServerNetAdapter(GameServer *server)
 {
     this->server = server;
@@ -133,6 +136,12 @@ static EntityTicker entity_ticker[Entity_Count] = {
 
 void GameServer::OnClientJoin(int clientIdx)
 {
+    static const Color playerColors[]{
+        MAROON,
+        LIME,
+        SKYBLUE
+    };
+
     uint32_t entityId = world->GetPlayerEntityId(clientIdx);
 
     ServerPlayer &serverPlayer = world->players[clientIdx];
@@ -140,21 +149,20 @@ void GameServer::OnClientJoin(int clientIdx)
     serverPlayer.joinedAt = now;
     serverPlayer.entityId = entityId;
 
-    static const Color colors[]{
-        MAROON,
-        LIME,
-        SKYBLUE
-    };
-
     Entity &entity = world->entities[serverPlayer.entityId];
     entity.type = Entity_Player;
-    entity.color = colors[clientIdx % (sizeof(colors) / sizeof(colors[0]))];
+    entity.color = playerColors[clientIdx % (sizeof(playerColors) / sizeof(playerColors[0]))];
     entity.size = { 32, 64 };
     entity.radius = 10;
     entity.position = { 680, 1390 };
     entity.speed = 100;
     entity.drag = 8.0f;
-    entity.data.player.playerId = clientIdx;
+
+    EntityPlayer &player = entity.data.player;
+    player.playerId = clientIdx;
+    player.life.maxHealth = 100;
+    player.life.health = player.life.maxHealth;
+
     world->SpawnEntity(*this, entityId);
 }
 
@@ -396,6 +404,8 @@ void GameServer::Tick(void)
         if (eid_bot1) {
             Entity &entity = world->entities[eid_bot1];
             EntityBot &bot = entity.data.bot;
+            bot.life.maxHealth = 100;
+            bot.life.health = bot.life.maxHealth;
             bot.pathId = 0;
 
             entity.type = Entity_Bot;
@@ -420,6 +430,38 @@ void GameServer::Tick(void)
         entity.forceAccum = {};
         entity_ticker[entity.type](*this, entityId, SV_TICK_DT);
         world->map.ResolveEntityTerrainCollisions(entity);
+    }
+
+    for (int projectileId = 0; projectileId < SV_MAX_ENTITIES; projectileId++) {
+        Entity &projectile = world->entities[projectileId];
+        if (projectile.type == Entity_Projectile && !projectile.despawnedAt) {
+            for (int botId = 0; botId < SV_MAX_ENTITIES; botId++) {
+                Entity &bot = world->entities[botId];
+                if (bot.type == Entity_Bot && !bot.despawnedAt) {
+                    Rectangle projectileHitbox{
+                        projectile.position.x - projectile.size.x / 2,
+                        projectile.position.y - projectile.size.y,
+                        projectile.size.x,
+                        projectile.size.y
+                    };
+                    Rectangle botHitbox{
+                        bot.position.x - bot.size.x / 2,
+                        bot.position.y - bot.size.y,
+                        bot.size.x,
+                        bot.size.y
+                    };
+                    if (CheckCollisionRecs(projectileHitbox, botHitbox)) {
+                        bot.data.bot.life.TakeDamage(5);
+                        const char *msg = "Ouch!";
+                        BroadcastEntitySay(botId, strlen(msg), msg);
+                        world->DespawnEntity(*this, projectileId);
+
+                        lastCollisionA = projectileHitbox;
+                        lastCollisionB = botHitbox;
+                    }
+                }
+            }
+        }
     }
 
     tick++;

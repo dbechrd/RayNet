@@ -191,6 +191,9 @@ Err Play(GameServer &server)
         // [World] Tilemap
         server.world->map.Draw(camera2d);
 
+        DrawRectangleLinesEx(lastCollisionA, 1, RED);
+        DrawRectangleLinesEx(lastCollisionB, 1, GREEN);
+
         // [World][Editor] Paths
 
         // Draw path edges

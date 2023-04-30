@@ -1,7 +1,7 @@
 #pragma once
-#include "input_command.h"
-#include "net/entity_snapshot.h"
-#include "ring_buffer.h"
+
+struct EntitySnapshot;
+struct EntitySpawnEvent;
 
 enum EntityType {
     Entity_None,
@@ -11,11 +11,26 @@ enum EntityType {
     Entity_Count,
 };
 
+struct EntityLife {
+    int maxHealth{};
+    int health{};
+
+    void TakeDamage(int damage) {
+        if (damage >= health) {
+            health = 0;
+        } else {
+            health -= damage;
+        }
+    }
+};
+
 struct EntityPlayer {
+    EntityLife life{};
     uint32_t playerId{};
 };
 
 struct EntityBot {
+    EntityLife life{};
     uint32_t pathId{};  // TODO: Entity should remember which path it follows somehow
     int pathNodeLastArrivedAt{};
     int pathNodeTarget{};
@@ -40,7 +55,7 @@ struct Entity {
 
     // TODO(dlb): Could be a pointer, or could be a type + index into another pool
     union {
-        EntityPlayer player{};
+        EntityPlayer player;
         EntityBot bot;
     } data;
 
@@ -53,5 +68,7 @@ struct Entity {
     void ApplyForce(Vector2 force);
     void Tick(double now, double dt);
     Rectangle GetRect(void);
+    EntityLife *GetLife(void);
+    void DrawHoverInfo(void);
     void Draw(const Font &font, int clientIdx, float scale);
 };

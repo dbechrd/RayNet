@@ -43,3 +43,6 @@ struct GameServer {
     void Update(void);
     void Stop(void);
 };
+
+extern Rectangle lastCollisionA;
+extern Rectangle lastCollisionB;

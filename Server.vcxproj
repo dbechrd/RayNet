@@ -28,7 +28,6 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\common\ui\ui.h" />
-    <ClInclude Include="src\server\game_server.h" />
     <ClInclude Include="src\server\server_world.h" />
   </ItemGroup>
   <PropertyGroup Label="Globals">

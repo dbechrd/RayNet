@@ -1,5 +1,6 @@
 #pragma once
 #include "../../common.h"
+#include "../../ring_buffer.h"
 #include "../../input_command.h"
 
 struct Msg_C_InputCommands : public yojimbo::Message

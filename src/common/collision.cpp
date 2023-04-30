@@ -9,7 +9,7 @@ bool dlb_CheckCollisionPointRec(Vector2 point, Rectangle rec)
     return collision;
 }
 
-bool dlb_CheckCollisionCircleRec(Vector2 center, float radius, Rectangle rec, Vector2 &contact, Vector2 &normal, float &depth)
+bool dlb_CheckCollisionCircleRec(Vector2 center, float radius, Rectangle rec, Manifold *manifold)
 {
     float xOverlap = 0;
     float yOverlap = 0;
@@ -34,19 +34,21 @@ bool dlb_CheckCollisionCircleRec(Vector2 center, float radius, Rectangle rec, Ve
     }
 
     if (Vector2DistanceSqr(pt, center) < radius * radius) {
-        contact = pt;  // closest point to "pt" on the surface of the box
-        if (fabsf(xOverlap) < fabsf(yOverlap)) {
-            contact.x += xOverlap;
-        } else if (fabsf(yOverlap) < fabsf(xOverlap)) {
-            contact.y += yOverlap;
-        }
+        if (manifold) {
+            manifold->contact = pt;  // closest point to "pt" on the surface of the box
+            if (fabsf(xOverlap) < fabsf(yOverlap)) {
+                manifold->contact.x += xOverlap;
+            } else if (fabsf(yOverlap) < fabsf(xOverlap)) {
+                manifold->contact.y += yOverlap;
+            }
 
-        Vector2 pen = Vector2Subtract(center, contact);
-        depth = radius - Vector2Length(pen);
-        normal = Vector2Normalize(pen);
+            Vector2 pen = Vector2Subtract(center, manifold->contact);
+            manifold->depth = radius - Vector2Length(pen);
+            manifold->normal = Vector2Normalize(pen);
 
-        if (xOverlap && yOverlap) {
-            depth -= radius * 2;
+            if (xOverlap && yOverlap) {
+                manifold->depth -= radius * 2;
+            }
         }
         return true;
     }

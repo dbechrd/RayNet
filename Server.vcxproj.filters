@@ -17,7 +17,6 @@
     <Image Include="res\server.ico" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="src\server\game_server.h" />
     <ClInclude Include="src\server\server_world.h" />
     <ClInclude Include="src\common\ui\ui.h" />
   </ItemGroup>
