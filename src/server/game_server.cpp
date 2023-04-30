@@ -56,9 +56,6 @@ void tick_player(GameServer &server, uint32_t entityId, double dt)
                 eBullet.velocity = Vector2Scale(direction, 400); //GetRandomValue(800, 1000));
                 eBullet.drag = 0.02f;
                 server.world->SpawnEntity(server, idBullet);
-
-                const char *dumbBulletMsg = "I'm a bullet, weeeeee!";
-                server.BroadcastEntitySay(idBullet, (uint32_t)strlen(dumbBulletMsg), dumbBulletMsg);
             }
         }
     }
@@ -71,46 +68,47 @@ void tick_bot(GameServer &server, uint32_t entityId, double dt)
     Entity &entity = server.world->entities[entityId];
     EntityBot &bot = entity.data.bot;
     AiPathNode *aiPathNode = server.world->map.GetPathNode(bot.pathId, bot.pathNodeTarget);
+    if (aiPathNode) {
+        Vector2 target = aiPathNode->pos;
+        Vector2 toTarget = Vector2Subtract(target, entity.position);
+        if (Vector2LengthSqr(toTarget) < 10 * 10) {
+            if (bot.pathNodeLastArrivedAt != bot.pathNodeTarget) {
+                // Arrived at a new node
+                bot.pathNodeLastArrivedAt = bot.pathNodeTarget;
+                bot.pathNodeArrivedAt = server.now;
+            }
+            if (server.now - bot.pathNodeArrivedAt > aiPathNode->waitFor) {
+                // Been at node long enough, move on
+                bot.pathNodeTarget = server.world->map.GetNextPathNodeIndex(bot.pathId, bot.pathNodeTarget);
+            }
+        } else {
+            bot.pathNodeLastArrivedAt = 0;
+            bot.pathNodeArrivedAt = 0;
 
-    Vector2 target = aiPathNode->pos;
-    Vector2 toTarget = Vector2Subtract(target, entity.position);
-    if (Vector2LengthSqr(toTarget) < 10 * 10) {
-        if (bot.pathNodeLastArrivedAt != bot.pathNodeTarget) {
-            // Arrived at a new node
-            bot.pathNodeLastArrivedAt = bot.pathNodeTarget;
-            bot.pathNodeArrivedAt = server.now;
+            Vector2 moveForce = toTarget;
+            moveForce = Vector2Normalize(moveForce);
+            moveForce = Vector2Scale(moveForce, entity.speed);
+            entity.ApplyForce(moveForce);
         }
-        if (server.now - bot.pathNodeArrivedAt > aiPathNode->waitFor) {
-            // Been at node long enough, move on
-            bot.pathNodeTarget = server.world->map.GetNextPathNodeIndex(bot.pathId, bot.pathNodeTarget);
-        }
-    } else {
-        bot.pathNodeLastArrivedAt = 0;
-        bot.pathNodeArrivedAt = 0;
-
-        Vector2 moveForce = toTarget;
-        moveForce = Vector2Normalize(moveForce);
-        moveForce = Vector2Scale(moveForce, entity.speed);
-        entity.ApplyForce(moveForce);
-    }
 
 #if 0
-    InputCmd aiCmd{};
-    if (eBot.position.x < target.x) {
-        aiCmd.east = true;
-    } else if (eBot.position.x > target.x) {
-        aiCmd.west = true;
-    }
-    if (eBot.position.y < target.y) {
-        aiCmd.south = true;
-    } else if (eBot.position.y > target.y) {
-        aiCmd.north = true;
-    }
+        InputCmd aiCmd{};
+        if (eBot.position.x < target.x) {
+            aiCmd.east = true;
+        } else if (eBot.position.x > target.x) {
+            aiCmd.west = true;
+        }
+        if (eBot.position.y < target.y) {
+            aiCmd.south = true;
+        } else if (eBot.position.y > target.y) {
+            aiCmd.north = true;
+        }
 
-    Vector2 moveForce = aiCmd.GenerateMoveForce(eBot.speed);
+        Vector2 moveForce = aiCmd.GenerateMoveForce(eBot.speed);
 #else
 
 #endif
+    }
 
     entity.Tick(server.now, SV_TICK_DT);
 }
@@ -353,8 +351,8 @@ void GameServer::ProcessMessages(void)
                         Msg_C_EntityInteract *msg = (Msg_C_EntityInteract *)yjMsg;
                         Entity *entity = world->GetEntity(msg->entityId);
                         if (entity && entity->type == Entity_Bot) {
-                            const char *text = TextFormat("Lily says: TPS is %d", (int)(1.0/SV_TICK_DT));
-                            SendEntitySay(clientIdx, msg->entityId, (uint32_t)strlen(text), text);
+                            //const char *text = TextFormat("Lily says: TPS is %d", (int)(1.0/SV_TICK_DT));
+                            //SendEntitySay(clientIdx, msg->entityId, (uint32_t)strlen(text), text);
                         }
                         break;
                     }
@@ -398,24 +396,34 @@ void GameServer::ProcessMessages(void)
 void GameServer::Tick(void)
 {
     // Spawn entities
-    static uint32_t eid_bot1 = 0;
-    if (!eid_bot1) {
-        eid_bot1 = world->CreateEntity(Entity_Bot);
-        if (eid_bot1) {
-            Entity &entity = world->entities[eid_bot1];
-            EntityBot &bot = entity.data.bot;
-            bot.life.maxHealth = 100;
-            bot.life.health = bot.life.maxHealth;
-            bot.pathId = 0;
+    static uint32_t eid_bots[10];
+    for (int i = 0; i < ARRAY_SIZE(eid_bots); i++) {
+        if (!world->GetEntity(eid_bots[i])) {
+            eid_bots[i] = 0;
+        }
+        if (!eid_bots[i] && ((int)tick % 100 == i * 10)) {
+            eid_bots[i] = world->CreateEntity(Entity_Bot);
+            if (eid_bots[i]) {
+                Entity *entity = world->GetEntity(eid_bots[i]);
+                EntityBot &bot = entity->data.bot;
+                bot.life.maxHealth = 100;
+                bot.life.health = bot.life.maxHealth;
+                bot.pathId = 0;
 
-            entity.type = Entity_Bot;
-            entity.color = DARKPURPLE;
-            entity.size = { 32, 64 };
-            entity.radius = 10;
-            entity.position = world->map.GetPathNode(bot.pathId, 0)->pos;
-            entity.speed = 10;
-            entity.drag = 8.0f;
-            world->SpawnEntity(*this, eid_bot1);
+                entity->type = Entity_Bot;
+                entity->color = DARKPURPLE;
+                entity->size = { 32, 64 };
+                entity->radius = 10;
+                AiPathNode *aiPathNode = world->map.GetPathNode(bot.pathId, 0);
+                if (aiPathNode) {
+                    entity->position = aiPathNode->pos;
+                } else {
+                    entity->position = { 0, 0 }; // TODO world spawn or something?
+                }
+                entity->speed = GetRandomValue(10, 50);
+                entity->drag = 8.0f;
+                world->SpawnEntity(*this, eid_bots[i]);
+            }
         }
     }
 
@@ -435,9 +443,12 @@ void GameServer::Tick(void)
     for (int projectileId = 0; projectileId < SV_MAX_ENTITIES; projectileId++) {
         Entity &projectile = world->entities[projectileId];
         if (projectile.type == Entity_Projectile && !projectile.despawnedAt) {
-            for (int botId = 0; botId < SV_MAX_ENTITIES; botId++) {
-                Entity &bot = world->entities[botId];
-                if (bot.type == Entity_Bot && !bot.despawnedAt) {
+            for (int targetId = 0; targetId < SV_MAX_ENTITIES && !projectile.despawnedAt; targetId++) {
+                Entity &target = world->entities[targetId];
+                if (target.type == Entity_Bot && !target.despawnedAt) {
+                    EntityLife &life = target.data.bot.life;
+                    if (life.Dead()) continue;
+
                     Rectangle projectileHitbox{
                         projectile.position.x - projectile.size.x / 2,
                         projectile.position.y - projectile.size.y,
@@ -445,17 +456,20 @@ void GameServer::Tick(void)
                         projectile.size.y
                     };
                     Rectangle botHitbox{
-                        bot.position.x - bot.size.x / 2,
-                        bot.position.y - bot.size.y,
-                        bot.size.x,
-                        bot.size.y
+                        target.position.x - target.size.x / 2,
+                        target.position.y - target.size.y,
+                        target.size.x,
+                        target.size.y
                     };
                     if (CheckCollisionRecs(projectileHitbox, botHitbox)) {
-                        bot.data.bot.life.TakeDamage(5);
-                        const char *msg = "Ouch!";
-                        BroadcastEntitySay(botId, strlen(msg), msg);
+                        life.TakeDamage(GetRandomValue(3, 8));
+                        if (life.Alive()) {
+                            const char *msg = "Ouch!";
+                            BroadcastEntitySay(targetId, strlen(msg), msg);
+                        } else {
+                            world->DespawnEntity(*this, targetId);
+                        }
                         world->DespawnEntity(*this, projectileId);
-
                         lastCollisionA = projectileHitbox;
                         lastCollisionB = botHitbox;
                     }

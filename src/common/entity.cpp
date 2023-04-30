@@ -175,21 +175,37 @@ void Entity::DrawHoverInfo(void)
             10
         };
 #else
-        Rectangle hpBar{
-            (float)GetScreenWidth() / 2 - life->maxHealth / 2,
+        const float borderWidth = 1;
+        const float pad = 1;
+        Vector2 hpBarPad{ pad, pad };
+        Vector2 hpBarSize{ 200, 24 };
+
+        Rectangle hpBarBg{
+            (float)GetScreenWidth() / 2 - hpBarSize.x / 2 - hpBarPad.x,
             20.0f,
-            (float)life->maxHealth,
-            10.0f
+            hpBarSize.x + hpBarPad.x * 2,
+            hpBarSize.y + hpBarPad.y * 2
         };
+
+        Rectangle hpBar{
+            hpBarBg.x + hpBarPad.x,
+            hpBarBg.y + hpBarPad.y,
+            hpBarSize.x,
+            hpBarSize.y
+        };
+
 #endif
-        DrawRectangleRec(hpBar, GRAY);
-        hpBar.width = life->health;
-        DrawRectangleRec(hpBar, MAROON);
-        hpBar.x -= 1;
-        hpBar.y -= 1;
-        hpBar.width = life->maxHealth + 2;
-        hpBar.height += 2;
-        DrawRectangleLinesEx(hpBar, 1, BLACK);
+        DrawRectangleRec(hpBarBg, Fade(BLACK, 0.5));
+        float pctHealth = CLAMP((float)life->health / life->maxHealth, 0, 1);
+        hpBar.width = CLAMP(ceilf(hpBarSize.x * pctHealth), 0, hpBarSize.x);
+        DrawRectangleRec(hpBar, ColorBrightness(MAROON, -0.4));
+
+        Vector2 labelSize = MeasureTextEx(fntHackBold20, "Lily", fntHackBold20.baseSize, 1);
+        Vector2 labelPos{
+            floorf(hpBarBg.x + hpBarBg.width / 2 - labelSize.x / 2),
+            floorf(hpBarBg.y + hpBarBg.height / 2 - labelSize.y / 2)
+        };
+        DrawTextShadowEx(fntHackBold20, "Lily", labelPos, fntHackBold20.baseSize, WHITE);
     }
 }
 

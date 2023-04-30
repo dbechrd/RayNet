@@ -38,11 +38,9 @@ struct GameClient {
     }
 
     Entity *LocalPlayer(void) {
-        Entity *localPlayer = 0;
-        uint32_t eid = LocalPlayerEntityId();
-        if (eid) {
-            localPlayer = &world->entities[eid];
-            if (localPlayer->type == Entity_Player) {
+        if (yj_client->IsConnected()) {
+            Entity *localPlayer = world->GetEntity(LocalPlayerEntityId());
+            if (localPlayer && localPlayer->type == Entity_Player) {
                 return localPlayer;
             }
         }

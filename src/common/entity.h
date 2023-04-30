@@ -22,6 +22,14 @@ struct EntityLife {
             health -= damage;
         }
     }
+
+    bool Alive(void) {
+        return health > 0;
+    }
+
+    bool Dead(void) {
+        return !Alive();
+    }
 };
 
 struct EntityPlayer {
@@ -31,7 +39,7 @@ struct EntityPlayer {
 
 struct EntityBot {
     EntityLife life{};
-    uint32_t pathId{};  // TODO: Entity should remember which path it follows somehow
+    int pathId{};
     int pathNodeLastArrivedAt{};
     int pathNodeTarget{};
     double pathNodeArrivedAt{};
@@ -58,6 +66,8 @@ struct Entity {
         EntityPlayer player;
         EntityBot bot;
     } data;
+
+    uint32_t latestDialog;
 
     uint32_t freelist_next;
 

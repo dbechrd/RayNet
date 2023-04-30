@@ -197,15 +197,21 @@ Err Play(GameServer &server)
         // [World][Editor] Paths
 
         // Draw path edges
-        for (uint32_t pathId = 0; pathId < server.world->map.pathCount; pathId++) {
-            AiPath *path = server.world->map.GetPath(pathId);
-            for (uint32_t pathNodeIndex = 0; pathNodeIndex < path->pathNodeIndexCount; pathNodeIndex++) {
-                uint32_t nextPathNodeIndex = server.world->map.GetNextPathNodeIndex(pathId, pathNodeIndex);
-                AiPathNode *pathNode = server.world->map.GetPathNode(pathId, pathNodeIndex);
-                AiPathNode *nextPathNode = server.world->map.GetPathNode(pathId, nextPathNodeIndex);
+        for (uint32_t aiPathId = 0; aiPathId < server.world->map.pathCount; aiPathId++) {
+            AiPath *aiPath = server.world->map.GetPath(aiPathId);
+            if (!aiPath) {
+                continue;
+            }
+
+            for (uint32_t aiPathNodeIndex = 0; aiPathNodeIndex < aiPath->pathNodeIndexCount; aiPathNodeIndex++) {
+                uint32_t aiPathNodeNextIndex = server.world->map.GetNextPathNodeIndex(aiPathId, aiPathNodeIndex);
+                AiPathNode *aiPathNode = server.world->map.GetPathNode(aiPathId, aiPathNodeIndex);
+                AiPathNode *aiPathNodeNext = server.world->map.GetPathNode(aiPathId, aiPathNodeNextIndex);
+                assert(aiPathNode);
+                assert(aiPathNodeNext);
                 DrawLine(
-                    pathNode->pos.x, pathNode->pos.y,
-                    nextPathNode->pos.x, nextPathNode->pos.y,
+                    aiPathNode->pos.x, aiPathNode->pos.y,
+                    aiPathNodeNext->pos.x, aiPathNodeNext->pos.y,
                     LIGHTGRAY
                 );
             }
@@ -220,10 +226,15 @@ Err Play(GameServer &server)
 
         // Draw path nodes
         const float pathRectRadius = 5;
-        for (uint32_t pathId = 0; pathId < server.world->map.pathCount; pathId++) {
-            AiPath *aipath = server.world->map.GetPath(pathId);
-            for (uint32_t pathNodeIndex = 0; pathNodeIndex < aipath->pathNodeIndexCount; pathNodeIndex++) {
-                AiPathNode *aiPathNode = server.world->map.GetPathNode(pathId, pathNodeIndex);
+        for (uint32_t aiPathId = 0; aiPathId < server.world->map.pathCount; aiPathId++) {
+            AiPath *aiPath = server.world->map.GetPath(aiPathId);
+            if (!aiPath) {
+                continue;
+            }
+
+            for (uint32_t aiPathNodeIndex = 0; aiPathNodeIndex < aiPath->pathNodeIndexCount; aiPathNodeIndex++) {
+                AiPathNode *aiPathNode = server.world->map.GetPathNode(aiPathId, aiPathNodeIndex);
+                assert(aiPathNode);
 
                 Rectangle nodeRect{
                     aiPathNode->pos.x - pathRectRadius,
@@ -234,7 +245,7 @@ Err Play(GameServer &server)
 
                 Color color = aiPathNode->waitFor ? BLUE : RED;
                 bool hover = dlb_CheckCollisionPointRec(cursorWorldPos, nodeRect);
-                if (hover || (aiPathNodeDrag.active && aiPathNodeDrag.pathNodeIndex == pathNodeIndex)) {
+                if (hover || (aiPathNodeDrag.active && aiPathNodeDrag.pathNodeIndex == aiPathNodeIndex)) {
                     if (hover) {
                         color = aiPathNode->waitFor ? SKYBLUE : PINK;
                     }
@@ -243,8 +254,8 @@ Err Play(GameServer &server)
                         color = aiPathNode->waitFor ? DARKBLUE : MAROON;
                         if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
                             aiPathNodeDrag.active = true;
-                            aiPathNodeDrag.pathId = pathId;
-                            aiPathNodeDrag.pathNodeIndex = pathNodeIndex;
+                            aiPathNodeDrag.pathId = aiPathId;
+                            aiPathNodeDrag.pathNodeIndex = aiPathNodeIndex;
                             aiPathNodeDrag.startPosition = aiPathNode->pos;
                         } else if (escape) {
                             aiPathNode->pos = aiPathNodeDrag.startPosition;
@@ -270,8 +281,11 @@ Err Play(GameServer &server)
             }
             Vector2SubtractValue(newNodePos, pathRectRadius);
             AiPath *aiPath = server.world->map.GetPath(aiPathNodeDrag.pathId);
-            AiPathNode *aiPathNode = server.world->map.GetPathNode(aiPathNodeDrag.pathId, aiPathNodeDrag.pathNodeIndex);
-            aiPathNode->pos = newNodePos;
+            if (aiPath) {
+                AiPathNode *aiPathNode = server.world->map.GetPathNode(aiPathNodeDrag.pathId, aiPathNodeDrag.pathNodeIndex);
+                assert(aiPathNode);
+                aiPathNode->pos = newNodePos;
+            }
         }
 
         const bool editorHovered = dlb_CheckCollisionPointRec(GetMousePosition(), editorRect);

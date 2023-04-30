@@ -17,15 +17,19 @@ struct Dialog {
 struct ClientWorld {
     Camera2D camera2d{};
     Tilemap map{};
-    Entity entities[SV_MAX_ENTITIES]{};
     EntityGhost ghosts[SV_MAX_ENTITIES]{};
     Dialog dialogs[CL_MAX_DIALOGS]{};
 
+    Entity *GetEntity(uint32_t entityId);
+    Entity *GetEntityDeadOrAlive(uint32_t entityId);
     Err CreateDialog(uint32_t entityId, uint32_t messageLength, const char *message, double now);
+    Err DestroyDialog(uint32_t dialogId);
     void Update(GameClient &gameClient);
     void Draw(void);
 
 private:
+    Entity entities[SV_MAX_ENTITIES]{};
+
     void UpdateEntities(GameClient &gameClient);
     void RemoveExpiredDialogs(GameClient &gameClient);
     void DrawDialog(Dialog &dialog, Vector2 bottomCenter);

@@ -38,7 +38,7 @@
 #define SV_PORT                     4040 //40000
 #define SV_TICK_DT                  (1.0/30.0)
 #define SV_MAX_PLAYERS              8
-#define SV_MAX_ENTITIES             SV_MAX_PLAYERS + 8
+#define SV_MAX_ENTITIES             SV_MAX_PLAYERS + 32
 #define SV_MAX_ENTITY_SAY_MSG_LEN   1024
 
 //#define CL_PORT                 30000
@@ -72,6 +72,7 @@ enum Err {
     RN_NET_INIT_FAILED  = -7,
     RN_INVALID_ADDRESS  = -8,
     RN_RAYLIB_ERROR     = -9,
+    RN_BAD_ID           = -10,
 };
 
 // Dumb stuff that should get a resource manager or wutevs

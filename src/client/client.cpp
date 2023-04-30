@@ -6,7 +6,7 @@
 #include <deque>
 #include <time.h>
 
-static bool CL_DBG_SNAPSHOT_SHADOWS = true;
+static bool CL_DBG_SNAPSHOT_SHADOWS = false;
 
 int ClientTryConnect(GameClient *client)
 {
@@ -137,16 +137,18 @@ void ClientProcessMessages(GameClient *client)
                 case MSG_S_ENTITY_DESPAWN:
                 {
                     Msg_S_EntityDespawn *msg = (Msg_S_EntityDespawn *)yjMsg;
-                    Entity &entity = client->world->entities[msg->entityId];
-                    entity = {};
-                    EntityGhost &ghost = client->world->ghosts[msg->entityId];
-                    ghost.snapshots = {};
+                    Entity *entity = client->world->GetEntity(msg->entityId);
+                    if (entity) {
+                        client->world->DestroyDialog(entity->latestDialog);
+                        *entity = {};
+                        EntityGhost &ghost = client->world->ghosts[msg->entityId];
+                        ghost.snapshots = {};
+                    }
                     break;
                 }
                 case MSG_S_ENTITY_SAY:
                 {
                     Msg_S_EntitySay *msg = (Msg_S_EntitySay *)yjMsg;
-                    Entity &entity = client->world->entities[msg->entityId];
                     if (msg->messageLength > 0 && msg->messageLength <= SV_MAX_ENTITY_SAY_MSG_LEN) {
                         client->world->CreateDialog(
                             msg->entityId,
@@ -171,8 +173,17 @@ void ClientProcessMessages(GameClient *client)
                 case MSG_S_ENTITY_SPAWN:
                 {
                     Msg_S_EntitySpawn *msg = (Msg_S_EntitySpawn *)yjMsg;
-                    Entity &entity = client->world->entities[msg->entitySpawnEvent.id];
-                    entity.ApplySpawnEvent(msg->entitySpawnEvent);
+                    uint32_t entityId = msg->entitySpawnEvent.id;
+                    Entity *entity = client->world->GetEntityDeadOrAlive(msg->entitySpawnEvent.id);
+                    if (entity) {
+                        // WARN(dlb): Other things could refer to a previous version of this entityId.
+                        // TODO(dlb): Generations?
+                        *entity = {};
+                        entity->ApplySpawnEvent(msg->entitySpawnEvent);
+                        if (entity->type == Entity_Projectile) {
+                            PlaySound(sndSoftTick);
+                        }
+                    }
                     break;
                 }
             }
@@ -237,6 +248,8 @@ int main(int argc, char *argv[])
     const double startedAt = GetTime();
     // NOTE(dlb): yojimbo uses rand() for network simulator and random_int()/random_float()
     srand((unsigned int)startedAt);
+
+    InitAudioDevice();
 
     InitWindow(WINDOW_WIDTH, WINDOW_HEIGHT, "RayNet Client");
     //SetWindowState(FLAG_VSYNC_HINT);  // Gahhhhhh Windows fucking sucks at this
@@ -334,7 +347,7 @@ int main(int argc, char *argv[])
             client->controller.cmdAccum.west |= IsKeyDown(KEY_A);
             client->controller.cmdAccum.south |= IsKeyDown(KEY_S);
             client->controller.cmdAccum.east |= IsKeyDown(KEY_D);
-            client->controller.cmdAccum.fire |= IsMouseButtonPressed(MOUSE_LEFT_BUTTON);
+            client->controller.cmdAccum.fire |= IsMouseButtonDown(MOUSE_LEFT_BUTTON);
 
             cursorWorldPos = GetScreenToWorld2D(GetMousePosition(), client->world->camera2d);
             Vector2 facing = Vector2Subtract(cursorWorldPos, localPlayer->position);
@@ -376,6 +389,10 @@ int main(int argc, char *argv[])
 
         localPlayer = client->LocalPlayer();
         if (localPlayer) {
+            if (client->LocalPlayerEntityId() != 1) {
+                SetMasterVolume(0);
+            }
+
             //--------------------
             // Camera
             // TODO: Move update code out of draw code and update local player's
@@ -392,14 +409,14 @@ int main(int argc, char *argv[])
             // Draw the entities
             cursorWorldPos = GetScreenToWorld2D(GetMousePosition(), client->world->camera2d);
             for (uint32_t entityId = 0; entityId < SV_MAX_ENTITIES; entityId++) {
-                Entity &entity = client->world->entities[entityId];
-                if (entity.type == Entity_None) {
+                Entity *entity = client->world->GetEntity(entityId);
+                if (!entity) {
                     continue;
                 }
                 EntityGhost &ghost = client->world->ghosts[entityId];
 
                 if (CL_DBG_SNAPSHOT_SHADOWS) {
-                    Entity ghostInstance = client->world->entities[entityId];
+                    Entity ghostInstance = *entity;
                     for (int i = 0; i < ghost.snapshots.size(); i++) {
                         if (!ghost.snapshots[i].serverTime) {
                             continue;
@@ -414,7 +431,7 @@ int main(int argc, char *argv[])
 #if CL_CLIENT_SIDE_PREDICT
                     // NOTE(dlb): These aren't actually snapshot shadows, they're client-side prediction shadows
                     if (entityId == client->LocalPlayerEntityId()) {
-                        Entity predictionInstance = client->world->entities[entityId];
+                        Entity predictionInstance = *entity;
 
                         uint32_t lastProcessedInputCmd = 0;
                         const EntitySnapshot &latestSnapshot = ghost.snapshots.newest();
@@ -441,18 +458,18 @@ int main(int argc, char *argv[])
 #endif
                 }
 
-                const Color origColor = entity.color;
-                bool hover = dlb_CheckCollisionPointRec(cursorWorldPos, entity.GetRect());
+                const Color origColor = entity->color;
+                bool hover = dlb_CheckCollisionPointRec(cursorWorldPos, entity->GetRect());
                 if (hover) {
-                    entity.color = ColorBrightness(entity.color, 0.2f);
+                    entity->color = ColorBrightness(entity->color, 0.2f);
                     bool down = IsMouseButtonPressed(MOUSE_BUTTON_LEFT);
                     if (down) {
                         ClientSendEntityInteract(client, entityId);
                     }
                     hoveredEntityId = entityId;
                 }
-                entity.Draw(fntHackBold20, entityId, 1);
-                entity.color = origColor;
+                entity->Draw(fntHackBold20, entityId, 1);
+                entity->color = origColor;
             }
 
             //--------------------
@@ -461,6 +478,8 @@ int main(int argc, char *argv[])
 
             EndMode2D();
         } else {
+            SetMasterVolume(1);
+
             Vector2 uiPosition{ screenSize.x / 2, screenSize.y / 2 };
             Vector2 uiCursor{};
             if (client->yj_client->IsConnected()) {
@@ -476,8 +495,11 @@ int main(int argc, char *argv[])
         }
 
         if (hoveredEntityId) {
-            Entity &entity = client->world->entities[hoveredEntityId];
-            entity.DrawHoverInfo();
+            Entity *entity = client->world->GetEntity(hoveredEntityId);
+            assert(entity); // huh?
+            if (entity) {
+                entity->DrawHoverInfo();
+            }
         }
 
         {

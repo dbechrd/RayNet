@@ -1,14 +1,43 @@
 #include "client_world.h"
 #include "game_client.h"
 
+Entity *ClientWorld::GetEntity(uint32_t entityId)
+{
+    if (entityId < SV_MAX_ENTITIES) {
+        Entity &entity = entities[entityId];
+        if (entity.type && !entity.despawnedAt) {
+            return &entity;
+        }
+    } else {
+        printf("error: entityId %u out of range\n", entityId);
+    }
+    return 0;
+}
+
+Entity *ClientWorld::GetEntityDeadOrAlive(uint32_t entityId)
+{
+    if (entityId < SV_MAX_ENTITIES) {
+        return &entities[entityId];
+    } else {
+        printf("error: entityId %u out of range\n", entityId);
+    }
+    return 0;
+}
+
 Err ClientWorld::CreateDialog(uint32_t entityId, uint32_t messageLength, const char *message, double now)
 {
+    Entity *entity = GetEntity(entityId);
+    if (!entity) {
+        return RN_SUCCESS;  // might be an error.. but might be success.. hmm
+    }
+
     //Dialog dialog{ entityId, messageLength, message, now };
     //dialogs.push_back(dialog);
+    int dialogId = 1;
     Dialog *dialog = 0;
-    for (int i = 0; i < ARRAY_SIZE(dialogs); i++) {
-        if (!dialogs[i].entityId) {
-            dialog = &dialogs[i];
+    for (; dialogId < ARRAY_SIZE(dialogs); dialogId++) {
+        if (!dialogs[dialogId].entityId) {
+            dialog = &dialogs[dialogId];
             break;
         }
     }
@@ -22,11 +51,43 @@ Err ClientWorld::CreateDialog(uint32_t entityId, uint32_t messageLength, const c
             return RN_BAD_ALLOC;
         }
         strncpy(dialog->message, message, messageLength);
+
+        entity->latestDialog = dialogId;
     } else {
         return RN_BAD_ALLOC;
     }
 
     return RN_SUCCESS;
+}
+
+Err ClientWorld::DestroyDialog(uint32_t dialogId)
+{
+    if (dialogId < CL_MAX_DIALOGS) {
+        free(dialogs[dialogId].message);
+        dialogs[dialogId] = {};
+        return RN_SUCCESS;
+    }
+    return RN_BAD_ID;
+}
+
+void ClientWorld::RemoveExpiredDialogs(GameClient &gameClient)
+{
+    for (int dialogId = 0; dialogId < ARRAY_SIZE(dialogs); dialogId++) {
+        Dialog &dialog = dialogs[dialogId];
+        Entity *entity = GetEntity(dialog.entityId);
+        if (!entity) {
+            continue;
+        }
+
+        if (entity->latestDialog != dialogId) {
+            DestroyDialog(dialogId);
+        }
+
+        const double duration = CL_DIALOG_DURATION_MIN + CL_DIALOG_DURATION_PER_CHAR * dialog.messageLength;
+        if (gameClient.now - dialog.spawnedAt > duration) {
+            DestroyDialog(dialogId);
+        }
+    }
 }
 
 void ClientWorld::UpdateEntities(GameClient &client)
@@ -100,23 +161,6 @@ void ClientWorld::UpdateEntities(GameClient &client)
             }
 
             entity.ApplyStateInterpolated(*snapshotA, *snapshotB, alpha);
-        }
-    }
-}
-
-void ClientWorld::RemoveExpiredDialogs(GameClient &gameClient)
-{
-    for (int i = 0; i < ARRAY_SIZE(dialogs); i++) {
-        Dialog &dialog = dialogs[i];
-        Entity &entity = entities[dialog.entityId];
-        if (!entity.type || entity.despawnedAt) {
-            continue;
-        }
-
-        const double duration = CL_DIALOG_DURATION_MIN + CL_DIALOG_DURATION_PER_CHAR * dialog.messageLength;
-        if (gameClient.now - dialog.spawnedAt > duration) {
-            free(dialogs[i].message);
-            dialogs[i] = {};
         }
     }
 }

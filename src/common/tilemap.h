@@ -2,6 +2,8 @@
 #include "common.h"
 #include <cstdio>
 
+#define AI_PATH_NONE UINT32_MAX
+
 typedef uint8_t Tile;
 
 struct AiPathNode {
@@ -63,22 +65,25 @@ struct Tilemap {
 
     // Paths
     AiPath *GetPath(uint32_t pathId) {
-        assert(pathId < pathCount);
-        return &paths[pathId];
+        if (pathId < pathCount) {
+            return &paths[pathId];
+        }
+        return 0;
     }
     uint32_t GetNextPathNodeIndex(uint32_t pathId, uint32_t pathNodeIndex) {
-        assert(pathId < pathCount);
-        AiPath *path = &paths[pathId];
-        assert(pathNodeIndex < path->pathNodeIndexCount);
-        uint32_t nextPathNodeIndex = (pathNodeIndex + 1) % path->pathNodeIndexCount;
-        return nextPathNodeIndex;
+        AiPath *path = GetPath(pathId);
+        if (path && pathNodeIndex < path->pathNodeIndexCount) {
+            uint32_t nextPathNodeIndex = (pathNodeIndex + 1) % path->pathNodeIndexCount;
+            return nextPathNodeIndex;
+        }
+        return 0;
     }
     AiPathNode *GetPathNode(uint32_t pathId, uint32_t pathNodeIndex) {
-        assert(pathId < pathCount);
-        AiPath *path = &paths[pathId];
-        assert(pathNodeIndex < path->pathNodeIndexCount);
-        uint32_t pathNodeId = pathNodeIndices[path->pathNodeIndexOffset + pathNodeIndex];
-        return &pathNodes[pathNodeId];
+        AiPath *path = GetPath(pathId);
+        if (path && pathNodeIndex < path->pathNodeIndexCount) {
+            uint32_t pathNodeId = pathNodeIndices[path->pathNodeIndexOffset + pathNodeIndex];
+            return &pathNodes[pathNodeId];
+        }
+        return 0;
     }
-
 };
