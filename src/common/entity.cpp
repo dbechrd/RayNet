@@ -224,7 +224,7 @@ void Entity::Draw(const Font &font, int clientIdx, float scale) {
     float y = position.y - (size.y - sy) / 2;
 
     if (type == Entity_Bot) {
-        DrawTextureV(texYikes, { position.x - texYikes.width / 2, position.y - texYikes.height }, WHITE);
+        DrawTextureV(texLily, { position.x - texLily.width / 2, position.y - texLily.height }, WHITE);
     } else {
 #if 0
 #if 1

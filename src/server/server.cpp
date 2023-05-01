@@ -70,11 +70,6 @@ Err Play(GameServer &server)
         printf("Failed to load common resources\n");
     }
 
-    err = InitUI();
-    if (err) {
-        printf("Failed to load UI resources\n");
-    }
-
     err = server.world->map.Load(LEVEL_001);
     if (err) {
         printf("Failed to load map with code %d\n", err);
@@ -538,7 +533,6 @@ Err Play(GameServer &server)
         }
     }
 
-    FreeUI();
     FreeCommon();
     return err;
 }

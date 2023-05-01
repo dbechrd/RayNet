@@ -9,6 +9,7 @@
     <ClCompile Include="src\client\client_world.cpp" />
     <ClCompile Include="src\common\ui\ui.cpp" />
     <ClCompile Include="src\client\todo.cpp" />
+    <ClCompile Include="src\client\game_client.cpp" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="res\client.ico" />

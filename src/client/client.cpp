@@ -7,236 +7,6 @@
 
 static bool CL_DBG_SNAPSHOT_SHADOWS = false;
 
-int ClientTryConnect(GameClient *client)
-{
-    if (!client->yj_client->IsDisconnected()) {
-        printf("yj: client already connected, disconnect first\n");
-        return -1;
-    }
-
-    uint8_t privateKey[yojimbo::KeyBytes];
-    memset(privateKey, 0, yojimbo::KeyBytes);
-
-    uint64_t clientId = 0;
-    yojimbo::random_bytes((uint8_t *)&clientId, 8);
-    printf("yj: client id is %.16" PRIx64 "\n", clientId);
-
-    //yojimbo::Address serverAddress("127.0.0.1", SV_PORT);
-    //yojimbo::Address serverAddress("192.168.0.143", SV_PORT);
-    yojimbo::Address serverAddress("68.9.219.64", SV_PORT);
-    //yojimbo::Address serverAddress("slime.theprogrammingjunkie.com", SV_PORT);
-
-    if (!serverAddress.IsValid()) {
-        printf("yj: invalid address\n");
-        return -1;
-    }
-
-    client->yj_client->InsecureConnect(privateKey, clientId, serverAddress);
-    client->world = new ClientWorld;
-    client->world->camera2d.zoom = 1.0f;
-    client->world->map.Load(LEVEL_001);
-    return 0;
-}
-
-void ClientStart(GameClient *client)
-{
-    if (!InitializeYojimbo()) {
-        printf("yj: error: failed to initialize Yojimbo!\n");
-        return;
-    }
-    yojimbo_log_level(YOJIMBO_LOG_LEVEL_INFO);
-    yojimbo_set_printf_function(yj_printf);
-
-    yojimbo::ClientServerConfig config{};
-    config.numChannels = CHANNEL_COUNT;
-    config.channel[CHANNEL_R_CLOCK_SYNC     ].type = yojimbo::CHANNEL_TYPE_RELIABLE_ORDERED;
-    config.channel[CHANNEL_U_INPUT_COMMANDS ].type = yojimbo::CHANNEL_TYPE_UNRELIABLE_UNORDERED;
-    config.channel[CHANNEL_R_ENTITY_EVENT   ].type = yojimbo::CHANNEL_TYPE_RELIABLE_ORDERED;
-    config.channel[CHANNEL_U_ENTITY_SNAPSHOT].type = yojimbo::CHANNEL_TYPE_UNRELIABLE_UNORDERED;
-
-    client->yj_client = new yojimbo::Client(
-        yojimbo::GetDefaultAllocator(),
-        yojimbo::Address("0.0.0.0"),
-        config,
-        client->adapter,
-        client->now
-    );
-
-    if (ClientTryConnect(client) < 0) {
-        printf("Failed to connect to server\n");
-    }
-#if 0
-    char addressString[256];
-    client->GetAddress().ToString(addressString, sizeof(addressString));
-    printf("yj: client address is %s\n", addressString);
-#endif
-}
-
-void ClientSendInput(GameClient *client, const Controller &controller)
-{
-    if (client->yj_client->CanSendMessage(MSG_C_INPUT_COMMANDS)) {
-        Msg_C_InputCommands *msg = (Msg_C_InputCommands *)client->yj_client->CreateMessage(MSG_C_INPUT_COMMANDS);
-        if (msg) {
-            msg->cmdQueue = controller.cmdQueue;
-            client->yj_client->SendMessage(CHANNEL_U_INPUT_COMMANDS, msg);
-        } else {
-            printf("Failed to create INPUT_COMMANDS message.\n");
-        }
-    } else {
-        printf("Outgoing INPUT_COMMANDS channel message queue is full.\n");
-    }
-}
-
-void ClientSendEntityInteract(GameClient *client, uint32_t entityId)
-{
-    if (client->yj_client->CanSendMessage(MSG_C_ENTITY_INTERACT)) {
-        Msg_C_EntityInteract *msg = (Msg_C_EntityInteract *)client->yj_client->CreateMessage(MSG_C_ENTITY_INTERACT);
-        if (msg) {
-            msg->entityId = entityId;
-            client->yj_client->SendMessage(MSG_C_ENTITY_INTERACT, msg);
-        } else {
-            printf("Failed to create ENTITY_INTERACT message.\n");
-        }
-    } else {
-        printf("Outgoing ENTITY_INTERACT channel message queue is full.\n");
-    }
-}
-
-void ClientSendTileInteract(GameClient *client, uint32_t x, uint32_t y)
-{
-    if (client->yj_client->CanSendMessage(MSG_C_TILE_INTERACT)) {
-        Msg_C_TileInteract *msg = (Msg_C_TileInteract *)client->yj_client->CreateMessage(MSG_C_TILE_INTERACT);
-        if (msg) {
-            msg->x = x;
-            msg->y = y;
-            client->yj_client->SendMessage(MSG_C_TILE_INTERACT, msg);
-        } else {
-            printf("Failed to create TILE_INTERACT message.\n");
-        }
-    } else {
-        printf("Outgoing TILE_INTERACT channel message queue is full.\n");
-    }
-}
-
-void ClientProcessMessages(GameClient *client)
-{
-    for (int channelIdx = 0; channelIdx < CHANNEL_COUNT; channelIdx++) {
-        yojimbo::Message *yjMsg = client->yj_client->ReceiveMessage(channelIdx);
-        while (yjMsg) {
-            switch (yjMsg->GetType()) {
-                case MSG_S_CLOCK_SYNC:
-                {
-                    Msg_S_ClockSync *msg = (Msg_S_ClockSync *)yjMsg;
-                    yojimbo::NetworkInfo netInfo{};
-                    client->yj_client->GetNetworkInfo(netInfo);
-                    const double approxServerNow = msg->serverTime + netInfo.RTT / 2000;
-                    client->clientTimeDeltaVsServer = client->now - approxServerNow;
-                    break;
-                }
-                case MSG_S_ENTITY_DESPAWN:
-                {
-                    Msg_S_EntityDespawn *msg = (Msg_S_EntityDespawn *)yjMsg;
-                    Entity *entity = client->world->GetEntity(msg->entityId);
-                    if (entity) {
-                        client->world->DestroyDialog(entity->latestDialog);
-                        *entity = {};
-                        EntityGhost &ghost = client->world->ghosts[msg->entityId];
-                        ghost.snapshots = {};
-                    }
-                    break;
-                }
-                case MSG_S_ENTITY_SAY:
-                {
-                    Msg_S_EntitySay *msg = (Msg_S_EntitySay *)yjMsg;
-                    if (msg->messageLength > 0 && msg->messageLength <= SV_MAX_ENTITY_SAY_MSG_LEN) {
-                        client->world->CreateDialog(
-                            msg->entityId,
-                            msg->messageLength,
-                            msg->message,
-                            client->now
-                        );
-                    } else {
-                        printf("Wtf dis server smokin'? Sent entity say message of length %u but max is %u\n",
-                            msg->messageLength,
-                            SV_MAX_ENTITY_SAY_MSG_LEN);
-                    }
-                    break;
-                }
-                case MSG_S_ENTITY_SNAPSHOT:
-                {
-                    Msg_S_EntitySnapshot *msg = (Msg_S_EntitySnapshot *)yjMsg;
-                    EntityGhost &ghost = client->world->ghosts[msg->entitySnapshot.id];
-                    ghost.snapshots.push(msg->entitySnapshot);
-                    break;
-                }
-                case MSG_S_ENTITY_SPAWN:
-                {
-                    Msg_S_EntitySpawn *msg = (Msg_S_EntitySpawn *)yjMsg;
-                    uint32_t entityId = msg->entitySpawnEvent.id;
-                    Entity *entity = client->world->GetEntityDeadOrAlive(msg->entitySpawnEvent.id);
-                    if (entity) {
-                        // WARN(dlb): Other things could refer to a previous version of this entityId.
-                        // TODO(dlb): Generations?
-                        *entity = {};
-                        entity->ApplySpawnEvent(msg->entitySpawnEvent);
-                        if (entity->type == Entity_Projectile) {
-                            PlaySound(sndSoftTick);
-                        }
-                    }
-                    break;
-                }
-            }
-            client->yj_client->ReleaseMessage(yjMsg);
-            yjMsg = client->yj_client->ReceiveMessage(channelIdx);
-        };
-    }
-}
-
-void ClientUpdate(GameClient *client)
-{
-    // NOTE(dlb): This sends keepalive packets
-    client->yj_client->AdvanceTime(client->now);
-
-    // TODO(dlb): Is it a good idea / necessary to receive packets every frame,
-    // rather than at a fixed rate? It seems like it is... right!?
-    client->yj_client->ReceivePackets();
-    if (!client->yj_client->IsConnected()) {
-        return;
-    }
-
-    ClientProcessMessages(client);
-
-    // Sample accumulator once per server tick and push command into command queue
-    if (client->controller.sampleInputAccum >= CL_SAMPLE_INPUT_DT) {
-        client->controller.cmdAccum.seq = ++client->controller.nextSeq;
-        client->controller.cmdQueue.push(client->controller.cmdAccum);
-        client->controller.cmdAccum = {};
-        client->controller.lastInputSampleAt = client->now;
-        client->controller.sampleInputAccum -= CL_SAMPLE_INPUT_DT;
-    }
-
-    // Send rolled up input at fixed interval
-    if (client->now - client->controller.lastCommandSentAt >= CL_SEND_INPUT_DT) {
-        ClientSendInput(client, client->controller);
-        client->controller.lastCommandSentAt = client->now;
-    }
-
-    client->yj_client->SendPackets();
-}
-
-void ClientStop(GameClient *client)
-{
-    client->yj_client->Disconnect();
-    client->clientTimeDeltaVsServer = 0;
-    client->netTickAccum = 0;
-    client->lastNetTick = 0;
-    client->now = 0;
-
-    client->controller = {};
-    delete client->world;
-    client->world = {};
-}
-
 int main(int argc, char *argv[])
 //int __stdcall WinMain(void *hInstance, void *hPrevInstance, char *pCmdLine, int nCmdShow)
 {
@@ -282,21 +52,19 @@ int main(int argc, char *argv[])
         printf("Failed to load common resources\n");
     }
 
-    err = InitUI();
-    if (err) {
-        printf("Failed to load UI resources\n");
-    }
-
     //--------------------
     // Client
     GameClient *client = new GameClient;
     client->now = GetTime();
-    ClientStart(client);
+    client->Start();
 
     Histogram histogram{};
     double frameStart = GetTime();
     double frameDt = 0;
     double frameDtSmooth = 60;
+
+    bool showNetInfo = false;
+    bool showTodoList = false;
 
     while (!WindowShouldClose())
     {
@@ -324,16 +92,22 @@ int main(int argc, char *argv[])
         }
 
         if (IsKeyPressed(KEY_C)) {
-            ClientTryConnect(client);
+            client->TryConnect();
         }
         if (IsKeyPressed(KEY_X)) {
-            ClientStop(client);
+            client->Stop();
         }
         if (IsKeyPressed(KEY_Z)) {
             CL_DBG_SNAPSHOT_SHADOWS = !CL_DBG_SNAPSHOT_SHADOWS;
         }
         if (IsKeyPressed(KEY_H)) {
             histogram.paused = !histogram.paused;
+        }
+        if (IsKeyPressed(KEY_T)) {
+            showTodoList = !showTodoList;
+            if (showTodoList) {
+                client->todoList.Load(TODO_LIST_PATH);
+            }
         }
 
         Vector2 cursorWorldPos{};
@@ -358,7 +132,7 @@ int main(int argc, char *argv[])
             if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
                 Tilemap::Coord coord{};
                 if (client->world->map.WorldToTileIndex(cursorWorldPos.x, cursorWorldPos.y, coord)) {
-                    ClientSendTileInteract(client, coord.x, coord.y);
+                    client->SendTileInteract(coord.x, coord.y);
                 }
             }
         }
@@ -366,7 +140,7 @@ int main(int argc, char *argv[])
         //--------------------
         // Networking
         if (doNetTick) {
-            ClientUpdate(client);
+            client->Update();
             client->lastNetTick = client->now;
             client->netTickAccum -= SV_TICK_DT;
         }
@@ -463,7 +237,7 @@ int main(int argc, char *argv[])
                     entity->color = ColorBrightness(entity->color, 0.2f);
                     bool down = IsMouseButtonPressed(MOUSE_BUTTON_LEFT);
                     if (down) {
-                        ClientSendEntityInteract(client, entityId);
+                        client->SendEntityInteract(entityId);
                     }
                     hoveredEntityId = entityId;
                 }
@@ -488,7 +262,7 @@ int main(int argc, char *argv[])
             } else {
                 UIState connectButton = UIButton(fntHackBold20, BLUE, "Connect", uiPosition, uiCursor);
                 if (connectButton.clicked) {
-                    ClientTryConnect(client);
+                    client->TryConnect();
                 }
             }
         }
@@ -535,7 +309,6 @@ int main(int argc, char *argv[])
                 case yojimbo::CLIENT_STATE_CONNECTED:    clientStateStr = "CLIENT_STATE_CONNECTED"; break;
             }
 
-            static bool showNetInfo = false;
             Rectangle netInfoRect{};
             DRAW_TEXT_MEASURE(&netInfoRect,
                 showNetInfo ? "[-] state" : "[+] state",
@@ -561,7 +334,6 @@ int main(int argc, char *argv[])
                 uiPosition.x -= 16.0f;
             }
 
-            static bool showTodoList = false;
             Rectangle todoListRect{};
             DRAW_TEXT_MEASURE(&todoListRect, showTodoList ? "[-] todo" : "[+] todo");
             if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)
@@ -575,13 +347,13 @@ int main(int argc, char *argv[])
 
                 UIState loadButton = UIButton(fntHackBold20, BLUE, "Load", uiPosition, uiCursor);
                 if (loadButton.clicked) {
-                    client->todoList.Load("resources/todo.txt");
+                    client->todoList.Load(TODO_LIST_PATH);
                 }
                 uiCursor.x += 8;
 
                 UIState saveButton = UIButton(fntHackBold20, BLUE, "Save", uiPosition, uiCursor);
                 if (saveButton.clicked) {
-                    client->todoList.Save("resources/todo.txt");
+                    client->todoList.Save(TODO_LIST_PATH);
                 }
                 uiCursor.x = 0;
                 uiCursor.y += fntHackBold20.baseSize + 8;
@@ -597,13 +369,12 @@ int main(int argc, char *argv[])
 
     //--------------------
     // Cleanup
-    ClientStop(client);
+    client->Stop();
     delete client->yj_client;
     client->yj_client = {};
     delete client;
     ShutdownYojimbo();
 
-    FreeUI();
     FreeCommon();
     CloseWindow();
 

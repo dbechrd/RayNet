@@ -1,27 +1,6 @@
 #include "ui.h"
 #include "../shared_lib.h"
 
-Sound sndSoftTick;
-Sound sndHardTick;
-
-Err InitUI(void)
-{
-    Err err = RN_SUCCESS;
-
-    sndSoftTick = LoadSound("resources/soft_tick.wav");
-    if (!sndSoftTick.frameCount) err = RN_RAYLIB_ERROR;
-    sndHardTick = LoadSound("resources/hard_tick.wav");
-    if (!sndHardTick.frameCount) err = RN_RAYLIB_ERROR;
-
-    return err;
-}
-
-void FreeUI(void)
-{
-    UnloadSound(sndSoftTick);
-    UnloadSound(sndHardTick);
-}
-
 UIState UIButton(Font font, Color color, const char *text, Vector2 uiPosition, Vector2 &uiCursor)
 {
     Vector2 position = Vector2Add(uiPosition, uiCursor);

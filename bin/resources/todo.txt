@@ -1,5 +1,5 @@
 [x] Todo list
-[ ] Refactor GameClient into its own file
+[x] Refactor GameClient into its own file
 [ ] Chat
 [ ] Items
 [ ] Inventory (w/ Hotbar)

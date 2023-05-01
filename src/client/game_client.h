@@ -31,21 +31,14 @@ struct GameClient {
         return serverNow;
     }
 
-    uint32_t LocalPlayerEntityId(void) {
-        if (yj_client->IsConnected()) {
-            // TODO(dlb)[cleanup]: Yikes.. the server should send us our entityId when we connect
-            return yj_client->GetClientIndex() + 1;
-        }
-        return 0;
-    }
-
-    Entity *LocalPlayer(void) {
-        if (yj_client->IsConnected()) {
-            Entity *localPlayer = world->GetEntity(LocalPlayerEntityId());
-            if (localPlayer && localPlayer->type == Entity_Player) {
-                return localPlayer;
-            }
-        }
-        return 0;
-    }
+    uint32_t LocalPlayerEntityId(void);
+    Entity *LocalPlayer(void);
+    Err TryConnect(void);
+    void Start(void);
+    void SendInput(const Controller &controller);
+    void SendEntityInteract(uint32_t entityId);
+    void SendTileInteract(uint32_t x, uint32_t y);
+    void ProcessMessages(void);
+    void Update(void);
+    void Stop(void);
 };
