@@ -343,22 +343,7 @@ int main(int argc, char *argv[])
             }
             if (showTodoList) {
                 uiPosition.y += 8;
-                Vector2 uiCursor{};
-
-                UIState loadButton = UIButton(fntHackBold20, BLUE, "Load", uiPosition, uiCursor);
-                if (loadButton.clicked) {
-                    client->todoList.Load(TODO_LIST_PATH);
-                }
-                uiCursor.x += 8;
-
-                UIState saveButton = UIButton(fntHackBold20, BLUE, "Save", uiPosition, uiCursor);
-                if (saveButton.clicked) {
-                    client->todoList.Save(TODO_LIST_PATH);
-                }
-                uiCursor.x = 0;
-                uiCursor.y += fntHackBold20.baseSize + 8;
-
-                client->todoList.Draw(uiPosition, uiCursor);
+                client->todoList.Draw(uiPosition);
             }
         }
 

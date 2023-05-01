@@ -3,6 +3,7 @@
 
 struct UIState {
     bool hover;
+    bool pressed;
     bool down;
     bool clicked;
 };

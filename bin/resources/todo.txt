@@ -1,8 +1,9 @@
 [x] Todo list
 [x] Refactor GameClient into its own file
-[ ] Chat
+[ ] Send map data to client
+[ ] Switch maps
 [ ] Items
 [ ] Inventory (w/ Hotbar)
 [ ] NPC inventory (Buy/Sell UI)
-[ ] Send map data to client
-[ ] Switch maps
+[ ] Y sort (requires drawlist -_-)
+[ ] Chat

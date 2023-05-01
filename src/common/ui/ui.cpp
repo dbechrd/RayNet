@@ -20,7 +20,7 @@ UIState UIButton(Font font, Color color, const char *text, Vector2 uiPosition, V
         buttonSize.x + lineThick.x * 2,
         buttonSize.y + lineThick.y * 2
     };
-    if (lineThick.x || lineThick.y) {
+    if (color.a && (lineThick.x || lineThick.y)) {
         DrawRectangleRounded(
             buttonRect,
             cornerRoundness, cornerSegments, BLACK
@@ -47,6 +47,9 @@ UIState UIButton(Font font, Color color, const char *text, Vector2 uiPosition, V
         if (IsMouseButtonDown(MOUSE_BUTTON_LEFT)) {
             state.down = true;
             effectiveColor = ColorBrightness(color, -0.3f);
+            if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
+                state.pressed = true;
+            }
         } else if (IsMouseButtonReleased(MOUSE_BUTTON_LEFT)) {
             state.clicked = true;
         }
@@ -63,9 +66,11 @@ UIState UIButton(Font font, Color color, const char *text, Vector2 uiPosition, V
     }
 
     float yOffset = (state.down ? 0 : -lineThick.y * 2);
-    DrawRectangleRounded(
-        { position.x, position.y + yOffset, buttonSize.x, buttonSize.y },
-        cornerRoundness, cornerSegments, effectiveColor);
+    if (color.a) {
+        DrawRectangleRounded(
+            { position.x, position.y + yOffset, buttonSize.x, buttonSize.y },
+            cornerRoundness, cornerSegments, effectiveColor);
+    }
     DrawTextShadowEx(font, text,
         { position.x + pad.x, position.y + pad.y + yOffset },
         font.baseSize, WHITE);
