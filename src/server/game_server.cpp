@@ -367,9 +367,9 @@ void GameServer::ProcessMessages(void)
                         Msg_C_TileInteract *msg = (Msg_C_TileInteract *)yjMsg;
                         Tile tile{};
                         if (world->map.AtTry(msg->x, msg->y, tile)) {
-                            world->map.Set(msg->x, msg->y, 0);
-                            // TODO: If player is currently holding the magic tile inspector tool
+                            //world->map.Set(msg->x, msg->y, 0);
 #if 0
+                            // TODO: If player is currently holding the magic tile inspector tool
                             uint32_t idLabel = world->CreateEntity(Entity_Projectile);
                             if (idLabel) {
                                 Entity &eLabel = world->entities[idLabel];

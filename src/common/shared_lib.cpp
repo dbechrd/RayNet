@@ -1,6 +1,7 @@
 #include "shared_lib.h"
 #include "collision.cpp"
 #include "entity.cpp"
+#include "file_utils.cpp"
 #include "net/net.cpp"
 #include "tilemap.cpp"
 

@@ -6,6 +6,9 @@
 #include "yojimbo.h"
 #pragma warning(pop)
 #include <cassert>
+#include <cstdio>
+#include <ctime>
+#include <cctype>
 
 // Stuff that probably shouldn't be here
 

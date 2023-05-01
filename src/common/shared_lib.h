@@ -3,6 +3,7 @@
 #include "common.h"
 #include "collision.h"
 #include "entity.h"
+#include "file_utils.h"
 #include "input_command.h"
 #include "net/entity_snapshot.h"
 #include "net/messages/msg_c_input_commands.h"

@@ -1,6 +1,5 @@
 #pragma once
 #include "common.h"
-#include <cstdio>
 
 #define AI_PATH_NONE UINT32_MAX
 
@@ -49,8 +48,6 @@ struct Tilemap {
     void Free(void);
     ~Tilemap();
 
-    Err HexifyFile(const char *filename);
-    Err MakeBackup(const char *filename);
     Err Save(const char *filename);
     Err Load(const char *filename);
 

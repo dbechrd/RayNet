@@ -393,7 +393,7 @@ Err Play(GameServer &server)
 
             Vector2 uiCursor = uiMargin;
 
-            UIState saveButton = UIButton(fntHackBold20, "Save", uiPosition, uiCursor);
+            UIState saveButton = UIButton(fntHackBold20, BLUE, "Save", uiPosition, uiCursor);
             if (saveButton.clicked) {
                 if (map.Save(LEVEL_001) != RN_SUCCESS) {
                     // TODO: Display error message on screen for N seconds or
@@ -403,7 +403,7 @@ Err Play(GameServer &server)
 
             uiCursor.x += uiPadding.x;
 
-            UIState loadButton = UIButton(fntHackBold20, "Load", uiPosition, uiCursor);
+            UIState loadButton = UIButton(fntHackBold20, BLUE, "Load", uiPosition, uiCursor);
             if (loadButton.clicked) {
                 Err err = map.Load(LEVEL_001);
                 if (err != RN_SUCCESS) {

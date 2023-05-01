@@ -12,4 +12,4 @@ struct UIState {
 
 Err InitUI(void);
 void FreeUI(void);
-UIState UIButton(Font font, const char *text, Vector2 uiPosition, Vector2 &uiCursor);
+UIState UIButton(Font font, Color color, const char *text, Vector2 uiPosition, Vector2 &uiCursor);

@@ -22,7 +22,7 @@ void FreeUI(void)
     UnloadSound(sndHardTick);
 }
 
-UIState UIButton(Font font, const char *text, Vector2 uiPosition, Vector2 &uiCursor)
+UIState UIButton(Font font, Color color, const char *text, Vector2 uiPosition, Vector2 &uiCursor)
 {
     Vector2 position = Vector2Add(uiPosition, uiCursor);
     const Vector2 pad{ 8, 1 };
@@ -48,16 +48,26 @@ UIState UIButton(Font font, const char *text, Vector2 uiPosition, Vector2 &uiCur
         );
     }
 
-    static const char *prevHover = 0;
+    static struct HoverHash {
+        const char *text{};
+        Vector2 position{};
 
-    Color color = BLUE;
+        HoverHash(void) {};
+        HoverHash(const char *text, Vector2 position) : text(text), position(position) {}
+
+        bool Equals(HoverHash &other) {
+            return text == other.text && Vector2Equals(position, other.position);
+        }
+    } prevHoverHash{};
+
+    Color effectiveColor = color;
     UIState state{};
     if (dlb_CheckCollisionPointRec(GetMousePosition(), buttonRect)) {
         state.hover = true;
-        color = SKYBLUE;
+        effectiveColor = ColorBrightness(color, 0.3f);
         if (IsMouseButtonDown(MOUSE_BUTTON_LEFT)) {
             state.down = true;
-            color = DARKBLUE;
+            effectiveColor = ColorBrightness(color, -0.3f);
         } else if (IsMouseButtonReleased(MOUSE_BUTTON_LEFT)) {
             state.clicked = true;
         }
@@ -65,14 +75,21 @@ UIState UIButton(Font font, const char *text, Vector2 uiPosition, Vector2 &uiCur
 
     if (state.clicked) {
         PlaySound(sndHardTick);
-    } else if (state.hover && text != prevHover) {
-        PlaySound(sndSoftTick);
-        prevHover = text;
+    } else if (state.hover) {
+        HoverHash hash{ text, { buttonRect.x, buttonRect.y } };
+        if (!hash.Equals(prevHoverHash)) {
+            PlaySound(sndSoftTick);
+            prevHoverHash = hash;
+        }
     }
 
     float yOffset = (state.down ? 0 : -lineThick.y * 2);
-    DrawRectangleRounded({ position.x, position.y + yOffset, buttonSize.x, buttonSize.y }, cornerRoundness, cornerSegments, color);
-    DrawTextShadowEx(font, text, { position.x + pad.x, position.y + pad.y + yOffset }, font.baseSize, WHITE);
+    DrawRectangleRounded(
+        { position.x, position.y + yOffset, buttonSize.x, buttonSize.y },
+        cornerRoundness, cornerSegments, effectiveColor);
+    DrawTextShadowEx(font, text,
+        { position.x + pad.x, position.y + pad.y + yOffset },
+        font.baseSize, WHITE);
 
     uiCursor.x += buttonSize.x;
     return state;

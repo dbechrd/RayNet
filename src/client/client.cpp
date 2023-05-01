@@ -3,8 +3,7 @@
 #include "../common/ui/ui.h"
 #include "client_world.h"
 #include "game_client.h"
-#include <deque>
-#include <time.h>
+#include "todo.h"
 
 static bool CL_DBG_SNAPSHOT_SHADOWS = false;
 
@@ -487,13 +486,14 @@ int main(int argc, char *argv[])
             } else if (client->yj_client->IsConnecting()) {
                 DrawTextShadowEx(fntHackBold20, "Connecting...", uiPosition, FONT_SIZE, WHITE);
             } else {
-                UIState connectButton = UIButton(fntHackBold20, "Connect", uiPosition, uiCursor);
+                UIState connectButton = UIButton(fntHackBold20, BLUE, "Connect", uiPosition, uiCursor);
                 if (connectButton.clicked) {
                     ClientTryConnect(client);
                 }
             }
         }
 
+        // HP bar
         if (hoveredEntityId) {
             Entity *entity = client->world->GetEntity(hoveredEntityId);
             assert(entity); // huh?
@@ -502,19 +502,19 @@ int main(int argc, char *argv[])
             }
         }
 
+        Vector2 uiPosition{ 8, 30 };
+
+        // Debug HUD
         {
-            float hud_x = 8.0f;
-            float hud_y = 30.0f;
             char buf[128];
             #define DRAW_TEXT_MEASURE(measureRect, label, fmt, ...) { \
                 snprintf(buf, sizeof(buf), "%-11s : " fmt, label, __VA_ARGS__); \
-                Vector2 position{ hud_x, hud_y }; \
-                DrawTextShadowEx(fntHackBold20, buf, position, (float)fntHackBold20.baseSize, RAYWHITE); \
+                DrawTextShadowEx(fntHackBold20, buf, uiPosition, (float)fntHackBold20.baseSize, RAYWHITE); \
                 if (measureRect) { \
                     Vector2 measure = MeasureTextEx(fntHackBold20, buf, (float)fntHackBold20.baseSize, 1.0); \
-                    *measureRect = { position.x, position.y, measure.x, measure.y }; \
+                    *measureRect = { uiPosition.x, uiPosition.y, measure.x, measure.y }; \
                 } \
-                hud_y += fntHackBold20.baseSize; \
+                uiPosition.y += fntHackBold20.baseSize; \
             }
 
             #define DRAW_TEXT(label, fmt, ...) \
@@ -547,7 +547,7 @@ int main(int argc, char *argv[])
                 showNetInfo = !showNetInfo;
             }
             if (showNetInfo) {
-                hud_x += 16.0f;
+                uiPosition.x += 16.0f;
                 yojimbo::NetworkInfo netInfo{};
                 client->yj_client->GetNetworkInfo(netInfo);
                 DRAW_TEXT("rtt", "%.2f", netInfo.RTT);
@@ -558,7 +558,35 @@ int main(int argc, char *argv[])
                 DRAW_TEXT("sent (pckt)", "%" PRIu64, netInfo.numPacketsSent);
                 DRAW_TEXT("recv (pckt)", "%" PRIu64, netInfo.numPacketsReceived);
                 DRAW_TEXT("ack  (pckt)", "%" PRIu64, netInfo.numPacketsAcked);
-                hud_x -= 16.0f;
+                uiPosition.x -= 16.0f;
+            }
+
+            static bool showTodoList = false;
+            Rectangle todoListRect{};
+            DRAW_TEXT_MEASURE(&todoListRect, showTodoList ? "[-] todo" : "[+] todo");
+            if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)
+                && CheckCollisionPointRec({ (float)GetMouseX(), (float)GetMouseY() }, todoListRect))
+            {
+                showTodoList = !showTodoList;
+            }
+            if (showTodoList) {
+                uiPosition.y += 8;
+                Vector2 uiCursor{};
+
+                UIState loadButton = UIButton(fntHackBold20, BLUE, "Load", uiPosition, uiCursor);
+                if (loadButton.clicked) {
+                    client->todoList.Load("resources/todo.txt");
+                }
+                uiCursor.x += 8;
+
+                UIState saveButton = UIButton(fntHackBold20, BLUE, "Save", uiPosition, uiCursor);
+                if (saveButton.clicked) {
+                    client->todoList.Save("resources/todo.txt");
+                }
+                uiCursor.x = 0;
+                uiCursor.y += fntHackBold20.baseSize + 8;
+
+                client->todoList.Draw(uiPosition, uiCursor);
             }
         }
 

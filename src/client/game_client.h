@@ -1,5 +1,6 @@
 #pragma once
 #include "../common/shared_lib.h"
+#include "todo.h"
 
 struct ClientWorld;
 
@@ -23,6 +24,7 @@ struct GameClient {
 
     Controller controller{};
     ClientWorld *world{};
+    TodoList todoList{};
 
     inline double ServerNow(void) {
         const double serverNow = now - clientTimeDeltaVsServer;

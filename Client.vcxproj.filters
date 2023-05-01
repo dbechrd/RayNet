@@ -8,6 +8,7 @@
     <ClCompile Include="src\common\histogram.cpp" />
     <ClCompile Include="src\client\client_world.cpp" />
     <ClCompile Include="src\common\ui\ui.cpp" />
+    <ClCompile Include="src\client\todo.cpp" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="res\client.ico" />
@@ -20,5 +21,6 @@
     <ClInclude Include="src\client\game_client.h" />
     <ClInclude Include="src\client\client_world.h" />
     <ClInclude Include="src\common\ui\ui.h" />
+    <ClInclude Include="src\client\todo.h" />
   </ItemGroup>
 </Project>
