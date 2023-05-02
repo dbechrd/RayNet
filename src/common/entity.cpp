@@ -205,7 +205,7 @@ void Entity::DrawHoverInfo(void)
             floorf(hpBarBg.x + hpBarBg.width / 2 - labelSize.x / 2),
             floorf(hpBarBg.y + hpBarBg.height / 2 - labelSize.y / 2)
         };
-        DrawTextShadowEx(fntHackBold20, "Lily", labelPos, fntHackBold20.baseSize, WHITE);
+        DrawTextShadowEx(fntHackBold20, "Lily", labelPos, WHITE);
     }
 }
 

@@ -176,7 +176,7 @@ void ClientWorld::DrawDialog(Dialog &dialog, Vector2 bottomCenter)
 {
     const float marginBottom = 4.0f;
     Vector2 bgPad{ 8, 2 };
-    Vector2 msgSize = MeasureTextEx(fntHackBold20, dialog.message, FONT_SIZE, 1.0f);
+    Vector2 msgSize = MeasureTextEx(fntHackBold20, dialog.message, fntHackBold20.baseSize, 1.0f);
     Vector2 msgPos{
         bottomCenter.x - msgSize.x / 2,
         bottomCenter.y - msgSize.y - bgPad.y * 2 - marginBottom
@@ -189,7 +189,7 @@ void ClientWorld::DrawDialog(Dialog &dialog, Vector2 bottomCenter)
     };
     DrawRectangleRounded(msgBgRect, 0.2f, 6, Fade(BLACK, 0.5));
     //DrawRectangleRoundedLines(msgBgRect, 0.2f, 6, 1.0f, RAYWHITE);
-    DrawTextEx(fntHackBold20, dialog.message, msgPos, FONT_SIZE, 1.0f, RAYWHITE);
+    DrawTextEx(fntHackBold20, dialog.message, msgPos, fntHackBold20.baseSize, 1.0f, RAYWHITE);
     //DrawTextShadowEx(fntHackBold20, dialog.message, msgPos, FONT_SIZE, RAYWHITE);
 }
 

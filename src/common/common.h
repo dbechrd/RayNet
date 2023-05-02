@@ -5,6 +5,7 @@
 #pragma warning(push, 0)
 #include "yojimbo.h"
 #pragma warning(pop)
+#include <stack>
 #include <cassert>
 #include <cstdio>
 #include <ctime>
@@ -16,9 +17,6 @@
 #define WINDOW_HEIGHT 900
 
 #define TILE_W 32
-
-#define FONT_PATH "resources/Hack-Bold.ttf"
-#define FONT_SIZE 20
 
 #define TODO_LIST_PATH "resources/todo.txt"
 
@@ -83,6 +81,7 @@ enum Err {
 // Dumb stuff that should get a resource manager or wutevs
 
 extern Font fntHackBold20;
+extern Font fntHackBold32;
 
 extern Texture texLily;
 

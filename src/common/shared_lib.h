@@ -13,4 +13,4 @@
 #include "ring_buffer.h"
 #include "tilemap.h"
 
-void DrawTextShadowEx(Font font, const char *text, Vector2 pos, float fontSize, Color color);
+void DrawTextShadowEx(Font font, const char *text, Vector2 pos, Color color);

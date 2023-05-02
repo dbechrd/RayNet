@@ -254,13 +254,19 @@ int main(int argc, char *argv[])
             SetMasterVolume(1);
 
             Vector2 uiPosition{ screenSize.x / 2, screenSize.y / 2 };
-            Vector2 uiCursor{};
+            UIStyle uiStyleMenu {};
+            uiStyleMenu.pad = { 16, 4 };
+            uiStyleMenu.font = &fntHackBold32;
+            UI uiMenu{ uiPosition, uiStyleMenu };
+
             if (client->yj_client->IsConnected()) {
-                DrawTextShadowEx(fntHackBold20, "Loading...", uiPosition, FONT_SIZE, WHITE);
+                // TODO(dlb): UI::Text (style.align = Centered)
+                DrawTextShadowEx(fntHackBold20, "Loading...", uiPosition, WHITE);
             } else if (client->yj_client->IsConnecting()) {
-                DrawTextShadowEx(fntHackBold20, "Connecting...", uiPosition, FONT_SIZE, WHITE);
+                // TODO(dlb): UI::Text (style.align = Centered)
+                DrawTextShadowEx(fntHackBold20, "Connecting...", uiPosition, WHITE);
             } else {
-                UIState connectButton = UIButton(fntHackBold20, BLUE, "Connect", uiPosition, uiCursor);
+                UIState connectButton = uiMenu.Button("Connect");
                 if (connectButton.clicked) {
                     client->TryConnect();
                 }
@@ -283,7 +289,7 @@ int main(int argc, char *argv[])
             char buf[128];
             #define DRAW_TEXT_MEASURE(measureRect, label, fmt, ...) { \
                 snprintf(buf, sizeof(buf), "%-11s : " fmt, label, __VA_ARGS__); \
-                DrawTextShadowEx(fntHackBold20, buf, uiPosition, (float)fntHackBold20.baseSize, RAYWHITE); \
+                DrawTextShadowEx(fntHackBold20, buf, uiPosition, RAYWHITE); \
                 if (measureRect) { \
                     Vector2 measure = MeasureTextEx(fntHackBold20, buf, (float)fntHackBold20.baseSize, 1.0); \
                     *measureRect = { uiPosition.x, uiPosition.y, measure.x, measure.y }; \

@@ -122,57 +122,58 @@ bool TodoList::TrySwapItems(int i, int j)
     return true;
 }
 
-void TodoList::Draw(Vector2 uiPosition)
+void TodoList::Draw(Vector2 position)
 {
     static int textDraggingIndex = -1;
 
-    Vector2 uiCursor{};
+    UIStyle uiStyle{};
+    uiStyle.margin = { 4, 0, 0, 4 };
+    UI ui{ position, uiStyle };
 
-    UIState loadButton = UIButton(fntHackBold20, BLUE, "Load", uiPosition, uiCursor);
+    UIState loadButton = ui.Button("Load");
     if (loadButton.clicked) {
         Load(TODO_LIST_PATH);
     }
-    uiCursor.x += 8;
 
-    UIState saveButton = UIButton(fntHackBold20, dirty ? ColorBrightness(ORANGE, -0.2f) : BLUE, dirty ? "Save*" : "Save", uiPosition, uiCursor);
+    UIState saveButton;
+    if (dirty) {
+        saveButton = ui.Button("Save*", ColorBrightness(ORANGE, -0.2f));
+    } else {
+        saveButton = ui.Button("Save");
+    }
     if (saveButton.clicked) {
         Save(TODO_LIST_PATH);
     }
-    uiCursor.x = 0;
-    uiCursor.y += fntHackBold20.baseSize + 8;
+
+    ui.Newline();
 
     //DrawTextShadowEx(fntHackBold20, TextFormat("dragIdx: %d", textDraggingIndex), Vector2Add(uiPosition, uiCursor), fntHackBold20.baseSize, WHITE);
     //uiCursor.y += fntHackBold20.baseSize + 4;
 
-    const Vector2 margin { 8, 4 };
+    const Vector2 margin { 8, 6 };
     for (int i = 0; i < itemCount; i++) {
-        uiCursor.x = 0;
-
         if (items[i].done) {
-            UIState restartButton = UIButton(fntHackBold20, DARKGREEN, "Done", uiPosition, uiCursor);
-            if (restartButton.clicked) {
+            UIState doneButton = ui.Button("Done", DARKGREEN);
+            if (doneButton.clicked) {
                 items[i].done = false;
                 dirty = true;
             }
         } else {
-            UIState doneButton = UIButton(fntHackBold20, MAROON, "Todo", uiPosition, uiCursor);
-            if (doneButton.clicked) {
+            UIState todoButton = ui.Button("Todo", MAROON);
+            if (todoButton.clicked) {
                 items[i].done = true;
                 dirty = true;
             }
         }
-        uiCursor.x += margin.x;
 
-        UIState dragButton = UIButton(fntHackBold20, i == textDraggingIndex ? ORANGE : DARKGRAY, " ", uiPosition, uiCursor);
-        uiCursor.x += margin.x;
-
+        UIState dragButton = ui.Button(" ", i == textDraggingIndex ? ORANGE : DARKGRAY);
         if (dragButton.pressed) {
             textDraggingIndex = i;
         } else if (textDraggingIndex == i && !IsMouseButtonDown(MOUSE_BUTTON_LEFT)) {
             textDraggingIndex = -1;
         }
 
-        bool mouseAboveMe = GetMouseY() < uiPosition.y + uiCursor.y;
+        bool mouseAboveMe = GetMouseY() < ui.CursorScreen().y;
         if (textDraggingIndex >= i && mouseAboveMe) {
             if (TrySwapItems(textDraggingIndex, textDraggingIndex - 1)) {
                 textDraggingIndex--;
@@ -205,7 +206,8 @@ void TodoList::Draw(Vector2 uiPosition)
         uiCursor.x += margin.x;
 #endif
 
-        DrawTextShadowEx(fntHackBold20, items[i].text, Vector2Add(uiPosition, uiCursor), fntHackBold20.baseSize, WHITE);
-        uiCursor.y += fntHackBold20.baseSize + margin.y;
+        Vector2 textPos = Vector2Add(ui.CursorScreen(), uiStyle.margin.TopLeft());
+        DrawTextShadowEx(fntHackBold20, items[i].text, textPos, WHITE);
+        ui.Newline();
     }
 }

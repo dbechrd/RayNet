@@ -97,8 +97,6 @@ Err Play(GameServer &server)
     double frameDtSmooth = 60;
 
     bool editorActive = false;
-    const Vector2 uiMargin{ 8, 8 };
-    const Vector2 uiPadding{ 8, 8 };
     const Vector2 uiPosition{ 380, 8 };
     const Rectangle editorRect{ uiPosition.x, uiPosition.y, 800, 80 };
 
@@ -383,12 +381,14 @@ Err Play(GameServer &server)
 
         // [Editor] Action Bar
         if (editorActive) {
+            UIStyle uiEditorMenuStyle{};
+            UI uiEditorMenu{ uiPosition, uiEditorMenuStyle };
+
+            // TODO: UI::Panel
             DrawRectangleRounded(editorRect, 0.2f, 6, ASESPRITE_BEIGE);
             DrawRectangleRoundedLines(editorRect, 0.2f, 6, 2.0f, BLACK);
 
-            Vector2 uiCursor = uiMargin;
-
-            UIState saveButton = UIButton(fntHackBold20, BLUE, "Save", uiPosition, uiCursor);
+            UIState saveButton = uiEditorMenu.Button("Save");
             if (saveButton.clicked) {
                 if (map.Save(LEVEL_001) != RN_SUCCESS) {
                     // TODO: Display error message on screen for N seconds or
@@ -396,9 +396,7 @@ Err Play(GameServer &server)
                 }
             }
 
-            uiCursor.x += uiPadding.x;
-
-            UIState loadButton = UIButton(fntHackBold20, BLUE, "Load", uiPosition, uiCursor);
+            UIState loadButton = uiEditorMenu.Button("Load");
             if (loadButton.clicked) {
                 Err err = map.Load(LEVEL_001);
                 if (err != RN_SUCCESS) {
@@ -409,15 +407,18 @@ Err Play(GameServer &server)
                 }
             }
 
-            uiCursor.x = uiMargin.x;
-            uiCursor.y += 30.0f;  // TODO: Calculate MAX(button.height) + pad.y
+            uiEditorMenu.Newline();
 
             // [Editor] Tile selector
             const bool editorPickTileDef = IsMouseButtonPressed(MOUSE_BUTTON_LEFT);
 
+            // TODO(dlb): UI::Panel (or row.style.colorBg?)
+            Vector2 uiCursor = uiEditorMenu.CursorScreen();
+            uiCursor = Vector2Add(uiCursor, uiEditorMenuStyle.margin.TopLeft());
+
             DrawRectangle(
-                uiPosition.x + uiCursor.x - 2,
-                uiPosition.y + uiCursor.y - 2,
+                uiCursor.x,
+                uiCursor.y,
                 server.world->map.tileDefCount * TILE_W + server.world->map.tileDefCount * 2 + 2,
                 TILE_W + 4,
                 BLACK
@@ -427,8 +428,8 @@ Err Play(GameServer &server)
                 TileDef &tileDef = server.world->map.tileDefs[i];
                 Rectangle texRect{ (float)tileDef.x, (float)tileDef.y, TILE_W, TILE_W };
                 Vector2 screenPos = {
-                    uiPosition.x + uiCursor.x + i * TILE_W + i * 2,
-                    uiPosition.y + uiCursor.y
+                    uiCursor.x + 2 + i * TILE_W + i * 2,
+                    uiCursor.y + 2
                 };
 
                 Rectangle tileDefRectScreen{ screenPos.x, screenPos.y, TILE_W, TILE_W };
@@ -472,7 +473,7 @@ Err Play(GameServer &server)
                     snprintf(buf, sizeof(buf), fmt, __VA_ARGS__); \
                 } \
                 Vector2 position{ hud_x, hud_y }; \
-                DrawTextShadowEx(fntHackBold20, buf, position, (float)fntHackBold20.baseSize, RAYWHITE); \
+                DrawTextShadowEx(fntHackBold20, buf, position, RAYWHITE); \
                 if (measureRect) { \
                     Vector2 measure = MeasureTextEx(fntHackBold20, buf, (float)fntHackBold20.baseSize, 1.0); \
                     *measureRect = { position.x, position.y, measure.x, measure.y }; \

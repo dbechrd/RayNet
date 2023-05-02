@@ -16,7 +16,7 @@ struct TodoList {
     ~TodoList(void);
     Err Save(const char *filename);
     Err Load(const char *filename);
-    void Draw(Vector2 uiPosition);
+    void Draw(Vector2 position);
 
 private:
     bool TrySwapItems(int i, int j);

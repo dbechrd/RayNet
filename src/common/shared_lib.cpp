@@ -5,15 +5,15 @@
 #include "net/net.cpp"
 #include "tilemap.cpp"
 
-void DrawTextShadowEx(Font font, const char *text, Vector2 pos, float fontSize, Color color)
+void DrawTextShadowEx(Font font, const char *text, Vector2 pos, Color color)
 {
     Vector2 shadowPos = pos;
     shadowPos.x += 1;
     shadowPos.y += 1;
 
     //DrawRectangle(windowWidth / 2 - textSize.x / 2, 370, textSize.x, textSize.y, WHITE);
-    DrawTextEx(font, text, shadowPos, fontSize, 1, BLACK);
-    DrawTextEx(font, text, pos, fontSize, 1, color);
+    DrawTextEx(font, text, shadowPos, font.baseSize, 1, BLACK);
+    DrawTextEx(font, text, pos, font.baseSize, 1, color);
 }
 
 #ifdef TRACY_ENABLE
