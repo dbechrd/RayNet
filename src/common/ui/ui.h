@@ -75,7 +75,7 @@ struct UI {
 
     void Newline(void);
 
-    // TODO(dlb): Make uiCursor a member variable?
+    void Text(const char *text);
     UIState Button(const char *text);
     UIState Button(const char *text, Color bgColor);
 

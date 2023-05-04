@@ -74,9 +74,6 @@ void GameClient::Start(void)
         now
     );
 
-    if (TryConnect() < 0) {
-        printf("Failed to connect to server\n");
-    }
 #if 0
     char addressString[256];
     yj_client->GetAddress().ToString(addressString, sizeof(addressString));

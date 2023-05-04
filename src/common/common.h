@@ -33,6 +33,7 @@
 // Custom colors
 
 #define ASESPRITE_BEIGE CLITERAL(Color){ 210, 203, 190, 255 } // Asesprite Beige
+#define GRAYISH_BLUE CLITERAL(Color){ 29, 58, 61, 255 } // Some kinda gray-ish blue
 
 // Networking
 
@@ -80,6 +81,7 @@ enum Err {
 
 // Dumb stuff that should get a resource manager or wutevs
 
+extern Shader shdSdfText;
 extern Font fntHackBold20;
 extern Font fntHackBold32;
 

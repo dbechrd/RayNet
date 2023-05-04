@@ -65,9 +65,12 @@ int main(int argc, char *argv[])
 
     bool showNetInfo = false;
     bool showTodoList = false;
+    static float texMenuBgScale = 0;
 
-    while (!WindowShouldClose())
-    {
+    SetExitKey(0);
+    bool quit = false;
+
+    while (!quit) {
         client->now = GetTime();
         frameDt = MIN(client->now - frameStart, SV_TICK_DT);  // arbitrary limit for now
         frameDtSmooth = LERP(frameDtSmooth, frameDt, 0.1);
@@ -76,6 +79,8 @@ int main(int argc, char *argv[])
         client->controller.sampleInputAccum += frameDt;
         client->netTickAccum += frameDt;
         bool doNetTick = client->netTickAccum >= SV_TICK_DT;
+
+        bool escape = IsKeyPressed(KEY_ESCAPE);
 
         //--------------------
         // Input
@@ -140,6 +145,11 @@ int main(int argc, char *argv[])
         //--------------------
         // Networking
         if (doNetTick) {
+            texMenuBgScale += 0.001f;
+            if (texMenuBgScale > 1.1f) {
+                texMenuBgScale = 0;
+            }
+
             client->Update();
             client->lastNetTick = client->now;
             client->netTickAccum -= SV_TICK_DT;
@@ -156,7 +166,7 @@ int main(int argc, char *argv[])
         //--------------------
         // Draw
         BeginDrawing();
-        ClearBackground(CLITERAL(Color){ 20, 60, 30, 255 });
+        ClearBackground(GRAYISH_BLUE);
 
         uint32_t hoveredEntityId = 0;
 
@@ -253,24 +263,73 @@ int main(int argc, char *argv[])
         } else {
             SetMasterVolume(1);
 
-            Vector2 uiPosition{ screenSize.x / 2, screenSize.y / 2 };
+            Vector2 uiPosition{ screenSize.x / 2, screenSize.y / 2 - 50 };
             UIStyle uiStyleMenu {};
             uiStyleMenu.pad = { 16, 4 };
+            uiStyleMenu.bgColor = BLANK;
+            uiStyleMenu.fgColor = RAYWHITE;
             uiStyleMenu.font = &fntHackBold32;
+            uiStyleMenu.alignH = TextAlign_Center;
             UI uiMenu{ uiPosition, uiStyleMenu };
 
-            if (client->yj_client->IsConnected()) {
-                // TODO(dlb): UI::Text (style.align = Centered)
-                DrawTextShadowEx(fntHackBold20, "Loading...", uiPosition, WHITE);
-            } else if (client->yj_client->IsConnecting()) {
-                // TODO(dlb): UI::Text (style.align = Centered)
-                DrawTextShadowEx(fntHackBold20, "Connecting...", uiPosition, WHITE);
+            BeginShaderMode(shdSdfText);    // Activate SDF font shader
+
+            const char *connectingStrs[] = {
+                "Connecting   ",
+                "Connecting.  ",
+                "Connecting.. ",
+                "Connecting..."
+            };
+            static int connectingDotIdx = 0;
+            static double connectingDotIdxLastUpdatedAt = 0;
+            if (client->yj_client->IsConnecting()) {
+                if (!connectingDotIdxLastUpdatedAt) {
+                    connectingDotIdxLastUpdatedAt = client->now;
+                } else if (client->now > connectingDotIdxLastUpdatedAt + 0.5) {
+                    connectingDotIdxLastUpdatedAt = client->now;
+                    connectingDotIdx = ((size_t)connectingDotIdx + 1) % ARRAY_SIZE(connectingStrs);
+                }
             } else {
-                UIState connectButton = uiMenu.Button("Connect");
+                connectingDotIdx = 0;
+                connectingDotIdxLastUpdatedAt = 0;
+            }
+
+            if (client->yj_client->IsConnected()) {
+                uiMenu.Text("Loading...");
+            } else if (client->yj_client->IsConnecting()) {
+                uiMenu.Text(connectingStrs[connectingDotIdx]);
+            } else {
+                const Vector2 screenHalfSize{ GetScreenWidth()/2, GetScreenHeight()/2 };
+                const Vector2 screenCenter{ screenHalfSize.x, screenHalfSize.y };
+                for (float scale = 0.0f; scale < 1.1f; scale += 0.1f) {
+                    const float modScale = fmod(texMenuBgScale + scale, 1);
+                    Rectangle menuBgRect{
+                        screenCenter.x - screenHalfSize.x * modScale,
+                        screenCenter.y - screenHalfSize.y * modScale,
+                        screenSize.x * modScale,
+                        screenSize.y * modScale
+                    };
+                    //DrawRectangleLinesEx(menuBgRect, 20, BLACK);
+                }
+
+                UIState connectButton = uiMenu.Button("Play");
                 if (connectButton.clicked) {
+                    //rnSoundSystem.Play(RN_Sound_Lily_Introduction);
                     client->TryConnect();
                 }
+                uiMenu.Newline();
+                uiMenu.Button("Options");
+                uiMenu.Newline();
+                UIState quitButton = uiMenu.Button("Quit");
+                if (quitButton.clicked) {
+                    quit = true;
+                }
+
+                // Draw font atlas for SDF font
+                //DrawTexture(fntHackBold32.texture, GetScreenWidth() - fntHackBold32.texture.width, 0, WHITE);
             }
+
+            EndShaderMode();
         }
 
         // HP bar
@@ -303,7 +362,6 @@ int main(int argc, char *argv[])
             DRAW_TEXT("frameDt", "%.2f fps (%.2f ms) (vsync=%s)", 1.0 / frameDt, frameDt * 1000.0, IsWindowState(FLAG_VSYNC_HINT) ? "on" : "off");
             DRAW_TEXT("serverTime", "%.2f (%s%.2f)", client->ServerNow(), client->clientTimeDeltaVsServer > 0 ? "+" : "", client->clientTimeDeltaVsServer);
             DRAW_TEXT("localTime", "%.2f", client->now);
-            DRAW_TEXT("cursor", "%d, %d", GetMouseX(), GetMouseY());
             DRAW_TEXT("cursor", "%d, %d (world: %.f, %.f)", GetMouseX(), GetMouseY(), cursorWorldPos.x, cursorWorldPos.y);
 
             const char *clientStateStr = "unknown";
@@ -341,7 +399,7 @@ int main(int argc, char *argv[])
             }
 
             Rectangle todoListRect{};
-            DRAW_TEXT_MEASURE(&todoListRect, showTodoList ? "[-] todo" : "[+] todo");
+            DRAW_TEXT_MEASURE(&todoListRect, showTodoList ? "[-] todo" : "[+] todo", "");
             if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)
                 && CheckCollisionPointRec({ (float)GetMouseX(), (float)GetMouseY() }, todoListRect))
             {
@@ -356,6 +414,26 @@ int main(int argc, char *argv[])
         histogram.Draw(8, 8);
         EndDrawing();
         //yojimbo_sleep(0.001);
+
+        // Nobody else handled it, so user probably wants to disconnect or quit
+        // TODO: Show a menu when in-game
+        if (escape) {
+            switch (client->yj_client->GetClientState()) {
+                case yojimbo::CLIENT_STATE_CONNECTED:
+                case yojimbo::CLIENT_STATE_CONNECTING: {
+                    client->Stop();
+                    break;
+                }
+                default: {
+                    quit = true;
+                    break;
+                }
+            }
+        }
+
+        if (WindowShouldClose()) {
+            quit = true;
+        }
     }
 
     //--------------------
