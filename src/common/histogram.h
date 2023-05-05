@@ -15,5 +15,5 @@ struct Histogram {
     RingBuffer<Entry, 64> buffer;
 
     void Push(double value, Color color);
-    void Draw(float x, float y);
+    void Draw(Vector2 position);
 };

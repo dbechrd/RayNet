@@ -13,3 +13,4 @@
 [ ] Choose which server to connect to (localhost vs. DandyNet)
 [ ] Nice entering area titles
 [ ] Add UI::Image
+[ ] Add UI::Histogram

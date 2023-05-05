@@ -83,6 +83,10 @@ struct UI {
         return Vector2Add(position, cursor);
     }
 
+    void SetCursor(Vector2 cursor) {
+        this->cursor = cursor;
+    }
+
 private:
     Vector2 position{}; // top left of this UI
     Vector2 cursor{};   // where to draw next element

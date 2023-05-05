@@ -8,7 +8,7 @@ void Histogram::Push(double value, Color color)
     }
 }
 
-void Histogram::Draw(float x, float y)
+void Histogram::Draw(Vector2 position)
 {
     float maxValue = 0.0f;
     for (int i = 0; i < buffer.size(); i++) {
@@ -17,9 +17,7 @@ void Histogram::Draw(float x, float y)
 
     const float barScale = histoHeight / maxValue;
 
-    Vector2 cursor{};
-    cursor.x = x;
-    cursor.y = y;
+    Vector2 cursor{ position };
 
     for (int i = 0; i < buffer.size(); i++) {
         float bottom = cursor.y + histoHeight;

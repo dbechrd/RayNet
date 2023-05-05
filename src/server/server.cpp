@@ -3,6 +3,7 @@
 #include "../common/ui/ui.h"
 #include "server_world.h"
 #include "game_server.h"
+#include "stb_herringbone_wang_tile.h"
 #include <stack>
 #include <cassert>
 
@@ -101,6 +102,12 @@ Err Play(GameServer &server)
     const Rectangle editorRect{ uiPosition.x, uiPosition.y, 800, 80 };
 
     SetExitKey(0);
+
+    Texture wangTemplateTex{};
+    stbhw_tileset tileset{};
+    Texture wangHTileTex{};
+    Texture wangVTileTex{};
+    Texture wangMapTex{};
 
     while (!WindowShouldClose())
     {
@@ -524,15 +531,139 @@ Err Play(GameServer &server)
             }
         }
 
-        histogram.Draw(8, 8);
+        histogram.Draw({ 8, 8 });
+
+        if (!wangTemplateTex.width) {
+            stbhw_config config{};
+            config.is_corner = 0;
+            config.short_side_len = 8;
+            config.num_color[0] = 1;
+            config.num_color[1] = 1;
+            config.num_color[2] = 1;
+            config.num_color[3] = 1;
+            config.num_color[4] = 1;
+            config.num_color[5] = 1;
+            config.num_vary_x = 1;
+            config.num_vary_y = 1;
+
+            int wangTemplateW{};
+            int wangTemplateH{};
+            stbhw_get_template_size(&config, &wangTemplateW, &wangTemplateH);
+            unsigned char *wangTemplatePixels = (unsigned char *)malloc((size_t)3 * wangTemplateW * wangTemplateH);
+            if (!stbhw_make_template(&config, wangTemplatePixels, wangTemplateW, wangTemplateH, wangTemplateW*3)) {
+                printf("[stbhw] failed to generate tileset template. %s\n", stbhw_get_last_error());
+                return RN_BAD_ALLOC;
+            }
+
+            //if (!stbhw_generate_image(&ts, NULL, data, xs*3, xs, ys)) {
+            //    printf("stbhw error: %s\n", stbhw_get_last_error());
+            //    return RN_BAD_ALLOC;
+            //}
+
+            Image wangTemplateImg{};
+            wangTemplateImg.width = wangTemplateW;
+            wangTemplateImg.height = wangTemplateH;
+            wangTemplateImg.format = PIXELFORMAT_UNCOMPRESSED_R8G8B8;
+            wangTemplateImg.data = wangTemplatePixels;
+            wangTemplateImg.mipmaps = 1;
+            wangTemplateTex = LoadTextureFromImage(wangTemplateImg);
+            bool exportSuccess = ExportImage(wangTemplateImg, "resources/wang/template.png");
+            free(wangTemplatePixels);
+
+            //stbi_write_png("test_map.png", xs, ys, 3, data, xs*3);
+
+            //stbhw_free_tileset(&ts);
+        }
+
+        if (!wangHTileTex.width) {
+            const char *wangTilesetPath = "resources/wang/tileset.png";
+            Image wangTilesetImg = LoadImage(wangTilesetPath);
+            if (wangTilesetImg.width) {
+                ImageFormat(&wangTilesetImg, PIXELFORMAT_UNCOMPRESSED_R8G8B8);
+
+                if (!stbhw_build_tileset_from_image(&tileset, (unsigned char *)wangTilesetImg.data, wangTilesetImg.width*3, wangTilesetImg.width, wangTilesetImg.height)) {
+                    printf("[stbhw] failed to build tileset from image %s. %s\n", wangTilesetPath, stbhw_get_last_error());
+                    return RN_BAD_ALLOC;
+                }
+
+                UnloadImage(wangTilesetImg);
+
+                stbhw_tile *h_tile = tileset.h_tiles[0];
+                stbhw_tile *v_tile = tileset.v_tiles[0];
+
+                Image wangHTile{};
+                wangHTile.data = h_tile->pixels;
+                wangHTile.width = tileset.short_side_len * 2;
+                wangHTile.height = tileset.short_side_len;
+                wangHTile.mipmaps = 1;
+                wangHTile.format = PIXELFORMAT_UNCOMPRESSED_R8G8B8;
+                wangHTileTex = LoadTextureFromImage(wangHTile);
+
+                Image wangVTile{};
+                wangVTile.data = v_tile->pixels;
+                wangVTile.width = tileset.short_side_len;
+                wangVTile.height = tileset.short_side_len * 2;
+                wangVTile.mipmaps = 1;
+                wangVTile.format = PIXELFORMAT_UNCOMPRESSED_R8G8B8;
+                wangVTileTex = LoadTextureFromImage(wangVTile);
+            }
+        }
+
+        if (!wangMapTex.width) {
+            int wangMapW = map.width;
+            int wangMapH = map.height;
+            unsigned char *wangMapPixels = (unsigned char *)malloc((size_t)3 * wangMapW * wangMapH);
+            if (!stbhw_generate_image(&tileset, 0, wangMapPixels, wangMapW*3, wangMapW, wangMapH)) {
+                printf("[stbhw] failed to generate map from tileset. %s\n", stbhw_get_last_error());
+                return RN_BAD_ALLOC;
+            }
+
+            Image wangMapImg{};
+            wangMapImg.width = wangMapW;
+            wangMapImg.height = wangMapH;
+            wangMapImg.format = PIXELFORMAT_UNCOMPRESSED_R8G8B8;
+            wangMapImg.data = wangMapPixels;
+            wangMapImg.mipmaps = 1;
+            ImageFormat(&wangMapImg, PIXELFORMAT_UNCOMPRESSED_GRAYSCALE);
+            wangMapTex = LoadTextureFromImage(wangMapImg);
+
+            for (int y = 0; y < map.height; y++) {
+                for (int x = 0; x < map.width; x++) {
+                    uint8_t pixel = ((uint8_t *)wangMapImg.data)[y * map.width + x];
+                    int tileType = (int)floorf(((float)pixel / 256) * map.tileDefCount);
+                    tileType = CLAMP(tileType, 0, map.tileDefCount - 1);
+                    //map.Set(x, y, tileType);
+                }
+            }
+
+            UnloadImage(wangMapImg);
+            //free(wangMapPixels);
+        }
+
+        // TODO ui.Image();
+        const float wangScale = 4;
+        Vector2 wangCursor{ 8, 300 };
+        DrawTextureEx(wangTemplateTex, wangCursor, 0, wangScale, WHITE);
+        wangCursor.y += wangTemplateTex.height * wangScale + 10;
+        DrawTextureEx(wangHTileTex, wangCursor, 0, wangScale, WHITE);
+        wangCursor.y += wangHTileTex.height * wangScale + 10;
+        DrawTextureEx(wangVTileTex, wangCursor, 0, wangScale, WHITE);
+        wangCursor.y += wangVTileTex.height * wangScale + 10;
+        DrawTextureEx(wangMapTex, wangCursor, 0, wangScale, WHITE);
+
         EndDrawing();
-        yojimbo_sleep(0.001);
+        //yojimbo_sleep(0.001);
 
         // Nobody else handled it, so user probably wants to quit
         if (escape) {
             CloseWindow();
         }
     }
+
+    stbhw_free_tileset(&tileset);
+    UnloadTexture(wangTemplateTex);
+    UnloadTexture(wangHTileTex);
+    UnloadTexture(wangVTileTex);
 
     FreeCommon();
     return err;

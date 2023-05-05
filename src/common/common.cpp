@@ -4,6 +4,9 @@
 #define RAYMATH_IMPLEMENTATION
 #include "raylib/raymath.h"
 
+#define STB_HERRINGBONE_WANG_TILE_IMPLEMENTATION
+#include "stb_herringbone_wang_tile.h"
+
 Shader shdSdfText;
 Font fntHackBold20;
 Font fntHackBold32;

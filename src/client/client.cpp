@@ -58,7 +58,6 @@ int main(int argc, char *argv[])
     client->now = GetTime();
     client->Start();
 
-    Histogram histogram{};
     double frameStart = GetTime();
     double frameDt = 0;
     double frameDtSmooth = 60;
@@ -104,9 +103,6 @@ int main(int argc, char *argv[])
         }
         if (IsKeyPressed(KEY_Z)) {
             CL_DBG_SNAPSHOT_SHADOWS = !CL_DBG_SNAPSHOT_SHADOWS;
-        }
-        if (IsKeyPressed(KEY_H)) {
-            histogram.paused = !histogram.paused;
         }
         if (IsKeyPressed(KEY_T)) {
             showTodoList = !showTodoList;
@@ -157,8 +153,6 @@ int main(int argc, char *argv[])
 
         //--------------------
         // Update
-        histogram.Push(frameDtSmooth, doNetTick ? GREEN : RAYWHITE);
-
         if (client->yj_client->IsConnected()) {
             client->world->Update(*client);
         }
@@ -341,7 +335,35 @@ int main(int argc, char *argv[])
             }
         }
 
-        Vector2 uiPosition{ 8, 30 };
+        // TODO: Quit button
+        UIStyle uiHUDMenuStyle{};
+        UI uiHUDMenu{ {}, uiHUDMenuStyle };
+
+        uiHUDMenu.Button("Menu");
+        uiHUDMenu.Button("Quests");
+        uiHUDMenu.Button("Inventory");
+        uiHUDMenu.Button("Map");
+        uiHUDMenu.Newline();
+
+        Vector2 hackNewCursor{ uiHUDMenu.CursorScreen() };
+
+        // TODO: ui.histogram(histogram);
+        {
+            static Histogram fpsHistogram{};
+
+            if (IsKeyPressed(KEY_H)) {
+                // TODO: fpsHistogram.update() which checks input and calls TogglePause?
+                fpsHistogram.paused = !fpsHistogram.paused;
+            }
+            fpsHistogram.Push(frameDtSmooth, doNetTick ? GREEN : RAYWHITE);
+
+            hackNewCursor.x += 8;
+            hackNewCursor.y += 8;
+            fpsHistogram.Draw(hackNewCursor);
+            hackNewCursor.y += fpsHistogram.histoHeight + 8;
+        }
+
+        Vector2 uiPosition{ hackNewCursor };
 
         // Debug HUD
         {
@@ -411,7 +433,6 @@ int main(int argc, char *argv[])
             }
         }
 
-        histogram.Draw(8, 8);
         EndDrawing();
         //yojimbo_sleep(0.001);
 
