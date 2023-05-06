@@ -64,7 +64,7 @@ struct Tilemap {
     bool AtWorld(uint32_t world_x, uint32_t world_y, Tile &tile);
     void Set(uint32_t x, uint32_t y, Tile tile, double now);
     void ResolveEntityTerrainCollisions(Entity &entity);
-    void Draw(Camera2D &camera);
+    void Draw(Camera2D &camera, bool showCollision);
 
     // Paths
     AiPath *GetPath(uint32_t pathId) {

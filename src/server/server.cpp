@@ -8,6 +8,7 @@
 #include <cassert>
 
 struct Cursor {
+    bool collide;
     int tileDefId;
 } cursor{};
 
@@ -133,6 +134,7 @@ Err Play(GameServer &server)
     double frameDtSmooth = 60;
 
     bool editorActive = false;
+    bool editorCollision = false;
     const Vector2 uiPosition{ 380, 8 };
     const Rectangle editorRect{ uiPosition.x, uiPosition.y, 800, 80 };
 
@@ -225,7 +227,7 @@ Err Play(GameServer &server)
         BeginMode2D(camera2d);
 
         // [World] Tilemap
-        server.world->map.Draw(camera2d);
+        server.world->map.Draw(camera2d, editorActive && editorCollision);
 
         DrawRectangleLinesEx(lastCollisionA, 1, RED);
         DrawRectangleLinesEx(lastCollisionB, 1, GREEN);
@@ -450,6 +452,11 @@ Err Play(GameServer &server)
                 }
             }
 
+            UIState editCollisionButton = uiEditorMenu.Button("Collision", editorCollision ? RED : GRAY);
+            if (editCollisionButton.clicked) {
+                editorCollision = !editorCollision;
+            }
+
             uiEditorMenu.Newline();
 
             // [Editor] Tile selector
@@ -481,7 +488,11 @@ Err Play(GameServer &server)
                     static int prevTileDefHovered = -1;
                     if (editorPickTileDef) {
                         PlaySound(sndHardTick);
-                        cursor.tileDefId = i;
+                        if (editorCollision) {
+                            tileDef.collide = !tileDef.collide;
+                        } else {
+                            cursor.tileDefId = i;
+                        }
                     } else if (i != prevTileDefHovered) {
                         PlaySound(sndSoftTick);
                     }
@@ -489,6 +500,21 @@ Err Play(GameServer &server)
                 }
 
                 DrawTextureRec(server.world->map.texture, texRect, screenPos, WHITE);
+
+                if (editorCollision && tileDef.collide) {
+                    const int pad = 1;
+                    DrawRectangleLinesEx(
+                        {
+                            screenPos.x + pad,
+                            screenPos.y + pad,
+                            TILE_W - pad * 2,
+                            TILE_W - pad * 2,
+                        },
+                        2.0f,
+                        MAROON
+                    );
+                }
+
                 const int outlinePad = 1;
                 if (i == cursor.tileDefId || hover) {
                     DrawRectangleLinesEx(
@@ -635,7 +661,7 @@ Err Play(GameServer &server)
                     uint8_t pixel = ((uint8_t *)wangMapImg.data)[y * map.width + x];
                     int tileType = (int)floorf(((float)pixel / 256) * map.tileDefCount);
                     tileType = CLAMP(tileType, 0, map.tileDefCount - 1);
-                    map.Set(x, y, tileType, server.now);
+                    //map.Set(x, y, tileType, server.now);
                 }
             }
 

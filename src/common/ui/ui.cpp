@@ -208,7 +208,9 @@ UIState UI::Button(const char *text)
     Color fgColorFx = style.fgColor;
     if (state.hover) {
         bgColorFx = ColorBrightness(style.bgColor, 0.3f);
-        fgColorFx = YELLOW;
+        // HACK(dlb): We should just make fgColor[state] for hover, down etc.
+        // Perhaps with special values that mean "brighten" and "darken".
+        if (!bgColorFx.a) fgColorFx = YELLOW;
         if (state.down) {
             bgColorFx = ColorBrightness(style.bgColor, -0.3f);
         }

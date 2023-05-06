@@ -22,23 +22,23 @@ static TileDef v2TileDefs[] = {
 #define TILEDEF(y, x, collide) { x * (TILE_W + 2) + 1, y * (TILE_W + 2) + 1, collide }
     TILEDEF(0, 0, 0),  // void
     TILEDEF(0, 1, 0),  // bright grass
-    TILEDEF(0, 2, 0),  // bright water
-    TILEDEF(0, 3, 0),
-    TILEDEF(0, 4, 0),
-    TILEDEF(1, 0, 0),
-    TILEDEF(1, 1, 0),
-    TILEDEF(1, 2, 0),
-    TILEDEF(1, 3, 0),
-    TILEDEF(1, 4, 0),
-    TILEDEF(2, 0, 0),
-    TILEDEF(2, 1, 0),
-    TILEDEF(2, 2, 0),
-    TILEDEF(2, 3, 0),
-    TILEDEF(2, 4, 0),
-    TILEDEF(3, 0, 0),
-    TILEDEF(3, 1, 0),
-    TILEDEF(3, 2, 0),
-    TILEDEF(3, 3, 0),
+    TILEDEF(0, 2, 1),  // bright water
+    TILEDEF(0, 3, 0),  // tall grass
+    TILEDEF(0, 4, 0),  // cracked sand
+    TILEDEF(1, 0, 0),  // light stone path
+    TILEDEF(1, 1, 0),  // ugly grass 1
+    TILEDEF(1, 2, 0),  // ugly grass 2
+    TILEDEF(1, 3, 1),  // tower TL
+    TILEDEF(1, 4, 1),  // tower TM
+    TILEDEF(2, 0, 1),  // tower TR
+    TILEDEF(2, 1, 1),  // ugly bush
+    TILEDEF(2, 2, 0),  // grass w/ flowers
+    TILEDEF(2, 3, 0),  // dirt
+    TILEDEF(2, 4, 0),  // d2 grass
+    TILEDEF(3, 0, 0),  // dark grass
+    TILEDEF(3, 1, 1),  // tower ML
+    TILEDEF(3, 2, 1),  // tower MM
+    TILEDEF(3, 3, 1),  // tower MR
     TILEDEF(3, 4, 1),  // dark water
 #undef TILEDEF
 };
@@ -416,7 +416,7 @@ void Tilemap::ResolveEntityTerrainCollisions(Entity &entity)
     }
 }
 
-void Tilemap::Draw(Camera2D &camera)
+void Tilemap::Draw(Camera2D &camera, bool showCollision)
 {
     // [World] Tilemap
 #if CL_DBG_TILE_CULLING
@@ -441,6 +441,20 @@ void Tilemap::Draw(Camera2D &camera)
             Rectangle texRect{ (float)tileDef.x, (float)tileDef.y, TILE_W, TILE_W };
             Vector2 tilePos = { (float)x * TILE_W, (float)y * TILE_W };
             DrawTextureRec(texture, texRect, tilePos, WHITE);
+
+            if (showCollision && tileDef.collide) {
+                const int pad = 1;
+                DrawRectangleLinesEx(
+                    {
+                        tilePos.x + pad,
+                        tilePos.y + pad,
+                        TILE_W - pad * 2,
+                        TILE_W - pad * 2,
+                    },
+                    2.0f,
+                    MAROON
+                );
+            }
         }
     }
 }
