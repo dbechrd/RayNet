@@ -8,6 +8,7 @@
 #include "messages/msg_s_entity_say.h"
 #include "messages/msg_s_entity_snapshot.h"
 #include "messages/msg_s_entity_spawn.h"
+#include "messages/msg_s_tile_chunk.h"
 
 enum ChannelType {
     CHANNEL_U_INPUT_COMMANDS,
@@ -31,6 +32,7 @@ enum MsgType
     MSG_S_ENTITY_SAY,
     MSG_S_ENTITY_SNAPSHOT,
     MSG_S_ENTITY_SPAWN,
+    MSG_S_TILE_CHUNK,
 
     MSG_COUNT
 };
@@ -44,6 +46,7 @@ YOJIMBO_DECLARE_MESSAGE_TYPE(MSG_S_ENTITY_DESPAWN,  Msg_S_EntityDespawn);
 YOJIMBO_DECLARE_MESSAGE_TYPE(MSG_S_ENTITY_SAY,      Msg_S_EntitySay);
 YOJIMBO_DECLARE_MESSAGE_TYPE(MSG_S_ENTITY_SNAPSHOT, Msg_S_EntitySnapshot);
 YOJIMBO_DECLARE_MESSAGE_TYPE(MSG_S_ENTITY_SPAWN,    Msg_S_EntitySpawn);
+YOJIMBO_DECLARE_MESSAGE_TYPE(MSG_S_TILE_CHUNK,      Msg_S_TileChunk);
 YOJIMBO_MESSAGE_FACTORY_FINISH();
 
 class NetAdapter : public yojimbo::Adapter

@@ -65,6 +65,7 @@ void GameClient::Start(void)
     config.channel[CHANNEL_U_INPUT_COMMANDS].type = yojimbo::CHANNEL_TYPE_UNRELIABLE_UNORDERED;
     config.channel[CHANNEL_R_ENTITY_EVENT].type = yojimbo::CHANNEL_TYPE_RELIABLE_ORDERED;
     config.channel[CHANNEL_U_ENTITY_SNAPSHOT].type = yojimbo::CHANNEL_TYPE_UNRELIABLE_UNORDERED;
+    config.bandwidthSmoothingFactor = CL_BANDWIDTH_SMOOTHING_FACTOR;
 
     yj_client = new yojimbo::Client(
         yojimbo::GetDefaultAllocator(),
@@ -192,6 +193,12 @@ void GameClient::ProcessMessages(void)
                             PlaySound(sndSoftTick);
                         }
                     }
+                    break;
+                }
+                case MSG_S_TILE_CHUNK:
+                {
+                    Msg_S_TileChunk *msg = (Msg_S_TileChunk *)yjMsg;
+                    world->map.CL_DeserializeChunk(*msg);
                     break;
                 }
             }

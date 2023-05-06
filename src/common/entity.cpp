@@ -110,11 +110,6 @@ void Entity::ApplyStateInterpolated(const EntitySnapshot &a, const EntitySnapsho
         case Entity_Bot: {
             LERP_PROP(data.bot.life.maxHealth);
             LERP_PROP(data.bot.life.health);
-
-            if (data.bot.life.health > 100) {
-                __debugbreak();
-            }
-
             break;
         }
     }

@@ -1,5 +1,23 @@
 #include "shared_lib.h"
 
+void Tilemap::SV_SerializeChunk(Msg_S_TileChunk &tileChunk, uint32_t x, uint32_t y)
+{
+    for (uint32_t ty = y; ty < SV_TILE_CHUNK_WIDTH; ty++) {
+        for (uint32_t tx = x; tx < SV_TILE_CHUNK_WIDTH; tx++) {
+            AtTry(tx, ty, tileChunk.tileDefs[ty * SV_TILE_CHUNK_WIDTH + tx]);
+        }
+    }
+}
+
+void Tilemap::CL_DeserializeChunk(Msg_S_TileChunk &tileChunk)
+{
+    for (uint32_t ty = tileChunk.y; ty < SV_TILE_CHUNK_WIDTH; ty++) {
+        for (uint32_t tx = tileChunk.x; tx < SV_TILE_CHUNK_WIDTH; tx++) {
+            Set(tx, ty, tileChunk.tileDefs[ty * SV_TILE_CHUNK_WIDTH + tx], 0);
+        }
+    }
+}
+
 static TileDef v2TileDefs[] = {
 #define TILEDEF(y, x, collide) { x * (TILE_W + 2) + 1, y * (TILE_W + 2) + 1, collide }
     TILEDEF(0, 0, 0),  // void
@@ -244,7 +262,6 @@ Err Tilemap::Load(const char *filename)
             fread(&tiles[i], sizeof(tiles[i]), 1, file);
         }
 
-
         pathNodes = (AiPathNode *)calloc(pathNodeCount, sizeof(*pathNodes));
         if (!pathNodes) {
             err = RN_BAD_ALLOC; break;
@@ -340,11 +357,15 @@ bool Tilemap::AtWorld(uint32_t world_x, uint32_t world_y, Tile &tile)
     return false;
 }
 
-void Tilemap::Set(uint32_t x, uint32_t y, Tile tile)
+void Tilemap::Set(uint32_t x, uint32_t y, Tile tile, double now)
 {
     assert(x < width);
     assert(y < height);
-    tiles[y * width + x] = tile;
+    Tile &mapTile = tiles[y * width + x];
+    if (mapTile != tile) {
+        mapTile = tile;
+        chunkLastUpdatedAt = now;
+    }
 }
 
 void Tilemap::ResolveEntityTerrainCollisions(Entity &entity)

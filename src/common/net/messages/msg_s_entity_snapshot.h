@@ -9,7 +9,6 @@ struct Msg_S_EntitySnapshot : public yojimbo::Message
     template <typename Stream> bool Serialize(Stream &stream)
     {
         serialize_double(stream, entitySnapshot.serverTime);
-        serialize_uint32(stream, entitySnapshot.lastProcessedInputCmd);
         serialize_uint32(stream, entitySnapshot.id);
 
         serialize_uint32(stream, (uint32_t &)entitySnapshot.entity.type);
@@ -19,6 +18,7 @@ struct Msg_S_EntitySnapshot : public yojimbo::Message
         serialize_float(stream, entitySnapshot.entity.position.y);
         switch (entitySnapshot.entity.type) {
             case Entity_Player: {
+                serialize_uint32(stream, entitySnapshot.lastProcessedInputCmd);
                 serialize_varint32(stream, entitySnapshot.entity.data.player.life.maxHealth);
                 serialize_varint32(stream, entitySnapshot.entity.data.player.life.health);
                 break;

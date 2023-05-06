@@ -1,17 +1,21 @@
 #include "ui.h"
 #include "../shared_lib.h"
 
+struct HoverHash {
+    Vector2 position{};
+
+    HoverHash(void) {};
+    HoverHash(Vector2 position) : position(position) {}
+
+    bool Equals(HoverHash &other) {
+        return Vector2Equals(position, other.position);
+    }
+};
+
 UI::UI(Vector2 position, UIStyle style)
 {
     this->position = position;
     styleStack.push(style);
-}
-
-void UI::Newline(void)
-{
-    cursor.x = 0;
-    cursor.y += lineSize.y;
-    lineSize = {};
 }
 
 void UI::PushStyle(UIStyle style)
@@ -24,7 +28,69 @@ void UI::PopStyle(void)
     styleStack.pop();
 }
 
-void UI::Text(const char *text)
+void Align(const UIStyle &style, Vector2 &position, const Vector2 &size)
+{
+    switch (style.alignH) {
+        case TextAlign_Left: {
+            break;
+        }
+        case TextAlign_Center: {
+            position.x -= size.x / 2;
+            position.y -= size.y / 2;
+            break;
+        }
+        case TextAlign_Right: {
+            position.x -= size.x;
+            position.y -= size.y;
+            break;
+        }
+    }
+}
+
+UIState CalcState(Rectangle &ctrlRect, HoverHash &prevHoverHash)
+{
+    HoverHash hash{ { ctrlRect.x, ctrlRect.y } };
+    bool prevHoveredCtrl = hash.Equals(prevHoverHash);
+
+    UIState state{};
+    if (dlb_CheckCollisionPointRec(GetMousePosition(), ctrlRect)) {
+        state.entered = !prevHoveredCtrl;
+        state.hover = true;
+        if (IsMouseButtonDown(MOUSE_BUTTON_LEFT)) {
+            state.down = true;
+            if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
+                state.pressed = true;
+            }
+        } else if (IsMouseButtonReleased(MOUSE_BUTTON_LEFT)) {
+            state.clicked = true;
+        }
+        prevHoverHash = hash;
+    } else if (prevHoveredCtrl) {
+        prevHoverHash = {};
+    }
+    return state;
+}
+
+void UI::UpdateCursor(const UIStyle &style, Rectangle &ctrlRect)
+{
+    // How much total space we used up (including margin)
+    Vector2 ctrlSpaceUsed{
+        style.margin.left + ctrlRect.width + style.margin.right,
+        style.margin.top + ctrlRect.height + style.margin.bottom,
+    };
+    lineSize.x += ctrlSpaceUsed.x;
+    lineSize.y = MAX(ctrlSpaceUsed.y, lineSize.y);
+    cursor.x += ctrlSpaceUsed.x;
+}
+
+void UI::Newline(void)
+{
+    cursor.x = 0;
+    cursor.y += lineSize.y;
+    lineSize = {};
+}
+
+UIState UI::Text(const char *text)
 {
     UIStyle &style = styleStack.top();
 
@@ -39,21 +105,7 @@ void UI::Text(const char *text)
         style.pad.top + textSize.y + style.pad.bottom
     };
 
-    switch (style.alignH) {
-        case TextAlign_Left: {
-            break;
-        }
-        case TextAlign_Center: {
-            ctrlPosition.x -= ctrlSize.x / 2;
-            ctrlPosition.y -= ctrlSize.y / 2;
-            break;
-        }
-        case TextAlign_Right: {
-            ctrlPosition.x -= ctrlSize.x;
-            ctrlPosition.y -= ctrlSize.y;
-            break;
-        }
-    }
+    Align(style, ctrlPosition, ctrlSize);
 
     Rectangle ctrlRect = {
         ctrlPosition.x,
@@ -61,6 +113,9 @@ void UI::Text(const char *text)
         ctrlSize.x + style.borderThickness.x * 2,
         ctrlSize.y + style.borderThickness.y * 2
     };
+
+    static HoverHash prevHoverHash{};
+    UIState state = CalcState(ctrlRect, prevHoverHash);
 
     // Draw text
     DrawTextShadowEx(*style.font, text,
@@ -71,14 +126,52 @@ void UI::Text(const char *text)
         style.fgColor
     );
 
-    // How much total space we used up (including margin)
-    Vector2 ctrlSpaceUsed{
-        style.margin.left + ctrlRect.width + style.margin.right,
-        style.margin.top + ctrlRect.height + style.margin.bottom,
+    UpdateCursor(style, ctrlRect);
+    return state;
+}
+
+UIState UI::Image(Texture &texture)
+{
+    UIStyle &style = styleStack.top();
+
+    Vector2 ctrlPosition{
+        position.x + cursor.x + style.margin.left,
+        position.y + cursor.y + style.margin.top
     };
-    lineSize.x += ctrlSpaceUsed.x;
-    lineSize.y = MAX(ctrlSpaceUsed.y, lineSize.y);
-    cursor.x += ctrlSpaceUsed.x;
+
+    Vector2 ctrlSize{
+        texture.width * style.scale,
+        texture.height * style.scale
+    };
+
+    Align(style, ctrlPosition, ctrlSize);
+
+    Rectangle ctrlRect = {
+        ctrlPosition.x,
+        ctrlPosition.y,
+        ctrlSize.x,
+        ctrlSize.y
+    };
+
+    static HoverHash prevHoverHash{};
+    UIState state = CalcState(ctrlRect, prevHoverHash);
+
+    // Draw image
+    DrawTextureEx(texture, ctrlPosition, 0, style.scale, WHITE);
+
+    if (state.hover) {
+        DrawRectangleLinesEx(ctrlRect, 2, YELLOW);
+    }
+
+    // Audio
+    if (state.clicked) {
+        PlaySound(sndHardTick);
+    } else if (state.entered) {
+        PlaySound(sndSoftTick);
+    }
+
+    UpdateCursor(style, ctrlRect);
+    return state;
 }
 
 UIState UI::Button(const char *text)
@@ -99,21 +192,7 @@ UIState UI::Button(const char *text)
         style.pad.top + textSize.y + style.pad.bottom
     };
 
-    switch (style.alignH) {
-        case TextAlign_Left: {
-            break;
-        }
-        case TextAlign_Center: {
-            ctrlPosition.x -= ctrlSize.x / 2;
-            ctrlPosition.y -= ctrlSize.y / 2;
-            break;
-        }
-        case TextAlign_Right: {
-            ctrlPosition.x -= ctrlSize.x;
-            ctrlPosition.y -= ctrlSize.y;
-            break;
-        }
-    }
+    Align(style, ctrlPosition, ctrlSize);
 
     Rectangle ctrlRect = {
         ctrlPosition.x,
@@ -122,52 +201,22 @@ UIState UI::Button(const char *text)
         ctrlSize.y + style.borderThickness.y * 2
     };
 
-    // Draw drop shadow
-    if (style.bgColor.a) {
-        DrawRectangleRounded(ctrlRect, cornerRoundness, cornerSegments, BLACK);
-    }
-
-    static struct HoverHash {
-        const char *text{};
-        Vector2 position{};
-
-        HoverHash(void) {};
-        HoverHash(const char *text, Vector2 position) : text(text), position(position) {}
-
-        bool Equals(HoverHash &other) {
-            return text == other.text && Vector2Equals(position, other.position);
-        }
-    } prevHoverHash{};
-
-    HoverHash hash{ text, { ctrlRect.x, ctrlRect.y } };
+    static HoverHash prevHoverHash{};
+    UIState state = CalcState(ctrlRect, prevHoverHash);
 
     Color bgColorFx = style.bgColor;
     Color fgColorFx = style.fgColor;
-    UIState state{};
-    if (dlb_CheckCollisionPointRec(GetMousePosition(), ctrlRect)) {
-        state.hover = true;
+    if (state.hover) {
         bgColorFx = ColorBrightness(style.bgColor, 0.3f);
         fgColorFx = YELLOW;
-        if (IsMouseButtonDown(MOUSE_BUTTON_LEFT)) {
-            state.down = true;
+        if (state.down) {
             bgColorFx = ColorBrightness(style.bgColor, -0.3f);
-            if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
-                state.pressed = true;
-            }
-        } else if (IsMouseButtonReleased(MOUSE_BUTTON_LEFT)) {
-            state.clicked = true;
         }
-    } else if (hash.Equals(prevHoverHash)) {
-        prevHoverHash = {};
     }
 
-    if (state.clicked) {
-        PlaySound(sndHardTick);
-    } else if (state.hover) {
-        if (!hash.Equals(prevHoverHash)) {
-            PlaySound(sndSoftTick);
-            prevHoverHash = hash;
-        }
+    // Draw drop shadow
+    if (style.bgColor.a) {
+        DrawRectangleRounded(ctrlRect, cornerRoundness, cornerSegments, BLACK);
     }
 
     const float downOffset = (state.down ? 1 : -1);
@@ -192,15 +241,14 @@ UIState UI::Button(const char *text)
         fgColorFx
     );
 
-    // How much total space we used up (including margin)
-    Vector2 ctrlSpaceUsed{
-        style.margin.left + ctrlRect.width + style.margin.right,
-        style.margin.top + ctrlRect.height + style.margin.bottom,
-    };
-    lineSize.x += ctrlSpaceUsed.x;
-    lineSize.y = MAX(ctrlSpaceUsed.y, lineSize.y);
-    cursor.x += ctrlSpaceUsed.x;
+    // Audio
+    if (state.clicked) {
+        PlaySound(sndHardTick);
+    } else if (state.entered) {
+        PlaySound(sndSoftTick);
+    }
 
+    UpdateCursor(style, ctrlRect);
     return state;
 }
 

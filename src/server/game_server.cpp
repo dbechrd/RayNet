@@ -162,6 +162,9 @@ void GameServer::OnClientJoin(int clientIdx)
     player.life.health = player.life.maxHealth;
 
     world->SpawnEntity(*this, entityId);
+
+    TileChunkRecord mainMap{};
+    serverPlayer.chunkList.push(mainMap);
 }
 
 void GameServer::OnClientLeave(int clientIdx)
@@ -206,6 +209,7 @@ Err GameServer::Start(void)
     config.channel[CHANNEL_U_INPUT_COMMANDS].type = yojimbo::CHANNEL_TYPE_UNRELIABLE_UNORDERED;
     config.channel[CHANNEL_R_ENTITY_EVENT].type = yojimbo::CHANNEL_TYPE_RELIABLE_ORDERED;
     config.channel[CHANNEL_U_ENTITY_SNAPSHOT].type = yojimbo::CHANNEL_TYPE_UNRELIABLE_UNORDERED;
+    config.bandwidthSmoothingFactor = CL_BANDWIDTH_SMOOTHING_FACTOR;
 
     // Loopback interface
     //yojimbo::Address address("127.0.0.1", SV_PORT);
@@ -332,6 +336,28 @@ void GameServer::BroadcastEntitySay(uint32_t entityId, uint32_t messageLength, c
         }
 
         SendEntitySay(clientIdx, entityId, messageLength, message);
+    }
+}
+
+void GameServer::SendTileChunk(int clientIdx, uint32_t x, uint32_t y)
+{
+    if (yj_server->CanSendMessage(clientIdx, CHANNEL_R_TILE_EVENT)) {
+        Msg_S_TileChunk *msg = (Msg_S_TileChunk *)yj_server->CreateMessage(clientIdx, MSG_S_TILE_CHUNK);
+        if (msg) {
+            world->map.SV_SerializeChunk(*msg, x, y);
+            yj_server->SendMessage(clientIdx, CHANNEL_R_TILE_EVENT, msg);
+        }
+    }
+}
+
+void GameServer::BroadcastTileChunk(uint32_t x, uint32_t y)
+{
+    for (int clientIdx = 0; clientIdx < SV_MAX_PLAYERS; clientIdx++) {
+        if (!yj_server->IsClientConnected(clientIdx)) {
+            continue;
+        }
+
+        SendTileChunk(clientIdx, x, y);
     }
 }
 
@@ -489,6 +515,17 @@ void GameServer::SendClientSnapshots(void)
             continue;
         }
 
+        ServerPlayer &serverPlayer = world->players[clientIdx];
+
+        for (int tileChunkIdx = 0; tileChunkIdx < serverPlayer.chunkList.size(); tileChunkIdx++) {
+            TileChunkRecord &chunkRec = serverPlayer.chunkList[tileChunkIdx];
+            if (chunkRec.lastSentAt < world->map.chunkLastUpdatedAt) {
+                SendTileChunk(clientIdx, chunkRec.coord.x, chunkRec.coord.y);
+                chunkRec.lastSentAt = now;
+                printf("Sending chunk to client\n");
+            }
+        }
+
         // TODO: Send only the world state that's relevant to this particular client
         for (int entityId = 0; entityId < SV_MAX_ENTITIES; entityId++) {
             Entity &entity = world->entities[entityId];
@@ -496,7 +533,6 @@ void GameServer::SendClientSnapshots(void)
                 continue;
             }
 
-            ServerPlayer &serverPlayer = world->players[clientIdx];
             if (serverPlayer.joinedAt == now && !entity.despawnedAt) {
                 if (yj_server->CanSendMessage(clientIdx, CHANNEL_R_ENTITY_EVENT)) {
                     Msg_S_EntitySpawn *msg = (Msg_S_EntitySpawn *)yj_server->CreateMessage(clientIdx, MSG_S_ENTITY_SPAWN);
@@ -559,6 +595,10 @@ void GameServer::Update(void)
 {
     if (!yj_server->IsRunning())
         return;
+
+    if (IsKeyDown(KEY_N)) {
+        printf("");
+    }
 
     yj_server->AdvanceTime(now);
     yj_server->ReceivePackets();

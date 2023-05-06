@@ -293,10 +293,10 @@ int main(int argc, char *argv[])
             } else if (client->yj_client->IsConnecting()) {
                 uiMenu.Text(connectingStrs[connectingDotIdx]);
             } else {
-                const Vector2 screenHalfSize{ GetScreenWidth()/2, GetScreenHeight()/2 };
+                const Vector2 screenHalfSize{ GetScreenWidth()/2.0f, GetScreenHeight()/2.0f };
                 const Vector2 screenCenter{ screenHalfSize.x, screenHalfSize.y };
                 for (float scale = 0.0f; scale < 1.1f; scale += 0.1f) {
-                    const float modScale = fmod(texMenuBgScale + scale, 1);
+                    const float modScale = fmodf(texMenuBgScale + scale, 1);
                     Rectangle menuBgRect{
                         screenCenter.x - screenHalfSize.x * modScale,
                         screenCenter.y - screenHalfSize.y * modScale,

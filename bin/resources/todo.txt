@@ -2,7 +2,8 @@
 [x] Refactor GameClient into its own file
 [x] Refactor UIButton into UI class
 [x] Add UI::Text
-[ ] Send map data to client
+[x] Send map data to client
+[x] Add UI::Image
 [ ] Switch maps
 [ ] Items
 [ ] Inventory (w/ Hotbar)
@@ -12,5 +13,4 @@
 [ ] Profile server
 [ ] Choose which server to connect to (localhost vs. DandyNet)
 [ ] Nice entering area titles
-[ ] Add UI::Image
 [ ] Add UI::Histogram

@@ -55,6 +55,7 @@ struct UIStyle {
     UIMargin margin{ 6, 0, 0, 6 };
     Vector2 borderThickness{ 1.0f, 1.0f };
     UIPad pad{ 8, 2 };
+    float scale{ 1 };
     Color bgColor{ BLUE };
     Color fgColor{ WHITE };
     Font *font{ &fntHackBold20 };
@@ -62,10 +63,11 @@ struct UIStyle {
 };
 
 struct UIState {
+    bool entered;  // first hover frame
     bool hover;
-    bool pressed;
+    bool pressed;  // first down frame
     bool down;
-    bool clicked;
+    bool clicked;  // frame after last down frame (released)
 };
 
 struct UI {
@@ -73,9 +75,11 @@ struct UI {
     void PushStyle(UIStyle style);
     void PopStyle(void);
 
+    void UpdateCursor(const UIStyle &style, Rectangle &ctrlRect);
     void Newline(void);
 
-    void Text(const char *text);
+    UIState Text(const char *text);
+    UIState Image(Texture &texture);
     UIState Button(const char *text);
     UIState Button(const char *text, Color bgColor);
 

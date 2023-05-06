@@ -16,13 +16,13 @@ struct AiPath {
 };
 
 struct TileDef {
-    int x, y;  // position in spritesheet
+    uint32_t x, y;  // position in spritesheet
     bool collide;
 };
 
 struct Tilemap {
     struct Coord {
-        int x, y;
+        uint32_t x, y;
     };
 
     const uint32_t MAGIC = 0xDBBB9192;
@@ -45,6 +45,12 @@ struct Tilemap {
     uint32_t *pathNodeIndices;  // 0 1 2 | 3 4 5
     AiPath *paths;  // offset, length | 0, 3 | 3, 3
 
+    // TODO: Actually have more than 1 chunk..
+    double chunkLastUpdatedAt;  // used by server to know when chunks are dirty on clients
+
+    void SV_SerializeChunk(Msg_S_TileChunk &tileChunk, uint32_t x, uint32_t y);
+    void CL_DeserializeChunk(Msg_S_TileChunk &tileChunk);
+
     void Free(void);
     ~Tilemap();
 
@@ -56,7 +62,7 @@ struct Tilemap {
     bool AtTry(uint32_t x, uint32_t y, Tile &tile);
     bool WorldToTileIndex(uint32_t world_x, uint32_t world_y, Coord &coord);
     bool AtWorld(uint32_t world_x, uint32_t world_y, Tile &tile);
-    void Set(uint32_t x, uint32_t y, Tile tile);
+    void Set(uint32_t x, uint32_t y, Tile tile, double now);
     void ResolveEntityTerrainCollisions(Entity &entity);
     void Draw(Camera2D &camera);
 

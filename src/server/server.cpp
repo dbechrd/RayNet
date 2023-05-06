@@ -11,7 +11,7 @@ struct Cursor {
     int tileDefId;
 } cursor{};
 
-bool NeedsFill(Tilemap &map, int x, int y, int tileDefFill)
+bool NeedsFill(Tilemap &map, uint32_t x, uint32_t y, int tileDefFill)
 {
     Tile tile;
     if (map.AtTry(x, y, tile)) {
@@ -20,10 +20,10 @@ bool NeedsFill(Tilemap &map, int x, int y, int tileDefFill)
     return false;
 }
 
-void Scan(Tilemap &map, int lx, int rx, int y, int tileDefFill, std::stack<Tilemap::Coord> &stack)
+void Scan(Tilemap &map, uint32_t lx, uint32_t rx, uint32_t y, Tile tileDefFill, std::stack<Tilemap::Coord> &stack)
 {
     bool inSpan = false;
-    for (int x = lx; x < rx; x++) {
+    for (uint32_t x = lx; x < rx; x++) {
         if (!NeedsFill(map, x, y, tileDefFill)) {
             inSpan = false;
         } else if (!inSpan) {
@@ -33,9 +33,9 @@ void Scan(Tilemap &map, int lx, int rx, int y, int tileDefFill, std::stack<Tilem
     }
 }
 
-void Fill(Tilemap &map, int x, int y, int tileDefId)
+void Fill(Tilemap &map, uint32_t x, uint32_t y, int tileDefId, double now)
 {
-    int tileDefFill = map.At(x, y);
+    Tile tileDefFill = map.At(x, y);
     if (tileDefFill == tileDefId) {
         return;
     }
@@ -47,19 +47,54 @@ void Fill(Tilemap &map, int x, int y, int tileDefId)
         Tilemap::Coord coord = stack.top();
         stack.pop();
 
-        int lx = coord.x;
-        int rx = coord.x;
-        while (NeedsFill(map, lx - 1, coord.y, tileDefFill)) {
-            map.Set(lx - 1, coord.y, tileDefId);
+        uint32_t lx = coord.x;
+        uint32_t rx = coord.x;
+        while (lx && NeedsFill(map, lx - 1, coord.y, tileDefFill)) {
+            map.Set(lx - 1, coord.y, tileDefId, now);
             lx -= 1;
         }
         while (NeedsFill(map, rx, coord.y, tileDefFill)) {
-            map.Set(rx, coord.y, tileDefId);
+            map.Set(rx, coord.y, tileDefId, now);
             rx += 1;
         }
-        Scan(map, lx, rx, coord.y - 1, tileDefFill, stack);
+        if (coord.y) {
+            Scan(map, lx, rx, coord.y - 1, tileDefFill, stack);
+        }
         Scan(map, lx, rx, coord.y + 1, tileDefFill, stack);
     }
+}
+
+void generate_wang_template(const char *filename)
+{
+    stbhw_config config{};
+    config.is_corner = 0;
+    config.short_side_len = 8;
+    config.num_color[0] = 1;
+    config.num_color[1] = 1;
+    config.num_color[2] = 1;
+    config.num_color[3] = 1;
+    config.num_color[4] = 1;
+    config.num_color[5] = 1;
+    config.num_vary_x = 1;
+    config.num_vary_y = 1;
+
+    int wangTemplateW{};
+    int wangTemplateH{};
+    stbhw_get_template_size(&config, &wangTemplateW, &wangTemplateH);
+    unsigned char *wangTemplatePixels = (unsigned char *)calloc((size_t)3 * wangTemplateW * wangTemplateH, 1);
+    if (!stbhw_make_template(&config, wangTemplatePixels, wangTemplateW, wangTemplateH, wangTemplateW*3)) {
+        printf("[stbhw] failed to generate tileset template. %s\n", stbhw_get_last_error());
+        return;
+    }
+
+    Image wangTemplateImg{};
+    wangTemplateImg.width = wangTemplateW;
+    wangTemplateImg.height = wangTemplateH;
+    wangTemplateImg.format = PIXELFORMAT_UNCOMPRESSED_R8G8B8;
+    wangTemplateImg.data = wangTemplatePixels;
+    wangTemplateImg.mipmaps = 1;
+    bool exportSuccess = ExportImage(wangTemplateImg, filename);
+    free(wangTemplatePixels);
 }
 
 Err Play(GameServer &server)
@@ -103,10 +138,11 @@ Err Play(GameServer &server)
 
     SetExitKey(0);
 
-    Texture wangTemplateTex{};
+    generate_wang_template("resources/wang/template.png");
+
     stbhw_tileset tileset{};
-    Texture wangHTileTex{};
-    Texture wangVTileTex{};
+    Texture *wangHTilesTex{};
+    Texture *wangVTilesTex{};
     Texture wangMapTex{};
 
     while (!WindowShouldClose())
@@ -304,11 +340,11 @@ Err Play(GameServer &server)
                 assert(validCoord);  // should always be true when hoveredTile != null
 
                 if (editorPlaceTile) {
-                    map.Set(coord.x, coord.y, cursor.tileDefId);
+                    map.Set(coord.x, coord.y, cursor.tileDefId, server.now);
                 } else if (editorPickTile) {
                     cursor.tileDefId = hoveredTile;
                 } else if (editorFillTile) {
-                    Fill(map, coord.x, coord.y, cursor.tileDefId);
+                    Fill(map, coord.x, coord.y, cursor.tileDefId, server.now);
                 }
 
                 DrawRectangleLinesEx({ (float)coord.x * TILE_W, (float)coord.y * TILE_W, TILE_W, TILE_W }, 2, WHITE);
@@ -518,7 +554,7 @@ Err Play(GameServer &server)
                     hud_x += 16.0f;
                     yojimbo::NetworkInfo netInfo{};
                     server.yj_server->GetNetworkInfo(clientIdx, netInfo);
-                    DRAW_TEXT("  rtt", "%f.02", netInfo.RTT);
+                    DRAW_TEXT("  rtt", "%.02f", netInfo.RTT);
                     DRAW_TEXT("  % loss", "%.02f", netInfo.packetLoss);
                     DRAW_TEXT("  sent (kbps)", "%.02f", netInfo.sentBandwidth);
                     DRAW_TEXT("  recv (kbps)", "%.02f", netInfo.receivedBandwidth);
@@ -533,79 +569,46 @@ Err Play(GameServer &server)
 
         histogram.Draw({ 8, 8 });
 
-        if (!wangTemplateTex.width) {
-            stbhw_config config{};
-            config.is_corner = 0;
-            config.short_side_len = 8;
-            config.num_color[0] = 1;
-            config.num_color[1] = 1;
-            config.num_color[2] = 1;
-            config.num_color[3] = 1;
-            config.num_color[4] = 1;
-            config.num_color[5] = 1;
-            config.num_vary_x = 1;
-            config.num_vary_y = 1;
-
-            int wangTemplateW{};
-            int wangTemplateH{};
-            stbhw_get_template_size(&config, &wangTemplateW, &wangTemplateH);
-            unsigned char *wangTemplatePixels = (unsigned char *)malloc((size_t)3 * wangTemplateW * wangTemplateH);
-            if (!stbhw_make_template(&config, wangTemplatePixels, wangTemplateW, wangTemplateH, wangTemplateW*3)) {
-                printf("[stbhw] failed to generate tileset template. %s\n", stbhw_get_last_error());
-                return RN_BAD_ALLOC;
-            }
-
-            //if (!stbhw_generate_image(&ts, NULL, data, xs*3, xs, ys)) {
-            //    printf("stbhw error: %s\n", stbhw_get_last_error());
-            //    return RN_BAD_ALLOC;
-            //}
-
-            Image wangTemplateImg{};
-            wangTemplateImg.width = wangTemplateW;
-            wangTemplateImg.height = wangTemplateH;
-            wangTemplateImg.format = PIXELFORMAT_UNCOMPRESSED_R8G8B8;
-            wangTemplateImg.data = wangTemplatePixels;
-            wangTemplateImg.mipmaps = 1;
-            wangTemplateTex = LoadTextureFromImage(wangTemplateImg);
-            bool exportSuccess = ExportImage(wangTemplateImg, "resources/wang/template.png");
-            free(wangTemplatePixels);
-
-            //stbi_write_png("test_map.png", xs, ys, 3, data, xs*3);
-
-            //stbhw_free_tileset(&ts);
-        }
-
-        if (!wangHTileTex.width) {
+        if (!wangHTilesTex) {
             const char *wangTilesetPath = "resources/wang/tileset.png";
             Image wangTilesetImg = LoadImage(wangTilesetPath);
             if (wangTilesetImg.width) {
                 ImageFormat(&wangTilesetImg, PIXELFORMAT_UNCOMPRESSED_R8G8B8);
-
                 if (!stbhw_build_tileset_from_image(&tileset, (unsigned char *)wangTilesetImg.data, wangTilesetImg.width*3, wangTilesetImg.width, wangTilesetImg.height)) {
                     printf("[stbhw] failed to build tileset from image %s. %s\n", wangTilesetPath, stbhw_get_last_error());
                     return RN_BAD_ALLOC;
                 }
-
                 UnloadImage(wangTilesetImg);
 
-                stbhw_tile *h_tile = tileset.h_tiles[0];
-                stbhw_tile *v_tile = tileset.v_tiles[0];
+                wangHTilesTex = (Texture *)calloc(tileset.num_h_tiles, sizeof(*wangHTilesTex));
+                if (!wangHTilesTex) {
+                    return RN_BAD_ALLOC;
+                }
+                wangVTilesTex = (Texture *)calloc(tileset.num_v_tiles, sizeof(*wangVTilesTex));
+                if (!wangVTilesTex) {
+                    return RN_BAD_ALLOC;
+                }
 
-                Image wangHTile{};
-                wangHTile.data = h_tile->pixels;
-                wangHTile.width = tileset.short_side_len * 2;
-                wangHTile.height = tileset.short_side_len;
-                wangHTile.mipmaps = 1;
-                wangHTile.format = PIXELFORMAT_UNCOMPRESSED_R8G8B8;
-                wangHTileTex = LoadTextureFromImage(wangHTile);
-
-                Image wangVTile{};
-                wangVTile.data = v_tile->pixels;
-                wangVTile.width = tileset.short_side_len;
-                wangVTile.height = tileset.short_side_len * 2;
-                wangVTile.mipmaps = 1;
-                wangVTile.format = PIXELFORMAT_UNCOMPRESSED_R8G8B8;
-                wangVTileTex = LoadTextureFromImage(wangVTile);
+                for (int i = 0; i < tileset.num_h_tiles; i++) {
+                    stbhw_tile &tile = *tileset.h_tiles[i];
+                    Image img{};
+                    img.data = tile.pixels;
+                    img.width = tileset.short_side_len * 2;
+                    img.height = tileset.short_side_len;
+                    img.mipmaps = 1;
+                    img.format = PIXELFORMAT_UNCOMPRESSED_R8G8B8;
+                    wangHTilesTex[i] = LoadTextureFromImage(img);
+                }
+                for (int i = 0; i < tileset.num_v_tiles; i++) {
+                    stbhw_tile &tile = *tileset.v_tiles[i];
+                    Image img{};
+                    img.data = tile.pixels;
+                    img.width = tileset.short_side_len;
+                    img.height = tileset.short_side_len * 2;
+                    img.mipmaps = 1;
+                    img.format = PIXELFORMAT_UNCOMPRESSED_R8G8B8;
+                    wangVTilesTex[i] = LoadTextureFromImage(img);
+                }
             }
         }
 
@@ -632,7 +635,7 @@ Err Play(GameServer &server)
                     uint8_t pixel = ((uint8_t *)wangMapImg.data)[y * map.width + x];
                     int tileType = (int)floorf(((float)pixel / 256) * map.tileDefCount);
                     tileType = CLAMP(tileType, 0, map.tileDefCount - 1);
-                    //map.Set(x, y, tileType);
+                    map.Set(x, y, tileType, server.now);
                 }
             }
 
@@ -640,16 +643,25 @@ Err Play(GameServer &server)
             //free(wangMapPixels);
         }
 
-        // TODO ui.Image();
-        const float wangScale = 4;
-        Vector2 wangCursor{ 8, 300 };
-        DrawTextureEx(wangTemplateTex, wangCursor, 0, wangScale, WHITE);
-        wangCursor.y += wangTemplateTex.height * wangScale + 10;
-        DrawTextureEx(wangHTileTex, wangCursor, 0, wangScale, WHITE);
-        wangCursor.y += wangHTileTex.height * wangScale + 10;
-        DrawTextureEx(wangVTileTex, wangCursor, 0, wangScale, WHITE);
-        wangCursor.y += wangVTileTex.height * wangScale + 10;
-        DrawTextureEx(wangMapTex, wangCursor, 0, wangScale, WHITE);
+        {
+            UIStyle uiWangStyle{};
+            uiWangStyle.scale = 4;
+            UI uiWang{ { 8, 400 }, uiWangStyle };
+
+            for (int i = 0; i < tileset.num_h_tiles; i++) {
+                Texture &tileTex = wangHTilesTex[i];
+                uiWang.Image(tileTex);
+            }
+            uiWang.Newline();
+
+            for (int i = 0; i < tileset.num_v_tiles; i++) {
+                Texture &tileTex = wangVTilesTex[i];
+                uiWang.Image(tileTex);
+            }
+            uiWang.Newline();
+
+            uiWang.Image(wangMapTex);
+        }
 
         EndDrawing();
         //yojimbo_sleep(0.001);
@@ -661,9 +673,15 @@ Err Play(GameServer &server)
     }
 
     stbhw_free_tileset(&tileset);
-    UnloadTexture(wangTemplateTex);
-    UnloadTexture(wangHTileTex);
-    UnloadTexture(wangVTileTex);
+
+    for (int i = 0; i < tileset.num_h_tiles; i++) {
+        UnloadTexture(wangHTilesTex[i]);
+    }
+    for (int i = 0; i < tileset.num_v_tiles; i++) {
+        UnloadTexture(wangVTilesTex[i]);
+    }
+    free(wangHTilesTex);
+    free(wangVTilesTex);
 
     FreeCommon();
     return err;

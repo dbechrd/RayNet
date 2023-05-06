@@ -35,6 +35,8 @@ struct GameServer {
     void BroadcastEntityDespawn(uint32_t entityId);
     void SendEntitySay(int clientIdx, uint32_t entityId, uint32_t messageLength, const char *message);
     void BroadcastEntitySay(uint32_t entityId, uint32_t messageLength, const char *message);
+    void SendTileChunk(int clientIdx, uint32_t x, uint32_t y);
+    void BroadcastTileChunk(uint32_t x, uint32_t y);
     void ProcessMessages(void);
     void Tick(void);
     void SendClientSnapshots(void);

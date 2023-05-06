@@ -291,6 +291,8 @@ namespace yojimbo
         int ackedPacketsBufferSize;                             ///< Number of packet entries in the acked packet buffer. Consider your packet send rate and aim to have at least a few seconds worth of entries.
         int receivedPacketsBufferSize;                          ///< Number of packet entries in the received packet sequence buffer. Consider your packet send rate and aim to have at least a few seconds worth of entries.
         float rttSmoothingFactor;                               ///< Round-Trip Time (RTT) smoothing factor over time.
+        float packetLossSmoothingFactor;
+        float bandwidthSmoothingFactor;
 
         ClientServerConfig()
         {
@@ -308,6 +310,8 @@ namespace yojimbo
             ackedPacketsBufferSize = 256;
             receivedPacketsBufferSize = 256;
             rttSmoothingFactor = 0.0025f;
+            packetLossSmoothingFactor = 0.1f;
+            bandwidthSmoothingFactor = 0.1f;
         }
     };
 }
@@ -1712,7 +1716,7 @@ namespace yojimbo
             if ( numWords > 0 )
             {
                 yojimbo_assert( ( m_bitsWritten % 32 ) == 0 );
-                memcpy( &m_data[m_wordIndex], data + headBytes, (size_t)numWords * 4 );
+                memcpy( &m_data[m_wordIndex], data + headBytes, numWords * 4 );
                 m_bitsWritten += numWords * 32;
                 m_wordIndex += numWords;
                 m_scratch = 0;
@@ -1944,7 +1948,7 @@ namespace yojimbo
             if ( numWords > 0 )
             {
                 yojimbo_assert( ( m_bitsRead % 32 ) == 0 );
-                memcpy( data + headBytes, &m_data[m_wordIndex], (size_t)numWords * 4 );
+                memcpy( data + headBytes, &m_data[m_wordIndex], numWords * 4 );
                 m_bitsRead += numWords * 32;
                 m_wordIndex += numWords;
                 m_scratchBits = 0;
@@ -2329,7 +2333,7 @@ namespace yojimbo
         bool SerializeVarint32( uint32_t & value )
         {
             int i = 0;
-            uint8_t data[6] = { 0 };
+            uint8_t data[6];
             uint32_t read_value;
             do {
                 if ( m_reader.WouldReadPastEnd( 8 ) )
@@ -2351,7 +2355,7 @@ namespace yojimbo
         bool SerializeVarint64( uint64_t & value )
         {
             int i = 0;
-            uint8_t data[10] = { 0 };
+            uint8_t data[10];
             uint32_t read_value;
             do {
                 if ( m_reader.WouldReadPastEnd( 8 ) )
@@ -3988,7 +3992,6 @@ namespace yojimbo
                     Message * message = (Message*) i->first;
                     yojimbo_printf( YOJIMBO_LOG_LEVEL_ERROR, "leaked message %p (type %d, refcount %d)\n", message, message->GetType(), message->GetRefCount() );
                 }
-                yojimbo_assert( !"leaked messages" );
                 exit(1);
             }
             #endif // #if YOJIMBO_DEBUG_MESSAGE_LEAKS
