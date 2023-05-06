@@ -368,6 +368,77 @@ void Tilemap::Set(uint32_t x, uint32_t y, Tile tile, double now)
     }
 }
 
+void Tilemap::SetFromWangMap(WangMap &wangMap, double now)
+{
+    // TODO: Specify map coords to set (or chunk id) and do a bounds check here instead
+    if (width != wangMap.image.width || height != wangMap.image.height) {
+        return;
+    }
+
+    uint8_t *pixels = (uint8_t *)wangMap.image.data;
+    for (int y = 0; y < width; y++) {
+        for (int x = 0; x < height; x++) {
+            uint8_t pixel = pixels[y * width + x];
+            int tileType = (int)floorf(((float)pixel / 256) * tileDefCount);
+            tileType = CLAMP(tileType, 0, tileDefCount - 1);
+            Set(x, y, tileType, now);
+        }
+    }
+}
+
+bool Tilemap::NeedsFill(uint32_t x, uint32_t y, int tileDefFill)
+{
+    Tile tile;
+    if (AtTry(x, y, tile)) {
+        return tile == tileDefFill;
+    }
+    return false;
+}
+
+void Tilemap::Scan(uint32_t lx, uint32_t rx, uint32_t y, Tile tileDefFill, std::stack<Tilemap::Coord> &stack)
+{
+    bool inSpan = false;
+    for (uint32_t x = lx; x < rx; x++) {
+        if (!NeedsFill(x, y, tileDefFill)) {
+            inSpan = false;
+        } else if (!inSpan) {
+            stack.push({ x, y });
+            inSpan = true;
+        }
+    }
+}
+
+void Tilemap::Fill(uint32_t x, uint32_t y, int tileDefId, double now)
+{
+    Tile tileDefFill = At(x, y);
+    if (tileDefFill == tileDefId) {
+        return;
+    }
+
+    std::stack<Tilemap::Coord> stack{};
+    stack.push({ x, y });
+
+    while (!stack.empty()) {
+        Tilemap::Coord coord = stack.top();
+        stack.pop();
+
+        uint32_t lx = coord.x;
+        uint32_t rx = coord.x;
+        while (lx && NeedsFill(lx - 1, coord.y, tileDefFill)) {
+            Set(lx - 1, coord.y, tileDefId, now);
+            lx -= 1;
+        }
+        while (NeedsFill(rx, coord.y, tileDefFill)) {
+            Set(rx, coord.y, tileDefId, now);
+            rx += 1;
+        }
+        if (coord.y) {
+            Scan(lx, rx, coord.y - 1, tileDefFill, stack);
+        }
+        Scan(lx, rx, coord.y + 1, tileDefFill, stack);
+    }
+}
+
 void Tilemap::ResolveEntityTerrainCollisions(Entity &entity)
 {
     if (!entity.radius) {

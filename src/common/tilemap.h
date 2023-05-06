@@ -3,6 +3,8 @@
 
 #define AI_PATH_NONE UINT32_MAX
 
+struct WangMap;
+
 typedef uint8_t Tile;
 
 struct AiPathNode {
@@ -63,6 +65,8 @@ struct Tilemap {
     bool WorldToTileIndex(uint32_t world_x, uint32_t world_y, Coord &coord);
     bool AtWorld(uint32_t world_x, uint32_t world_y, Tile &tile);
     void Set(uint32_t x, uint32_t y, Tile tile, double now);
+    void SetFromWangMap(WangMap &wangMap, double now);
+    void Fill(uint32_t x, uint32_t y, int tileDefId, double now);
     void ResolveEntityTerrainCollisions(Entity &entity);
     void Draw(Camera2D &camera, bool showCollision);
 
@@ -89,4 +93,8 @@ struct Tilemap {
         }
         return 0;
     }
+
+private:
+    bool NeedsFill(uint32_t x, uint32_t y, int tileDefFill);
+    void Scan(uint32_t lx, uint32_t rx, uint32_t y, Tile tileDefFill, std::stack<Tilemap::Coord> &stack);
 };

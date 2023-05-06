@@ -12,5 +12,6 @@
 #include "net/net.h"
 #include "ring_buffer.h"
 #include "tilemap.h"
+#include "wang.h"
 
 void DrawTextShadowEx(Font font, const char *text, Vector2 pos, Color color);

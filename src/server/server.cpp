@@ -12,90 +12,34 @@ struct Cursor {
     int tileDefId;
 } cursor{};
 
-bool NeedsFill(Tilemap &map, uint32_t x, uint32_t y, int tileDefFill)
+void UpdateCameraFreecam(Camera2D &camera)
 {
-    Tile tile;
-    if (map.AtTry(x, y, tile)) {
-        return tile == tileDefFill;
-    }
-    return false;
-}
+    if (IsMouseButtonDown(MOUSE_BUTTON_RIGHT)) {
+        Vector2 delta = GetMouseDelta();
+        delta = Vector2Scale(delta, -1.0f / camera.zoom);
 
-void Scan(Tilemap &map, uint32_t lx, uint32_t rx, uint32_t y, Tile tileDefFill, std::stack<Tilemap::Coord> &stack)
-{
-    bool inSpan = false;
-    for (uint32_t x = lx; x < rx; x++) {
-        if (!NeedsFill(map, x, y, tileDefFill)) {
-            inSpan = false;
-        } else if (!inSpan) {
-            stack.push({ x, y });
-            inSpan = true;
-        }
-    }
-}
-
-void Fill(Tilemap &map, uint32_t x, uint32_t y, int tileDefId, double now)
-{
-    Tile tileDefFill = map.At(x, y);
-    if (tileDefFill == tileDefId) {
-        return;
+        camera.target = Vector2Add(camera.target, delta);
     }
 
-    std::stack<Tilemap::Coord> stack{};
-    stack.push({ x, y });
+    // Zoom based on mouse wheel
+    float wheel = GetMouseWheelMove();
+    if (wheel != 0) {
+        // Get the world point that is under the mouse
+        Vector2 mouseWorldPos = GetScreenToWorld2D(GetMousePosition(), camera);
 
-    while (!stack.empty()) {
-        Tilemap::Coord coord = stack.top();
-        stack.pop();
+        // Set the offset to where the mouse is
+        camera.offset = GetMousePosition();
 
-        uint32_t lx = coord.x;
-        uint32_t rx = coord.x;
-        while (lx && NeedsFill(map, lx - 1, coord.y, tileDefFill)) {
-            map.Set(lx - 1, coord.y, tileDefId, now);
-            lx -= 1;
-        }
-        while (NeedsFill(map, rx, coord.y, tileDefFill)) {
-            map.Set(rx, coord.y, tileDefId, now);
-            rx += 1;
-        }
-        if (coord.y) {
-            Scan(map, lx, rx, coord.y - 1, tileDefFill, stack);
-        }
-        Scan(map, lx, rx, coord.y + 1, tileDefFill, stack);
+        // Set the target to match, so that the camera maps the world space point
+        // under the cursor to the screen space point under the cursor at any zoom
+        camera.target = mouseWorldPos;
+
+        // Zoom increment
+        const float zoomIncrement = 0.125f;
+
+        camera.zoom += (wheel * zoomIncrement * camera.zoom);
+        if (camera.zoom < zoomIncrement) camera.zoom = zoomIncrement;
     }
-}
-
-void generate_wang_template(const char *filename)
-{
-    stbhw_config config{};
-    config.is_corner = 0;
-    config.short_side_len = 8;
-    config.num_color[0] = 1;
-    config.num_color[1] = 1;
-    config.num_color[2] = 1;
-    config.num_color[3] = 1;
-    config.num_color[4] = 1;
-    config.num_color[5] = 1;
-    config.num_vary_x = 1;
-    config.num_vary_y = 1;
-
-    int wangTemplateW{};
-    int wangTemplateH{};
-    stbhw_get_template_size(&config, &wangTemplateW, &wangTemplateH);
-    unsigned char *wangTemplatePixels = (unsigned char *)calloc((size_t)3 * wangTemplateW * wangTemplateH, 1);
-    if (!stbhw_make_template(&config, wangTemplatePixels, wangTemplateW, wangTemplateH, wangTemplateW*3)) {
-        printf("[stbhw] failed to generate tileset template. %s\n", stbhw_get_last_error());
-        return;
-    }
-
-    Image wangTemplateImg{};
-    wangTemplateImg.width = wangTemplateW;
-    wangTemplateImg.height = wangTemplateH;
-    wangTemplateImg.format = PIXELFORMAT_UNCOMPRESSED_R8G8B8;
-    wangTemplateImg.data = wangTemplatePixels;
-    wangTemplateImg.mipmaps = 1;
-    bool exportSuccess = ExportImage(wangTemplateImg, filename);
-    free(wangTemplatePixels);
 }
 
 Err Play(GameServer &server)
@@ -140,12 +84,14 @@ Err Play(GameServer &server)
 
     SetExitKey(0);
 
-    generate_wang_template("resources/wang/template.png");
+    WangTileset tileset{};
+    err = tileset.GenerateTemplate("resources/wang/template.png");
+    if (err) return err;
 
-    stbhw_tileset tileset{};
-    Texture *wangHTilesTex{};
-    Texture *wangVTilesTex{};
-    Texture wangMapTex{};
+    tileset.Load("resources/wang/tileset.png");
+    WangMap wangMap{};
+    err = tileset.GenerateMap(map.width, map.height, wangMap);
+    if (err) return err;
 
     while (!WindowShouldClose())
     {
@@ -179,38 +125,7 @@ Err Play(GameServer &server)
 
         histogram.Push(frameDtSmooth, doNetTick ? GREEN : RAYWHITE);
 
-        if (editorActive) {
-            if (IsMouseButtonDown(MOUSE_BUTTON_RIGHT)) {
-                Vector2 delta = GetMouseDelta();
-                delta = Vector2Scale(delta, -1.0f / camera2d.zoom);
-
-                camera2d.target = Vector2Add(camera2d.target, delta);
-            }
-
-            // Zoom based on mouse wheel
-            float wheel = GetMouseWheelMove();
-            if (wheel != 0) {
-                // Get the world point that is under the mouse
-                Vector2 mouseWorldPos = GetScreenToWorld2D(GetMousePosition(), camera2d);
-
-                // Set the offset to where the mouse is
-                camera2d.offset = GetMousePosition();
-
-                // Set the target to match, so that the camera maps the world space point
-                // under the cursor to the screen space point under the cursor at any zoom
-                camera2d.target = mouseWorldPos;
-
-                // Zoom increment
-                const float zoomIncrement = 0.125f;
-
-                camera2d.zoom += (wheel * zoomIncrement * camera2d.zoom);
-                if (camera2d.zoom < zoomIncrement) camera2d.zoom = zoomIncrement;
-            }
-        } else {
-            //camera2d.offset = {};
-            //camera2d.target = {};
-            //camera2d.zoom = 1;
-        }
+        UpdateCameraFreecam(camera2d);
 
         const Vector2 cursorWorldPos = GetScreenToWorld2D({ (float)GetMouseX(), (float)GetMouseY() }, camera2d);
 
@@ -346,7 +261,7 @@ Err Play(GameServer &server)
                 } else if (editorPickTile) {
                     cursor.tileDefId = hoveredTile;
                 } else if (editorFillTile) {
-                    Fill(map, coord.x, coord.y, cursor.tileDefId, server.now);
+                    map.Fill(coord.x, coord.y, cursor.tileDefId, server.now);
                 }
 
                 DrawRectangleLinesEx({ (float)coord.x * TILE_W, (float)coord.y * TILE_W, TILE_W, TILE_W }, 2, WHITE);
@@ -595,98 +510,22 @@ Err Play(GameServer &server)
 
         histogram.Draw({ 8, 8 });
 
-        if (!wangHTilesTex) {
-            const char *wangTilesetPath = "resources/wang/tileset.png";
-            Image wangTilesetImg = LoadImage(wangTilesetPath);
-            if (wangTilesetImg.width) {
-                ImageFormat(&wangTilesetImg, PIXELFORMAT_UNCOMPRESSED_R8G8B8);
-                if (!stbhw_build_tileset_from_image(&tileset, (unsigned char *)wangTilesetImg.data, wangTilesetImg.width*3, wangTilesetImg.width, wangTilesetImg.height)) {
-                    printf("[stbhw] failed to build tileset from image %s. %s\n", wangTilesetPath, stbhw_get_last_error());
-                    return RN_BAD_ALLOC;
-                }
-                UnloadImage(wangTilesetImg);
-
-                wangHTilesTex = (Texture *)calloc(tileset.num_h_tiles, sizeof(*wangHTilesTex));
-                if (!wangHTilesTex) {
-                    return RN_BAD_ALLOC;
-                }
-                wangVTilesTex = (Texture *)calloc(tileset.num_v_tiles, sizeof(*wangVTilesTex));
-                if (!wangVTilesTex) {
-                    return RN_BAD_ALLOC;
-                }
-
-                for (int i = 0; i < tileset.num_h_tiles; i++) {
-                    stbhw_tile &tile = *tileset.h_tiles[i];
-                    Image img{};
-                    img.data = tile.pixels;
-                    img.width = tileset.short_side_len * 2;
-                    img.height = tileset.short_side_len;
-                    img.mipmaps = 1;
-                    img.format = PIXELFORMAT_UNCOMPRESSED_R8G8B8;
-                    wangHTilesTex[i] = LoadTextureFromImage(img);
-                }
-                for (int i = 0; i < tileset.num_v_tiles; i++) {
-                    stbhw_tile &tile = *tileset.v_tiles[i];
-                    Image img{};
-                    img.data = tile.pixels;
-                    img.width = tileset.short_side_len;
-                    img.height = tileset.short_side_len * 2;
-                    img.mipmaps = 1;
-                    img.format = PIXELFORMAT_UNCOMPRESSED_R8G8B8;
-                    wangVTilesTex[i] = LoadTextureFromImage(img);
-                }
-            }
-        }
-
-        if (!wangMapTex.width) {
-            int wangMapW = map.width;
-            int wangMapH = map.height;
-            unsigned char *wangMapPixels = (unsigned char *)malloc((size_t)3 * wangMapW * wangMapH);
-            if (!stbhw_generate_image(&tileset, 0, wangMapPixels, wangMapW*3, wangMapW, wangMapH)) {
-                printf("[stbhw] failed to generate map from tileset. %s\n", stbhw_get_last_error());
-                return RN_BAD_ALLOC;
-            }
-
-            Image wangMapImg{};
-            wangMapImg.width = wangMapW;
-            wangMapImg.height = wangMapH;
-            wangMapImg.format = PIXELFORMAT_UNCOMPRESSED_R8G8B8;
-            wangMapImg.data = wangMapPixels;
-            wangMapImg.mipmaps = 1;
-            ImageFormat(&wangMapImg, PIXELFORMAT_UNCOMPRESSED_GRAYSCALE);
-            wangMapTex = LoadTextureFromImage(wangMapImg);
-
-            for (int y = 0; y < map.height; y++) {
-                for (int x = 0; x < map.width; x++) {
-                    uint8_t pixel = ((uint8_t *)wangMapImg.data)[y * map.width + x];
-                    int tileType = (int)floorf(((float)pixel / 256) * map.tileDefCount);
-                    tileType = CLAMP(tileType, 0, map.tileDefCount - 1);
-                    //map.Set(x, y, tileType, server.now);
-                }
-            }
-
-            UnloadImage(wangMapImg);
-            //free(wangMapPixels);
-        }
-
         {
             UIStyle uiWangStyle{};
             uiWangStyle.scale = 4;
             UI uiWang{ { 8, 400 }, uiWangStyle };
 
-            for (int i = 0; i < tileset.num_h_tiles; i++) {
-                Texture &tileTex = wangHTilesTex[i];
-                uiWang.Image(tileTex);
+            for (Texture &tex : tileset.hTextures) {
+                uiWang.Image(tex);
             }
             uiWang.Newline();
 
-            for (int i = 0; i < tileset.num_v_tiles; i++) {
-                Texture &tileTex = wangVTilesTex[i];
-                uiWang.Image(tileTex);
+            for (Texture &tex : tileset.vTextures) {
+                uiWang.Image(tex);
             }
             uiWang.Newline();
 
-            uiWang.Image(wangMapTex);
+            uiWang.Image(wangMap.texture);
         }
 
         EndDrawing();
@@ -698,17 +537,7 @@ Err Play(GameServer &server)
         }
     }
 
-    stbhw_free_tileset(&tileset);
-
-    for (int i = 0; i < tileset.num_h_tiles; i++) {
-        UnloadTexture(wangHTilesTex[i]);
-    }
-    for (int i = 0; i < tileset.num_v_tiles; i++) {
-        UnloadTexture(wangVTilesTex[i]);
-    }
-    free(wangHTilesTex);
-    free(wangVTilesTex);
-
+    tileset.Unload();
     FreeCommon();
     return err;
 }
@@ -779,6 +608,7 @@ int main(int argc, char *argv[])
     //--------------------
     // Play the game
     err = Play(*server);
+    if (err) __debugbreak();
 
     //--------------------
     // Cleanup

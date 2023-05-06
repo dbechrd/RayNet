@@ -5,11 +5,13 @@
 #pragma warning(push, 0)
 #include "yojimbo.h"
 #pragma warning(pop)
+#include "stb_herringbone_wang_tile.h"
 #include <stack>
 #include <cassert>
 #include <cstdio>
 #include <ctime>
 #include <cctype>
+#include <vector>
 
 // Stuff that probably shouldn't be here
 

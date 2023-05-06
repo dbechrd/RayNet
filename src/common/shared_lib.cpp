@@ -5,6 +5,7 @@
 #include "file_utils.cpp"
 #include "net/net.cpp"
 #include "tilemap.cpp"
+#include "wang.cpp"
 
 void DrawTextShadowEx(Font font, const char *text, Vector2 pos, Color color)
 {

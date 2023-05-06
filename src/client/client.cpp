@@ -180,7 +180,7 @@ int main(int argc, char *argv[])
             //--------------------
             // Draw the map
             BeginMode2D(client->world->camera2d);
-            client->world->map.Draw(client->world->camera2d);
+            client->world->map.Draw(client->world->camera2d, false);
 
             //--------------------
             // Draw the entities
