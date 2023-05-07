@@ -281,20 +281,58 @@ Err Play(GameServer &server)
 
             UIStyle uiWangStyle{};
             uiWangStyle.scale = 4;
-            UI uiWang{ { 8, 400 }, uiWangStyle };
+            UI uiWang{ { 8, 200 }, uiWangStyle };
 
-            for (Texture &tex : tileset.hTextures) {
-                uiWang.Image(tex);
+            static int hTex = -1;
+            static int vTex = -1;
+
+            for (int i = 0; i < tileset.hTextures.size(); i++) {
+                if (uiWang.Image(tileset.hTextures[i]).pressed) {
+                    hTex = hTex == i ? -1 : i;
+                    vTex = -1;
+                }
             }
             uiWang.Newline();
 
-            for (Texture &tex : tileset.vTextures) {
-                uiWang.Image(tex);
+            for (int i = 0; i < tileset.vTextures.size(); i++) {
+                if (uiWang.Image(tileset.vTextures[i]).pressed) {
+                    hTex = -1;
+                    vTex = vTex == i ? -1 : i;
+                }
             }
             uiWang.Newline();
 
             if (uiWang.Image(wangMap.texture).pressed) {
                 map.SetFromWangMap(wangMap, server.now);
+            }
+
+            if (hTex >= 0 || vTex >= 0) {
+                UIStyle uiWangTileStyle{};
+                uiWangTileStyle.margin = 1;
+                UI uiWangTile{ { 300, 200 }, uiWangTileStyle };
+                if (hTex >= 0) {
+                    stbhw_tile *tile = tileset.tileset.h_tiles[hTex];
+                    for (int y = 0; y < tileset.tileset.short_side_len; y++) {
+                        for (int x = 0; x < tileset.tileset.short_side_len*2; x++) {
+                            uint8_t *pixel = &tile->pixels[3 * (y * tileset.tileset.short_side_len*2 + x)];
+                            uint8_t tile = *pixel % map.tileDefCount;
+                            const Rectangle tileRect = map.TileDefRect(tile);
+                            uiWangTile.Image(map.texture, tileRect);
+                        }
+                        uiWangTile.Newline();
+                    }
+                } else if (vTex >= 0) {
+                    stbhw_tile *tile = tileset.tileset.v_tiles[vTex];
+                    for (int y = 0; y < tileset.tileset.short_side_len*2; y++) {
+                        for (int x = 0; x < tileset.tileset.short_side_len; x++) {
+                            uint8_t *pixel = &tile->pixels[3 * (y * tileset.tileset.short_side_len + x)];
+                            uint8_t tile = *pixel % map.tileDefCount;
+                            const Rectangle tileRect = map.TileDefRect(tile);
+                            uiWangTile.Image(map.texture, tileRect);
+                        }
+                        uiWangTile.Newline();
+                    }
+                }
             }
 
             io.PopScope();

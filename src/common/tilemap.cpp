@@ -488,6 +488,19 @@ void Tilemap::ResolveEntityTerrainCollisions(Entity &entity)
     }
 }
 
+Rectangle Tilemap::TileDefRect(int tileDefIdx)
+{
+    const TileDef &tileDef = tileDefs[tileDefIdx];
+    const Rectangle rect{ (float)tileDef.x, (float)tileDef.y, TILE_W, TILE_W };
+    return rect;
+}
+
+void Tilemap::DrawTile(Tile tile, Vector2 position)
+{
+    const Rectangle texRect = TileDefRect(tile);
+    DrawTextureRec(texture, texRect, position, WHITE);
+}
+
 void Tilemap::Draw(Camera2D &camera)
 {
     Rectangle screenRect = GetScreenRectWorld(camera);
@@ -499,10 +512,7 @@ void Tilemap::Draw(Camera2D &camera)
     for (int y = yMin; y < yMax; y++) {
         for (int x = xMin; x < xMax; x++) {
             Tile tile = At(x, y);
-            TileDef &tileDef = tileDefs[tile];
-            Rectangle texRect{ (float)tileDef.x, (float)tileDef.y, TILE_W, TILE_W };
-            Vector2 tilePos = { (float)x * TILE_W, (float)y * TILE_W };
-            DrawTextureRec(texture, texRect, tilePos, WHITE);
+            DrawTile(tile, { (float)x * TILE_W, (float)y * TILE_W });
         }
     }
 }

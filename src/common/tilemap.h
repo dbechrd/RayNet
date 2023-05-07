@@ -64,10 +64,14 @@ struct Tilemap {
     bool AtTry(uint32_t x, uint32_t y, Tile &tile);
     bool WorldToTileIndex(uint32_t world_x, uint32_t world_y, Coord &coord);
     bool AtWorld(uint32_t world_x, uint32_t world_y, Tile &tile);
+
     void Set(uint32_t x, uint32_t y, Tile tile, double now);
     void SetFromWangMap(WangMap &wangMap, double now);
     void Fill(uint32_t x, uint32_t y, int tileDefId, double now);
     void ResolveEntityTerrainCollisions(Entity &entity);
+
+    Rectangle TileDefRect(int tileDef);
+    void DrawTile(Tile tile, Vector2 position);
     void Draw(Camera2D &camera);
     void DrawColliders(Camera2D &camera);
 

@@ -152,8 +152,12 @@ UIState UI::Text(const char *text, Color fgColor)
     return state;
 }
 
-UIState UI::Image(Texture &texture)
+UIState UI::Image(Texture &texture, Rectangle srcRect)
 {
+    if (!srcRect.width) {
+        srcRect = { 0, 0, (float)texture.width, (float)texture.height };
+    }
+
     UIStyle &style = styleStack.top();
 
     Vector2 ctrlPosition{
@@ -162,8 +166,8 @@ UIState UI::Image(Texture &texture)
     };
 
     Vector2 ctrlSize{
-        texture.width * style.scale,
-        texture.height * style.scale
+        srcRect.width * style.scale,
+        srcRect.height * style.scale
     };
 
     Align(style, ctrlPosition, ctrlSize);
@@ -179,7 +183,7 @@ UIState UI::Image(Texture &texture)
     UIState state = CalcState(ctrlRect, prevHoverHash);
 
     // Draw image
-    DrawTextureEx(texture, ctrlPosition, 0, style.scale, WHITE);
+    DrawTexturePro(texture, srcRect, ctrlRect, {}, 0, WHITE);
 
     if (state.hover) {
         DrawRectangleLinesEx(ctrlRect, 2, YELLOW);
