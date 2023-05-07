@@ -1,6 +1,8 @@
 #pragma once
 #include "common.h"
 
+struct Tilemap;
+
 struct WangMap {
     Image image{};
     Texture texture{};  // each pixel is an index into tileDefs
@@ -20,7 +22,9 @@ struct WangTileset {
     std::vector<Texture> vTextures{};
 
     Err GenerateTemplate(const char *filename);
-    Err Load(const char *filename);
+    void GenerateHTileTexture(Tilemap &map, int hTex);
+    void GenerateVTileTexture(Tilemap &map, int vTex);
+    Err Load(Tilemap &map, const char *filename);
     void Unload(void);
     Err GenerateMap(uint32_t w, uint32_t h, WangMap &wangMap);
 };

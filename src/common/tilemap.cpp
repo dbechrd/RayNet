@@ -239,7 +239,13 @@ Err Tilemap::Load(const char *filename, double now)
             for (uint32_t i = 0; i < tileDefCount; i++) {
                 TileDef &dst = tileDefs[i];
                 fread(&dst.x, sizeof(dst.x), 1, file);
+                if (dst.x < 0 || dst.x >= texture.width) {
+                    err = RN_OUT_OF_BOUNDS; break;
+                }
                 fread(&dst.y, sizeof(dst.y), 1, file);
+                if (dst.y < 0 || dst.y >= texture.height) {
+                    err = RN_OUT_OF_BOUNDS; break;
+                }
                 fread(&dst.collide, sizeof(dst.collide), 1, file);
             }
         } else {
@@ -260,6 +266,9 @@ Err Tilemap::Load(const char *filename, double now)
         for (uint32_t i = 0; i < tileCount; i++) {
             Tile &tile = tiles[i];
             fread(&tiles[i], sizeof(tiles[i]), 1, file);
+            if (tiles[i] >= tileDefCount) {
+                err = RN_OUT_OF_BOUNDS; break;
+            }
         }
         chunkLastUpdatedAt = now;
 
@@ -316,6 +325,18 @@ Err Tilemap::Load(const char *filename, double now)
                 aiPath.pathNodeIndexCount = v2HardcodedAiPaths[i].pathNodeIndexCount;
             }
         }
+
+        Image img = LoadImage(texturePath);
+        if (!img.width) {
+            err = RN_BAD_FILE_READ; break;
+        }
+        for (int i = 0; i < tileDefCount; i++) {
+            TileDef &tileDef = tileDefs[i];
+            assert(tileDef.x < img.width);
+            assert(tileDef.y < img.height);
+            tileDef.color = GetImageColor(img, tileDef.x, tileDef.y);
+        }
+        UnloadImage(img);
     } while (0);
 
     if (file) fclose(file);
@@ -379,10 +400,9 @@ void Tilemap::SetFromWangMap(WangMap &wangMap, double now)
     uint8_t *pixels = (uint8_t *)wangMap.image.data;
     for (int y = 0; y < width; y++) {
         for (int x = 0; x < height; x++) {
-            uint8_t pixel = pixels[y * width + x];
-            int tileType = (int)floorf(((float)pixel / 256) * tileDefCount);
-            tileType = CLAMP(tileType, 0, tileDefCount - 1);
-            Set(x, y, tileType, now);
+            uint8_t tile = pixels[y * width + x];
+            tile = CLAMP(tile, 0, tileDefCount - 1);
+            Set(x, y, tile, now);
         }
     }
 }
@@ -488,11 +508,17 @@ void Tilemap::ResolveEntityTerrainCollisions(Entity &entity)
     }
 }
 
-Rectangle Tilemap::TileDefRect(int tileDefIdx)
+Rectangle Tilemap::TileDefRect(Tile tile)
 {
-    const TileDef &tileDef = tileDefs[tileDefIdx];
+    const TileDef &tileDef = tileDefs[tile];
     const Rectangle rect{ (float)tileDef.x, (float)tileDef.y, TILE_W, TILE_W };
     return rect;
+}
+
+Color Tilemap::TileDefAvgColor(Tile tile)
+{
+    const TileDef &tileDef = tileDefs[tile];
+    return tileDef.color;
 }
 
 void Tilemap::DrawTile(Tile tile, Vector2 position)

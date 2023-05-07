@@ -88,6 +88,7 @@ enum Err {
     RN_INVALID_ADDRESS  = -8,
     RN_RAYLIB_ERROR     = -9,
     RN_BAD_ID           = -10,
+    RN_OUT_OF_BOUNDS    = -11,
 };
 
 // Dumb stuff that should get a resource manager or wutevs

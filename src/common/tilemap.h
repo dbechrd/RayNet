@@ -20,6 +20,7 @@ struct AiPath {
 struct TileDef {
     uint32_t x, y;  // position in spritesheet
     bool collide;
+    Color color;  // color for minimap/wang tile editor (top left pixel of tile)
 };
 
 struct Tilemap {
@@ -70,7 +71,8 @@ struct Tilemap {
     void Fill(uint32_t x, uint32_t y, int tileDefId, double now);
     void ResolveEntityTerrainCollisions(Entity &entity);
 
-    Rectangle TileDefRect(int tileDef);
+    Rectangle TileDefRect(Tile tile);
+    Color TileDefAvgColor(Tile tile);
     void DrawTile(Tile tile, Vector2 position);
     void Draw(Camera2D &camera);
     void DrawColliders(Camera2D &camera);

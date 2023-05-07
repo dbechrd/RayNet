@@ -191,9 +191,9 @@ UIState UI::Image(Texture &texture, Rectangle srcRect)
 
     // Audio
     if (state.clicked) {
-        PlaySound(sndHardTick);
+        PlaySoundMulti(sndHardTick);
     } else if (state.entered) {
-        PlaySound(sndSoftTick);
+        PlaySoundMulti(sndSoftTick);
     }
 
     UpdateCursor(style, ctrlRect);

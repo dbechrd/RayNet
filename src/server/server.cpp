@@ -71,7 +71,7 @@ Err Play(GameServer &server)
     err = tileset.GenerateTemplate("resources/wang/template.png");
     if (err) return err;
 
-    tileset.Load("resources/wang/tileset.png");
+    tileset.Load(map, "resources/wang/tileset.png");
     WangMap wangMap{};
     err = tileset.GenerateMap(map.width, map.height, wangMap);
     if (err) return err;
@@ -281,7 +281,7 @@ Err Play(GameServer &server)
 
             UIStyle uiWangStyle{};
             uiWangStyle.scale = 4;
-            UI uiWang{ { 8, 200 }, uiWangStyle };
+            UI uiWang{ { 8, 180 }, uiWangStyle };
 
             static int hTex = -1;
             static int vTex = -1;
@@ -302,13 +302,17 @@ Err Play(GameServer &server)
             }
             uiWang.Newline();
 
+            if (uiWang.Button("Re-generate Map").pressed) {
+                tileset.GenerateMap(map.width, map.height, wangMap);
+            }
+            uiWang.Newline();
             if (uiWang.Image(wangMap.texture).pressed) {
                 map.SetFromWangMap(wangMap, server.now);
             }
 
             if (hTex >= 0 || vTex >= 0) {
                 UIStyle uiWangTileStyle{};
-                uiWangTileStyle.margin = 1;
+                uiWangTileStyle.margin = 0;
                 UI uiWangTile{ { 300, 200 }, uiWangTileStyle };
                 if (hTex >= 0) {
                     stbhw_tile *tile = tileset.tileset.h_tiles[hTex];
@@ -317,7 +321,15 @@ Err Play(GameServer &server)
                             uint8_t *pixel = &tile->pixels[3 * (y * tileset.tileset.short_side_len*2 + x)];
                             uint8_t tile = *pixel % map.tileDefCount;
                             const Rectangle tileRect = map.TileDefRect(tile);
-                            uiWangTile.Image(map.texture, tileRect);
+                            if (uiWangTile.Image(map.texture, tileRect).down) {
+                                pixel[0] = editor.state.tiles.cursor.tileDefId;
+                                pixel[1] = editor.state.tiles.cursor.tileDefId;
+                                pixel[2] = editor.state.tiles.cursor.tileDefId;
+                                //pixel[0] = editor.state.tiles.cursor.tileDefId / 1   * (255/10);
+                                //pixel[1] = editor.state.tiles.cursor.tileDefId / 10  * (200/10) + (255-200);
+                                //pixel[2] = editor.state.tiles.cursor.tileDefId / 100 * (200/10) + (255-200);
+                                tileset.GenerateHTileTexture(map, hTex);
+                            }
                         }
                         uiWangTile.Newline();
                     }
@@ -328,7 +340,15 @@ Err Play(GameServer &server)
                             uint8_t *pixel = &tile->pixels[3 * (y * tileset.tileset.short_side_len + x)];
                             uint8_t tile = *pixel % map.tileDefCount;
                             const Rectangle tileRect = map.TileDefRect(tile);
-                            uiWangTile.Image(map.texture, tileRect);
+                            if (uiWangTile.Image(map.texture, tileRect).down) {
+                                pixel[0] = editor.state.tiles.cursor.tileDefId;
+                                pixel[1] = editor.state.tiles.cursor.tileDefId;
+                                pixel[2] = editor.state.tiles.cursor.tileDefId;
+                                //pixel[0] = editor.state.tiles.cursor.tileDefId / 1   * (255/10);
+                                //pixel[1] = editor.state.tiles.cursor.tileDefId / 10  * (200/10) + (255-200);
+                                //pixel[2] = editor.state.tiles.cursor.tileDefId / 100 * (200/10) + (255-200);
+                                tileset.GenerateVTileTexture(map, vTex);
+                            }
                         }
                         uiWangTile.Newline();
                     }
