@@ -142,6 +142,16 @@ UIState UI::Text(const char *text)
     return state;
 }
 
+UIState UI::Text(const char *text, Color fgColor)
+{
+    UIStyle style = GetStyle();
+    style.fgColor = fgColor;
+    PushStyle(style);
+    UIState state = Text(text);
+    PopStyle();
+    return state;
+}
+
 UIState UI::Image(Texture &texture)
 {
     UIStyle &style = styleStack.top();

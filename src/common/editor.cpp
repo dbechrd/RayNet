@@ -29,6 +29,11 @@ void Editor::DrawOverlays(IO &io, Tilemap &map, Camera2D &camera, double now)
 
     HandleInput(io, camera);
 
+    // Draw tile collision layer
+    if (state.showColliders) {
+        map.DrawColliders(camera);
+    }
+
     if (active) {
         switch (mode) {
             case EditMode_Tiles: {
@@ -47,11 +52,6 @@ void Editor::DrawOverlays(IO &io, Tilemap &map, Camera2D &camera, double now)
 
 void Editor::DrawOverlay_Tiles(IO &io, Tilemap &map, Camera2D &camera, double now)
 {
-    // Draw tile collision layer
-    if (state.tiles.editCollision) {
-        map.DrawColliders(camera);
-    }
-
     if (!io.IsMouseCaptured()) {
         // Draw hover highlight
         const Vector2 cursorWorldPos = GetScreenToWorld2D({ (float)GetMouseX(), (float)GetMouseY() }, camera);
@@ -236,6 +236,13 @@ UIState Editor::DrawUI_ActionBar(IO &io, Vector2 position, Tilemap &map)
         }
     }
 
+    uiActionBar.Space({ 16, 0 });
+
+    UIState showCollidersButton = uiActionBar.Button("Show Colliders", state.showColliders ? RED : GRAY);
+    if (showCollidersButton.clicked) {
+        state.showColliders = !state.showColliders;
+    }
+
     uiActionBar.Newline();
 
     switch (mode) {
@@ -254,7 +261,8 @@ UIState Editor::DrawUI_ActionBar(IO &io, Vector2 position, Tilemap &map)
 
 void Editor::DrawUI_TileActions(IO &io, UI &uiActionBar, Tilemap &map)
 {
-    UIState editCollisionButton = uiActionBar.Button("Collision", state.tiles.editCollision ? RED : GRAY);
+    uiActionBar.Text("Flags:", BLACK);
+    UIState editCollisionButton = uiActionBar.Button("Collide", state.tiles.editCollision ? RED : GRAY);
     if (editCollisionButton.clicked) {
         state.tiles.editCollision = !state.tiles.editCollision;
     }

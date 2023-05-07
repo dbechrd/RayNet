@@ -17,7 +17,10 @@ void DrawTextShadowEx(Font font, const char *text, Vector2 pos, Color color)
     }
 
     //DrawRectangle(windowWidth / 2 - textSize.x / 2, 370, textSize.x, textSize.y, WHITE);
-    DrawTextEx(font, text, shadowPos, font.baseSize, 1, BLACK);
+    if (color.r || color.g || color.b) {
+        // Don't draw shadows on black text
+        DrawTextEx(font, text, shadowPos, font.baseSize, 1, BLACK);
+    }
     DrawTextEx(font, text, pos, font.baseSize, 1, color);
 #else
     DrawTextEx(font, text, pos, font.baseSize, 1, color);

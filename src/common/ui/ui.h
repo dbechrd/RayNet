@@ -82,6 +82,7 @@ struct UI {
 
     void Space(Vector2 space);
     UIState Text(const char *text);
+    UIState Text(const char *text, Color fgColor);
     UIState Image(Texture &texture);
     UIState Button(const char *text);
     UIState Button(const char *text, Color bgColor);

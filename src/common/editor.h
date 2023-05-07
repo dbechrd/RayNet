@@ -30,7 +30,8 @@ struct EditModePathNodes {
     } cursor;
 };
 
-union EditModeState {
+struct EditModeState {
+    bool showColliders{};
     EditModeTiles tiles;
     EditModePathNodes pathNodes;
 };

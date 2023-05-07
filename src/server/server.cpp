@@ -75,7 +75,6 @@ Err Play(GameServer &server)
     WangMap wangMap{};
     err = tileset.GenerateMap(map.width, map.height, wangMap);
     if (err) return err;
-    //map.SetFromWangMap(wangMap, server.now);
 
     Editor editor{};
 
@@ -131,14 +130,16 @@ Err Play(GameServer &server)
             Entity &entity = server.world->entities[entityId];
             if (entity.type) {
                 entity.Draw(fntHackBold20, entityId, 1);
-#if CL_DBG_COLLIDERS
-                // [Debug] Draw colliders
-                if (entity.radius) {
-                    DrawCircle(entity.position.x, entity.position.y, entity.radius, entity.colliding ? Fade(RED, 0.5) : Fade(GRAY, 0.5));
+                if (editor.active && editor.state.showColliders) {
+                    // [Debug] Draw colliders
+                    if (entity.radius) {
+                        DrawCircle(entity.position.x, entity.position.y, entity.radius, entity.colliding ? Fade(RED, 0.5) : Fade(LIME, 0.5));
+                    }
                 }
+
                 // [Debug] Draw velocity vectors
                 //DrawLineEx(entity.position, Vector2Add(entity.position, entity.velocity), 2, PINK);
-#endif
+
 #if CL_DBG_FORCE_ACCUM
                 // [Debug] Draw force vectors
                 if (Vector2LengthSqr(entity.forceAccum)) {
@@ -292,7 +293,9 @@ Err Play(GameServer &server)
             }
             uiWang.Newline();
 
-            uiWang.Image(wangMap.texture);
+            if (uiWang.Image(wangMap.texture).pressed) {
+                map.SetFromWangMap(wangMap, server.now);
+            }
 
             io.PopScope();
         }
