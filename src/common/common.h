@@ -99,6 +99,9 @@ extern Texture texLily;
 extern Sound sndSoftTick;
 extern Sound sndHardTick;
 
+extern Music musAmbientOutdoors;
+extern Music musCave;
+
 Err InitCommon(void);
 void FreeCommon(void);
 

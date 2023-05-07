@@ -16,6 +16,9 @@ Texture texLily;
 Sound sndSoftTick;
 Sound sndHardTick;
 
+Music musAmbientOutdoors;
+Music musCave;
+
 IO io;
 
 // Load font from memory buffer, fileType refers to extension: i.e. ".ttf"
@@ -86,6 +89,8 @@ Err InitCommon(void)
 {
     Err err = RN_SUCCESS;
 
+    InitAudioDevice();
+
     // Load SDF required shader (we use default vertex shader)
     shdSdfText = LoadShader(0, "resources/shaders/sdf.fs");
 
@@ -105,6 +110,9 @@ Err InitCommon(void)
     sndHardTick = LoadSound("resources/hard_tick.wav");
     if (!sndHardTick.frameCount) err = RN_RAYLIB_ERROR;
 
+    musAmbientOutdoors = LoadMusicStream("resources/copyright/345470__philip_goddard__branscombe-landslip-birds-and-sea-echoes-ese-from-cave-track.ogg");
+    musCave = LoadMusicStream("resources/copyright/69391__zixem__cave_amb.wav");
+
     rnSoundSystem.Init();
 
     return err;
@@ -118,5 +126,7 @@ void FreeCommon(void)
     UnloadTexture(texLily);
     UnloadSound(sndSoftTick);
     UnloadSound(sndHardTick);
+    UnloadMusicStream(musAmbientOutdoors);
+    UnloadMusicStream(musCave);
     rnSoundSystem.Free();
 }

@@ -18,12 +18,17 @@ int main(int argc, char *argv[])
     // NOTE(dlb): yojimbo uses rand() for network simulator and random_int()/random_float()
     srand((unsigned int)startedAt);
 
-    InitAudioDevice();
-
     InitWindow(WINDOW_WIDTH, WINDOW_HEIGHT, "RayNet Client");
     //SetWindowState(FLAG_VSYNC_HINT);  // Gahhhhhh Windows fucking sucks at this
     //SetWindowState(FLAG_WINDOW_RESIZABLE);
     //SetWindowState(FLAG_FULLSCREEN_MODE);
+
+    err = InitCommon();
+    if (err) {
+        printf("Failed to load common resources\n");
+    }
+
+    PlayMusicStream(musAmbientOutdoors);
 
     Image icon = LoadImage("resources/client.png");
     SetWindowIcon(icon);
@@ -47,11 +52,6 @@ int main(int argc, char *argv[])
     );
 #endif
 
-    err = InitCommon();
-    if (err) {
-        printf("Failed to load common resources\n");
-    }
-
     //--------------------
     // Client
     GameClient *client = new GameClient;
@@ -70,6 +70,8 @@ int main(int argc, char *argv[])
     bool quit = false;
 
     while (!quit) {
+        UpdateMusicStream(musAmbientOutdoors);
+
         io.PushScope(IO::IO_Game);
 
         client->now = GetTime();
