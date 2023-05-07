@@ -183,12 +183,12 @@ void Editor::DrawOverlay_Paths(IO &io, Tilemap &map, Camera2D &camera)
     }
 }
 
-UIState Editor::DrawUI(IO &io, Vector2 position, Tilemap &map)
+UIState Editor::DrawUI(IO &io, Vector2 position, Tilemap &map, double now)
 {
     if (!active) return {};
     io.PushScope(IO::IO_EditorUI);
 
-    UIState state = DrawUI_ActionBar(io, position, map);
+    UIState state = DrawUI_ActionBar(io, position, map, now);
     if (state.hover) {
         io.CaptureMouse();
     }
@@ -197,7 +197,7 @@ UIState Editor::DrawUI(IO &io, Vector2 position, Tilemap &map)
     return state;
 }
 
-UIState Editor::DrawUI_ActionBar(IO &io, Vector2 position, Tilemap &map)
+UIState Editor::DrawUI_ActionBar(IO &io, Vector2 position, Tilemap &map, double now)
 {
     UIStyle uiActionBarStyle{};
     UI uiActionBar{ position, uiActionBarStyle };
@@ -219,7 +219,7 @@ UIState Editor::DrawUI_ActionBar(IO &io, Vector2 position, Tilemap &map)
 
     UIState loadButton = uiActionBar.Button("Load");
     if (loadButton.clicked) {
-        Err err = map.Load(LEVEL_001);
+        Err err = map.Load(LEVEL_001, now);
         if (err != RN_SUCCESS) {
             printf("Failed to load map with code %d\n", err);
             assert(!"oops");

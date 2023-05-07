@@ -162,7 +162,7 @@ Err Tilemap::Save(const char *filename)
     return RN_SUCCESS;
 }
 
-Err Tilemap::Load(const char *filename)
+Err Tilemap::Load(const char *filename, double now)
 {
     Err err = RN_SUCCESS;
 
@@ -261,6 +261,7 @@ Err Tilemap::Load(const char *filename)
             Tile &tile = tiles[i];
             fread(&tiles[i], sizeof(tiles[i]), 1, file);
         }
+        chunkLastUpdatedAt = now;
 
         pathNodes = (AiPathNode *)calloc(pathNodeCount, sizeof(*pathNodes));
         if (!pathNodes) {

@@ -46,7 +46,7 @@ Err Play(GameServer &server)
         printf("Failed to load common resources\n");
     }
 
-    err = server.world->map.Load(LEVEL_001);
+    err = server.world->map.Load(LEVEL_001, server.now);
     if (err) {
         printf("Failed to load map with code %d\n", err);
         assert(!"oops");
@@ -200,7 +200,7 @@ Err Play(GameServer &server)
             }, 1.0f, PINK);
 #endif
 
-        editor.DrawUI(io, { 380, 8 }, map);
+        editor.DrawUI(io, { 380, 8 }, map, server.now);
 
         {
             io.PushScope(IO::IO_HUD);

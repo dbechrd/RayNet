@@ -46,7 +46,7 @@ Err GameClient::TryConnect(void)
     yj_client->InsecureConnect(privateKey, clientId, serverAddress);
     world = new ClientWorld;
     world->camera2d.zoom = 1.0f;
-    world->map.Load(LEVEL_001);
+    world->map.Load(LEVEL_001, now);
     return RN_SUCCESS;
 }
 

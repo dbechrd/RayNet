@@ -57,7 +57,7 @@ struct Tilemap {
     ~Tilemap();
 
     Err Save(const char *filename);
-    Err Load(const char *filename);
+    Err Load(const char *filename, double now);
 
     // Tiles
     Tile At(uint32_t x, uint32_t y);
