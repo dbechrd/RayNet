@@ -1,10 +1,7 @@
 #pragma once
 
-namespace raylib {
-    #include "raylib/raylib.h"
-    #include "raylib/raymath.h"
-}
-using namespace raylib;
+#include "raylib/raylib.h"
+#include "raylib/raymath.h"
 
 #pragma warning(push, 0)
 #include "yojimbo.h"
@@ -151,55 +148,61 @@ struct IO {
     }
 
     // returns true if keyboard is captured by a higher precedence scope
-    bool IsKeyboardCaptured(void)
+    bool KeyboardCaptured(void)
     {
         int captureScope = MAX(prevKeyboardCaptureScope, keyboardCaptureScope);
         return captureScope > scopeStack.top();
     }
 
     // returns true if mouse is captured by a higher precedence scope
-    bool IsMouseCaptured(void)
+    bool MouseCaptured(void)
     {
         int captureScope = MAX(prevMouseCaptureScope, mouseCaptureScope);
         return captureScope > scopeStack.top();
     }
 
-    bool IsKeyPressed(int key) {
-        if (IsKeyboardCaptured()) {
+    bool KeyPressed(int key) {
+        if (KeyboardCaptured()) {
             return false;
         }
-        return raylib::IsKeyPressed(key);
+        return IsKeyPressed(key);
     }
-    bool IsKeyDown(int key) {
-        if (IsKeyboardCaptured()) {
+    bool KeyDown(int key) {
+        if (KeyboardCaptured()) {
             return false;
         }
-        return raylib::IsKeyDown(key);
+        return IsKeyDown(key);
     }
-    bool IsKeyReleased(int key) {
-        if (IsKeyboardCaptured()) {
+    bool KeyReleased(int key) {
+        if (KeyboardCaptured()) {
             return false;
         }
-        return raylib::IsKeyReleased(key);
+        return IsKeyReleased(key);
     }
 
-    bool IsMouseButtonPressed(int button) {
-        if (IsMouseCaptured()) {
+    bool MouseButtonPressed(int button) {
+        if (MouseCaptured()) {
             return false;
         }
-        return raylib::IsMouseButtonPressed(button);
+        return IsMouseButtonPressed(button);
     }
-    bool IsMouseButtonDown(int button) {
-        if (IsMouseCaptured()) {
+    bool MouseButtonDown(int button) {
+        if (MouseCaptured()) {
             return false;
         }
-        return raylib::IsMouseButtonDown(button);
+        return IsMouseButtonDown(button);
     }
-    bool IsMouseButtonReleased(int button) {
-        if (IsMouseCaptured()) {
+    bool MouseButtonReleased(int button) {
+        if (MouseCaptured()) {
             return false;
         }
-        return raylib::IsMouseButtonReleased(button);
+        return IsMouseButtonReleased(button);
+    }
+    float MouseWheelMove(void) {
+        if (MouseCaptured()) {
+            return 0;
+        }
+        return GetMouseWheelMove();
     }
 
 private:

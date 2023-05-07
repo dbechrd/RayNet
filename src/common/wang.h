@@ -5,26 +5,25 @@ struct Tilemap;
 
 struct WangMap {
     Image image{};
-    Texture texture{};  // each pixel is an index into tileDefs
+    Texture indexed{};  // each pixel is an index into tileDefs
+    Texture colorized{};  // each pixel is the pretty tileDef color (i.e. a minimap)
 
     ~WangMap(void) {
         UnloadImage(image);
-        UnloadTexture(texture);
+        UnloadTexture(indexed);
+        UnloadTexture(colorized);
     }
 };
 
 struct WangTileset {
     const PixelFormat format = PIXELFORMAT_UNCOMPRESSED_R8G8B8;
 
-    stbhw_tileset tileset;
-
-    std::vector<Texture> hTextures{};
-    std::vector<Texture> vTextures{};
+    stbhw_tileset ts;
+    Texture tsColorized{};
 
     Err GenerateTemplate(const char *filename);
-    void GenerateHTileTexture(Tilemap &map, int hTex);
-    void GenerateVTileTexture(Tilemap &map, int vTex);
+    Texture GenerateColorizedTexture(Image &image, Tilemap &map);
     Err Load(Tilemap &map, const char *filename);
     void Unload(void);
-    Err GenerateMap(uint32_t w, uint32_t h, WangMap &wangMap);
+    Err GenerateMap(uint32_t w, uint32_t h, Tilemap &map, WangMap &wangMap);
 };

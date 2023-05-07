@@ -4,12 +4,48 @@
 #include "server_world.h"
 #include "game_server.h"
 #include "stb_herringbone_wang_tile.h"
-#include <stack>
-#include <cassert>
+
+void RN_TraceLogCallback(int logLevel, const char *text, va_list args)
+{
+    const char *outofbounds = "Requested image pixel";
+    if (!strncmp(text, "Requested image pixel", strlen(outofbounds))) {
+        logLevel = LOG_FATAL;
+    }
+
+    if (logLevel > LOG_WARNING) {
+        assert(!"raylib is sad");
+    }
+
+    // Message has level below current threshold, don't emit
+    //if (logType < TraceLogLevel) return;
+
+    char buffer[128] = { 0 };
+
+    switch (logLevel)
+    {
+        case LOG_TRACE: strcpy(buffer, "TRACE: "); break;
+        case LOG_DEBUG: strcpy(buffer, "DEBUG: "); break;
+        case LOG_INFO: strcpy(buffer, "INFO: "); break;
+        case LOG_WARNING: strcpy(buffer, "WARNING: "); break;
+        case LOG_ERROR: strcpy(buffer, "ERROR: "); break;
+        case LOG_FATAL: strcpy(buffer, "FATAL: "); break;
+        default: break;
+    }
+
+    strcat(buffer, text);
+    strcat(buffer, "\n");
+    vprintf(buffer, args);
+    fflush(stdout);
+
+    // If fatal logging, exit program
+    if (logLevel == LOG_FATAL) {
+        exit(EXIT_FAILURE);
+    }
+}
 
 void UpdateCamera(Camera2D &camera)
 {
-    if (IsMouseButtonDown(MOUSE_BUTTON_RIGHT)) {
+    if (io.MouseButtonDown(MOUSE_BUTTON_RIGHT)) {
         Vector2 delta = GetMouseDelta();
         delta = Vector2Scale(delta, -1.0f / camera.zoom);
 
@@ -17,7 +53,7 @@ void UpdateCamera(Camera2D &camera)
     }
 
     // Zoom based on mouse wheel
-    float wheel = GetMouseWheelMove();
+    float wheel = io.MouseWheelMove();
     if (wheel != 0) {
         // Get the world point that is under the mouse
         Vector2 mouseWorldPos = GetScreenToWorld2D(GetMousePosition(), camera);
@@ -73,7 +109,7 @@ Err Play(GameServer &server)
 
     tileset.Load(map, "resources/wang/tileset.png");
     WangMap wangMap{};
-    err = tileset.GenerateMap(map.width, map.height, wangMap);
+    err = tileset.GenerateMap(map.width, map.height, map, wangMap);
     if (err) return err;
 
     Editor editor{};
@@ -92,10 +128,10 @@ Err Play(GameServer &server)
         bool doNetTick = server.tickAccum >= SV_TICK_DT;
         histogram.Push(frameDtSmooth, doNetTick ? GREEN : RAYWHITE);
 
-        if (io.IsKeyPressed(KEY_H)) {
+        if (io.KeyPressed(KEY_H)) {
             histogram.paused = !histogram.paused;
         }
-        if (io.IsKeyPressed(KEY_V)) {
+        if (io.KeyPressed(KEY_V)) {
             if (IsWindowState(FLAG_VSYNC_HINT)) {
                 ClearWindowState(FLAG_VSYNC_HINT);
             } else {
@@ -251,7 +287,7 @@ Err Play(GameServer &server)
                 bool hudHover = CheckCollisionPointRec({ (float)GetMouseX(), (float)GetMouseY() }, clientRowRect);
                 if (hudHover) {
                     io.CaptureMouse();
-                    if (io.IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
+                    if (io.MouseButtonPressed(MOUSE_BUTTON_LEFT)) {
                         showClientInfo[clientIdx] = !showClientInfo[clientIdx];
                     }
                 }
@@ -279,79 +315,114 @@ Err Play(GameServer &server)
         {
             io.PushScope(IO::IO_EditorUI);
 
-            UIStyle uiWangStyle{};
-            uiWangStyle.scale = 4;
-            UI uiWang{ { 8, 180 }, uiWangStyle };
+            UIStyle uiWangStyle2x{};
+            uiWangStyle2x.scale = 2;
+            UIStyle uiWangStyle4x = uiWangStyle2x;
+            uiWangStyle4x.scale = 4;
+            UI uiWang{ { 8, 180 }, uiWangStyle2x };
 
             static int hTex = -1;
             static int vTex = -1;
 
-            for (int i = 0; i < tileset.hTextures.size(); i++) {
-                if (uiWang.Image(tileset.hTextures[i]).pressed) {
-                    hTex = hTex == i ? -1 : i;
-                    vTex = -1;
+            uiWang.PushStyle(uiWangStyle4x);
+                for (int i = 0; i < tileset.ts.num_h_tiles; i++) {
+                    stbhw_tile *wangTile = tileset.ts.h_tiles[i];
+                    Rectangle srcRect{
+                        wangTile->x,
+                        wangTile->y,
+                        tileset.ts.short_side_len * 2,
+                        tileset.ts.short_side_len
+                    };
+                    if (uiWang.Image(tileset.tsColorized, srcRect).pressed) {
+                        hTex = hTex == i ? -1 : i;
+                        vTex = -1;
+                    }
                 }
-            }
-            uiWang.Newline();
+                uiWang.Newline();
 
-            for (int i = 0; i < tileset.vTextures.size(); i++) {
-                if (uiWang.Image(tileset.vTextures[i]).pressed) {
-                    hTex = -1;
-                    vTex = vTex == i ? -1 : i;
+                for (int i = 0; i < tileset.ts.num_v_tiles; i++) {
+                    stbhw_tile *wangTile = tileset.ts.v_tiles[i];
+                    Rectangle srcRect{
+                        wangTile->x,
+                        wangTile->y,
+                        tileset.ts.short_side_len,
+                        tileset.ts.short_side_len * 2
+                    };
+                    if (uiWang.Image(tileset.tsColorized, srcRect).pressed) {
+                        hTex = -1;
+                        vTex = vTex == i ? -1 : i;
+                    }
                 }
-            }
-            uiWang.Newline();
+                uiWang.Newline();
+
+                if (uiWang.Button("Export tileset").pressed) {
+                    ExportImage(tileset.ts.img, "resources/wang/tileset.png");
+                }
+                uiWang.Newline();
+                uiWang.Image(tileset.tsColorized);
+                uiWang.Newline();
+            uiWang.PopStyle();
 
             if (uiWang.Button("Re-generate Map").pressed) {
-                tileset.GenerateMap(map.width, map.height, wangMap);
+                tileset.GenerateMap(map.width, map.height, map, wangMap);
             }
             uiWang.Newline();
-            if (uiWang.Image(wangMap.texture).pressed) {
+            if (uiWang.Image(wangMap.colorized).pressed) {
                 map.SetFromWangMap(wangMap, server.now);
             }
 
             if (hTex >= 0 || vTex >= 0) {
+                Tile selectedTile = editor.state.tiles.cursor.tileDefId;
+                static double lastUpdatedAt = 0;
+                static double lastChangedAt = 0;
+                const double updateDelay = 0.02;
+
                 UIStyle uiWangTileStyle{};
                 uiWangTileStyle.margin = 0;
                 UI uiWangTile{ { 300, 200 }, uiWangTileStyle };
                 if (hTex >= 0) {
-                    stbhw_tile *tile = tileset.tileset.h_tiles[hTex];
-                    for (int y = 0; y < tileset.tileset.short_side_len; y++) {
-                        for (int x = 0; x < tileset.tileset.short_side_len*2; x++) {
-                            uint8_t *pixel = &tile->pixels[3 * (y * tileset.tileset.short_side_len*2 + x)];
-                            uint8_t tile = *pixel % map.tileDefCount;
+                    stbhw_tile *wangTile = tileset.ts.h_tiles[hTex];
+                    for (int y = 0; y < tileset.ts.short_side_len; y++) {
+                        for (int x = 0; x < tileset.ts.short_side_len*2; x++) {
+                            int templateX = wangTile->x + x;
+                            int templateY = wangTile->y + y;
+                            uint8_t *pixel = &((uint8_t *)tileset.ts.img.data)[(templateY * tileset.ts.img.width + templateX) * 3];
+                            uint8_t tile = pixel[0] % map.tileDefCount;
                             const Rectangle tileRect = map.TileDefRect(tile);
                             if (uiWangTile.Image(map.texture, tileRect).down) {
-                                pixel[0] = editor.state.tiles.cursor.tileDefId;
-                                pixel[1] = editor.state.tiles.cursor.tileDefId;
-                                pixel[2] = editor.state.tiles.cursor.tileDefId;
-                                //pixel[0] = editor.state.tiles.cursor.tileDefId / 1   * (255/10);
-                                //pixel[1] = editor.state.tiles.cursor.tileDefId / 10  * (200/10) + (255-200);
-                                //pixel[2] = editor.state.tiles.cursor.tileDefId / 100 * (200/10) + (255-200);
-                                tileset.GenerateHTileTexture(map, hTex);
+                                pixel[0] = selectedTile; //^ (selectedTile*55);
+                                pixel[1] = selectedTile; //^ (selectedTile*55);
+                                pixel[2] = selectedTile; //^ (selectedTile*55);
+                                lastChangedAt = server.now;
                             }
                         }
                         uiWangTile.Newline();
                     }
                 } else if (vTex >= 0) {
-                    stbhw_tile *tile = tileset.tileset.v_tiles[vTex];
-                    for (int y = 0; y < tileset.tileset.short_side_len*2; y++) {
-                        for (int x = 0; x < tileset.tileset.short_side_len; x++) {
-                            uint8_t *pixel = &tile->pixels[3 * (y * tileset.tileset.short_side_len + x)];
-                            uint8_t tile = *pixel % map.tileDefCount;
+                    stbhw_tile *wangTile = tileset.ts.v_tiles[vTex];
+                    for (int y = 0; y < tileset.ts.short_side_len*2; y++) {
+                        for (int x = 0; x < tileset.ts.short_side_len; x++) {
+                            int templateX = wangTile->x + x;
+                            int templateY = wangTile->y + y;
+                            uint8_t *pixel = &((uint8_t *)tileset.ts.img.data)[(templateY * tileset.ts.img.width + templateX) * 3];
+                            uint8_t tile = pixel[0] % map.tileDefCount;
                             const Rectangle tileRect = map.TileDefRect(tile);
                             if (uiWangTile.Image(map.texture, tileRect).down) {
-                                pixel[0] = editor.state.tiles.cursor.tileDefId;
-                                pixel[1] = editor.state.tiles.cursor.tileDefId;
-                                pixel[2] = editor.state.tiles.cursor.tileDefId;
-                                //pixel[0] = editor.state.tiles.cursor.tileDefId / 1   * (255/10);
-                                //pixel[1] = editor.state.tiles.cursor.tileDefId / 10  * (200/10) + (255-200);
-                                //pixel[2] = editor.state.tiles.cursor.tileDefId / 100 * (200/10) + (255-200);
-                                tileset.GenerateVTileTexture(map, vTex);
+                                pixel[0] = selectedTile; //^ (selectedTile*55);
+                                pixel[1] = selectedTile; //^ (selectedTile*55);
+                                pixel[2] = selectedTile; //^ (selectedTile*55);
+                                lastChangedAt = server.now;
                             }
                         }
                         uiWangTile.Newline();
                     }
+                }
+
+                // Update if dirty on a slight delay (to make dragging more efficient)
+                if (lastChangedAt > lastUpdatedAt && (server.now - lastChangedAt) > updateDelay) {
+                    UnloadTexture(tileset.tsColorized);
+                    tileset.tsColorized = tileset.GenerateColorizedTexture(tileset.ts.img, map);
+                    lastUpdatedAt = server.now;
                 }
             }
 
@@ -362,7 +433,7 @@ Err Play(GameServer &server)
         //yojimbo_sleep(0.001);
 
         // Nobody else handled it, so user probably wants to quit
-        if (io.IsKeyPressed(KEY_ESCAPE)) {
+        if (io.KeyPressed(KEY_ESCAPE)) {
             CloseWindow();
         }
 
@@ -380,6 +451,7 @@ int main(int argc, char *argv[])
 {
     Err err = RN_SUCCESS;
     //SetTraceLogLevel(LOG_WARNING);
+    SetTraceLogCallback(RN_TraceLogCallback);
 
     InitAudioDevice();
 

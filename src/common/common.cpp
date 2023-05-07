@@ -4,8 +4,8 @@
 #define RAYMATH_IMPLEMENTATION
 #include "raylib/raymath.h"
 
-#define STB_HERRINGBONE_WANG_TILE_IMPLEMENTATION
-#include "stb_herringbone_wang_tile.h"
+//#define STB_HERRINGBONE_WANG_TILE_IMPLEMENTATION
+#include "stb_herringbone_wang_tile.c"
 
 Shader shdSdfText;
 Font fntHackBold20;
@@ -99,7 +99,7 @@ Err InitCommon(void)
     texLily = LoadTexture("resources/lily.png");
     if (!texLily.width) err = RN_RAYLIB_ERROR;
 
-    sndSoftTick = LoadSound("resources/soft_tick.wav");
+    sndSoftTick = LoadSound("resources/soft_tick2.wav");
     if (!sndSoftTick.frameCount) err = RN_RAYLIB_ERROR;
 
     sndHardTick = LoadSound("resources/hard_tick.wav");

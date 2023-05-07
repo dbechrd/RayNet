@@ -63,12 +63,12 @@ UIState CalcState(Rectangle &ctrlRect, HoverHash &prevHoverHash)
         state.entered = !prevHoveredCtrl;
         state.hover = true;
         io.CaptureMouse();
-        if (io.IsMouseButtonDown(MOUSE_BUTTON_LEFT)) {
+        if (io.MouseButtonDown(MOUSE_BUTTON_LEFT)) {
             state.down = true;
-            if (io.IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
+            if (io.MouseButtonPressed(MOUSE_BUTTON_LEFT)) {
                 state.pressed = true;
             }
-        } else if (io.IsMouseButtonReleased(MOUSE_BUTTON_LEFT)) {
+        } else if (io.MouseButtonReleased(MOUSE_BUTTON_LEFT)) {
             state.clicked = true;
         }
         prevHoverHash = hash;
@@ -191,9 +191,9 @@ UIState UI::Image(Texture &texture, Rectangle srcRect)
 
     // Audio
     if (state.clicked) {
-        PlaySoundMulti(sndHardTick);
+        if (!IsSoundPlaying(sndHardTick)) PlaySound(sndHardTick);
     } else if (state.entered) {
-        PlaySoundMulti(sndSoftTick);
+        if (!IsSoundPlaying(sndSoftTick)) PlaySound(sndSoftTick);
     }
 
     UpdateCursor(style, ctrlRect);

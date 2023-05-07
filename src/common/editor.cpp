@@ -12,12 +12,12 @@ const char *EditModeStr(EditMode mode)
 
 void Editor::HandleInput(IO &io, Camera2D &camera)
 {
-    if (io.IsKeyPressed(KEY_GRAVE)) {
+    if (io.KeyPressed(KEY_GRAVE)) {
         active = !active;
     }
 
     if (active) {
-        if (io.IsKeyDown(KEY_LEFT_CONTROL) && io.IsKeyPressed(KEY_ZERO)) {
+        if (io.KeyDown(KEY_LEFT_CONTROL) && io.KeyPressed(KEY_ZERO)) {
             camera.zoom = 1.0f;
         }
     }
@@ -52,12 +52,12 @@ void Editor::DrawOverlays(IO &io, Tilemap &map, Camera2D &camera, double now)
 
 void Editor::DrawOverlay_Tiles(IO &io, Tilemap &map, Camera2D &camera, double now)
 {
-    if (!io.IsMouseCaptured()) {
+    if (!io.MouseCaptured()) {
         // Draw hover highlight
         const Vector2 cursorWorldPos = GetScreenToWorld2D({ (float)GetMouseX(), (float)GetMouseY() }, camera);
-        const bool editorPlaceTile = io.IsMouseButtonDown(MOUSE_BUTTON_LEFT);
-        const bool editorPickTile = io.IsMouseButtonDown(MOUSE_BUTTON_MIDDLE);
-        const bool editorFillTile = io.IsKeyPressed(KEY_F);
+        const bool editorPlaceTile = io.MouseButtonDown(MOUSE_BUTTON_LEFT);
+        const bool editorPickTile = io.MouseButtonDown(MOUSE_BUTTON_MIDDLE);
+        const bool editorFillTile = io.KeyPressed(KEY_F);
 
         Tile hoveredTile;
         bool hoveringTile = map.AtWorld((int32_t)cursorWorldPos.x, (int32_t)cursorWorldPos.y, hoveredTile);
@@ -126,13 +126,13 @@ void Editor::DrawOverlay_Paths(IO &io, Tilemap &map, Camera2D &camera)
 
             Color color = aiPathNode->waitFor ? BLUE : RED;
 
-            bool hover = !io.IsMouseCaptured() && dlb_CheckCollisionPointRec(cursorWorldPos, nodeRect);
+            bool hover = !io.MouseCaptured() && dlb_CheckCollisionPointRec(cursorWorldPos, nodeRect);
             if (hover) {
                 io.CaptureMouse();
 
                 color = aiPathNode->waitFor ? SKYBLUE : PINK;
 
-                if (io.IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
+                if (io.MouseButtonPressed(MOUSE_BUTTON_LEFT)) {
                     cursor.dragging = true;
                     cursor.dragPathId = aiPathId;
                     cursor.dragPathNodeIndex = aiPathNodeIndex;
@@ -142,13 +142,13 @@ void Editor::DrawOverlay_Paths(IO &io, Tilemap &map, Camera2D &camera)
 
             if (cursor.dragging && cursor.dragPathNodeIndex == aiPathNodeIndex) {
                 io.PushScope(IO::IO_EditorDrag);
-                if (io.IsMouseButtonDown(MOUSE_BUTTON_LEFT)) {
+                if (io.MouseButtonDown(MOUSE_BUTTON_LEFT)) {
                     io.CaptureMouse();
                     io.CaptureKeyboard();
 
                     color = aiPathNode->waitFor ? DARKBLUE : MAROON;
 
-                    if (io.IsKeyPressed(KEY_ESCAPE)) {
+                    if (io.KeyPressed(KEY_ESCAPE)) {
                         aiPathNode->pos = cursor.dragStartPosition;
                         cursor = {};
                         io.CaptureKeyboard();
@@ -167,7 +167,7 @@ void Editor::DrawOverlay_Paths(IO &io, Tilemap &map, Camera2D &camera)
         io.PushScope(IO::IO_EditorDrag);
 
         Vector2 newNodePos = cursorWorldPos;
-        if (io.IsKeyDown(KEY_LEFT_SHIFT)) {
+        if (io.KeyDown(KEY_LEFT_SHIFT)) {
             newNodePos.x = roundf(newNodePos.x / 8) * 8;
             newNodePos.y = roundf(newNodePos.y / 8) * 8;
         }
@@ -270,7 +270,7 @@ void Editor::DrawUI_TileActions(IO &io, UI &uiActionBar, Tilemap &map)
     uiActionBar.Newline();
 
     // [Editor] Tile selector
-    const bool editorPickTileDef = io.IsMouseButtonPressed(MOUSE_BUTTON_LEFT);
+    const bool editorPickTileDef = io.MouseButtonPressed(MOUSE_BUTTON_LEFT);
 
     // TODO(dlb): UI::Panel (or row.style.colorBg?)
     Vector2 uiCursor = uiActionBar.CursorScreen();
