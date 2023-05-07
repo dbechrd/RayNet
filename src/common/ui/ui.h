@@ -59,6 +59,7 @@ struct UIStyle {
     Color bgColor{ BLUE };
     Color fgColor{ WHITE };
     Font *font{ &fntHackBold20 };
+    bool buttonPressed{};
     UIStyle_TextAlignH alignH{ TextAlign_Left };
 };
 
@@ -73,15 +74,18 @@ struct UIState {
 struct UI {
     UI(Vector2 position, UIStyle style);
     void PushStyle(UIStyle style);
+    UIStyle GetStyle(void);
     void PopStyle(void);
 
     void UpdateCursor(const UIStyle &style, Rectangle &ctrlRect);
     void Newline(void);
 
+    void Space(Vector2 space);
     UIState Text(const char *text);
     UIState Image(Texture &texture);
     UIState Button(const char *text);
     UIState Button(const char *text, Color bgColor);
+    UIState Button(const char *text, bool pressed, Color pressedColor);
 
     inline Vector2 CursorScreen(void) {
         return Vector2Add(position, cursor);

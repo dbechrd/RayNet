@@ -1,16 +1,23 @@
 #pragma once
 
-#include "raylib/raylib.h"
-#include "raylib/raymath.h"
+namespace raylib {
+    #include "raylib/raylib.h"
+    #include "raylib/raymath.h"
+}
+using namespace raylib;
+
 #pragma warning(push, 0)
 #include "yojimbo.h"
 #pragma warning(pop)
+
 #include "stb_herringbone_wang_tile.h"
-#include <stack>
+
 #include <cassert>
 #include <cstdio>
 #include <ctime>
 #include <cctype>
+
+#include <stack>
 #include <vector>
 
 // Stuff that probably shouldn't be here
@@ -97,3 +104,114 @@ extern Sound sndHardTick;
 
 Err InitCommon(void);
 void FreeCommon(void);
+
+// TODO: Where does this go for realz?
+
+struct IO {
+    // In order of least to greatest I/O precedence
+    enum Scope {
+        IO_None,
+        IO_Game,
+        IO_EditorOverlay,
+        IO_EditorUI,
+        IO_EditorDrag,
+        IO_HUD,
+        IO_Count
+    };
+
+    void EndFrame(void)
+    {
+        assert(scopeStack.empty());  // forgot to close a scope?
+
+        prevKeyboardCaptureScope = keyboardCaptureScope;
+        prevMouseCaptureScope = mouseCaptureScope;
+        keyboardCaptureScope = IO_None;
+        mouseCaptureScope = IO_None;
+    }
+
+    void PushScope(Scope scope)
+    {
+        scopeStack.push(scope);
+    }
+
+    void PopScope(void)
+    {
+        scopeStack.pop();
+    }
+
+    // TODO(dlb): Maybe these can just be bools in PushScope?
+    void CaptureKeyboard(void)
+    {
+        keyboardCaptureScope = MAX(keyboardCaptureScope, scopeStack.top());
+    }
+
+    void CaptureMouse(void)
+    {
+        mouseCaptureScope = MAX(mouseCaptureScope, scopeStack.top());
+    }
+
+    // returns true if keyboard is captured by a higher precedence scope
+    bool IsKeyboardCaptured(void)
+    {
+        int captureScope = MAX(prevKeyboardCaptureScope, keyboardCaptureScope);
+        return captureScope > scopeStack.top();
+    }
+
+    // returns true if mouse is captured by a higher precedence scope
+    bool IsMouseCaptured(void)
+    {
+        int captureScope = MAX(prevMouseCaptureScope, mouseCaptureScope);
+        return captureScope > scopeStack.top();
+    }
+
+    bool IsKeyPressed(int key) {
+        if (IsKeyboardCaptured()) {
+            return false;
+        }
+        return raylib::IsKeyPressed(key);
+    }
+    bool IsKeyDown(int key) {
+        if (IsKeyboardCaptured()) {
+            return false;
+        }
+        return raylib::IsKeyDown(key);
+    }
+    bool IsKeyReleased(int key) {
+        if (IsKeyboardCaptured()) {
+            return false;
+        }
+        return raylib::IsKeyReleased(key);
+    }
+
+    bool IsMouseButtonPressed(int button) {
+        if (IsMouseCaptured()) {
+            return false;
+        }
+        return raylib::IsMouseButtonPressed(button);
+    }
+    bool IsMouseButtonDown(int button) {
+        if (IsMouseCaptured()) {
+            return false;
+        }
+        return raylib::IsMouseButtonDown(button);
+    }
+    bool IsMouseButtonReleased(int button) {
+        if (IsMouseCaptured()) {
+            return false;
+        }
+        return raylib::IsMouseButtonReleased(button);
+    }
+
+private:
+    // NOTE: This default value prevents all input on the first frame (as opposed
+    // to letting multiple things handle the input at once) but it probably doesn't
+    // matter either way.
+    Scope prevKeyboardCaptureScope = IO_Count;
+    Scope prevMouseCaptureScope = IO_Count;
+    Scope keyboardCaptureScope{};
+    Scope mouseCaptureScope{};
+
+    std::stack<Scope> scopeStack;
+};
+
+extern IO io;

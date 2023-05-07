@@ -70,6 +70,8 @@ int main(int argc, char *argv[])
     bool quit = false;
 
     while (!quit) {
+        io.PushScope(IO::IO_Game);
+
         client->now = GetTime();
         frameDt = MIN(client->now - frameStart, SV_TICK_DT);  // arbitrary limit for now
         frameDtSmooth = LERP(frameDtSmooth, frameDt, 0.1);
@@ -180,7 +182,7 @@ int main(int argc, char *argv[])
             //--------------------
             // Draw the map
             BeginMode2D(client->world->camera2d);
-            client->world->map.Draw(client->world->camera2d, false);
+            client->world->map.Draw(client->world->camera2d);
 
             //--------------------
             // Draw the entities
@@ -257,6 +259,7 @@ int main(int argc, char *argv[])
         } else {
             SetMasterVolume(1);
 
+            io.PushScope(IO::IO_EditorUI);
             Vector2 uiPosition{ screenSize.x / 2, screenSize.y / 2 - 50 };
             UIStyle uiStyleMenu {};
             uiStyleMenu.pad = { 16, 4 };
@@ -321,9 +324,11 @@ int main(int argc, char *argv[])
 
                 // Draw font atlas for SDF font
                 //DrawTexture(fntHackBold32.texture, GetScreenWidth() - fntHackBold32.texture.width, 0, WHITE);
+
             }
 
             EndShaderMode();
+            io.PopScope();
         }
 
         // HP bar
@@ -367,6 +372,8 @@ int main(int argc, char *argv[])
 
         // Debug HUD
         {
+            io.PushScope(IO::IO_HUD);
+
             char buf[128];
             #define DRAW_TEXT_MEASURE(measureRect, label, fmt, ...) { \
                 snprintf(buf, sizeof(buf), "%-11s : " fmt, label, __VA_ARGS__); \
@@ -400,10 +407,12 @@ int main(int argc, char *argv[])
                 showNetInfo ? "[-] state" : "[+] state",
                 "%s", clientStateStr
             );
-            if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)
-                && CheckCollisionPointRec({ (float)GetMouseX(), (float)GetMouseY() }, netInfoRect))
-            {
-                showNetInfo = !showNetInfo;
+            bool hudHover = CheckCollisionPointRec({ (float)GetMouseX(), (float)GetMouseY() }, netInfoRect);
+            if (hudHover) {
+                io.CaptureMouse();
+                if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
+                    showNetInfo = !showNetInfo;
+                }
             }
             if (showNetInfo) {
                 uiPosition.x += 16.0f;
@@ -431,6 +440,8 @@ int main(int argc, char *argv[])
                 uiPosition.y += 8;
                 client->todoList.Draw(uiPosition);
             }
+
+            io.PopScope();
         }
 
         EndDrawing();
@@ -455,6 +466,9 @@ int main(int argc, char *argv[])
         if (WindowShouldClose()) {
             quit = true;
         }
+
+        io.PopScope();
+        io.EndFrame();
     }
 
     //--------------------

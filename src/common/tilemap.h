@@ -68,7 +68,8 @@ struct Tilemap {
     void SetFromWangMap(WangMap &wangMap, double now);
     void Fill(uint32_t x, uint32_t y, int tileDefId, double now);
     void ResolveEntityTerrainCollisions(Entity &entity);
-    void Draw(Camera2D &camera, bool showCollision);
+    void Draw(Camera2D &camera);
+    void DrawColliders(Camera2D &camera);
 
     // Paths
     AiPath *GetPath(uint32_t pathId) {

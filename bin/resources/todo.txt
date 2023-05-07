@@ -4,6 +4,8 @@
 [x] Add UI::Text
 [x] Send map data to client
 [x] Add UI::Image
+[x] Refactor editor
+[x] Handle input precedence
 [ ] Switch maps
 [ ] Items
 [ ] Inventory (w/ Hotbar)

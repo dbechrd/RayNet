@@ -487,33 +487,39 @@ void Tilemap::ResolveEntityTerrainCollisions(Entity &entity)
     }
 }
 
-void Tilemap::Draw(Camera2D &camera, bool showCollision)
+void Tilemap::Draw(Camera2D &camera)
 {
-    // [World] Tilemap
-#if CL_DBG_TILE_CULLING
-    const int screenMargin = 64;
-    Vector2 screenTLWorld = GetScreenToWorld2D({ screenMargin, screenMargin }, camera);
-    Vector2 screenBRWorld = GetScreenToWorld2D({ (float)GetScreenWidth() - screenMargin, (float)GetScreenHeight() - screenMargin }, camera);
-#else
-    Vector2 screenTLWorld = GetScreenToWorld2D({ 0, 0 }, camera);
-    Vector2 screenBRWorld = GetScreenToWorld2D({ (float)GetScreenWidth(), (float)GetScreenHeight() }, camera);
-#endif
-
-    int yMin = CLAMP(floorf(screenTLWorld.y / TILE_W), 0, height);
-    int yMax = CLAMP(ceilf(screenBRWorld.y / TILE_W), 0, height);
-    int xMin = CLAMP(floorf(screenTLWorld.x / TILE_W), 0, width);
-    int xMax = CLAMP(ceilf(screenBRWorld.x / TILE_W), 0, width);
+    Rectangle screenRect = GetScreenRectWorld(camera);
+    int yMin = CLAMP(floorf(screenRect.y / TILE_W), 0, height);
+    int yMax = CLAMP(ceilf((screenRect.y + screenRect.height) / TILE_W), 0, height);
+    int xMin = CLAMP(floorf(screenRect.x / TILE_W), 0, width);
+    int xMax = CLAMP(ceilf((screenRect.x + screenRect.width) / TILE_W), 0, width);
 
     for (int y = yMin; y < yMax; y++) {
         for (int x = xMin; x < xMax; x++) {
             Tile tile = At(x, y);
             TileDef &tileDef = tileDefs[tile];
-
             Rectangle texRect{ (float)tileDef.x, (float)tileDef.y, TILE_W, TILE_W };
             Vector2 tilePos = { (float)x * TILE_W, (float)y * TILE_W };
             DrawTextureRec(texture, texRect, tilePos, WHITE);
+        }
+    }
+}
 
-            if (showCollision && tileDef.collide) {
+void Tilemap::DrawColliders(Camera2D &camera)
+{
+    Rectangle screenRect = GetScreenRectWorld(camera);
+    int yMin = CLAMP(floorf(screenRect.y / TILE_W), 0, height);
+    int yMax = CLAMP(ceilf((screenRect.y + screenRect.height) / TILE_W), 0, height);
+    int xMin = CLAMP(floorf(screenRect.x / TILE_W), 0, width);
+    int xMax = CLAMP(ceilf((screenRect.x + screenRect.width) / TILE_W), 0, width);
+
+    for (int y = yMin; y < yMax; y++) {
+        for (int x = xMin; x < xMax; x++) {
+            Tile tile = At(x, y);
+            TileDef &tileDef = tileDefs[tile];
+            if (tileDef.collide) {
+                Vector2 tilePos = { (float)x * TILE_W, (float)y * TILE_W };
                 const int pad = 1;
                 DrawRectangleLinesEx(
                     {

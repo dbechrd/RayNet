@@ -20,7 +20,6 @@ struct ServerPlayer {
 };
 
 struct ServerWorld {
-    Camera2D camera2d{};
     Tilemap map{};
     Entity entities[SV_MAX_ENTITIES]{};
     uint32_t entity_freelist;

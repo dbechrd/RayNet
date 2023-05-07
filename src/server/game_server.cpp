@@ -596,10 +596,6 @@ void GameServer::Update(void)
     if (!yj_server->IsRunning())
         return;
 
-    if (IsKeyDown(KEY_N)) {
-        printf("");
-    }
-
     yj_server->AdvanceTime(now);
     yj_server->ReceivePackets();
     ProcessMessages();
@@ -611,7 +607,7 @@ void GameServer::Update(void)
         hasDelta = true;
     }
 
-    // TODO(dlb): Calculate actual deltas
+    // TODO(dlb): Calculate actual state deltas
     if (hasDelta) {
         SendClientSnapshots();
         DestroyDespawnedEntities();

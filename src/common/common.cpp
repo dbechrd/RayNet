@@ -16,6 +16,8 @@ Texture texLily;
 Sound sndSoftTick;
 Sound sndHardTick;
 
+IO io;
+
 // Load font from memory buffer, fileType refers to extension: i.e. ".ttf"
 Font dlb_LoadFontFromMemory(const char *fileType, const unsigned char *fileData, int dataSize, int fontSize, int *fontChars, int glyphCount, int type)
 {

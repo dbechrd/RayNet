@@ -2,6 +2,7 @@
 #include "common.h"
 #include "audio/audio.h"
 #include "collision.h"
+#include "editor.h"
 #include "entity.h"
 #include "file_utils.h"
 #include "input_command.h"
@@ -15,3 +16,4 @@
 #include "wang.h"
 
 void DrawTextShadowEx(Font font, const char *text, Vector2 pos, Color color);
+Rectangle GetScreenRectWorld(Camera2D &camera);

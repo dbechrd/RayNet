@@ -23,6 +23,12 @@ void UI::PushStyle(UIStyle style)
     styleStack.push(style);
 }
 
+UIStyle UI::GetStyle(void)
+{
+    UIStyle style = styleStack.top();
+    return style;
+}
+
 void UI::PopStyle(void)
 {
     styleStack.pop();
@@ -56,12 +62,13 @@ UIState CalcState(Rectangle &ctrlRect, HoverHash &prevHoverHash)
     if (dlb_CheckCollisionPointRec(GetMousePosition(), ctrlRect)) {
         state.entered = !prevHoveredCtrl;
         state.hover = true;
-        if (IsMouseButtonDown(MOUSE_BUTTON_LEFT)) {
+        io.CaptureMouse();
+        if (io.IsMouseButtonDown(MOUSE_BUTTON_LEFT)) {
             state.down = true;
-            if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
+            if (io.IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
                 state.pressed = true;
             }
-        } else if (IsMouseButtonReleased(MOUSE_BUTTON_LEFT)) {
+        } else if (io.IsMouseButtonReleased(MOUSE_BUTTON_LEFT)) {
             state.clicked = true;
         }
         prevHoverHash = hash;
@@ -88,6 +95,11 @@ void UI::Newline(void)
     cursor.x = 0;
     cursor.y += lineSize.y;
     lineSize = {};
+}
+
+void UI::Space(Vector2 space)
+{
+    cursor = Vector2Add(cursor, space);
 }
 
 UIState UI::Text(const char *text)
@@ -221,7 +233,7 @@ UIState UI::Button(const char *text)
         DrawRectangleRounded(ctrlRect, cornerRoundness, cornerSegments, BLACK);
     }
 
-    const float downOffset = (state.down ? 1 : -1);
+    const float downOffset = (style.buttonPressed || state.down) ? 1 : -1;
 
     // Draw button
     DrawRectangleRounded(
@@ -256,10 +268,26 @@ UIState UI::Button(const char *text)
 
 UIState UI::Button(const char *text, Color bgColor)
 {
-    UIStyle colorStyle = styleStack.top();
-    colorStyle.bgColor = bgColor;
-    PushStyle(colorStyle);
+    UIStyle style = GetStyle();
+    style.bgColor = bgColor;
+    PushStyle(style);
     UIState state = Button(text);
     PopStyle();
+    return state;
+}
+
+UIState UI::Button(const char *text, bool pressed, Color pressedColor)
+{
+    UIState state{};
+    if (pressed) {
+        UIStyle style = GetStyle();
+        style.bgColor = pressedColor;
+        style.buttonPressed = pressed;
+        PushStyle(style);
+    }
+    state = Button(text);
+    if (pressed) {
+        PopStyle();
+    }
     return state;
 }
