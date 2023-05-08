@@ -21,6 +21,25 @@ Music musCave;
 
 IO io;
 
+const char *ErrStr(Err err)
+{
+    switch (err) {
+        case RN_SUCCESS         : return "RN_SUCCESS        ";
+        case RN_BAD_ALLOC       : return "RN_BAD_ALLOC      ";
+        case RN_BAD_MAGIC       : return "RN_BAD_MAGIC      ";
+        case RN_BAD_FILE_READ   : return "RN_BAD_FILE_READ  ";
+        case RN_BAD_FILE_WRITE  : return "RN_BAD_FILE_WRITE ";
+        case RN_INVALID_SIZE    : return "RN_INVALID_SIZE   ";
+        case RN_INVALID_PATH    : return "RN_INVALID_PATH   ";
+        case RN_NET_INIT_FAILED : return "RN_NET_INIT_FAILED";
+        case RN_INVALID_ADDRESS : return "RN_INVALID_ADDRESS";
+        case RN_RAYLIB_ERROR    : return "RN_RAYLIB_ERROR   ";
+        case RN_BAD_ID          : return "RN_BAD_ID         ";
+        case RN_OUT_OF_BOUNDS   : return "RN_OUT_OF_BOUNDS  ";
+        default                 : return TextFormat("Code %d", err);
+    }
+}
+
 // Load font from memory buffer, fileType refers to extension: i.e. ".ttf"
 Font dlb_LoadFontFromMemory(const char *fileType, const unsigned char *fileData, int dataSize, int fontSize, int *fontChars, int glyphCount, int type)
 {
@@ -89,8 +108,6 @@ Err InitCommon(void)
 {
     Err err = RN_SUCCESS;
 
-    InitAudioDevice();
-
     // Load SDF required shader (we use default vertex shader)
     shdSdfText = LoadShader(0, "resources/shaders/sdf.fs");
 
@@ -104,8 +121,11 @@ Err InitCommon(void)
     texLily = LoadTexture("resources/lily.png");
     if (!texLily.width) err = RN_RAYLIB_ERROR;
 
-    sndSoftTick = LoadSound("resources/soft_tick2.wav");
+#if 0
+    sndSoftTick = LoadSound("resources/soft_tick3.wav");
     if (!sndSoftTick.frameCount) err = RN_RAYLIB_ERROR;
+    SetSoundVolume(sndSoftTick, 0.1f);
+#endif
 
     sndHardTick = LoadSound("resources/hard_tick.wav");
     if (!sndHardTick.frameCount) err = RN_RAYLIB_ERROR;

@@ -495,13 +495,13 @@ namespace yojimbo
     #define YOJIMBO_NEW( a, T, ... ) ( new ( (a).Allocate( sizeof(T), __FILE__, __LINE__ ) ) T(__VA_ARGS__) )
 
     /// Macro for deleting an object created with a yojimbo allocator.
-    #define YOJIMBO_DELETE( a, T, p ) do { if (p) { (p)->~T(); (a).Free( p, __FILE__, __LINE__ ); p = NULL; } } while (0)
+    #define YOJIMBO_DELETE( a, T, p ) do { if (p) { (p)->~T(); (a).Unload( p, __FILE__, __LINE__ ); p = NULL; } } while (0)
 
     /// Macro for allocating a block of memory with a yojimbo allocator.
     #define YOJIMBO_ALLOCATE( a, bytes ) (a).Allocate( (bytes), __FILE__, __LINE__ )
 
     /// Macro for freeing a block of memory created with a yojimbo allocator.
-    #define YOJIMBO_FREE( a, p ) do { if ( p ) { (a).Free( p, __FILE__, __LINE__ ); p = NULL; } } while(0)
+    #define YOJIMBO_FREE( a, p ) do { if ( p ) { (a).Unload( p, __FILE__, __LINE__ ); p = NULL; } } while(0)
 
     /// Allocator error level.
     enum AllocatorErrorLevel
@@ -587,7 +587,7 @@ namespace yojimbo
             @see Allocator::GetErrorLevel
          */
 
-        virtual void Free( void * p, const char * file, int line ) = 0;
+        virtual void Unload( void * p, const char * file, int line ) = 0;
 
         /**
             Get the allocator error level.
@@ -680,7 +680,7 @@ namespace yojimbo
             @param line The line number in the source code file that is performing the free.
          */
 
-        void Free( void * p, const char * file, int line );
+        void Unload( void * p, const char * file, int line );
 
     private:
 
@@ -737,7 +737,7 @@ namespace yojimbo
             @see Allocator::GetError
          */
 
-        void Free( void * p, const char * file, int line );
+        void Unload( void * p, const char * file, int line );
 
     private:
 
@@ -4222,7 +4222,7 @@ namespace yojimbo
 
         void Initialize();
 
-        void Free( MessageFactory & messageFactory );
+        void Unload( MessageFactory & messageFactory );
 
         template <typename Stream> bool Serialize( Stream & stream, MessageFactory & messageFactory, const ChannelConfig * channelConfigs, int numChannels );
 

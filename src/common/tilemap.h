@@ -28,6 +28,7 @@ struct Tilemap {
         uint32_t x, y;
     };
 
+    const char *filename;
     const uint32_t MAGIC = 0xDBBB9192;
     // v1: the OG
     // v2: added texturePath
@@ -54,11 +55,11 @@ struct Tilemap {
     void SV_SerializeChunk(Msg_S_TileChunk &tileChunk, uint32_t x, uint32_t y);
     void CL_DeserializeChunk(Msg_S_TileChunk &tileChunk);
 
-    void Free(void);
     ~Tilemap();
 
     Err Save(const char *filename);
     Err Load(const char *filename, double now);
+    void Unload(void);
 
     // Tiles
     Tile At(uint32_t x, uint32_t y);

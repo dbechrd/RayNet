@@ -11,6 +11,7 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="include\tinyfiledialogs.c" />
     <ClCompile Include="include\tracy\TracyClient.cpp" />
     <ClCompile Include="src\client\client.cpp" />
     <ClCompile Include="src\client\client_world.cpp" />
@@ -89,7 +90,7 @@
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>raylib.lib;yojimbo.lib;kernel32.lib;user32.lib;gdi32.lib;shell32.lib;ws2_32.lib;winmm.lib</AdditionalDependencies>
+      <AdditionalDependencies>raylib.lib;yojimbo.lib;kernel32.lib;comdlg32.lib;ole32.lib;user32.lib;gdi32.lib;shell32.lib;ws2_32.lib;winmm.lib</AdditionalDependencies>
       <AdditionalLibraryDirectories>lib</AdditionalLibraryDirectories>
       <AdditionalOptions>/NODEFAULTLIB:library
  %(AdditionalOptions)</AdditionalOptions>
@@ -112,7 +113,7 @@
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>raylib.lib;yojimbo.lib;kernel32.lib;user32.lib;gdi32.lib;shell32.lib;ws2_32.lib;winmm.lib</AdditionalDependencies>
+      <AdditionalDependencies>raylib.lib;yojimbo.lib;kernel32.lib;comdlg32.lib;ole32.lib;user32.lib;gdi32.lib;shell32.lib;ws2_32.lib;winmm.lib</AdditionalDependencies>
       <AdditionalLibraryDirectories>lib</AdditionalLibraryDirectories>
       <AdditionalOptions>/NODEFAULTLIB:library
  %(AdditionalOptions)</AdditionalOptions>

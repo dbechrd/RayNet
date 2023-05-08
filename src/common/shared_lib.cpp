@@ -11,7 +11,7 @@
 void DrawTextShadowEx(Font font, const char *text, Vector2 pos, Color color)
 {
 #if 1
-    Vector2 shadowPos = Vector2Add(pos, { 1, 2 });
+    Vector2 shadowPos = Vector2Add(pos, { 1, 1 });
     if (font.baseSize > 32) {
         shadowPos = Vector2AddValue(pos, 2);
     }

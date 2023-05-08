@@ -1,5 +1,6 @@
 #include "editor.h"
 #include "ui/ui.h"
+#include "tinyfiledialogs.h"
 
 const char *EditModeStr(EditMode mode)
 {
@@ -209,23 +210,91 @@ UIState Editor::DrawUI_ActionBar(IO &io, Vector2 position, Tilemap &map, double 
     DrawRectangleRoundedLines(actionBarRect, 0.15f, 8, 2.0f, BLACK);
     uiState.hover = dlb_CheckCollisionPointRec(GetMousePosition(), actionBarRect);
 
+    const char *mapFileFilter[1] = { "*.dat" };
+    static const char *openRequest = 0;
+    static const char *saveAsRequest = 0;
+
+    UIState openButton = uiActionBar.Button("Open");
+    if (openButton.clicked) {
+        const char *filename = map.filename;
+        std::thread openFileThread([filename, mapFileFilter]{
+            openRequest = tinyfd_openFileDialog(
+                "Open File",
+                filename,
+                ARRAY_SIZE(mapFileFilter),
+                mapFileFilter,
+                "RayNet Tilemap (*.dat)",
+                0
+            );
+        });
+        openFileThread.detach();
+    }
+    if (openRequest) {
+        Err err = map.Load(openRequest, now);
+        if (err) {
+            std::thread errorThread([err]{
+                const char *msg = TextFormat("Failed to load file %s. %s\n", openRequest, ErrStr(err));
+                tinyfd_messageBox("Error", msg, "ok", "error", 1);
+            });
+            errorThread.detach();
+        }
+        openRequest = 0;
+    }
+
     UIState saveButton = uiActionBar.Button("Save");
     if (saveButton.clicked) {
-        if (map.Save(LEVEL_001) != RN_SUCCESS) {
-            // TODO: Display error message on screen for N seconds or
-            // until dismissed
+        Err err = map.Save(map.filename);
+        if (err) {
+            const char *filename = map.filename;
+            std::thread errorThread([filename, err]{
+                const char *msg = TextFormat("Failed to save file %s. %s\n", filename, ErrStr(err));
+                tinyfd_messageBox("Error", msg, "ok", "error", 1);
+            });
+            errorThread.detach();
         }
     }
 
-    UIState loadButton = uiActionBar.Button("Load");
-    if (loadButton.clicked) {
-        Err err = map.Load(LEVEL_001, now);
-        if (err != RN_SUCCESS) {
-            printf("Failed to load map with code %d\n", err);
-            assert(!"oops");
-            // TODO: Display error message on screen for N seconds or
-            // until dismissed
+    UIState saveAsButton = uiActionBar.Button("Save As");
+    if (saveAsButton.clicked) {
+        const char *filename = map.filename;
+        std::thread saveAsThread([filename, mapFileFilter]{
+            saveAsRequest = tinyfd_saveFileDialog(
+                "Save File",
+                filename,
+                ARRAY_SIZE(mapFileFilter),
+                mapFileFilter,
+                "RayNet Tilemap (*.dat)");
+        });
+        saveAsThread.detach();
+    }
+    if (saveAsRequest) {
+        Err err = map.Save(saveAsRequest);
+        if (err) {
+            std::thread errorThread([err]{
+                const char *msg = TextFormat("Failed to save file %s. %s\n", saveAsRequest, ErrStr(err));
+                tinyfd_messageBox("Error", msg, "ok", "error", 1);
+            });
+            errorThread.detach();
         }
+        saveAsRequest = 0;
+    }
+
+    UIState reloadButton = uiActionBar.Button("Reload");
+    if (reloadButton.clicked) {
+        Err err = map.Load(map.filename, now);
+        if (err) {
+            const char *filename = map.filename;
+            std::thread errorThread([filename, err]{
+                const char *msg = TextFormat("Failed to reload file %s. %s\n", filename, ErrStr(err));
+                tinyfd_messageBox("Error", msg, "ok", "error", 1);
+            });
+            errorThread.detach();
+        }
+    }
+
+    UIState mapPath = uiActionBar.Text(GetFileName(map.filename), BROWN);
+    if (mapPath.clicked) {
+        system("explorer maps");
     }
 
     uiActionBar.Space({ 16, 0 });
@@ -261,7 +330,7 @@ UIState Editor::DrawUI_ActionBar(IO &io, Vector2 position, Tilemap &map, double 
 
 void Editor::DrawUI_TileActions(IO &io, UI &uiActionBar, Tilemap &map)
 {
-    uiActionBar.Text("Flags:", BLACK);
+    uiActionBar.Text("Flags:", BROWN);
     UIState editCollisionButton = uiActionBar.Button("Collide", state.tiles.editCollision ? RED : GRAY);
     if (editCollisionButton.clicked) {
         state.tiles.editCollision = !state.tiles.editCollision;

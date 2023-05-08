@@ -14,21 +14,23 @@ int main(int argc, char *argv[])
 
     //SetTraceLogLevel(LOG_WARNING);
 
-    const double startedAt = GetTime();
-    // NOTE(dlb): yojimbo uses rand() for network simulator and random_int()/random_float()
-    srand((unsigned int)startedAt);
-
     InitWindow(WINDOW_WIDTH, WINDOW_HEIGHT, "RayNet Client");
     //SetWindowState(FLAG_VSYNC_HINT);  // Gahhhhhh Windows fucking sucks at this
     //SetWindowState(FLAG_WINDOW_RESIZABLE);
     //SetWindowState(FLAG_FULLSCREEN_MODE);
+
+    InitAudioDevice();
+
+    // NOTE(dlb): yojimbo uses rand() for network simulator and random_int()/random_float()
+    srand((unsigned int)GetTime());
 
     err = InitCommon();
     if (err) {
         printf("Failed to load common resources\n");
     }
 
-    PlayMusicStream(musAmbientOutdoors);
+    Music music = musAmbientOutdoors;
+    PlayMusicStream(music);
 
     Image icon = LoadImage("resources/client.png");
     SetWindowIcon(icon);
@@ -70,7 +72,7 @@ int main(int argc, char *argv[])
     bool quit = false;
 
     while (!quit) {
-        UpdateMusicStream(musAmbientOutdoors);
+        UpdateMusicStream(music);
 
         io.PushScope(IO::IO_Game);
 

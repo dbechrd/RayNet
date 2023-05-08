@@ -74,31 +74,24 @@ static AiPath v2HardcodedAiPaths[] = {
     { 0, 20 }
 };
 
-void Tilemap::Free(void)
-{
-    UnloadTexture(texture);
-    free(texturePath);
-    free(tileDefs);
-    free(tiles);
-    free(pathNodes);
-    free(pathNodeIndices);
-    free(paths);
-}
-
 Tilemap::~Tilemap(void)
 {
-    Free();
+    Unload();
 }
 
 Err Tilemap::Save(const char *filename)
 {
-    Err err = MakeBackup(filename);
-    if (err) return err;
+    Err err = RN_SUCCESS;
+
+    if (FileExists(filename)) {
+        err = MakeBackup(filename);
+        if (err) return err;
+    }
 
     FILE *file = fopen(filename, "w");
     do {
         if (!file) {
-            return RN_BAD_FILE_WRITE;
+            err = RN_BAD_FILE_WRITE; break;
         }
 
         assert(texturePath);
@@ -158,15 +151,19 @@ Err Tilemap::Save(const char *filename)
         }
     } while (0);
 
-    fclose(file);
+    if (file) fclose(file);
+    if (!err) this->filename = filename;
     return RN_SUCCESS;
 }
 
+// TODO(dlb): This shouldn't load in-place.. it causes the game to crash when
+// the load fails. Instead, return a new a tilemap and switch over to it after
+// it has been loaded successfully.
 Err Tilemap::Load(const char *filename, double now)
 {
     Err err = RN_SUCCESS;
 
-    Free();
+    Unload();
 
     FILE *file = fopen(filename, "r");
     do {
@@ -340,7 +337,19 @@ Err Tilemap::Load(const char *filename, double now)
     } while (0);
 
     if (file) fclose(file);
+    if (!err) this->filename = filename;
     return err;
+}
+
+void Tilemap::Unload(void)
+{
+    UnloadTexture(texture);
+    free(texturePath);
+    free(tileDefs);
+    free(tiles);
+    free(pathNodes);
+    free(pathNodeIndices);
+    free(paths);
 }
 
 Tile Tilemap::At(uint32_t x, uint32_t y)

@@ -14,7 +14,9 @@
 #include <ctime>
 #include <cctype>
 
+#include <queue>
 #include <stack>
+#include <thread>
 #include <vector>
 
 // Stuff that probably shouldn't be here
@@ -87,6 +89,8 @@ enum Err {
     RN_BAD_ID           = -10,
     RN_OUT_OF_BOUNDS    = -11,
 };
+
+const char *ErrStr(Err err);
 
 // Dumb stuff that should get a resource manager or wutevs
 

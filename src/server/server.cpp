@@ -77,11 +77,6 @@ Err Play(GameServer &server)
 {
     Err err = RN_SUCCESS;
 
-    err = InitCommon();
-    if (err) {
-        printf("Failed to load common resources\n");
-    }
-
     err = server.world->map.Load(LEVEL_001, server.now);
     if (err) {
         printf("Failed to load map with code %d\n", err);
@@ -442,7 +437,6 @@ Err Play(GameServer &server)
     }
 
     tileset.Unload();
-    FreeCommon();
     return err;
 }
 
@@ -453,14 +447,19 @@ int main(int argc, char *argv[])
     //SetTraceLogLevel(LOG_WARNING);
     SetTraceLogCallback(RN_TraceLogCallback);
 
+    InitWindow(WINDOW_WIDTH, WINDOW_HEIGHT, "RayNet Server");
+    //SetWindowState(FLAG_VSYNC_HINT);
+    //SetWindowState(FLAG_WINDOW_RESIZABLE);
+
     InitAudioDevice();
 
-    InitWindow(WINDOW_WIDTH, WINDOW_HEIGHT, "RayNet Server");
     // NOTE(dlb): yojimbo uses rand() for network simulator and random_int()/random_float()
     srand((unsigned int)GetTime());
 
-    //SetWindowState(FLAG_VSYNC_HINT);
-    //SetWindowState(FLAG_WINDOW_RESIZABLE);
+    err = InitCommon();
+    if (err) {
+        printf("Failed to load common resources\n");
+    }
 
     Image icon = LoadImage("resources/server.png");
     SetWindowIcon(icon);
@@ -523,6 +522,8 @@ int main(int argc, char *argv[])
     delete server;
     server = {};
     ShutdownYojimbo();
+
+    FreeCommon();
     CloseAudioDevice();
 
     return err;

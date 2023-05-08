@@ -9,6 +9,7 @@
     <ClCompile Include="src\server\game_server.cpp" />
     <ClCompile Include="src\common\common.cpp" />
     <ClCompile Include="src\common\ui\ui.cpp" />
+    <ClCompile Include="include\tinyfiledialogs.c" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="src\server\Server.rc" />

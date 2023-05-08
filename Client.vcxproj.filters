@@ -10,6 +10,7 @@
     <ClCompile Include="src\common\ui\ui.cpp" />
     <ClCompile Include="src\client\todo.cpp" />
     <ClCompile Include="src\client\game_client.cpp" />
+    <ClCompile Include="include\tinyfiledialogs.c" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="res\client.ico" />
