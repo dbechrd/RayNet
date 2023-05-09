@@ -11,7 +11,7 @@ const char *EditModeStr(EditMode mode)
     }
 }
 
-void Editor::HandleInput(IO &io, Camera2D &camera)
+void Editor::HandleInput(Camera2D &camera)
 {
     if (io.KeyPressed(KEY_GRAVE)) {
         active = !active;
@@ -24,11 +24,11 @@ void Editor::HandleInput(IO &io, Camera2D &camera)
     }
 }
 
-void Editor::DrawOverlays(IO &io, Tilemap &map, Camera2D &camera, double now)
+void Editor::DrawOverlays(Tilemap &map, Camera2D &camera, double now)
 {
     io.PushScope(IO::IO_EditorOverlay);
 
-    HandleInput(io, camera);
+    HandleInput(camera);
 
     // Draw tile collision layer
     if (state.showColliders) {
@@ -38,11 +38,11 @@ void Editor::DrawOverlays(IO &io, Tilemap &map, Camera2D &camera, double now)
     if (active) {
         switch (mode) {
             case EditMode_Tiles: {
-                DrawOverlay_Tiles(io, map, camera, now);
+                DrawOverlay_Tiles(map, camera, now);
                 break;
             }
             case EditMode_Paths: {
-                DrawOverlay_Paths(io, map, camera);
+                DrawOverlay_Paths(map, camera);
                 break;
             }
         }
@@ -51,7 +51,7 @@ void Editor::DrawOverlays(IO &io, Tilemap &map, Camera2D &camera, double now)
     io.PopScope();
 }
 
-void Editor::DrawOverlay_Tiles(IO &io, Tilemap &map, Camera2D &camera, double now)
+void Editor::DrawOverlay_Tiles(Tilemap &map, Camera2D &camera, double now)
 {
     if (!io.MouseCaptured()) {
         // Draw hover highlight
@@ -80,7 +80,7 @@ void Editor::DrawOverlay_Tiles(IO &io, Tilemap &map, Camera2D &camera, double no
     }
 }
 
-void Editor::DrawOverlay_Paths(IO &io, Tilemap &map, Camera2D &camera)
+void Editor::DrawOverlay_Paths(Tilemap &map, Camera2D &camera)
 {
     auto &cursor = state.pathNodes.cursor;
     const Vector2 cursorWorldPos = GetScreenToWorld2D({ (float)GetMouseX(), (float)GetMouseY() }, camera);
@@ -184,12 +184,12 @@ void Editor::DrawOverlay_Paths(IO &io, Tilemap &map, Camera2D &camera)
     }
 }
 
-UIState Editor::DrawUI(IO &io, Vector2 position, Tilemap &map, double now)
+UIState Editor::DrawUI(Vector2 position, Tilemap &map, double now)
 {
     if (!active) return {};
     io.PushScope(IO::IO_EditorUI);
 
-    UIState state = DrawUI_ActionBar(io, position, map, now);
+    UIState state = DrawUI_ActionBar(position, map, now);
     if (state.hover) {
         io.CaptureMouse();
     }
@@ -198,17 +198,28 @@ UIState Editor::DrawUI(IO &io, Vector2 position, Tilemap &map, double now)
     return state;
 }
 
-UIState Editor::DrawUI_ActionBar(IO &io, Vector2 position, Tilemap &map, double now)
+UIState Editor::DrawUI_ActionBar(Vector2 position, Tilemap &map, double now)
 {
     UIStyle uiActionBarStyle{};
     UI uiActionBar{ position, uiActionBarStyle };
 
     // TODO: UI::Panel
     UIState uiState{};
-    const Rectangle actionBarRect{ position.x, position.y, 800, 110 };
+    const Rectangle actionBarRect{ position.x, position.y, 840, 240 };
+#if 0
     DrawRectangleRounded(actionBarRect, 0.15f, 8, ASESPRITE_BEIGE);
     DrawRectangleRoundedLines(actionBarRect, 0.15f, 8, 2.0f, BLACK);
+#else
+    DrawRectangleRec(actionBarRect, Fade(ASESPRITE_BEIGE, 0.7f));
+    DrawRectangleLinesEx(actionBarRect, 2.0f, BLACK);
+#endif
     uiState.hover = dlb_CheckCollisionPointRec(GetMousePosition(), actionBarRect);
+
+    UIState mapPath = uiActionBar.Text(GetFileName(map.filename), WHITE);
+    if (mapPath.clicked) {
+        system("explorer maps");
+    }
+    uiActionBar.Newline();
 
     const char *mapFileFilter[1] = { "*.dat" };
     static const char *openRequest = 0;
@@ -292,11 +303,6 @@ UIState Editor::DrawUI_ActionBar(IO &io, Vector2 position, Tilemap &map, double 
         }
     }
 
-    UIState mapPath = uiActionBar.Text(GetFileName(map.filename), BROWN);
-    if (mapPath.clicked) {
-        system("explorer maps");
-    }
-
     uiActionBar.Space({ 16, 0 });
 
     for (int i = 0; i < EditMode_Count; i++) {
@@ -316,11 +322,13 @@ UIState Editor::DrawUI_ActionBar(IO &io, Vector2 position, Tilemap &map, double 
 
     switch (mode) {
         case EditMode_Tiles: {
-            DrawUI_TileActions(io, uiActionBar, map);
+            //DrawUI_TileActions(uiActionBar, map);
+            //uiActionBar.Newline();
+            DrawUI_Tilesheet(uiActionBar, map);
             break;
         }
         case EditMode_Paths: {
-            DrawUI_PathActions(io, uiActionBar);
+            DrawUI_PathActions(uiActionBar);
             break;
         }
     }
@@ -328,9 +336,49 @@ UIState Editor::DrawUI_ActionBar(IO &io, Vector2 position, Tilemap &map, double 
     return uiState;
 }
 
-void Editor::DrawUI_TileActions(IO &io, UI &uiActionBar, Tilemap &map)
+void Editor::DrawUI_Tilesheet(UI &uiActionBar, Tilemap &map)
 {
-    uiActionBar.Text("Flags:", BROWN);
+    // TODO: Support multi-select (big rectangle?), and figure out where this lives
+
+    UIState uiSheet = uiActionBar.Image(map.texture);
+    Vector2 imgTL = uiSheet.contentTopLeft;
+    if (uiSheet.hover) {
+        Vector2 mousePos = GetMousePosition();
+        Vector2 mouseRel = Vector2Subtract(mousePos, imgTL);
+
+        //DrawTextEx(fntHackBold20, TextFormat("%f, %f\n", mouseRel.x, mouseRel.y),
+        //    Vector2Add(GetMousePosition(), { 10, 10 }), fntHackBold20.baseSize, 1, YELLOW);
+
+        int tileX = (int)mouseRel.x / 32;
+        int tileY = (int)mouseRel.y / 32;
+        DrawRectangleLinesEx(
+            { imgTL.x + tileX * TILE_W, imgTL.y + tileY * TILE_W, TILE_W, TILE_W },
+            2, YELLOW
+        );
+
+        //DrawTextEx(fntHackBold20, TextFormat("%d, %d\n", tileX, tileY),
+        //    Vector2Add(GetMousePosition(), { 10, 10 }), fntHackBold20.baseSize, 1, YELLOW);
+
+        if (uiSheet.pressed) {
+            int tileIdx = tileY * (map.texture.width / TILE_W) + tileX;
+            assert(tileIdx >= 0 && tileIdx < map.tileDefCount);
+            state.tiles.cursor.tileDefId = tileIdx;
+        }
+    }
+
+    if (state.tiles.cursor.tileDefId >= 0) {
+        int tileX = state.tiles.cursor.tileDefId % (map.texture.width / TILE_W);
+        int tileY = state.tiles.cursor.tileDefId / (map.texture.width / TILE_W);
+        DrawRectangleLinesEx(
+            { imgTL.x + tileX * TILE_W, imgTL.y + tileY * TILE_W, TILE_W, TILE_W },
+            2, WHITE
+        );
+    }
+}
+
+void Editor::DrawUI_TileActions(UI &uiActionBar, Tilemap &map)
+{
+    uiActionBar.Text("Flags:", BLACK);
     UIState editCollisionButton = uiActionBar.Button("Collide", state.tiles.editCollision ? RED : GRAY);
     if (editCollisionButton.clicked) {
         state.tiles.editCollision = !state.tiles.editCollision;
@@ -410,7 +458,7 @@ void Editor::DrawUI_TileActions(IO &io, UI &uiActionBar, Tilemap &map)
     }
 }
 
-void Editor::DrawUI_PathActions(IO &io, UI &uiActionBar)
+void Editor::DrawUI_PathActions(UI &uiActionBar)
 {
     if (state.pathNodes.cursor.dragging) {
         printf("dragging\n");

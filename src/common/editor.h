@@ -42,15 +42,16 @@ struct Editor {
     EditMode mode{};
     EditModeState state{};
 
-    void DrawOverlays(IO &io, Tilemap &map, Camera2D &camera, double now);
-    UIState DrawUI(IO &io, Vector2 position, Tilemap &map, double now);
+    void DrawOverlays(Tilemap &map, Camera2D &camera, double now);
+    UIState DrawUI(Vector2 position, Tilemap &map, double now);
 
 private:
-    void HandleInput(IO &io, Camera2D &camera);
-    void DrawOverlay_Tiles(IO &io, Tilemap &map, Camera2D &camera, double now);
-    void DrawOverlay_Paths(IO &io, Tilemap &map, Camera2D &camera);
+    void HandleInput(Camera2D &camera);
+    void DrawOverlay_Tiles(Tilemap &map, Camera2D &camera, double now);
+    void DrawOverlay_Paths(Tilemap &map, Camera2D &camera);
 
-    UIState DrawUI_ActionBar(IO &io, Vector2 position, Tilemap &map, double now);
-    void DrawUI_TileActions(IO &io, UI &uiActionBar, Tilemap &map);
-    void DrawUI_PathActions(IO &io, UI &uiActionBar);
+    UIState DrawUI_ActionBar(Vector2 position, Tilemap &map, double now);
+    void DrawUI_Tilesheet(UI &uiActionBar, Tilemap &map);
+    void DrawUI_TileActions(UI &uiActionBar, Tilemap &map);
+    void DrawUI_PathActions(UI &uiActionBar);
 };

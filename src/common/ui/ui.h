@@ -53,7 +53,8 @@ enum UIElementType {
 
 struct UIStyle {
     UIMargin margin{ 6, 0, 0, 6 };
-    Vector2 borderThickness{ 1.0f, 1.0f };
+    float buttonBorderThickness{ 1 };
+    float imageBorderThickness{ 2 };
     UIPad pad{ 8, 2 };
     float scale{ 1 };
     Color bgColor{ BLUE };
@@ -69,6 +70,7 @@ struct UIState {
     bool pressed;  // first down frame
     bool down;
     bool clicked;  // frame after last down frame (released)
+    Vector2 contentTopLeft;
 };
 
 struct UI {

@@ -33,13 +33,14 @@ struct Tilemap {
     // v1: the OG
     // v2: added texturePath
     // v3: added AI paths/nodes
-    const uint32_t VERSION = 3;
+    // v4: tileDefCount and tileDef.x/y are now implicit based on texture size
+    const uint32_t VERSION = 4;
     uint32_t texturePathLen;
     char *texturePath;
     Texture2D texture;  // not in file, loaded from texturePath
     uint32_t tileDefCount;
-    uint32_t width;
-    uint32_t height;
+    uint32_t width;  // width of map in tiles
+    uint32_t height;  // height of map in tiles
     uint32_t pathNodeCount;
     uint32_t pathNodeIndexCount;
     uint32_t pathCount;

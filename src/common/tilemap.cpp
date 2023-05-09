@@ -112,7 +112,6 @@ Err Tilemap::Save(const char *filename)
         fwrite(&VERSION, sizeof(VERSION), 1, file);
         fwrite(&texturePathLen, sizeof(texturePathLen), 1, file);
         fwrite(texturePath, sizeof(*texturePath), texturePathLen, file);
-        fwrite(&tileDefCount, sizeof(tileDefCount), 1, file);
         fwrite(&width, sizeof(width), 1, file);
         fwrite(&height, sizeof(height), 1, file);
         fwrite(&pathNodeCount, sizeof(pathNodeCount), 1, file);
@@ -121,8 +120,6 @@ Err Tilemap::Save(const char *filename)
 
         for (uint32_t i = 0; i < tileDefCount; i++) {
             TileDef &tileDef = tileDefs[i];
-            fwrite(&tileDef.x, sizeof(tileDef.x), 1, file);
-            fwrite(&tileDef.y, sizeof(tileDef.y), 1, file);
             fwrite(&tileDef.collide, sizeof(tileDef.collide), 1, file);
         }
 
@@ -205,10 +202,14 @@ Err Tilemap::Load(const char *filename, double now)
             err = RN_BAD_FILE_READ; break;
         }
 
-        if (version >= 3) {
-            fread(&tileDefCount, sizeof(tileDefCount), 1, file);
-        } else {
-            tileDefCount = ARRAY_SIZE(v2TileDefs);
+        if (texture.width % TILE_W != 0 || texture.height % TILE_W != 0) {
+            err = RN_INVALID_SIZE; break;
+        }
+        tileDefCount = (texture.width / TILE_W) * (texture.height / TILE_W);
+
+        int v3TileDefCount = 0;
+        if (version == 3) {
+            fread(&v3TileDefCount, sizeof(v3TileDefCount), 1, file);
         }
 
         fread(&width, sizeof(width), 1, file);
@@ -232,25 +233,37 @@ Err Tilemap::Load(const char *filename, double now)
             err = RN_BAD_ALLOC; break;
         }
 
-        if (version >= 3) {
+        if (version >= 4) {
             for (uint32_t i = 0; i < tileDefCount; i++) {
                 TileDef &dst = tileDefs[i];
-                fread(&dst.x, sizeof(dst.x), 1, file);
-                if (dst.x < 0 || dst.x >= texture.width) {
-                    err = RN_OUT_OF_BOUNDS; break;
-                }
-                fread(&dst.y, sizeof(dst.y), 1, file);
-                if (dst.y < 0 || dst.y >= texture.height) {
-                    err = RN_OUT_OF_BOUNDS; break;
-                }
+                int tilesPerRow = texture.width / TILE_W;
+                dst.x = i % tilesPerRow * TILE_W;
+                dst.y = i / tilesPerRow * TILE_W;
+                fread(&dst.collide, sizeof(dst.collide), 1, file);
+            }
+        } else if (version >= 3) {
+            for (uint32_t i = 0; i < v3TileDefCount; i++) {
+                TileDef &dst = tileDefs[i];
+                uint32_t v3IgnoreX;
+                fread(&v3IgnoreX, sizeof(v3IgnoreX), 1, file);
+                uint32_t v3IgnoreY;
+                fread(&v3IgnoreY, sizeof(v3IgnoreY), 1, file);
+
+                int tilesPerRow = texture.width / TILE_W;
+                dst.x = i % tilesPerRow * TILE_W;
+                dst.y = i / tilesPerRow * TILE_W;
                 fread(&dst.collide, sizeof(dst.collide), 1, file);
             }
         } else {
             for (uint32_t i = 0; i < tileDefCount; i++) {
                 TileDef &src = v2TileDefs[i];
                 TileDef &dst = tileDefs[i];
-                dst.x = src.x;
-                dst.y = src.y;
+                //dst.x = src.x;
+                //dst.y = src.y;
+
+                int tilesPerRow = texture.width / TILE_W;
+                dst.x = i % tilesPerRow * TILE_W;
+                dst.y = i / tilesPerRow * TILE_W;
                 dst.collide = src.collide;
             }
         }

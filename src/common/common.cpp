@@ -121,7 +121,7 @@ Err InitCommon(void)
     texLily = LoadTexture("resources/lily.png");
     if (!texLily.width) err = RN_RAYLIB_ERROR;
 
-#if 0
+#if 1
     sndSoftTick = LoadSound("resources/soft_tick3.wav");
     if (!sndSoftTick.frameCount) err = RN_RAYLIB_ERROR;
     SetSoundVolume(sndSoftTick, 0.1f);

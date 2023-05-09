@@ -152,7 +152,7 @@ Err Play(GameServer &server)
         server.world->map.Draw(camera);
 
         // [Editor] Overlays
-        editor.DrawOverlays(io, map, camera, server.now);
+        editor.DrawOverlays(map, camera, server.now);
 
         DrawRectangleLinesEx(lastCollisionA, 1, RED);
         DrawRectangleLinesEx(lastCollisionB, 1, GREEN);
@@ -231,7 +231,7 @@ Err Play(GameServer &server)
             }, 1.0f, PINK);
 #endif
 
-        editor.DrawUI(io, { 380, 8 }, map, server.now);
+        editor.DrawUI({ 380, 8 }, map, server.now);
 
         {
             io.PushScope(IO::IO_HUD);

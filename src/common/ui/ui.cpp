@@ -122,8 +122,8 @@ UIState UI::Text(const char *text)
     Rectangle ctrlRect = {
         ctrlPosition.x,
         ctrlPosition.y,
-        ctrlSize.x + style.borderThickness.x * 2,
-        ctrlSize.y + style.borderThickness.y * 2
+        ctrlSize.x,
+        ctrlSize.y
     };
 
     static HoverHash prevHoverHash{};
@@ -132,12 +132,13 @@ UIState UI::Text(const char *text)
     // Draw text
     DrawTextShadowEx(*style.font, text,
         {
-            ctrlPosition.x + style.borderThickness.x + style.pad.left,
-            ctrlPosition.y + style.borderThickness.y * style.pad.top
+            ctrlPosition.x,
+            ctrlPosition.y
         },
         style.fgColor
     );
 
+    state.contentTopLeft = { ctrlRect.x, ctrlRect.y };
     UpdateCursor(style, ctrlRect);
     return state;
 }
@@ -175,19 +176,24 @@ UIState UI::Image(Texture &texture, Rectangle srcRect)
     Rectangle ctrlRect = {
         ctrlPosition.x,
         ctrlPosition.y,
-        ctrlSize.x,
-        ctrlSize.y
+        ctrlSize.x + style.imageBorderThickness * 2,
+        ctrlSize.y + style.imageBorderThickness * 2
     };
 
+    Rectangle contentRect = ctrlRect;
+    contentRect.x += style.imageBorderThickness;
+    contentRect.y += style.imageBorderThickness;
+    contentRect.width -= style.imageBorderThickness * 2;
+    contentRect.height -= style.imageBorderThickness * 2;
+
     static HoverHash prevHoverHash{};
-    UIState state = CalcState(ctrlRect, prevHoverHash);
+    UIState state = CalcState(contentRect, prevHoverHash);
+
+    // Draw border
+    DrawRectangleLinesEx(ctrlRect, style.imageBorderThickness, state.hover ? YELLOW : BLACK);
 
     // Draw image
-    DrawTexturePro(texture, srcRect, ctrlRect, {}, 0, WHITE);
-
-    if (state.hover) {
-        DrawRectangleLinesEx(ctrlRect, 2, YELLOW);
-    }
+    DrawTexturePro(texture, srcRect, contentRect, {}, 0, WHITE);
 
     // Audio
     if (state.clicked) {
@@ -196,6 +202,7 @@ UIState UI::Image(Texture &texture, Rectangle srcRect)
         if (!IsSoundPlaying(sndSoftTick)) PlaySound(sndSoftTick);
     }
 
+    state.contentTopLeft = { contentRect.x, contentRect.y };
     UpdateCursor(style, ctrlRect);
     return state;
 }
@@ -220,11 +227,11 @@ UIState UI::Button(const char *text)
 
     Align(style, ctrlPosition, ctrlSize);
 
-    Rectangle ctrlRect = {
+    Rectangle ctrlRect{
         ctrlPosition.x,
         ctrlPosition.y,
-        ctrlSize.x + style.borderThickness.x * 2,
-        ctrlSize.y + style.borderThickness.y * 2
+        ctrlSize.x + style.buttonBorderThickness * 2,
+        ctrlSize.y + style.buttonBorderThickness * 2
     };
 
     static HoverHash prevHoverHash{};
@@ -248,23 +255,21 @@ UIState UI::Button(const char *text)
     }
 
     const float downOffset = (style.buttonPressed || state.down) ? 1 : -1;
+    Rectangle contentRect{
+        ctrlPosition.x + style.buttonBorderThickness,
+        ctrlPosition.y + style.buttonBorderThickness * downOffset,
+        ctrlSize.x,
+        ctrlSize.y
+    };
 
     // Draw button
-    DrawRectangleRounded(
-        {
-            ctrlPosition.x + style.borderThickness.x,
-            ctrlPosition.y + style.borderThickness.y * downOffset,
-            ctrlSize.x,
-            ctrlSize.y
-        },
-        cornerRoundness, cornerSegments, bgColorFx
-    );
+    DrawRectangleRounded(contentRect, cornerRoundness, cornerSegments, bgColorFx);
 
     // Draw button text
     DrawTextShadowEx(*style.font, text,
         {
-            ctrlPosition.x + style.borderThickness.x + style.pad.left,
-            ctrlPosition.y + style.borderThickness.y * downOffset + style.pad.top
+            contentRect.x + style.pad.left,
+            contentRect.y + style.pad.top
         },
         fgColorFx
     );
@@ -276,6 +281,7 @@ UIState UI::Button(const char *text)
         PlaySound(sndSoftTick);
     }
 
+    state.contentTopLeft = { contentRect.x, contentRect.y };
     UpdateCursor(style, ctrlRect);
     return state;
 }
