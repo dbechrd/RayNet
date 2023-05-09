@@ -15,5 +15,9 @@
 #include "tilemap.h"
 #include "wang.h"
 
+float GetRandomFloatZeroToOne(void);
+float GetRandomFloatMinusOneToOne(void);
+float GetRandomFloatVariance(float variance);
+
 void DrawTextShadowEx(Font font, const char *text, Vector2 pos, Color color);
 Rectangle GetScreenRectWorld(Camera2D &camera);

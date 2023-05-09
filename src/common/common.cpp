@@ -13,9 +13,6 @@ Font fntHackBold32;
 
 Texture texLily;
 
-Sound sndSoftTick;
-Sound sndHardTick;
-
 Music musAmbientOutdoors;
 Music musCave;
 
@@ -121,15 +118,6 @@ Err InitCommon(void)
     texLily = LoadTexture("resources/lily.png");
     if (!texLily.width) err = RN_RAYLIB_ERROR;
 
-#if 1
-    sndSoftTick = LoadSound("resources/soft_tick3.wav");
-    if (!sndSoftTick.frameCount) err = RN_RAYLIB_ERROR;
-    SetSoundVolume(sndSoftTick, 0.1f);
-#endif
-
-    sndHardTick = LoadSound("resources/hard_tick.wav");
-    if (!sndHardTick.frameCount) err = RN_RAYLIB_ERROR;
-
     musAmbientOutdoors = LoadMusicStream("resources/copyright/345470__philip_goddard__branscombe-landslip-birds-and-sea-echoes-ese-from-cave-track.ogg");
     musCave = LoadMusicStream("resources/copyright/69391__zixem__cave_amb.wav");
 
@@ -144,8 +132,6 @@ void FreeCommon(void)
     UnloadFont(fntHackBold20);
     UnloadFont(fntHackBold32);
     UnloadTexture(texLily);
-    UnloadSound(sndSoftTick);
-    UnloadSound(sndHardTick);
     UnloadMusicStream(musAmbientOutdoors);
     UnloadMusicStream(musCave);
     rnSoundSystem.Free();

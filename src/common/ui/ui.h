@@ -79,9 +79,7 @@ struct UI {
     UIStyle GetStyle(void);
     void PopStyle(void);
 
-    void UpdateCursor(const UIStyle &style, Rectangle &ctrlRect);
     void Newline(void);
-
     void Space(Vector2 space);
     UIState Text(const char *text);
     UIState Text(const char *text, Color fgColor);
@@ -103,4 +101,7 @@ private:
     Vector2 cursor{};   // where to draw next element
     Vector2 lineSize{}; // total size of current row of UI elements
     std::stack<UIStyle> styleStack{};
+
+    void UpdateAudio(const UIState &uiState);
+    void UpdateCursor(const UIStyle &style, Rectangle &ctrlRect);
 };

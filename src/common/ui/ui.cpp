@@ -78,6 +78,15 @@ UIState CalcState(Rectangle &ctrlRect, HoverHash &prevHoverHash)
     return state;
 }
 
+void UI::UpdateAudio(const UIState &uiState)
+{
+    if (uiState.clicked) {
+        rnSoundSystem.Play(RN_Sound_Tick_Hard);
+    } else if (uiState.entered) {
+        rnSoundSystem.Play(RN_Sound_Tick_Soft);
+    }
+}
+
 void UI::UpdateCursor(const UIStyle &style, Rectangle &ctrlRect)
 {
     // How much total space we used up (including margin)
@@ -195,14 +204,8 @@ UIState UI::Image(Texture &texture, Rectangle srcRect)
     // Draw image
     DrawTexturePro(texture, srcRect, contentRect, {}, 0, WHITE);
 
-    // Audio
-    if (state.clicked) {
-        if (!IsSoundPlaying(sndHardTick)) PlaySound(sndHardTick);
-    } else if (state.entered) {
-        if (!IsSoundPlaying(sndSoftTick)) PlaySound(sndSoftTick);
-    }
-
     state.contentTopLeft = { contentRect.x, contentRect.y };
+    UpdateAudio(state);
     UpdateCursor(style, ctrlRect);
     return state;
 }
@@ -274,14 +277,8 @@ UIState UI::Button(const char *text)
         fgColorFx
     );
 
-    // Audio
-    if (state.clicked) {
-        PlaySound(sndHardTick);
-    } else if (state.entered) {
-        PlaySound(sndSoftTick);
-    }
-
     state.contentTopLeft = { contentRect.x, contentRect.y };
+    UpdateAudio(state);
     UpdateCursor(style, ctrlRect);
     return state;
 }

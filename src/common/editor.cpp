@@ -414,14 +414,14 @@ void Editor::DrawUI_TileActions(UI &uiActionBar, Tilemap &map)
         if (hover) {
             static int prevTileDefHovered = -1;
             if (editorPickTileDef) {
-                PlaySound(sndHardTick);
+                rnSoundSystem.Play(RN_Sound_Tick_Hard);
                 if (state.tiles.editCollision) {
                     tileDef.collide = !tileDef.collide;
                 } else {
                     state.tiles.cursor.tileDefId = i;
                 }
             } else if (i != prevTileDefHovered) {
-                PlaySound(sndSoftTick);
+                rnSoundSystem.Play(RN_Sound_Tick_Soft);
             }
             prevTileDefHovered = i;
         }

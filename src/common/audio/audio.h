@@ -3,7 +3,10 @@
 
 enum RN_SoundType {
     RN_Sound_None,
-    RN_Sound_Lily_Introduction = 1,
+
+    RN_Sound_Tick_Soft,
+    RN_Sound_Tick_Hard,
+    RN_Sound_Lily_Introduction,
 
     RN_Sound_Count,
 };
@@ -11,12 +14,14 @@ enum RN_SoundType {
 struct RN_Sound {
     const char *filename{};
     Sound sound{};
+    float pitchVariance{};
 };
 
 struct RN_SoundSystem {
     void Init(void);
     void Free(void);
-    void Play(RN_SoundType soundType);
+    void Load(RN_SoundType soundType, const char *filename, float pitchVariance = 0.0f);
+    void Play(RN_SoundType soundType, float pitchVariance = 0.0f, bool multi = true);
 
 private:
     RN_Sound rnSounds[RN_Sound_Count]{};
