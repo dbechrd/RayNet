@@ -2,15 +2,23 @@
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
     <ClCompile Include="src\client\client.cpp" />
-    <ClCompile Include="src\common\shared_lib.cpp" />
-    <ClCompile Include="include\tracy\TracyClient.cpp" />
     <ClCompile Include="src\common\common.cpp" />
     <ClCompile Include="src\common\histogram.cpp" />
     <ClCompile Include="src\client\client_world.cpp" />
     <ClCompile Include="src\common\ui\ui.cpp" />
     <ClCompile Include="src\client\todo.cpp" />
     <ClCompile Include="src\client\game_client.cpp" />
+    <ClCompile Include="src\common\collision.cpp" />
+    <ClCompile Include="src\common\editor.cpp" />
+    <ClCompile Include="src\common\entity.cpp" />
+    <ClCompile Include="src\common\file_utils.cpp" />
+    <ClCompile Include="src\common\tilemap.cpp" />
+    <ClCompile Include="src\common\wang.cpp" />
+    <ClCompile Include="src\common\net\net.cpp" />
+    <ClCompile Include="src\common\audio\audio.cpp" />
+    <ClCompile Include="include\tracy\TracyClient.cpp" />
     <ClCompile Include="include\tinyfiledialogs.c" />
+    <ClCompile Include="include\stb_herringbone_wang_tile.cpp" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="res\client.ico" />
@@ -24,5 +32,27 @@
     <ClInclude Include="src\client\client_world.h" />
     <ClInclude Include="src\common\ui\ui.h" />
     <ClInclude Include="src\client\todo.h" />
+    <ClInclude Include="src\common\collision.h" />
+    <ClInclude Include="src\common\common.h" />
+    <ClInclude Include="src\common\editor.h" />
+    <ClInclude Include="src\common\entity.h" />
+    <ClInclude Include="src\common\file_utils.h" />
+    <ClInclude Include="src\common\input_command.h" />
+    <ClInclude Include="src\common\ring_buffer.h" />
+    <ClInclude Include="src\common\tilemap.h" />
+    <ClInclude Include="src\common\wang.h" />
+    <ClInclude Include="src\common\net\entity_snapshot.h" />
+    <ClInclude Include="src\common\net\net.h" />
+    <ClInclude Include="src\common\net\messages\msg_c_entity_interact.h" />
+    <ClInclude Include="src\common\net\messages\msg_c_input_commands.h" />
+    <ClInclude Include="src\common\net\messages\msg_c_tile_interact.h" />
+    <ClInclude Include="src\common\net\messages\msg_s_clock_sync.h" />
+    <ClInclude Include="src\common\net\messages\msg_s_entity_despawn.h" />
+    <ClInclude Include="src\common\net\messages\msg_s_entity_say.h" />
+    <ClInclude Include="src\common\net\messages\msg_s_entity_snapshot.h" />
+    <ClInclude Include="src\common\net\messages\msg_s_entity_spawn.h" />
+    <ClInclude Include="src\common\net\messages\msg_s_tile_chunk.h" />
+    <ClInclude Include="src\common\audio\audio.h" />
+    <ClInclude Include="src\client\resource.h" />
   </ItemGroup>
 </Project>

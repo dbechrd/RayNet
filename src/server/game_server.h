@@ -1,6 +1,5 @@
 #pragma once
 #include "server_world.h"
-#include "../common/shared_lib.h"
 
 struct ServerWorld;
 

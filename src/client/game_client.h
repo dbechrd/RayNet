@@ -1,5 +1,8 @@
 #pragma once
-#include "../common/shared_lib.h"
+#include "../common/common.h"
+#include "../common/input_command.h"
+#include "../common/net/net.h"
+#include "../common/ring_buffer.h"
 #include "todo.h"
 
 struct ClientWorld;

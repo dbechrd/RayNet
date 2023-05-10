@@ -1,5 +1,6 @@
 #pragma once
 #include "common.h"
+#include "net/net.h"
 
 #define AI_PATH_NONE UINT32_MAX
 

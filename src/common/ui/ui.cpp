@@ -1,5 +1,6 @@
 #include "ui.h"
-#include "../shared_lib.h"
+#include "../audio/audio.h"
+#include "../collision.h"
 
 struct HoverHash {
     Vector2 position{};

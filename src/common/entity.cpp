@@ -1,4 +1,5 @@
 #include "entity.h"
+#include "net/net.h"
 
 #define SPAWN_PROP(prop) entitySpawnEvent.entity.prop = prop;
 void Entity::Serialize(uint32_t entityId, EntitySpawnEvent &entitySpawnEvent, double serverTime)

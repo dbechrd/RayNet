@@ -1,5 +1,8 @@
+#include "audio/audio.h"
+#include "collision.h"
 #include "editor.h"
 #include "ui/ui.h"
+#include "tilemap.h"
 #include "tinyfiledialogs.h"
 
 const char *EditModeStr(EditMode mode)

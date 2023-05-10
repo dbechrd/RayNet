@@ -1,4 +1,4 @@
-#include "../common/shared_lib.h"
+#include "../common/collision.h"
 #include "../common/histogram.h"
 #include "../common/ui/ui.h"
 #include "client_world.h"
@@ -484,6 +484,7 @@ int main(int argc, char *argv[])
     ShutdownYojimbo();
 
     FreeCommon();
+    CloseAudioDevice();
     CloseWindow();
 
     return err;

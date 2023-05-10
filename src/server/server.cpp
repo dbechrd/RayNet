@@ -1,6 +1,7 @@
-#include "../common/shared_lib.h"
+#include "../common/editor.h"
 #include "../common/histogram.h"
 #include "../common/ui/ui.h"
+#include "../common/wang.h"
 #include "server_world.h"
 #include "game_server.h"
 #include "stb_herringbone_wang_tile.h"
@@ -97,6 +98,7 @@ Err Play(GameServer &server)
     const Vector2 uiPosition{ 380, 8 };
 
     SetExitKey(0);
+    bool quit = false;
 
     WangTileset tileset{};
     err = tileset.GenerateTemplate("resources/wang/template.png");
@@ -109,8 +111,7 @@ Err Play(GameServer &server)
 
     Editor editor{};
 
-    while (!WindowShouldClose())
-    {
+    while (!quit) {
         io.PushScope(IO::IO_Game);
 
         server.now = GetTime();
@@ -323,10 +324,10 @@ Err Play(GameServer &server)
                 for (int i = 0; i < tileset.ts.num_h_tiles; i++) {
                     stbhw_tile *wangTile = tileset.ts.h_tiles[i];
                     Rectangle srcRect{
-                        wangTile->x,
-                        wangTile->y,
-                        tileset.ts.short_side_len * 2,
-                        tileset.ts.short_side_len
+                        (float)wangTile->x,
+                        (float)wangTile->y,
+                        (float)tileset.ts.short_side_len * 2,
+                        (float)tileset.ts.short_side_len
                     };
                     if (uiWang.Image(tileset.tsColorized, srcRect).pressed) {
                         hTex = hTex == i ? -1 : i;
@@ -338,10 +339,10 @@ Err Play(GameServer &server)
                 for (int i = 0; i < tileset.ts.num_v_tiles; i++) {
                     stbhw_tile *wangTile = tileset.ts.v_tiles[i];
                     Rectangle srcRect{
-                        wangTile->x,
-                        wangTile->y,
-                        tileset.ts.short_side_len,
-                        tileset.ts.short_side_len * 2
+                        (float)wangTile->x,
+                        (float)wangTile->y,
+                        (float)tileset.ts.short_side_len,
+                        (float)tileset.ts.short_side_len * 2
                     };
                     if (uiWang.Image(tileset.tsColorized, srcRect).pressed) {
                         hTex = -1;
@@ -428,8 +429,8 @@ Err Play(GameServer &server)
         //yojimbo_sleep(0.001);
 
         // Nobody else handled it, so user probably wants to quit
-        if (io.KeyPressed(KEY_ESCAPE)) {
-            CloseWindow();
+        if (WindowShouldClose() || io.KeyPressed(KEY_ESCAPE)) {
+            quit = true;
         }
 
         io.PopScope();
@@ -525,6 +526,7 @@ int main(int argc, char *argv[])
 
     FreeCommon();
     CloseAudioDevice();
+    CloseWindow();
 
     return err;
 }

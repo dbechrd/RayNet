@@ -106,6 +106,13 @@ extern Music musCave;
 Err InitCommon(void);
 void FreeCommon(void);
 
+float GetRandomFloatZeroToOne(void);
+float GetRandomFloatMinusOneToOne(void);
+float GetRandomFloatVariance(float variance);
+
+void DrawTextShadowEx(Font font, const char *text, Vector2 pos, Color color);
+Rectangle GetScreenRectWorld(Camera2D &camera);
+
 // TODO: Where does this go for realz?
 
 struct IO {

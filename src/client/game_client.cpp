@@ -1,5 +1,6 @@
 #include "game_client.h"
 #include "client_world.h"
+#include "../common/audio/audio.h"
 
 uint32_t GameClient::LocalPlayerEntityId(void) {
     if (yj_client->IsConnected()) {

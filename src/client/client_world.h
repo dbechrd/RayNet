@@ -1,5 +1,7 @@
 #pragma once
-#include "../common/shared_lib.h"
+#include "../common/common.h"
+#include "../common/net/entity_snapshot.h"
+#include "../common/tilemap.h"
 
 struct GameClient;
 

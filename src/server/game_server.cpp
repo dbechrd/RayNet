@@ -1,5 +1,4 @@
 #include "game_server.h"
-#include "../common/shared_lib.h"
 
 Rectangle lastCollisionA{};
 Rectangle lastCollisionB{};

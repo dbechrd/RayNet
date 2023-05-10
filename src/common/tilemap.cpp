@@ -1,4 +1,7 @@
-#include "shared_lib.h"
+#include "collision.h"
+#include "file_utils.h"
+#include "tilemap.h"
+#include "wang.h"
 
 void Tilemap::SV_SerializeChunk(Msg_S_TileChunk &tileChunk, uint32_t x, uint32_t y)
 {
