@@ -166,6 +166,7 @@ Err Tilemap::Load(const char *filename, double now)
     Unload();
 
     FILE *file = fopen(filename, "r");
+    Image img{};
     do {
         if (!file) {
             err = RN_BAD_FILE_READ; break;
@@ -339,7 +340,7 @@ Err Tilemap::Load(const char *filename, double now)
             }
         }
 
-        Image img = LoadImage(texturePath);
+        img = LoadImage(texturePath);
         if (!img.width) {
             err = RN_BAD_FILE_READ; break;
         }
@@ -349,11 +350,120 @@ Err Tilemap::Load(const char *filename, double now)
             assert(tileDef.y < img.height);
             tileDef.color = GetImageColor(img, tileDef.x, tileDef.y);
         }
-        UnloadImage(img);
     } while (0);
-
+    if (img.data) UnloadImage(img);
     if (file) fclose(file);
-    if (!err) this->filename = filename;
+
+    if (!err) {
+        this->filename = filename;
+    } else {
+        Unload();
+    }
+    return err;
+}
+
+Err Tilemap::ChangeTileset(Tilemap &map, const char *newTexturePath, double now)
+{
+    Err err = RN_SUCCESS;
+
+    if (!strcmp(map.texturePath, newTexturePath)) {
+        assert(!"u wot mate?");
+        return RN_SUCCESS;
+    }
+
+    Tilemap newMap{};
+    Image img{};
+    do {
+        newMap.texture = LoadTexture(newTexturePath);
+        if (!newMap.texture.width) {
+            err = RN_BAD_FILE_READ; break;
+        }
+        if (newMap.texture.width % TILE_W != 0 || newMap.texture.height % TILE_W != 0) {
+            err = RN_INVALID_SIZE; break;
+        }
+        newMap.tileDefCount = (newMap.texture.width / TILE_W) * (newMap.texture.height / TILE_W);
+
+        newMap.texturePathLen = strlen(newTexturePath);
+        newMap.texturePath = (char *)calloc((size_t)newMap.texturePathLen + 1, sizeof(*newMap.texturePath));
+        strncpy(newMap.texturePath, newTexturePath, newMap.texturePathLen);
+
+        newMap.tileDefs = (TileDef *)calloc(newMap.tileDefCount, sizeof(*tileDefs));
+        for (int i = 0; i < newMap.tileDefCount; i++) {
+            TileDef &dst = newMap.tileDefs[i];
+            int tilesPerRow = newMap.texture.width / TILE_W;
+            dst.x = i % tilesPerRow * TILE_W;
+            dst.y = i / tilesPerRow * TILE_W;
+
+            // This probably kinda stupid.. but idk
+            if (i < map.tileDefCount) {
+                TileDef &src = map.tileDefs[i];
+                dst.collide = src.collide;
+            }
+        }
+
+        // TODO(dlb): If we want to be able to change the size of tileset images
+        // but still have the old indices somehow resolve to the same art in the
+        // new tileset image, we should probably do something fancy like hash
+        // the pixel data of the tiles and match them up that way or wutevs.
+        //
+        // If we did that, maybe it's optional.. because you might want to move
+        // tiles around on purpose and have them map to some other tile, right?
+        //
+        newMap.tiles = (Tile *)calloc((size_t)map.width * map.height, sizeof(*newMap.tiles));
+        if (!newMap.tiles) {
+            err = RN_BAD_ALLOC; break;
+        }
+        for (int i = 0; i < map.width * map.height; i++) {
+            Tile &src = map.tiles[i];
+            Tile &dst = newMap.tiles[i];
+            dst = src >= newMap.tileDefCount ? 0 : src;
+        }
+
+        img = LoadImage(newMap.texturePath);
+        if (!img.width) {
+            err = RN_BAD_FILE_READ; break;
+        }
+        for (int i = 0; i < newMap.tileDefCount; i++) {
+            TileDef &tileDef = newMap.tileDefs[i];
+            tileDef.color = GetImageColor(img, tileDef.x, tileDef.y);
+        }
+    } while(0);
+    if (img.width) UnloadImage(img);
+
+    if (!err) {
+        UnloadTexture(map.texture);
+        free(map.texturePath);
+        free(map.tileDefs);
+        free(map.tiles);
+        //free(pathNodes);
+        //free(pathNodeIndices);
+        //free(paths);
+
+        // HACK(dlb): The weird zeroing logic here is so that newMap's
+        // destructor does not unload all the new data we just created above.
+
+        map.texturePathLen = newMap.texturePathLen;
+        map.texturePath = newMap.texturePath;
+        newMap.texturePath = 0;
+        map.texture = newMap.texture;
+        newMap.texture = {};
+        map.tileDefCount = newMap.tileDefCount;
+        //map.width = newMap.width;
+        //map.height = newMap.width;
+        //map.pathNodeCount = newMap.pathNodeCount;
+        //map.pathNodeIndexCount = newMap.pathNodeIndexCount;
+        //map.pathCount = newMap.pathCount;
+        map.tileDefs = newMap.tileDefs;
+        newMap.tileDefs = 0;
+        map.tiles = newMap.tiles;
+        newMap.tiles = 0;
+        //map.pathNodes = newMap.pathNodes;
+        //map.pathNodeIndices = newMap.pathNodeIndices;
+        //map.paths = newMap.paths;
+        map.chunkLastUpdatedAt = now;
+    } else {
+        newMap.Unload();
+    }
     return err;
 }
 

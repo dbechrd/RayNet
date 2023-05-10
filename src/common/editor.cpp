@@ -323,11 +323,14 @@ UIState Editor::DrawUI_ActionBar(Vector2 position, Tilemap &map, double now)
 
     uiActionBar.Newline();
 
+    uiActionBar.Text("--------------------------------------------------------------");
+    uiActionBar.Newline();
+
     switch (mode) {
         case EditMode_Tiles: {
             //DrawUI_TileActions(uiActionBar, map);
             //uiActionBar.Newline();
-            DrawUI_Tilesheet(uiActionBar, map);
+            DrawUI_Tilesheet(uiActionBar, map, now);
             break;
         }
         case EditMode_Paths: {
@@ -339,13 +342,59 @@ UIState Editor::DrawUI_ActionBar(Vector2 position, Tilemap &map, double now)
     return uiState;
 }
 
-void Editor::DrawUI_Tilesheet(UI &uiActionBar, Tilemap &map)
+void Editor::DrawUI_Tilesheet(UI &uiActionBar, Tilemap &map, double now)
 {
     // TODO: Support multi-select (big rectangle?), and figure out where this lives
 
-    UIState uiSheet = uiActionBar.Image(map.texture);
-    Vector2 imgTL = uiSheet.contentTopLeft;
-    if (uiSheet.hover) {
+    const char *mapFileFilter[1] = { "*.png" };
+    static const char *openRequest = 0;
+
+    if (uiActionBar.Button("Change tileset").clicked) {
+        const char *filename = map.texturePath;
+        std::thread openFileThread([filename, mapFileFilter]{
+            openRequest = tinyfd_openFileDialog(
+                "Open File",
+                filename,
+                ARRAY_SIZE(mapFileFilter),
+                mapFileFilter,
+                "RayNet Tileset (*.png)",
+                0
+            );
+        });
+        openFileThread.detach();
+    }
+    if (openRequest) {
+        Err err = Tilemap::ChangeTileset(map, openRequest, now);
+        if (err) {
+            std::thread errorThread([err]{
+                const char *msg = TextFormat("Failed to load file %s. %s\n", openRequest, ErrStr(err));
+                tinyfd_messageBox("Error", msg, "ok", "error", 1);
+            });
+            errorThread.detach();
+        }
+        openRequest = 0;
+    }
+    uiActionBar.Newline();
+
+    Vector2 uiSheetPos{
+        GetScreenWidth() - map.texture.width - 10,
+        GetScreenHeight() - map.texture.height - 10
+    };
+    UIStyle uiSheetStyle{};
+    UI uiSheet{ uiSheetPos, uiSheetStyle };
+
+    static Texture checkerboard{};
+    if (checkerboard.width != map.texture.width || checkerboard.height != map.texture.height) {
+        checkerboard = LoadTextureFromImage(
+            GenImageChecked(map.texture.width, map.texture.height, 8, 8, GRAY, LIGHTGRAY)
+        );
+    }
+
+    UIState sheet = uiSheet.Image(checkerboard);
+    DrawTextureEx(map.texture, sheet.contentTopLeft, 0, 1, WHITE);
+
+    Vector2 imgTL = sheet.contentTopLeft;
+    if (sheet.hover) {
         Vector2 mousePos = GetMousePosition();
         Vector2 mouseRel = Vector2Subtract(mousePos, imgTL);
 
@@ -362,7 +411,7 @@ void Editor::DrawUI_Tilesheet(UI &uiActionBar, Tilemap &map)
         //DrawTextEx(fntHackBold20, TextFormat("%d, %d\n", tileX, tileY),
         //    Vector2Add(GetMousePosition(), { 10, 10 }), fntHackBold20.baseSize, 1, YELLOW);
 
-        if (uiSheet.pressed) {
+        if (sheet.pressed) {
             int tileIdx = tileY * (map.texture.width / TILE_W) + tileX;
             assert(tileIdx >= 0 && tileIdx < map.tileDefCount);
             state.tiles.cursor.tileDefId = tileIdx;

@@ -6,6 +6,8 @@
 [x] Add UI::Image
 [x] Refactor editor
 [x] Handle input precedence
+[x] Replace a map's tileset image
+[ ] edit tileDef collision
 [ ] Switch maps
 [ ] Items
 [ ] Inventory (w/ Hotbar)

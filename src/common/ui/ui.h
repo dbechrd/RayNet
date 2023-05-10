@@ -30,7 +30,7 @@ struct UIPad {
         this->left    = left;
     }
 
-    Vector2 TopLeft(void) {
+    Vector2 TopLeft(void) const {
         return { top, left };
     }
 };
@@ -76,7 +76,7 @@ struct UIState {
 struct UI {
     UI(Vector2 position, UIStyle style);
     void PushStyle(UIStyle style);
-    UIStyle GetStyle(void);
+    const UIStyle &GetStyle(void);
     void PopStyle(void);
 
     void Newline(void);

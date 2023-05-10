@@ -450,7 +450,7 @@ int main(int argc, char *argv[])
 
     InitWindow(WINDOW_WIDTH, WINDOW_HEIGHT, "RayNet Server");
     //SetWindowState(FLAG_VSYNC_HINT);
-    //SetWindowState(FLAG_WINDOW_RESIZABLE);
+    SetWindowState(FLAG_WINDOW_RESIZABLE);
 
     InitAudioDevice();
 

@@ -24,14 +24,15 @@ void UI::PushStyle(UIStyle style)
     styleStack.push(style);
 }
 
-UIStyle UI::GetStyle(void)
+const UIStyle &UI::GetStyle(void)
 {
-    UIStyle style = styleStack.top();
-    return style;
+    assert(styleStack.size());  // did you PopStyle too many times?
+    return styleStack.top();
 }
 
 void UI::PopStyle(void)
 {
+    assert(styleStack.size());  // did you PopStyle too many times?
     styleStack.pop();
 }
 
@@ -114,7 +115,7 @@ void UI::Space(Vector2 space)
 
 UIState UI::Text(const char *text)
 {
-    UIStyle &style = styleStack.top();
+    const UIStyle &style = GetStyle();
 
     Vector2 ctrlPosition{
         position.x + cursor.x + style.margin.left,
@@ -169,7 +170,7 @@ UIState UI::Image(Texture &texture, Rectangle srcRect)
         srcRect = { 0, 0, (float)texture.width, (float)texture.height };
     }
 
-    UIStyle &style = styleStack.top();
+    const UIStyle &style = GetStyle();
 
     Vector2 ctrlPosition{
         position.x + cursor.x + style.margin.left,
@@ -213,7 +214,7 @@ UIState UI::Image(Texture &texture, Rectangle srcRect)
 
 UIState UI::Button(const char *text)
 {
-    UIStyle &style = styleStack.top();
+    const UIStyle &style = GetStyle();
 
     Vector2 ctrlPosition{
         position.x + cursor.x + style.margin.left,

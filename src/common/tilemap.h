@@ -61,6 +61,7 @@ struct Tilemap {
 
     Err Save(const char *filename);
     Err Load(const char *filename, double now);
+    static Err ChangeTileset(Tilemap &map, const char *newTexturePath, double now);
     void Unload(void);
 
     // Tiles
