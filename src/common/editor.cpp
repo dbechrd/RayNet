@@ -19,11 +19,15 @@ void Editor::HandleInput(Camera2D &camera)
     if (io.KeyPressed(KEY_GRAVE)) {
         active = !active;
     }
+    if (io.KeyPressed(KEY_ESCAPE)) {
+        active = false;
+    }
+    if (io.KeyDown(KEY_LEFT_CONTROL) && io.KeyPressed(KEY_ZERO)) {
+        camera.zoom = 1.0f;
+    }
 
     if (active) {
-        if (io.KeyDown(KEY_LEFT_CONTROL) && io.KeyPressed(KEY_ZERO)) {
-            camera.zoom = 1.0f;
-        }
+        io.CaptureKeyboard();
     }
 }
 
@@ -63,22 +67,24 @@ void Editor::DrawOverlay_Tiles(Tilemap &map, Camera2D &camera, double now)
         const bool editorPickTile = io.MouseButtonDown(MOUSE_BUTTON_MIDDLE);
         const bool editorFillTile = io.KeyPressed(KEY_F);
 
-        Tile hoveredTile;
-        bool hoveringTile = map.AtWorld((int32_t)cursorWorldPos.x, (int32_t)cursorWorldPos.y, hoveredTile);
-        if (hoveringTile) {
+        Tile &cursorTile = state.tiles.cursor.tileDefId;
+        Tile hoveredTile{};
+        if (map.AtWorld((int32_t)cursorWorldPos.x, (int32_t)cursorWorldPos.y, hoveredTile)) {
             Tilemap::Coord coord{};
             bool validCoord = map.WorldToTileIndex(cursorWorldPos.x, cursorWorldPos.y, coord);
             assert(validCoord);  // should always be true when hoveredTile != null
 
             if (editorPlaceTile) {
-                map.Set(coord.x, coord.y, state.tiles.cursor.tileDefId, now);
+                map.Set(coord.x, coord.y, cursorTile, now);
             } else if (editorPickTile) {
-                state.tiles.cursor.tileDefId = hoveredTile;
+                cursorTile = hoveredTile;
             } else if (editorFillTile) {
-                map.Fill(coord.x, coord.y, state.tiles.cursor.tileDefId, now);
+                map.Fill(coord.x, coord.y, cursorTile, now);
             }
 
-            DrawRectangleLinesEx({ (float)coord.x * TILE_W, (float)coord.y * TILE_W, TILE_W, TILE_W }, 2, WHITE);
+            Vector2 drawPos{ (float)coord.x * TILE_W, (float)coord.y * TILE_W };
+            map.DrawTile(cursorTile, drawPos);
+            DrawRectangleLinesEx({ drawPos.x, drawPos.y, TILE_W, TILE_W }, 2, WHITE);
         }
     }
 }
@@ -189,12 +195,14 @@ void Editor::DrawOverlay_Paths(Tilemap &map, Camera2D &camera)
 
 UIState Editor::DrawUI(Vector2 position, Tilemap &map, double now)
 {
-    if (!active) return {};
     io.PushScope(IO::IO_EditorUI);
 
-    UIState state = DrawUI_ActionBar(position, map, now);
-    if (state.hover) {
-        io.CaptureMouse();
+    UIState state{};
+    if (active) {
+        state = DrawUI_ActionBar(position, map, now);
+        if (state.hover) {
+            io.CaptureMouse();
+        }
     }
 
     io.PopScope();
@@ -377,8 +385,8 @@ void Editor::DrawUI_Tilesheet(UI &uiActionBar, Tilemap &map, double now)
     uiActionBar.Newline();
 
     Vector2 uiSheetPos{
-        GetScreenWidth() - map.texture.width - 10,
-        GetScreenHeight() - map.texture.height - 10
+        GetScreenWidth() - map.texture.width - 10.0f,
+        GetScreenHeight() - map.texture.height - 10.0f
     };
     UIStyle uiSheetStyle{};
     UI uiSheet{ uiSheetPos, uiSheetStyle };

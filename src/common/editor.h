@@ -1,9 +1,7 @@
 #pragma once
 #include "common.h"
-
-struct Tilemap;
-struct UI;
-struct UIState;
+#include "tilemap.h"
+#include "ui/ui.h"
 
 enum EditMode {
     EditMode_Tiles,
@@ -15,7 +13,7 @@ struct EditModeTiles {
     bool editCollision;
 
     struct {
-        int tileDefId;
+        Tile tileDefId;
     } cursor;
 };
 

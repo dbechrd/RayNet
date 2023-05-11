@@ -21,7 +21,7 @@ struct RN_SoundSystem {
     void Init(void);
     void Free(void);
     void Load(RN_SoundType soundType, const char *filename, float pitchVariance = 0.0f);
-    void Play(RN_SoundType soundType, float pitchVariance = 0.0f, bool multi = true);
+    void Play(RN_SoundType soundType, bool multi = true, float pitchVariance = 0.0f);
 
 private:
     RN_Sound rnSounds[RN_Sound_Count]{};

@@ -4,7 +4,7 @@ RN_SoundSystem rnSoundSystem;
 
 void RN_SoundSystem::Init(void)
 {
-    Load(RN_Sound_Tick_Soft, "resources/soft_tick3.wav", 0.03f);
+    Load(RN_Sound_Tick_Soft, "resources/soft_tick.wav", 0.03f);
     Load(RN_Sound_Tick_Hard, "resources/hard_tick.wav", 0.03f);
     Load(RN_Sound_Lily_Introduction, "resources/mic_test.wav");
 
@@ -42,7 +42,7 @@ void RN_SoundSystem::Load(RN_SoundType soundType, const char *filename, float pi
     }
 }
 
-void RN_SoundSystem::Play(RN_SoundType soundType, float pitchVariance, bool multi)
+void RN_SoundSystem::Play(RN_SoundType soundType, bool multi, float pitchVariance)
 {
     RN_Sound &rnSound = rnSounds[soundType];
 

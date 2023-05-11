@@ -85,7 +85,7 @@ void UI::UpdateAudio(const UIState &uiState)
     if (uiState.clicked) {
         rnSoundSystem.Play(RN_Sound_Tick_Hard);
     } else if (uiState.entered) {
-        rnSoundSystem.Play(RN_Sound_Tick_Soft);
+        rnSoundSystem.Play(RN_Sound_Tick_Soft, false);
     }
 }
 
@@ -198,7 +198,7 @@ UIState UI::Image(Texture &texture, Rectangle srcRect)
     contentRect.height -= style.imageBorderThickness * 2;
 
     static HoverHash prevHoverHash{};
-    UIState state = CalcState(contentRect, prevHoverHash);
+    UIState state = CalcState(ctrlRect, prevHoverHash);
 
     // Draw border
     DrawRectangleLinesEx(ctrlRect, style.imageBorderThickness, state.hover ? YELLOW : BLACK);

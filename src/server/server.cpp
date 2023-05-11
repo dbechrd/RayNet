@@ -375,6 +375,7 @@ Err Play(GameServer &server)
 
                 UIStyle uiWangTileStyle{};
                 uiWangTileStyle.margin = 0;
+                uiWangTileStyle.imageBorderThickness = 1;
                 UI uiWangTile{ { 300, 200 }, uiWangTileStyle };
                 if (hTex >= 0) {
                     stbhw_tile *wangTile = tileset.ts.h_tiles[hTex];
