@@ -50,6 +50,6 @@ private:
 
     UIState DrawUI_ActionBar(Vector2 position, Tilemap &map, double now);
     void DrawUI_Tilesheet(UI &uiActionBar, Tilemap &map, double now);
-    void DrawUI_TileActions(UI &uiActionBar, Tilemap &map);
+    void DrawUI_TileActions(UI &uiActionBar, Tilemap &map, double now);
     void DrawUI_PathActions(UI &uiActionBar);
 };

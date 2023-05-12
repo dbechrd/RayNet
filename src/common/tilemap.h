@@ -1,6 +1,7 @@
 #pragma once
 #include "common.h"
 #include "net/net.h"
+#include "texture_catalog.h"
 
 #define AI_PATH_NONE UINT32_MAX
 
@@ -36,9 +37,8 @@ struct Tilemap {
     // v3: added AI paths/nodes
     // v4: tileDefCount and tileDef.x/y are now implicit based on texture size
     const uint32_t VERSION = 4;
-    uint32_t texturePathLen;
+    TextureId textureId;  // generated upon load, used to look up in rnTextureCatalog
     char *texturePath;
-    Texture2D texture;  // not in file, loaded from texturePath
     uint32_t tileDefCount;
     uint32_t width;  // width of map in tiles
     uint32_t height;  // height of map in tiles

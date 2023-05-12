@@ -1,5 +1,6 @@
 #include "common.h"
 #include "audio/audio.h"
+#include "texture_catalog.h"
 
 #define RAYMATH_IMPLEMENTATION
 #include "raylib/raymath.h"
@@ -35,6 +36,45 @@ const char *ErrStr(Err err)
         case RN_OUT_OF_BOUNDS   : return "RN_OUT_OF_BOUNDS  ";
         default                 : return TextFormat("Code %d", err);
     }
+}
+
+// TODO: Load placeholder textures/sounds etc. if fail
+Err InitCommon(void)
+{
+    Err err = RN_SUCCESS;
+
+    // Load SDF required shader (we use default vertex shader)
+    shdSdfText = LoadShader(0, "resources/shaders/sdf.fs");
+
+    fntHackBold20 = LoadFontEx("resources/Hack-Bold.ttf", 20, 0, 0);
+    if (!fntHackBold20.baseSize) err = RN_RAYLIB_ERROR;
+
+    fntHackBold32 = dlb_LoadFontEx("resources/Hack-Bold.ttf", 42, 0, 0, FONT_SDF);
+    if (!fntHackBold32.baseSize) err = RN_RAYLIB_ERROR;
+    SetTextureFilter(fntHackBold32.texture, TEXTURE_FILTER_BILINEAR);    // Required for SDF font
+
+    texLily = LoadTexture("resources/lily.png");
+    if (!texLily.width) err = RN_RAYLIB_ERROR;
+
+    musAmbientOutdoors = LoadMusicStream("resources/copyright/345470__philip_goddard__branscombe-landslip-birds-and-sea-echoes-ese-from-cave-track.ogg");
+    musCave = LoadMusicStream("resources/copyright/69391__zixem__cave_amb.wav");
+
+    rnSoundSystem.Init();
+    rnTextureCatalog.Init();
+
+    return err;
+}
+
+void FreeCommon(void)
+{
+    UnloadShader(shdSdfText);
+    UnloadFont(fntHackBold20);
+    UnloadFont(fntHackBold32);
+    UnloadTexture(texLily);
+    UnloadMusicStream(musAmbientOutdoors);
+    UnloadMusicStream(musCave);
+    rnSoundSystem.Free();
+    rnTextureCatalog.Free();
 }
 
 // Load font from memory buffer, fileType refers to extension: i.e. ".ttf"
@@ -200,39 +240,24 @@ void operator delete(void *ptr) noexcept
 }
 #endif
 
-// TODO: Load placeholder textures/sounds etc. if fail
-Err InitCommon(void)
+Rectangle RectShrink(const Rectangle &rect, float pixels)
 {
-    Err err = RN_SUCCESS;
-
-    // Load SDF required shader (we use default vertex shader)
-    shdSdfText = LoadShader(0, "resources/shaders/sdf.fs");
-
-    fntHackBold20 = LoadFontEx("resources/Hack-Bold.ttf", 20, 0, 0);
-    if (!fntHackBold20.baseSize) err = RN_RAYLIB_ERROR;
-
-    fntHackBold32 = dlb_LoadFontEx("resources/Hack-Bold.ttf", 42, 0, 0, FONT_SDF);
-    if (!fntHackBold32.baseSize) err = RN_RAYLIB_ERROR;
-    SetTextureFilter(fntHackBold32.texture, TEXTURE_FILTER_BILINEAR);    // Required for SDF font
-
-    texLily = LoadTexture("resources/lily.png");
-    if (!texLily.width) err = RN_RAYLIB_ERROR;
-
-    musAmbientOutdoors = LoadMusicStream("resources/copyright/345470__philip_goddard__branscombe-landslip-birds-and-sea-echoes-ese-from-cave-track.ogg");
-    musCave = LoadMusicStream("resources/copyright/69391__zixem__cave_amb.wav");
-
-    rnSoundSystem.Init();
-
-    return err;
+    assert(pixels * 2 < rect.width);
+    assert(pixels * 2 < rect.height);
+    Rectangle shrunk = rect;
+    shrunk.x += pixels;
+    shrunk.y += pixels;
+    shrunk.width -= pixels * 2;
+    shrunk.height -= pixels * 2;
+    return shrunk;
 }
 
-void FreeCommon(void)
+Rectangle RectGrow(const Rectangle &rect, float pixels)
 {
-    UnloadShader(shdSdfText);
-    UnloadFont(fntHackBold20);
-    UnloadFont(fntHackBold32);
-    UnloadTexture(texLily);
-    UnloadMusicStream(musAmbientOutdoors);
-    UnloadMusicStream(musCave);
-    rnSoundSystem.Free();
+    Rectangle grown = rect;
+    grown.x -= pixels;
+    grown.y -= pixels;
+    grown.width += pixels * 2;
+    grown.height += pixels * 2;
+    return grown;
 }

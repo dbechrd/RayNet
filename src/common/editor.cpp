@@ -1,9 +1,10 @@
 #include "audio/audio.h"
 #include "collision.h"
 #include "editor.h"
-#include "ui/ui.h"
+#include "texture_catalog.h"
 #include "tilemap.h"
 #include "tinyfiledialogs.h"
+#include "ui/ui.h"
 
 const char *EditModeStr(EditMode mode)
 {
@@ -216,7 +217,7 @@ UIState Editor::DrawUI_ActionBar(Vector2 position, Tilemap &map, double now)
 
     // TODO: UI::Panel
     UIState uiState{};
-    const Rectangle actionBarRect{ position.x, position.y, 840, 240 };
+    const Rectangle actionBarRect{ position.x, position.y, 840, 160 };
 #if 0
     DrawRectangleRounded(actionBarRect, 0.15f, 8, ASESPRITE_BEIGE);
     DrawRectangleRoundedLines(actionBarRect, 0.15f, 8, 2.0f, BLACK);
@@ -336,8 +337,7 @@ UIState Editor::DrawUI_ActionBar(Vector2 position, Tilemap &map, double now)
 
     switch (mode) {
         case EditMode_Tiles: {
-            //DrawUI_TileActions(uiActionBar, map);
-            //uiActionBar.Newline();
+            DrawUI_TileActions(uiActionBar, map, now);
             DrawUI_Tilesheet(uiActionBar, map, now);
             break;
         }
@@ -350,10 +350,8 @@ UIState Editor::DrawUI_ActionBar(Vector2 position, Tilemap &map, double now)
     return uiState;
 }
 
-void Editor::DrawUI_Tilesheet(UI &uiActionBar, Tilemap &map, double now)
+void Editor::DrawUI_TileActions(UI &uiActionBar, Tilemap &map, double now)
 {
-    // TODO: Support multi-select (big rectangle?), and figure out where this lives
-
     const char *mapFileFilter[1] = { "*.png" };
     static const char *openRequest = 0;
 
@@ -368,7 +366,7 @@ void Editor::DrawUI_Tilesheet(UI &uiActionBar, Tilemap &map, double now)
                 "RayNet Tileset (*.png)",
                 0
             );
-        });
+            });
         openFileThread.detach();
     }
     if (openRequest) {
@@ -376,32 +374,58 @@ void Editor::DrawUI_Tilesheet(UI &uiActionBar, Tilemap &map, double now)
         if (err) {
             std::thread errorThread([err]{
                 const char *msg = TextFormat("Failed to load file %s. %s\n", openRequest, ErrStr(err));
-                tinyfd_messageBox("Error", msg, "ok", "error", 1);
-            });
+            tinyfd_messageBox("Error", msg, "ok", "error", 1);
+                });
             errorThread.detach();
         }
         openRequest = 0;
     }
     uiActionBar.Newline();
 
+    uiActionBar.Text("Flags:", BLACK);
+    UIState editCollisionButton = uiActionBar.Button("Collide", state.tiles.editCollision ? RED : GRAY);
+    if (editCollisionButton.clicked) {
+        state.tiles.editCollision = !state.tiles.editCollision;
+    }
+}
+
+void Editor::DrawUI_Tilesheet(UI &uiActionBar, Tilemap &map, double now)
+{
+    // TODO: Support multi-select (big rectangle?), and figure out where this lives
+
+    Texture mapTex = rnTextureCatalog.ById(map.textureId);
     Vector2 uiSheetPos{
-        GetScreenWidth() - map.texture.width - 10.0f,
-        GetScreenHeight() - map.texture.height - 10.0f
+        GetScreenWidth() - mapTex.width - 10.0f,
+        GetScreenHeight() - mapTex.height - 10.0f
     };
     UIStyle uiSheetStyle{};
     UI uiSheet{ uiSheetPos, uiSheetStyle };
 
     static Texture checkerboard{};
-    if (checkerboard.width != map.texture.width || checkerboard.height != map.texture.height) {
+    if (checkerboard.width != mapTex.width || checkerboard.height != mapTex.height) {
         checkerboard = LoadTextureFromImage(
-            GenImageChecked(map.texture.width, map.texture.height, 8, 8, GRAY, LIGHTGRAY)
+            GenImageChecked(mapTex.width, mapTex.height, 8, 8, GRAY, LIGHTGRAY)
         );
     }
 
     UIState sheet = uiSheet.Image(checkerboard);
-    DrawTextureEx(map.texture, sheet.contentTopLeft, 0, 1, WHITE);
+    DrawTextureEx(mapTex, sheet.contentTopLeft, 0, 1, WHITE);
 
     Vector2 imgTL = sheet.contentTopLeft;
+
+    // Draw collision overlay on tilesheet if we're in collision editing mode
+    if (state.tiles.editCollision) {
+        for (int i = 0; i < map.tileDefCount; i++) {
+            if (map.tileDefs[i].collide) {
+                Rectangle tileDefRectScreen = map.TileDefRect(i);
+                tileDefRectScreen.x += imgTL.x;
+                tileDefRectScreen.y += imgTL.y;
+                tileDefRectScreen = RectShrink(tileDefRectScreen, 2);
+                DrawRectangleLinesEx(tileDefRectScreen, 2.0f, MAROON);
+            }
+        }
+    }
+
     if (sheet.hover) {
         Vector2 mousePos = GetMousePosition();
         Vector2 mouseRel = Vector2Subtract(mousePos, imgTL);
@@ -409,112 +433,43 @@ void Editor::DrawUI_Tilesheet(UI &uiActionBar, Tilemap &map, double now)
         //DrawTextEx(fntHackBold20, TextFormat("%f, %f\n", mouseRel.x, mouseRel.y),
         //    Vector2Add(GetMousePosition(), { 10, 10 }), fntHackBold20.baseSize, 1, YELLOW);
 
+        // Draw hover highlight on tilesheet if mouse hovering a tile
         int tileX = (int)mouseRel.x / 32;
         int tileY = (int)mouseRel.y / 32;
         DrawRectangleLinesEx(
             { imgTL.x + tileX * TILE_W, imgTL.y + tileY * TILE_W, TILE_W, TILE_W },
-            2, YELLOW
+            2,
+            Fade(WHITE, 0.7f)
         );
 
         //DrawTextEx(fntHackBold20, TextFormat("%d, %d\n", tileX, tileY),
         //    Vector2Add(GetMousePosition(), { 10, 10 }), fntHackBold20.baseSize, 1, YELLOW);
 
+        // If mouse pressed, select tile, or change collision data, depending on mode
         if (sheet.pressed) {
-            int tileIdx = tileY * (map.texture.width / TILE_W) + tileX;
+            int tileIdx = tileY * (mapTex.width / TILE_W) + tileX;
             assert(tileIdx >= 0 && tileIdx < map.tileDefCount);
-            state.tiles.cursor.tileDefId = tileIdx;
-        }
-    }
 
-    if (state.tiles.cursor.tileDefId >= 0) {
-        int tileX = state.tiles.cursor.tileDefId % (map.texture.width / TILE_W);
-        int tileY = state.tiles.cursor.tileDefId / (map.texture.width / TILE_W);
-        DrawRectangleLinesEx(
-            { imgTL.x + tileX * TILE_W, imgTL.y + tileY * TILE_W, TILE_W, TILE_W },
-            2, WHITE
-        );
-    }
-}
-
-void Editor::DrawUI_TileActions(UI &uiActionBar, Tilemap &map)
-{
-    uiActionBar.Text("Flags:", BLACK);
-    UIState editCollisionButton = uiActionBar.Button("Collide", state.tiles.editCollision ? RED : GRAY);
-    if (editCollisionButton.clicked) {
-        state.tiles.editCollision = !state.tiles.editCollision;
-    }
-
-    uiActionBar.Newline();
-
-    // [Editor] Tile selector
-    const bool editorPickTileDef = io.MouseButtonPressed(MOUSE_BUTTON_LEFT);
-
-    // TODO(dlb): UI::Panel (or row.style.colorBg?)
-    Vector2 uiCursor = uiActionBar.CursorScreen();
-    uiCursor = Vector2Add(uiCursor, uiActionBar.GetStyle().margin.TopLeft());
-
-    DrawRectangle(
-        uiCursor.x,
-        uiCursor.y,
-        map.tileDefCount * TILE_W + map.tileDefCount * 2 + 2,
-        TILE_W + 4,
-        BLACK
-    );
-
-    for (uint32_t i = 0; i < map.tileDefCount; i++) {
-        TileDef &tileDef = map.tileDefs[i];
-        Rectangle texRect{ (float)tileDef.x, (float)tileDef.y, TILE_W, TILE_W };
-        Vector2 screenPos = {
-            uiCursor.x + 2 + i * TILE_W + i * 2,
-            uiCursor.y + 2
-        };
-
-        Rectangle tileDefRectScreen{ screenPos.x, screenPos.y, TILE_W, TILE_W };
-        bool hover = dlb_CheckCollisionPointRec(GetMousePosition(), tileDefRectScreen);
-        if (hover) {
-            static int prevTileDefHovered = -1;
-            if (editorPickTileDef) {
-                rnSoundSystem.Play(RN_Sound_Tick_Hard);
-                if (state.tiles.editCollision) {
-                    tileDef.collide = !tileDef.collide;
-                } else {
-                    state.tiles.cursor.tileDefId = i;
+            switch (state.tiles.editCollision) {
+                case false: {
+                    state.tiles.cursor.tileDefId = tileIdx;
+                    break;
                 }
-            } else if (i != prevTileDefHovered) {
-                rnSoundSystem.Play(RN_Sound_Tick_Soft);
+                case true: {
+                    TileDef &tileDef = map.tileDefs[tileIdx];
+                    tileDef.collide = !tileDef.collide;
+                    break;
+                }
             }
-            prevTileDefHovered = i;
         }
+    }
 
-        DrawTextureRec(map.texture, texRect, screenPos, WHITE);
-
-        if (state.tiles.editCollision && tileDef.collide) {
-            const int pad = 1;
-            DrawRectangleLinesEx(
-                {
-                    screenPos.x + pad,
-                    screenPos.y + pad,
-                    TILE_W - pad * 2,
-                    TILE_W - pad * 2,
-                },
-                2.0f,
-                MAROON
-            );
-        }
-
-        const int outlinePad = 1;
-        if (i == state.tiles.cursor.tileDefId || hover) {
-            DrawRectangleLinesEx(
-                {
-                    screenPos.x - outlinePad,
-                    screenPos.y - outlinePad,
-                    TILE_W + outlinePad * 2,
-                    TILE_W + outlinePad * 2
-                },
-                2,
-                i == state.tiles.cursor.tileDefId ? YELLOW : WHITE
-            );
-        }
+    // Draw highlight around currently selected tiledef in draw mode
+    if (!state.tiles.editCollision && state.tiles.cursor.tileDefId >= 0) {
+        Rectangle tileDefRectScreen = map.TileDefRect(state.tiles.cursor.tileDefId);
+        tileDefRectScreen.x += imgTL.x;
+        tileDefRectScreen.y += imgTL.y;
+        DrawRectangleLinesEx(tileDefRectScreen, 2, WHITE);
     }
 }
 

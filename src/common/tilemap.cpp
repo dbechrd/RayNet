@@ -1,5 +1,6 @@
 #include "collision.h"
 #include "file_utils.h"
+#include "texture_catalog.h"
 #include "tilemap.h"
 #include "wang.h"
 
@@ -113,6 +114,7 @@ Err Tilemap::Save(const char *filename)
 
         fwrite(&MAGIC, sizeof(MAGIC), 1, file);
         fwrite(&VERSION, sizeof(VERSION), 1, file);
+        int texturePathLen = strlen(texturePath);
         fwrite(&texturePathLen, sizeof(texturePathLen), 1, file);
         fwrite(texturePath, sizeof(*texturePath), texturePathLen, file);
         fwrite(&width, sizeof(width), 1, file);
@@ -181,6 +183,7 @@ Err Tilemap::Load(const char *filename, double now)
         uint32_t version = 0;
         fread(&version, sizeof(version), 1, file);
 
+        int texturePathLen = 0;
         if (version >= 2) {
             fread(&texturePathLen, sizeof(texturePathLen), 1, file);
             if (!texturePathLen || texturePathLen > 1024) {
@@ -194,23 +197,20 @@ Err Tilemap::Load(const char *filename, double now)
         } else {
             const char *v1_texturePath = "resources/tiles32.png";
             texturePathLen = (uint32_t)strlen(v1_texturePath);
-            texturePath = (char *)calloc(texturePathLen, sizeof(*texturePath));
+            texturePath = (char *)calloc((size_t)texturePathLen + 1, sizeof(*texturePath));
             if (!texturePath) {
                 err = RN_BAD_ALLOC; break;
             }
             strncpy(texturePath, v1_texturePath, texturePathLen);
         }
 
-        texture = LoadTexture(texturePath);
-        if (!texture.width) {
-            err = RN_BAD_FILE_READ; break;
-        }
-
+        textureId = rnTextureCatalog.FindOrLoad(texturePath);
+        Texture texture = rnTextureCatalog.ById(textureId);
         if (texture.width % TILE_W != 0 || texture.height % TILE_W != 0) {
             err = RN_INVALID_SIZE; break;
         }
-        tileDefCount = (texture.width / TILE_W) * (texture.height / TILE_W);
 
+        tileDefCount = (texture.width / TILE_W) * (texture.height / TILE_W);
         int v3TileDefCount = 0;
         if (version == 3) {
             fread(&v3TileDefCount, sizeof(v3TileDefCount), 1, file);
@@ -374,23 +374,21 @@ Err Tilemap::ChangeTileset(Tilemap &map, const char *newTexturePath, double now)
     Tilemap newMap{};
     Image img{};
     do {
-        newMap.texture = LoadTexture(newTexturePath);
-        if (!newMap.texture.width) {
-            err = RN_BAD_FILE_READ; break;
-        }
-        if (newMap.texture.width % TILE_W != 0 || newMap.texture.height % TILE_W != 0) {
+        newMap.textureId = rnTextureCatalog.FindOrLoad(newTexturePath);
+        Texture texture = rnTextureCatalog.ById(newMap.textureId);
+        if (texture.width % TILE_W != 0 || texture.height % TILE_W != 0) {
             err = RN_INVALID_SIZE; break;
         }
-        newMap.tileDefCount = (newMap.texture.width / TILE_W) * (newMap.texture.height / TILE_W);
+        newMap.tileDefCount = (texture.width / TILE_W) * (texture.height / TILE_W);
 
-        newMap.texturePathLen = strlen(newTexturePath);
-        newMap.texturePath = (char *)calloc((size_t)newMap.texturePathLen + 1, sizeof(*newMap.texturePath));
-        strncpy(newMap.texturePath, newTexturePath, newMap.texturePathLen);
+        const int texturePathLen = strlen(newTexturePath);
+        newMap.texturePath = (char *)calloc((size_t)texturePathLen + 1, sizeof(*newMap.texturePath));
+        strncpy(newMap.texturePath, newTexturePath, texturePathLen);
 
         newMap.tileDefs = (TileDef *)calloc(newMap.tileDefCount, sizeof(*tileDefs));
         for (int i = 0; i < newMap.tileDefCount; i++) {
             TileDef &dst = newMap.tileDefs[i];
-            int tilesPerRow = newMap.texture.width / TILE_W;
+            int tilesPerRow = texture.width / TILE_W;
             dst.x = i % tilesPerRow * TILE_W;
             dst.y = i / tilesPerRow * TILE_W;
 
@@ -431,7 +429,7 @@ Err Tilemap::ChangeTileset(Tilemap &map, const char *newTexturePath, double now)
     if (img.width) UnloadImage(img);
 
     if (!err) {
-        UnloadTexture(map.texture);
+        rnTextureCatalog.Unload(map.texturePath);
         free(map.texturePath);
         free(map.tileDefs);
         free(map.tiles);
@@ -442,11 +440,8 @@ Err Tilemap::ChangeTileset(Tilemap &map, const char *newTexturePath, double now)
         // HACK(dlb): The weird zeroing logic here is so that newMap's
         // destructor does not unload all the new data we just created above.
 
-        map.texturePathLen = newMap.texturePathLen;
         map.texturePath = newMap.texturePath;
         newMap.texturePath = 0;
-        map.texture = newMap.texture;
-        newMap.texture = {};
         map.tileDefCount = newMap.tileDefCount;
         //map.width = newMap.width;
         //map.height = newMap.width;
@@ -469,7 +464,7 @@ Err Tilemap::ChangeTileset(Tilemap &map, const char *newTexturePath, double now)
 
 void Tilemap::Unload(void)
 {
-    UnloadTexture(texture);
+    rnTextureCatalog.Unload(texturePath);
     free(texturePath);
     free(tileDefs);
     free(tiles);
@@ -658,8 +653,9 @@ Color Tilemap::TileDefAvgColor(Tile tile)
 
 void Tilemap::DrawTile(Tile tile, Vector2 position)
 {
+    const Texture tex = rnTextureCatalog.ById(textureId);
     const Rectangle texRect = TileDefRect(tile);
-    DrawTextureRec(texture, texRect, position, WHITE);
+    DrawTextureRec(tex, texRect, position, WHITE);
 }
 
 void Tilemap::Draw(Camera2D &camera)

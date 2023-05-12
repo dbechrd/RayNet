@@ -22,6 +22,7 @@
     <ClCompile Include="src\common\file_utils.cpp" />
     <ClCompile Include="src\common\histogram.cpp" />
     <ClCompile Include="src\common\net\net.cpp" />
+    <ClCompile Include="src\common\texture_catalog.cpp" />
     <ClCompile Include="src\common\tilemap.cpp" />
     <ClCompile Include="src\common\ui\ui.cpp" />
     <ClCompile Include="src\common\wang.cpp" />
@@ -56,6 +57,7 @@
     <ClInclude Include="src\common\net\messages\msg_s_tile_chunk.h" />
     <ClInclude Include="src\common\net\net.h" />
     <ClInclude Include="src\common\ring_buffer.h" />
+    <ClInclude Include="src\common\texture_catalog.h" />
     <ClInclude Include="src\common\tilemap.h" />
     <ClInclude Include="src\common\ui\ui.h" />
     <ClInclude Include="src\common\wang.h" />

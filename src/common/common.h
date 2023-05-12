@@ -17,12 +17,13 @@
 #include <queue>
 #include <stack>
 #include <thread>
+#include <unordered_map>
 #include <vector>
 
 // Stuff that probably shouldn't be here
 
-#define WINDOW_WIDTH 1600
-#define WINDOW_HEIGHT 900
+#define WINDOW_WIDTH 1920
+#define WINDOW_HEIGHT 1017
 
 #define TILE_W 32
 
@@ -105,6 +106,8 @@ extern Music musCave;
 
 Err InitCommon(void);
 void FreeCommon(void);
+Font dlb_LoadFontFromMemory(const char *fileType, const unsigned char *fileData, int dataSize, int fontSize, int *fontChars, int glyphCount, int type);
+Font dlb_LoadFontEx(const char *fileName, int fontSize, int *fontChars, int glyphCount, int type);
 
 float GetRandomFloatZeroToOne(void);
 float GetRandomFloatMinusOneToOne(void);
@@ -112,9 +115,10 @@ float GetRandomFloatVariance(float variance);
 
 void DrawTextShadowEx(Font font, const char *text, Vector2 pos, Color color);
 Rectangle GetScreenRectWorld(Camera2D &camera);
+Rectangle RectShrink(const Rectangle &rect, float pixels);
+Rectangle RectGrow(const Rectangle &rect, float pixels);
 
-// TODO: Where does this go for realz?
-
+// TODO: MOOOOOOOOOOOOOOOOOOOOOOOVE THIS
 struct IO {
     // In order of least to greatest I/O precedence
     enum Scope {

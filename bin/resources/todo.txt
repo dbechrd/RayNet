@@ -7,14 +7,14 @@
 [x] Refactor editor
 [x] Handle input precedence
 [x] Replace a map's tileset image
-[ ] edit tileDef collision
+[x] edit tileDef collision
+[x] Profile server
 [ ] Switch maps
 [ ] Items
 [ ] Inventory (w/ Hotbar)
 [ ] NPC inventory (Buy/Sell UI)
 [ ] Y sort (drawlist)
 [ ] Chat
-[ ] Profile server
 [ ] Choose which server to connect to (localhost vs. DandyNet)
 [ ] Nice entering area titles
 [ ] Add UI::Histogram

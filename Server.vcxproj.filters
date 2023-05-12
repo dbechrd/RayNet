@@ -18,6 +18,7 @@
     <ClCompile Include="include\tracy\TracyClient.cpp" />
     <ClCompile Include="include\tinyfiledialogs.c" />
     <ClCompile Include="include\stb_herringbone_wang_tile.cpp" />
+    <ClCompile Include="src\common\texture_catalog.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="src\server\Server.rc" />
@@ -52,5 +53,6 @@
     <ClInclude Include="src\common\net\messages\msg_s_tile_chunk.h" />
     <ClInclude Include="src\server\resource.h" />
     <ClInclude Include="src\server\game_server.h" />
+    <ClInclude Include="src\common\texture_catalog.h" />
   </ItemGroup>
 </Project>
