@@ -6,6 +6,9 @@
 
 void Tilemap::SV_SerializeChunk(Msg_S_TileChunk &tileChunk, uint32_t x, uint32_t y)
 {
+    tileChunk.mapName = filename;
+    tileChunk.x = x;
+    tileChunk.y = y;
     for (uint32_t ty = y; ty < SV_TILE_CHUNK_WIDTH; ty++) {
         for (uint32_t tx = x; tx < SV_TILE_CHUNK_WIDTH; tx++) {
             AtTry(tx, ty, tileChunk.tileDefs[ty * SV_TILE_CHUNK_WIDTH + tx]);
@@ -15,9 +18,12 @@ void Tilemap::SV_SerializeChunk(Msg_S_TileChunk &tileChunk, uint32_t x, uint32_t
 
 void Tilemap::CL_DeserializeChunk(Msg_S_TileChunk &tileChunk)
 {
+    if (tileChunk.mapName != filename) {
+        Load(tileChunk.mapName, 0);
+    }
     for (uint32_t ty = tileChunk.y; ty < SV_TILE_CHUNK_WIDTH; ty++) {
         for (uint32_t tx = tileChunk.x; tx < SV_TILE_CHUNK_WIDTH; tx++) {
-            Set(tx, ty, tileChunk.tileDefs[ty * SV_TILE_CHUNK_WIDTH + tx], 0);
+            Set(tileChunk.x + tx, tileChunk.y + ty, tileChunk.tileDefs[ty * SV_TILE_CHUNK_WIDTH + tx], 0);
         }
     }
 }

@@ -51,8 +51,6 @@ struct Tilemap {
         uint32_t x, y;
     };
 
-    static const uint32_t PATH_LEN_MAX = 1024;
-
     const uint32_t MAGIC = 0xDBBB9192;
     // v1: the OG
     // v2: added texturePath

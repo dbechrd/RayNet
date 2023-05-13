@@ -120,6 +120,8 @@ int main(int argc, char *argv[])
 
         Vector2 cursorWorldPos{};
 
+        Camera2D &camera = client->world->camera2d;
+
         //--------------------
         // Accmulate input every frame
         Entity *localPlayer = client->LocalPlayer();
@@ -130,7 +132,7 @@ int main(int argc, char *argv[])
             client->controller.cmdAccum.east |= IsKeyDown(KEY_D);
             client->controller.cmdAccum.fire |= IsMouseButtonDown(MOUSE_LEFT_BUTTON);
 
-            cursorWorldPos = GetScreenToWorld2D(GetMousePosition(), client->world->camera2d);
+            cursorWorldPos = GetScreenToWorld2D(GetMousePosition(), camera);
             Vector2 facing = Vector2Subtract(cursorWorldPos, localPlayer->position);
             facing = Vector2Normalize(facing);
             client->controller.cmdAccum.facing = facing;
@@ -181,17 +183,31 @@ int main(int argc, char *argv[])
             // Camera
             // TODO: Move update code out of draw code and update local player's
             // position before using it to determine camera location... doh!
-            client->world->camera2d.offset = { (float)GetScreenWidth()/2, (float)GetScreenHeight()/2 };
-            client->world->camera2d.target = { localPlayer->position.x, localPlayer->position.y };
+            {
+                camera .offset = { (float)GetScreenWidth()/2, (float)GetScreenHeight()/2 };
+                camera .target = { localPlayer->position.x, localPlayer->position.y };
+
+                // Zoom based on mouse wheel
+                float wheel = GetMouseWheelMove();
+                if (wheel != 0) {
+                    // Get the world point that is under the mouse
+                    Vector2 mouseWorldPos = GetScreenToWorld2D(GetMousePosition(), camera );
+
+                    // Zoom increment
+                    const float zoomIncrement = 0.125f;
+                    camera.zoom += (wheel * zoomIncrement * camera.zoom);
+                    if (camera.zoom < zoomIncrement) camera.zoom = zoomIncrement;
+                }
+            }
 
             //--------------------
             // Draw the map
-            BeginMode2D(client->world->camera2d);
-            client->world->map.Draw(client->world->camera2d);
+            BeginMode2D(camera);
+            client->world->map.Draw(camera);
 
             //--------------------
             // Draw the entities
-            cursorWorldPos = GetScreenToWorld2D(GetMousePosition(), client->world->camera2d);
+            cursorWorldPos = GetScreenToWorld2D(GetMousePosition(), camera);
             for (uint32_t entityId = 0; entityId < SV_MAX_ENTITIES; entityId++) {
                 Entity *entity = client->world->GetEntity(entityId);
                 if (!entity) {
