@@ -11,6 +11,7 @@ const char *EditModeStr(EditMode mode)
     switch (mode) {
         case EditMode_Tiles: return "Tiles";
         case EditMode_Paths: return "Paths";
+        case EditMode_Warps: return "Warps";
         default: return "<null>";
     }
 }
@@ -51,6 +52,10 @@ void Editor::DrawOverlays(Tilemap &map, Camera2D &camera, double now)
             }
             case EditMode_Paths: {
                 DrawOverlay_Paths(map, camera);
+                break;
+            }
+            case EditMode_Warps: {
+                DrawOverlay_Warps(map, camera);
                 break;
             }
         }
@@ -96,7 +101,7 @@ void Editor::DrawOverlay_Paths(Tilemap &map, Camera2D &camera)
     const Vector2 cursorWorldPos = GetScreenToWorld2D({ (float)GetMouseX(), (float)GetMouseY() }, camera);
 
     // Draw path edges
-    for (uint32_t aiPathId = 0; aiPathId < map.pathCount; aiPathId++) {
+    for (uint32_t aiPathId = 0; aiPathId < map.paths.size(); aiPathId++) {
         AiPath *aiPath = map.GetPath(aiPathId);
         if (!aiPath) {
             continue;
@@ -118,7 +123,7 @@ void Editor::DrawOverlay_Paths(Tilemap &map, Camera2D &camera)
 
     // Draw path nodes
     const float pathRectRadius = 5;
-    for (uint32_t aiPathId = 0; aiPathId < map.pathCount; aiPathId++) {
+    for (uint32_t aiPathId = 0; aiPathId < map.paths.size(); aiPathId++) {
         AiPath *aiPath = map.GetPath(aiPathId);
         if (!aiPath) {
             continue;
@@ -194,6 +199,13 @@ void Editor::DrawOverlay_Paths(Tilemap &map, Camera2D &camera)
     }
 }
 
+void Editor::DrawOverlay_Warps(Tilemap &map, Camera2D &camera)
+{
+    for (const Warp &warp : map.warps) {
+        DrawRectangleRec(warp.collider, Fade(SKYBLUE, 0.7f));
+    }
+}
+
 UIState Editor::DrawUI(Vector2 position, Tilemap &map, double now)
 {
     io.PushScope(IO::IO_EditorUI);
@@ -227,32 +239,34 @@ UIState Editor::DrawUI_ActionBar(Vector2 position, Tilemap &map, double now)
 #endif
     uiState.hover = dlb_CheckCollisionPointRec(GetMousePosition(), actionBarRect);
 
-    UIState mapPath = uiActionBar.Text(GetFileName(map.filename), WHITE);
+    uiActionBar.Text(TextFormat("v%d", map.version));
+    UIState mapPath = uiActionBar.Text(GetFileName(map.filename.c_str()), WHITE);
     if (mapPath.clicked) {
         system("explorer maps");
     }
     uiActionBar.Newline();
 
     const char *mapFileFilter[1] = { "*.dat" };
-    static const char *openRequest = 0;
-    static const char *saveAsRequest = 0;
+    static std::string openRequest;
+    static std::string saveAsRequest;
 
     UIState openButton = uiActionBar.Button("Open");
     if (openButton.clicked) {
-        const char *filename = map.filename;
+        std::string filename = map.filename;
         std::thread openFileThread([filename, mapFileFilter]{
-            openRequest = tinyfd_openFileDialog(
+            const char *openRequestBuf = tinyfd_openFileDialog(
                 "Open File",
-                filename,
+                filename.c_str(),
                 ARRAY_SIZE(mapFileFilter),
                 mapFileFilter,
                 "RayNet Tilemap (*.dat)",
                 0
             );
+            if (openRequestBuf) openRequest = openRequestBuf;
         });
         openFileThread.detach();
     }
-    if (openRequest) {
+    if (openRequest.size()) {
         Err err = map.Load(openRequest, now);
         if (err) {
             std::thread errorThread([err]{
@@ -261,16 +275,16 @@ UIState Editor::DrawUI_ActionBar(Vector2 position, Tilemap &map, double now)
             });
             errorThread.detach();
         }
-        openRequest = 0;
+        openRequest.clear();
     }
 
     UIState saveButton = uiActionBar.Button("Save");
     if (saveButton.clicked) {
         Err err = map.Save(map.filename);
         if (err) {
-            const char *filename = map.filename;
+            std::string filename = map.filename;
             std::thread errorThread([filename, err]{
-                const char *msg = TextFormat("Failed to save file %s. %s\n", filename, ErrStr(err));
+                const char *msg = TextFormat("Failed to save file %s. %s\n", filename.c_str(), ErrStr(err));
                 tinyfd_messageBox("Error", msg, "ok", "error", 1);
             });
             errorThread.detach();
@@ -279,36 +293,37 @@ UIState Editor::DrawUI_ActionBar(Vector2 position, Tilemap &map, double now)
 
     UIState saveAsButton = uiActionBar.Button("Save As");
     if (saveAsButton.clicked) {
-        const char *filename = map.filename;
+        std::string filename = map.filename;
         std::thread saveAsThread([filename, mapFileFilter]{
-            saveAsRequest = tinyfd_saveFileDialog(
+            const char *saveAsRequestBuf = tinyfd_saveFileDialog(
                 "Save File",
-                filename,
+                filename.c_str(),
                 ARRAY_SIZE(mapFileFilter),
                 mapFileFilter,
                 "RayNet Tilemap (*.dat)");
+            if (saveAsRequestBuf) saveAsRequest = saveAsRequestBuf;
         });
         saveAsThread.detach();
     }
-    if (saveAsRequest) {
+    if (saveAsRequest.size()) {
         Err err = map.Save(saveAsRequest);
         if (err) {
             std::thread errorThread([err]{
-                const char *msg = TextFormat("Failed to save file %s. %s\n", saveAsRequest, ErrStr(err));
+                const char *msg = TextFormat("Failed to save file %s. %s\n", saveAsRequest.c_str(), ErrStr(err));
                 tinyfd_messageBox("Error", msg, "ok", "error", 1);
             });
             errorThread.detach();
         }
-        saveAsRequest = 0;
+        saveAsRequest.clear();
     }
 
     UIState reloadButton = uiActionBar.Button("Reload");
     if (reloadButton.clicked) {
         Err err = map.Load(map.filename, now);
         if (err) {
-            const char *filename = map.filename;
+            std::string filename = map.filename;
             std::thread errorThread([filename, err]{
-                const char *msg = TextFormat("Failed to reload file %s. %s\n", filename, ErrStr(err));
+                const char *msg = TextFormat("Failed to reload file %s. %s\n", filename.c_str(), ErrStr(err));
                 tinyfd_messageBox("Error", msg, "ok", "error", 1);
             });
             errorThread.detach();
@@ -343,6 +358,10 @@ UIState Editor::DrawUI_ActionBar(Vector2 position, Tilemap &map, double now)
         }
         case EditMode_Paths: {
             DrawUI_PathActions(uiActionBar);
+            break;
+        }
+        case EditMode_Warps: {
+            DrawUI_WarpActions(uiActionBar);
             break;
         }
     }
@@ -415,7 +434,7 @@ void Editor::DrawUI_Tilesheet(UI &uiActionBar, Tilemap &map, double now)
 
     // Draw collision overlay on tilesheet if we're in collision editing mode
     if (state.tiles.editCollision) {
-        for (int i = 0; i < map.tileDefCount; i++) {
+        for (int i = 0; i < map.tileDefs.size(); i++) {
             if (map.tileDefs[i].collide) {
                 Rectangle tileDefRectScreen = map.TileDefRect(i);
                 tileDefRectScreen.x += imgTL.x;
@@ -448,24 +467,26 @@ void Editor::DrawUI_Tilesheet(UI &uiActionBar, Tilemap &map, double now)
         // If mouse pressed, select tile, or change collision data, depending on mode
         if (sheet.pressed) {
             int tileIdx = tileY * (mapTex.width / TILE_W) + tileX;
-            assert(tileIdx >= 0 && tileIdx < map.tileDefCount);
-
-            switch (state.tiles.editCollision) {
-                case false: {
-                    state.tiles.cursor.tileDefId = tileIdx;
-                    break;
+            if (tileIdx >= 0 && tileIdx < map.tileDefs.size()) {
+                switch (state.tiles.editCollision) {
+                    case false: {
+                        state.tiles.cursor.tileDefId = tileIdx;
+                        break;
+                    }
+                    case true: {
+                        TileDef &tileDef = map.tileDefs[tileIdx];
+                        tileDef.collide = !tileDef.collide;
+                        break;
+                    }
                 }
-                case true: {
-                    TileDef &tileDef = map.tileDefs[tileIdx];
-                    tileDef.collide = !tileDef.collide;
-                    break;
-                }
+            } else {
+                assert("!wut da heck, how you select a tile that's not in the map at all?");
             }
         }
     }
 
     // Draw highlight around currently selected tiledef in draw mode
-    if (!state.tiles.editCollision && state.tiles.cursor.tileDefId >= 0) {
+    if (state.tiles.cursor.tileDefId >= 0) {
         Rectangle tileDefRectScreen = map.TileDefRect(state.tiles.cursor.tileDefId);
         tileDefRectScreen.x += imgTL.x;
         tileDefRectScreen.y += imgTL.y;
@@ -484,4 +505,9 @@ void Editor::DrawUI_PathActions(UI &uiActionBar)
         state.pathNodes.cursor.dragPathId,
         state.pathNodes.cursor.dragPathNodeIndex
     ));
+}
+
+void Editor::DrawUI_WarpActions(UI &uiActionBar)
+{
+    uiActionBar.Text("TODO: Warp actions");
 }

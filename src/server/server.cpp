@@ -397,8 +397,7 @@ Err Play(GameServer &server)
                             int templateX = wangTile->x + x;
                             int templateY = wangTile->y + y;
                             uint8_t *pixel = &((uint8_t *)wangTileset.ts.img.data)[(templateY * wangTileset.ts.img.width + templateX) * 3];
-                            uint8_t tile = pixel[0];
-                            if (tile >= map.tileDefCount) tile = 0;
+                            uint8_t tile = pixel[0] < map.tileDefs.size() ? pixel[0] : 0;
 
                             Texture mapTex = rnTextureCatalog.GetTexture(map.textureId);
                             const Rectangle tileRect = map.TileDefRect(tile);
@@ -418,8 +417,7 @@ Err Play(GameServer &server)
                             int templateX = wangTile->x + x;
                             int templateY = wangTile->y + y;
                             uint8_t *pixel = &((uint8_t *)wangTileset.ts.img.data)[(templateY * wangTileset.ts.img.width + templateX) * 3];
-                            uint8_t tile = pixel[0];
-                            if (tile >= map.tileDefCount) tile = 0;
+                            uint8_t tile = pixel[0] < map.tileDefs.size() ? pixel[0] : 0;
 
                             Texture mapTex = rnTextureCatalog.GetTexture(map.textureId);
                             const Rectangle tileRect = map.TileDefRect(tile);

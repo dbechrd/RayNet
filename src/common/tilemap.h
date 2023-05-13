@@ -19,7 +19,6 @@ struct AiPath {
 
 typedef int TileMatId;
 struct TileMat {
-    int id;
     bool collide;
 
     // TODO(dlb): Footsteps per material?
@@ -35,46 +34,45 @@ struct TileDef {
     Color color;  // color for minimap/wang tile editor (top left pixel of tile)
 };
 
+ struct Warp {
+     Rectangle collider;
+     Vector2 destPos;
+     std::string destMapName;   // [required] if doesn't exist, and templateName is set, will be generated
+     std::string templateName;  // [optional] if dest map is auto-generated, this will point to a wang tileset
+ };
+
 typedef uint8_t Tile;
 struct Tilemap {
     struct Coord {
         uint32_t x, y;
     };
 
-    const char *filename;
+    static const uint32_t TEXTURE_PATH_LEN_MAX = 1024;
+    static const uint32_t WARP_DEST_MAP_LEN_MAX = 1024;
+    static const uint32_t WARP_TEMPLATE_LEN_MAX = 1024;
+
     const uint32_t MAGIC = 0xDBBB9192;
     // v1: the OG
     // v2: added texturePath
     // v3: added AI paths/nodes
     // v4: tileDefCount and tileDef.x/y are now implicit based on texture size
-    const uint32_t VERSION = 4;
-    static const uint32_t TEXTURE_PATH_LEN_MAX = 1024;
+    // v5: added warps
+    const uint32_t VERSION = 5;
 
+    uint32_t version;
+    std::string filename;
     TextureId textureId;  // generated upon load, used to look up in rnTextureCatalog
-
-    // TODO(dlb)[cleanup]: use textureId instead
-    //char *texturePath;
-
-    // TODO(dlb)[cleanup]: use width/height instead
-    uint32_t tileDefCount;
 
     uint32_t width;  // width of map in tiles
     uint32_t height;  // height of map in tiles
-    uint32_t pathNodeCount;
-    uint32_t pathNodeIndexCount;
-    uint32_t pathCount;
 
     // TODO(dlb): Move these to a global pool, each has its own textureId
-    // TODO(dlb): Make this a std::vector
-    TileDef *tileDefs;
-    // TODO(dlb): Make this a std::vector
-    Tile *tiles;
-    // TODO(dlb): Make this a std::vector
-    AiPathNode *pathNodes; // 94 19 56 22 57
-    // TODO(dlb): Make this a std::vector
-    uint32_t *pathNodeIndices;  // 0 1 2 | 3 4 5
-    // TODO(dlb): Make this a std::vector
-    AiPath *paths;  // offset, length | 0, 3 | 3, 3
+    std::vector<TileDef> tileDefs;
+    std::vector<Tile> tiles;
+    std::vector<AiPathNode> pathNodes; // 94 19 56 22 57
+    std::vector<uint32_t> pathNodeIndices;  // 0 1 2 | 3 4 5
+    std::vector<AiPath> paths;  // offset, length | 0, 3 | 3, 3
+    std::vector<Warp> warps;
 
     // TODO: Actually have more than 1 chunk..
     double chunkLastUpdatedAt;  // used by server to know when chunks are dirty on clients
@@ -84,9 +82,9 @@ struct Tilemap {
 
     ~Tilemap();
 
-    Err Save(const char *filename);
-    Err Load(const char *filename, double now);
-    static Err ChangeTileset(Tilemap &map, const char *newTexturePath, double now);
+    Err Save(std::string path);
+    Err Load(std::string path, double now);
+    static Err ChangeTileset(Tilemap &map, std::string newTexturePath, double now);
     void Unload(void);
 
     // Tiles
@@ -102,33 +100,14 @@ struct Tilemap {
 
     Rectangle TileDefRect(Tile tile);
     Color TileDefAvgColor(Tile tile);
+
+    AiPath *GetPath(uint32_t pathId);
+    uint32_t GetNextPathNodeIndex(uint32_t pathId, uint32_t pathNodeIndex);
+    AiPathNode *GetPathNode(uint32_t pathId, uint32_t pathNodeIndex);
+
     void DrawTile(Tile tile, Vector2 position);
     void Draw(Camera2D &camera);
     void DrawColliders(Camera2D &camera);
-
-    // Paths
-    AiPath *GetPath(uint32_t pathId) {
-        if (pathId < pathCount) {
-            return &paths[pathId];
-        }
-        return 0;
-    }
-    uint32_t GetNextPathNodeIndex(uint32_t pathId, uint32_t pathNodeIndex) {
-        AiPath *path = GetPath(pathId);
-        if (path && pathNodeIndex < path->pathNodeIndexCount) {
-            uint32_t nextPathNodeIndex = (pathNodeIndex + 1) % path->pathNodeIndexCount;
-            return nextPathNodeIndex;
-        }
-        return 0;
-    }
-    AiPathNode *GetPathNode(uint32_t pathId, uint32_t pathNodeIndex) {
-        AiPath *path = GetPath(pathId);
-        if (path && pathNodeIndex < path->pathNodeIndexCount) {
-            uint32_t pathNodeId = pathNodeIndices[path->pathNodeIndexOffset + pathNodeIndex];
-            return &pathNodes[pathNodeId];
-        }
-        return 0;
-    }
 
 private:
     bool NeedsFill(uint32_t x, uint32_t y, int tileDefFill);

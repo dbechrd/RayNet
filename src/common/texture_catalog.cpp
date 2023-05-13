@@ -32,14 +32,14 @@ void TextureCatalog::Free(void)
     entriesByPath.clear();
 }
 
-TextureId TextureCatalog::FindOrLoad(const char *path)
+TextureId TextureCatalog::FindOrLoad(std::string path)
 {
     TextureId id = 0;
     const auto &entry = entriesByPath.find(path);
     if (entry != entriesByPath.end()) {
         id = entry->second;
     } else {
-        Image image = LoadImage(path);
+        Image image = LoadImage(path.c_str());
         if (image.width) {
             Texture texture = LoadTextureFromImage(image);
             if (texture.width) {

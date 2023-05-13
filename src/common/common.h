@@ -23,7 +23,7 @@
 // Stuff that probably shouldn't be here
 
 #define WINDOW_WIDTH 1920
-#define WINDOW_HEIGHT 1017
+#define WINDOW_HEIGHT 1016
 
 #define TILE_W 32
 

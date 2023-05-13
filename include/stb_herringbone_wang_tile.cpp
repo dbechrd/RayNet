@@ -898,8 +898,8 @@ STBHW_EXTERN int stbhw_make_template(stbhw_config *c, Image image)
         p.process_v_rect = stbhw__edge_process_v_rect;
     }
 
-    for (i=0; i < h; ++i)
-        memset(data + i*w*3, 255, 3*w);
+    //for (i=0; i < h; ++i)
+    //    memset(data + i*w*3, 255, 3*w);
 
     if (!stbhw__process_template(&p))
         return 0;

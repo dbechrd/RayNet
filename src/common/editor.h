@@ -6,6 +6,7 @@
 enum EditMode {
     EditMode_Tiles,
     EditMode_Paths,
+    EditMode_Warps,
     EditMode_Count
 };
 
@@ -47,9 +48,11 @@ private:
     void HandleInput(Camera2D &camera);
     void DrawOverlay_Tiles(Tilemap &map, Camera2D &camera, double now);
     void DrawOverlay_Paths(Tilemap &map, Camera2D &camera);
+    void DrawOverlay_Warps(Tilemap &map, Camera2D &camera);
 
     UIState DrawUI_ActionBar(Vector2 position, Tilemap &map, double now);
     void DrawUI_Tilesheet(UI &uiActionBar, Tilemap &map, double now);
     void DrawUI_TileActions(UI &uiActionBar, Tilemap &map, double now);
     void DrawUI_PathActions(UI &uiActionBar);
+    void DrawUI_WarpActions(UI &uiActionBar);
 };
