@@ -363,7 +363,7 @@ Err Play(GameServer &server)
                 uiWang.Newline();
 
                 if (uiWang.Button("Export tileset").pressed) {
-                    ExportImage(wangTileset.ts.img, wangTileset.filename);
+                    ExportImage(wangTileset.ts.img, wangTileset.filename.c_str());
                 }
                 uiWang.Newline();
                 uiWang.Image(wangTileset.thumbnail);
@@ -455,7 +455,6 @@ Err Play(GameServer &server)
         io.EndFrame();
     }
 
-    wangTileset.Unload();
     return err;
 }
 

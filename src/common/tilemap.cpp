@@ -105,13 +105,17 @@ Err Tilemap::Save(std::string path)
             fwrite(&warp.destPos.x, sizeof(warp.destPos.x), 1, file);
             fwrite(&warp.destPos.y, sizeof(warp.destPos.y), 1, file);
 
-            uint32_t destMapNameLen = warp.destMapName.size();
-            fwrite(&destMapNameLen, 1, sizeof(destMapNameLen), file);
-            fwrite(warp.destMapName.c_str(), 1, warp.destMapName.size(), file);
+            uint32_t destMapLen = warp.destMap.size();
+            fwrite(&destMapLen, 1, sizeof(destMapLen), file);
+            fwrite(warp.destMap.c_str(), 1, warp.destMap.size(), file);
 
-            uint32_t templateNameLen = warp.templateName.size();
-            fwrite(&templateNameLen, 1, sizeof(templateNameLen), file);
-            fwrite(warp.templateName.c_str(), 1, warp.templateName.size(), file);
+            uint32_t templateMapLen = warp.templateMap.size();
+            fwrite(&templateMapLen, 1, sizeof(templateMapLen), file);
+            fwrite(warp.templateMap.c_str(), 1, warp.templateMap.size(), file);
+
+            uint32_t templateTilesetLen = warp.templateTileset.size();
+            fwrite(&templateTilesetLen, 1, sizeof(templateTilesetLen), file);
+            fwrite(warp.templateTileset.c_str(), 1, warp.templateTileset.size(), file);
         }
     } while (0);
 
@@ -148,11 +152,11 @@ Err Tilemap::Load(std::string path, double now)
 
         int texturePathLen = 0;
         fread(&texturePathLen, sizeof(texturePathLen), 1, file);
-        if (!texturePathLen || texturePathLen > TEXTURE_PATH_LEN_MAX) {
+        if (!texturePathLen || texturePathLen > PATH_LEN_MAX) {
             err = RN_INVALID_PATH; break;
         }
 
-        char texturePathBuf[TEXTURE_PATH_LEN_MAX + 1]{};
+        char texturePathBuf[PATH_LEN_MAX + 1]{};
         fread(texturePathBuf, 1, texturePathLen, file);
 
         textureId = rnTextureCatalog.FindOrLoad(texturePathBuf);
@@ -177,11 +181,7 @@ Err Tilemap::Load(std::string path, double now)
         fread(&pathNodeCount, sizeof(pathNodeCount), 1, file);
         fread(&pathNodeIndexCount, sizeof(pathNodeIndexCount), 1, file);
         fread(&pathCount, sizeof(pathCount), 1, file);
-        if (version >= 5) {
-            fread(&warpCount, sizeof(warpCount), 1, file);
-        } else {
-            warpCount = 1;
-        }
+        fread(&warpCount, sizeof(warpCount), 1, file);
 
         size_t tileDefCount = ((size_t)texEntry.texture.width / TILE_W) * (texEntry.texture.height / TILE_W);
         tileDefs.resize(tileDefCount);
@@ -236,23 +236,32 @@ Err Tilemap::Load(std::string path, double now)
                 fread(&warp.destPos.x, sizeof(warp.destPos.x), 1, file);
                 fread(&warp.destPos.y, sizeof(warp.destPos.y), 1, file);
 
-                uint32_t destMapNameLen = warp.destMapName.size();
-                fread(&destMapNameLen, 1, sizeof(destMapNameLen), file);
-                if (destMapNameLen > WARP_DEST_MAP_LEN_MAX) {
+                uint32_t destMapLen = warp.destMap.size();
+                fread(&destMapLen, 1, sizeof(destMapLen), file);
+                if (destMapLen > PATH_LEN_MAX) {
                     err = RN_OUT_OF_BOUNDS; break;
                 }
-                char destMapNameBuf[WARP_DEST_MAP_LEN_MAX + 1]{};
-                fread(destMapNameBuf, 1, destMapNameLen, file);
-                warp.destMapName = destMapNameBuf;
+                char destMapBuf[PATH_LEN_MAX + 1]{};
+                fread(destMapBuf, 1, destMapLen, file);
+                warp.destMap = destMapBuf;
 
-                uint32_t templateNameLen = warp.templateName.size();
-                fread(&templateNameLen, 1, sizeof(templateNameLen), file);
-                if (templateNameLen > WARP_DEST_MAP_LEN_MAX) {
+                uint32_t templateMapLen = warp.templateMap.size();
+                fread(&templateMapLen, 1, sizeof(templateMapLen), file);
+                if (templateMapLen > PATH_LEN_MAX) {
                     err = RN_OUT_OF_BOUNDS; break;
                 }
-                char templateNameBuf[WARP_TEMPLATE_LEN_MAX + 1]{};
-                fread(templateNameBuf, 1, templateNameLen, file);
-                warp.templateName = templateNameBuf;
+                char templateMapBuf[PATH_LEN_MAX + 1]{};
+                fread(templateMapBuf, 1, templateMapLen, file);
+                warp.templateMap = templateMapBuf;
+
+                uint32_t templateTilesetLen = warp.templateTileset.size();
+                fread(&templateTilesetLen, 1, sizeof(templateTilesetLen), file);
+                if (templateTilesetLen > PATH_LEN_MAX) {
+                    err = RN_OUT_OF_BOUNDS; break;
+                }
+                char templateTilesetBuf[PATH_LEN_MAX + 1]{};
+                fread(templateTilesetBuf, 1, templateTilesetLen, file);
+                warp.templateTileset = templateTilesetBuf;
             } else {
                 Vector2 TL{ 1632, 404 };
                 Vector2 BR{ 1696, 416 };
@@ -267,8 +276,8 @@ Err Tilemap::Load(std::string path, double now)
                 // Bottom center of warp (assume maps line up and are same size for now)
                 warp.destPos.x = BR.x - size.x / 2;
                 warp.destPos.y = BR.y;
-                warp.destMapName = "wang1.dat";
-                warp.templateName = "tileset2x2.png";
+                warp.templateMap = "maps/cave.dat";
+                warp.templateTileset = "resources/wang/tileset2x2.png";
             }
         }
     } while (0);
@@ -330,7 +339,7 @@ Err Tilemap::ChangeTileset(Tilemap &map, std::string newTexturePath, double now)
         // If we did that, maybe it's optional.. because you might want to move
         // tiles around on purpose and have them map to some other tile, right?
         //
-        newMap.tiles.resize(map.width * map.height);
+        newMap.tiles.resize((size_t)map.width * map.height);
         for (int i = 0; i < map.width * map.height; i++) {
             Tile &src = map.tiles[i];
             Tile &dst = newMap.tiles[i];
@@ -530,6 +539,57 @@ void Tilemap::ResolveEntityTerrainCollisions(Entity &entity)
                     }
                 }
             }
+        }
+    }
+}
+
+void Tilemap::ResolveEntityWarpCollisions(Entity &entity, double now)
+{
+    if (!entity.radius || entity.type != Entity_Player) {
+        return;
+    }
+
+    for (Warp warp : warps) {
+        if (dlb_CheckCollisionCircleRec(entity.position, entity.radius, warp.collider, 0)) {
+            if (warp.destMap.size()) {
+                Err err = Load(warp.destMap, now);
+                if (err) {
+                    assert(!"UH-OH");
+                    exit(EXIT_FAILURE);
+                }
+            } else {
+                Err err = Load(warp.templateMap, now);
+                if (err) {
+                    assert(!"UH-OH");
+                    exit(EXIT_FAILURE);
+                }
+
+#if 0
+                // TODO: Make a copy of the template map if you wanna edit it
+                err = Save(warp.destMap);
+                if (err) {
+                    assert(!"UH-OH");
+                    exit(EXIT_FAILURE);
+                }
+#endif
+
+                WangTileset wangTileset{};
+                err = wangTileset.Load(*this, warp.templateTileset);
+                if (err) {
+                    assert(!"UH-OH");
+                    exit(EXIT_FAILURE);
+                }
+
+                WangMap wangMap{};
+                err = wangTileset.GenerateMap(width, height, *this, wangMap);
+                if (err) {
+                    assert(!"UH-OH");
+                    exit(EXIT_FAILURE);
+                }
+
+                SetFromWangMap(wangMap, now);
+            }
+            break;
         }
     }
 }

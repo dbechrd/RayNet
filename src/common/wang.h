@@ -18,16 +18,21 @@ struct WangMap {
 struct WangTileset {
     const PixelFormat format = PIXELFORMAT_UNCOMPRESSED_R8G8B8;
 
-    const char *filename{};
+    std::string filename{};
     stbhw_tileset ts{};
     Texture thumbnail{};
 
     //std::vector<Tilemap> hWangTilemaps{};
     //std::vector<Tilemap> vWangTilemaps{};
 
-    Err GenerateTemplate(const char *filename);
+    ~WangTileset(void);
+
+    Err Load(Tilemap &map, std::string path);
+
+    Err GenerateTemplate(std::string path);
     Texture GenerateColorizedTexture(Image &image, Tilemap &map);
-    Err Load(Tilemap &map, const char *filename);
-    void Unload(void);
     Err GenerateMap(uint32_t w, uint32_t h, Tilemap &map, WangMap &wangMap);
+
+private:
+    void Unload(void);
 };

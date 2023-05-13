@@ -463,6 +463,7 @@ void GameServer::Tick(void)
         entity.forceAccum = {};
         entity_ticker[entity.type](*this, entityId, SV_TICK_DT);
         world->map.ResolveEntityTerrainCollisions(entity);
+        world->map.ResolveEntityWarpCollisions(entity, now);
     }
 
     for (int projectileId = 0; projectileId < SV_MAX_ENTITIES; projectileId++) {

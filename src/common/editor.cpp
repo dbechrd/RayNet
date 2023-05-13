@@ -357,11 +357,11 @@ UIState Editor::DrawUI_ActionBar(Vector2 position, Tilemap &map, double now)
             break;
         }
         case EditMode_Paths: {
-            DrawUI_PathActions(uiActionBar);
+            DrawUI_PathActions(uiActionBar, map, now);
             break;
         }
         case EditMode_Warps: {
-            DrawUI_WarpActions(uiActionBar);
+            DrawUI_WarpActions(uiActionBar, map, now);
             break;
         }
     }
@@ -374,7 +374,7 @@ void Editor::DrawUI_TileActions(UI &uiActionBar, Tilemap &map, double now)
     const char *mapFileFilter[1] = { "*.png" };
     static const char *openRequest = 0;
 
-    if (uiActionBar.Button("Change tileset").clicked) {
+    if (uiActionBar.Button("Change tileset", ColorBrightness(ORANGE, -0.2f)).clicked) {
         std::string filename = rnTextureCatalog.GetEntry(map.textureId).path;
         std::thread openFileThread([filename, mapFileFilter]{
             openRequest = tinyfd_openFileDialog(
@@ -494,7 +494,7 @@ void Editor::DrawUI_Tilesheet(UI &uiActionBar, Tilemap &map, double now)
     }
 }
 
-void Editor::DrawUI_PathActions(UI &uiActionBar)
+void Editor::DrawUI_PathActions(UI &uiActionBar, Tilemap &map, double now)
 {
     if (state.pathNodes.cursor.dragging) {
         printf("dragging\n");
@@ -507,7 +507,9 @@ void Editor::DrawUI_PathActions(UI &uiActionBar)
     ));
 }
 
-void Editor::DrawUI_WarpActions(UI &uiActionBar)
+void Editor::DrawUI_WarpActions(UI &uiActionBar, Tilemap &map, double now)
 {
-    uiActionBar.Text("TODO: Warp actions");
+    if (uiActionBar.Button("Delete all warps", MAROON).pressed) {
+        map.warps.clear();
+    }
 }

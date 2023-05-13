@@ -35,10 +35,14 @@ struct TileDef {
 };
 
  struct Warp {
-     Rectangle collider;
-     Vector2 destPos;
-     std::string destMapName;   // [required] if doesn't exist, and templateName is set, will be generated
-     std::string templateName;  // [optional] if dest map is auto-generated, this will point to a wang tileset
+     Rectangle collider{};
+     Vector2 destPos{};
+
+     // You either need this
+     std::string destMap{};          // regular map to warp to
+     // Or both of these
+     std::string templateMap{};      // template map to make a copy of for procgen
+     std::string templateTileset{};  // wang tileset to use for procgen
  };
 
 typedef uint8_t Tile;
@@ -47,9 +51,7 @@ struct Tilemap {
         uint32_t x, y;
     };
 
-    static const uint32_t TEXTURE_PATH_LEN_MAX = 1024;
-    static const uint32_t WARP_DEST_MAP_LEN_MAX = 1024;
-    static const uint32_t WARP_TEMPLATE_LEN_MAX = 1024;
+    static const uint32_t PATH_LEN_MAX = 1024;
 
     const uint32_t MAGIC = 0xDBBB9192;
     // v1: the OG
@@ -97,6 +99,7 @@ struct Tilemap {
     void SetFromWangMap(WangMap &wangMap, double now);
     void Fill(uint32_t x, uint32_t y, int tileDefId, double now);
     void ResolveEntityTerrainCollisions(Entity &entity);
+    void ResolveEntityWarpCollisions(Entity &entity, double now);
 
     Rectangle TileDefRect(Tile tile);
     Color TileDefAvgColor(Tile tile);
