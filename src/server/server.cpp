@@ -14,10 +14,6 @@ void RN_TraceLogCallback(int logLevel, const char *text, va_list args)
         logLevel = LOG_FATAL;
     }
 
-    if (logLevel > LOG_WARNING) {
-        assert(!"raylib is sad");
-    }
-
     // Message has level below current threshold, don't emit
     //if (logType < TraceLogLevel) return;
 
@@ -38,6 +34,10 @@ void RN_TraceLogCallback(int logLevel, const char *text, va_list args)
     strcat(buffer, "\n");
     vprintf(buffer, args);
     fflush(stdout);
+
+    if (logLevel > LOG_WARNING) {
+        assert(!"raylib is sad");
+    }
 
     // If fatal logging, exit program
     if (logLevel == LOG_FATAL) {
@@ -400,7 +400,7 @@ Err Play(GameServer &server)
                             uint8_t tile = pixel[0];
                             if (tile >= map.tileDefCount) tile = 0;
 
-                            Texture mapTex = rnTextureCatalog.ById(map.textureId);
+                            Texture mapTex = rnTextureCatalog.GetTexture(map.textureId);
                             const Rectangle tileRect = map.TileDefRect(tile);
                             if (uiWangTile.Image(mapTex, tileRect).down) {
                                 pixel[0] = selectedTile; //^ (selectedTile*55);
@@ -421,7 +421,7 @@ Err Play(GameServer &server)
                             uint8_t tile = pixel[0];
                             if (tile >= map.tileDefCount) tile = 0;
 
-                            Texture mapTex = rnTextureCatalog.ById(map.textureId);
+                            Texture mapTex = rnTextureCatalog.GetTexture(map.textureId);
                             const Rectangle tileRect = map.TileDefRect(tile);
                             if (uiWangTile.Image(mapTex, tileRect).down) {
                                 pixel[0] = selectedTile; //^ (selectedTile*55);

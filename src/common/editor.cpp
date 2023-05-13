@@ -356,11 +356,11 @@ void Editor::DrawUI_TileActions(UI &uiActionBar, Tilemap &map, double now)
     static const char *openRequest = 0;
 
     if (uiActionBar.Button("Change tileset").clicked) {
-        const char *filename = map.texturePath;
+        std::string filename = rnTextureCatalog.GetEntry(map.textureId).path;
         std::thread openFileThread([filename, mapFileFilter]{
             openRequest = tinyfd_openFileDialog(
                 "Open File",
-                filename,
+                filename.c_str(),
                 ARRAY_SIZE(mapFileFilter),
                 mapFileFilter,
                 "RayNet Tileset (*.png)",
@@ -374,8 +374,8 @@ void Editor::DrawUI_TileActions(UI &uiActionBar, Tilemap &map, double now)
         if (err) {
             std::thread errorThread([err]{
                 const char *msg = TextFormat("Failed to load file %s. %s\n", openRequest, ErrStr(err));
-            tinyfd_messageBox("Error", msg, "ok", "error", 1);
-                });
+                tinyfd_messageBox("Error", msg, "ok", "error", 1);
+            });
             errorThread.detach();
         }
         openRequest = 0;
@@ -393,7 +393,7 @@ void Editor::DrawUI_Tilesheet(UI &uiActionBar, Tilemap &map, double now)
 {
     // TODO: Support multi-select (big rectangle?), and figure out where this lives
 
-    Texture mapTex = rnTextureCatalog.ById(map.textureId);
+    Texture mapTex = rnTextureCatalog.GetTexture(map.textureId);
     Vector2 uiSheetPos{
         GetScreenWidth() - mapTex.width - 10.0f,
         GetScreenHeight() - mapTex.height - 10.0f

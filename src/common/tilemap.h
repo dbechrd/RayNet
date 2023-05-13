@@ -7,8 +7,6 @@
 
 struct WangMap;
 
-typedef uint8_t Tile;
-
 struct AiPathNode {
     Vector2 pos;
     double waitFor;
@@ -19,12 +17,25 @@ struct AiPath {
     uint32_t pathNodeIndexCount;
 };
 
+typedef int TileMatId;
+struct TileMat {
+    int id;
+    bool collide;
+
+    // TODO(dlb): Footsteps per material?
+    //SoundId sndFootstepId;
+};
+
 struct TileDef {
     uint32_t x, y;  // position in spritesheet
+    int index;  // position in spritesheet
+
+    TileMatId materialId;
     bool collide;
     Color color;  // color for minimap/wang tile editor (top left pixel of tile)
 };
 
+typedef uint8_t Tile;
 struct Tilemap {
     struct Coord {
         uint32_t x, y;
@@ -37,18 +48,32 @@ struct Tilemap {
     // v3: added AI paths/nodes
     // v4: tileDefCount and tileDef.x/y are now implicit based on texture size
     const uint32_t VERSION = 4;
+    static const uint32_t TEXTURE_PATH_LEN_MAX = 1024;
+
     TextureId textureId;  // generated upon load, used to look up in rnTextureCatalog
-    char *texturePath;
+
+    // TODO(dlb)[cleanup]: use textureId instead
+    //char *texturePath;
+
+    // TODO(dlb)[cleanup]: use width/height instead
     uint32_t tileDefCount;
+
     uint32_t width;  // width of map in tiles
     uint32_t height;  // height of map in tiles
     uint32_t pathNodeCount;
     uint32_t pathNodeIndexCount;
     uint32_t pathCount;
+
+    // TODO(dlb): Move these to a global pool, each has its own textureId
+    // TODO(dlb): Make this a std::vector
     TileDef *tileDefs;
+    // TODO(dlb): Make this a std::vector
     Tile *tiles;
+    // TODO(dlb): Make this a std::vector
     AiPathNode *pathNodes; // 94 19 56 22 57
+    // TODO(dlb): Make this a std::vector
     uint32_t *pathNodeIndices;  // 0 1 2 | 3 4 5
+    // TODO(dlb): Make this a std::vector
     AiPath *paths;  // offset, length | 0, 3 | 3, 3
 
     // TODO: Actually have more than 1 chunk..

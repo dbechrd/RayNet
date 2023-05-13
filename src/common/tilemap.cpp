@@ -98,7 +98,7 @@ Err Tilemap::Save(const char *filename)
             err = RN_BAD_FILE_WRITE; break;
         }
 
-        assert(texturePath);
+        assert(textureId);
         assert(tileDefCount);
         assert(width);
         assert(height);
@@ -114,9 +114,10 @@ Err Tilemap::Save(const char *filename)
 
         fwrite(&MAGIC, sizeof(MAGIC), 1, file);
         fwrite(&VERSION, sizeof(VERSION), 1, file);
-        int texturePathLen = strlen(texturePath);
+        const std::string texturePath = rnTextureCatalog.GetEntry(textureId).path;
+        const int texturePathLen = texturePath.size();
         fwrite(&texturePathLen, sizeof(texturePathLen), 1, file);
-        fwrite(texturePath, sizeof(*texturePath), texturePathLen, file);
+        fwrite(texturePath.c_str(), 1, texturePathLen, file);
         fwrite(&width, sizeof(width), 1, file);
         fwrite(&height, sizeof(height), 1, file);
         fwrite(&pathNodeCount, sizeof(pathNodeCount), 1, file);
@@ -168,7 +169,6 @@ Err Tilemap::Load(const char *filename, double now)
     Unload();
 
     FILE *file = fopen(filename, "r");
-    Image img{};
     do {
         if (!file) {
             err = RN_BAD_FILE_READ; break;
@@ -183,34 +183,30 @@ Err Tilemap::Load(const char *filename, double now)
         uint32_t version = 0;
         fread(&version, sizeof(version), 1, file);
 
-        int texturePathLen = 0;
+        char texturePathBuf[TEXTURE_PATH_LEN_MAX + 1]{};
+        const char *texturePath = 0;
         if (version >= 2) {
+            int texturePathLen = 0;
             fread(&texturePathLen, sizeof(texturePathLen), 1, file);
-            if (!texturePathLen || texturePathLen > 1024) {
+            if (!texturePathLen || texturePathLen > TEXTURE_PATH_LEN_MAX) {
                 err = RN_INVALID_PATH; break;
             }
-            texturePath = (char *)calloc((size_t)texturePathLen + 1, sizeof(*texturePath));
-            if (!texturePath) {
-                err = RN_BAD_ALLOC; break;
-            }
-            fread(texturePath, sizeof(*texturePath), texturePathLen, file);
+            fread(texturePathBuf, sizeof(*texturePath), texturePathLen, file);
+            texturePath = texturePathBuf;
         } else {
-            const char *v1_texturePath = "resources/tiles32.png";
-            texturePathLen = (uint32_t)strlen(v1_texturePath);
-            texturePath = (char *)calloc((size_t)texturePathLen + 1, sizeof(*texturePath));
-            if (!texturePath) {
-                err = RN_BAD_ALLOC; break;
-            }
-            strncpy(texturePath, v1_texturePath, texturePathLen);
+            texturePath = "resources/tiles32.png";
         }
 
         textureId = rnTextureCatalog.FindOrLoad(texturePath);
-        Texture texture = rnTextureCatalog.ById(textureId);
-        if (texture.width % TILE_W != 0 || texture.height % TILE_W != 0) {
+        const TextureCatalogEntry &texEntry = rnTextureCatalog.GetEntry(textureId);
+        if (!texEntry.image.width) {
+            err = RN_BAD_FILE_READ; break;
+        }
+        if (texEntry.texture.width % TILE_W != 0 || texEntry.texture.height % TILE_W != 0) {
             err = RN_INVALID_SIZE; break;
         }
 
-        tileDefCount = (texture.width / TILE_W) * (texture.height / TILE_W);
+        tileDefCount = (texEntry.texture.width / TILE_W) * (texEntry.texture.height / TILE_W);
         int v3TileDefCount = 0;
         if (version == 3) {
             fread(&v3TileDefCount, sizeof(v3TileDefCount), 1, file);
@@ -240,7 +236,7 @@ Err Tilemap::Load(const char *filename, double now)
         if (version >= 4) {
             for (uint32_t i = 0; i < tileDefCount; i++) {
                 TileDef &dst = tileDefs[i];
-                int tilesPerRow = texture.width / TILE_W;
+                int tilesPerRow = texEntry.texture.width / TILE_W;
                 dst.x = i % tilesPerRow * TILE_W;
                 dst.y = i / tilesPerRow * TILE_W;
                 fread(&dst.collide, sizeof(dst.collide), 1, file);
@@ -253,7 +249,7 @@ Err Tilemap::Load(const char *filename, double now)
                 uint32_t v3IgnoreY;
                 fread(&v3IgnoreY, sizeof(v3IgnoreY), 1, file);
 
-                int tilesPerRow = texture.width / TILE_W;
+                int tilesPerRow = texEntry.texture.width / TILE_W;
                 dst.x = i % tilesPerRow * TILE_W;
                 dst.y = i / tilesPerRow * TILE_W;
                 fread(&dst.collide, sizeof(dst.collide), 1, file);
@@ -265,11 +261,18 @@ Err Tilemap::Load(const char *filename, double now)
                 //dst.x = src.x;
                 //dst.y = src.y;
 
-                int tilesPerRow = texture.width / TILE_W;
+                int tilesPerRow = texEntry.texture.width / TILE_W;
                 dst.x = i % tilesPerRow * TILE_W;
                 dst.y = i / tilesPerRow * TILE_W;
                 dst.collide = src.collide;
             }
+        }
+
+        for (int i = 0; i < tileDefCount; i++) {
+            TileDef &tileDef = tileDefs[i];
+            assert(tileDef.x < texEntry.image.width);
+            assert(tileDef.y < texEntry.image.height);
+            tileDef.color = GetImageColor(texEntry.image, tileDef.x, tileDef.y);
         }
 
         const uint32_t tileCount = width * height;
@@ -339,19 +342,7 @@ Err Tilemap::Load(const char *filename, double now)
                 aiPath.pathNodeIndexCount = v2HardcodedAiPaths[i].pathNodeIndexCount;
             }
         }
-
-        img = LoadImage(texturePath);
-        if (!img.width) {
-            err = RN_BAD_FILE_READ; break;
-        }
-        for (int i = 0; i < tileDefCount; i++) {
-            TileDef &tileDef = tileDefs[i];
-            assert(tileDef.x < img.width);
-            assert(tileDef.y < img.height);
-            tileDef.color = GetImageColor(img, tileDef.x, tileDef.y);
-        }
     } while (0);
-    if (img.data) UnloadImage(img);
     if (file) fclose(file);
 
     if (!err) {
@@ -366,29 +357,30 @@ Err Tilemap::ChangeTileset(Tilemap &map, const char *newTexturePath, double now)
 {
     Err err = RN_SUCCESS;
 
-    if (!strcmp(map.texturePath, newTexturePath)) {
+    const TextureCatalogEntry &texEntry = rnTextureCatalog.GetEntry(map.textureId);
+
+    // TODO(dlb): Is this valid?? comparing a std::string to a const char *
+    if (texEntry.path == newTexturePath) {
         assert(!"u wot mate?");
         return RN_SUCCESS;
     }
 
     Tilemap newMap{};
-    Image img{};
     do {
         newMap.textureId = rnTextureCatalog.FindOrLoad(newTexturePath);
-        Texture texture = rnTextureCatalog.ById(newMap.textureId);
-        if (texture.width % TILE_W != 0 || texture.height % TILE_W != 0) {
+        const TextureCatalogEntry &newTexEntry = rnTextureCatalog.GetEntry(newMap.textureId);
+        if (newTexEntry.texture.width % TILE_W != 0 || newTexEntry.texture.height % TILE_W != 0) {
             err = RN_INVALID_SIZE; break;
         }
-        newMap.tileDefCount = (texture.width / TILE_W) * (texture.height / TILE_W);
+        if (!newTexEntry.image.width) {
+            err = RN_BAD_FILE_READ; break;
+        }
 
-        const int texturePathLen = strlen(newTexturePath);
-        newMap.texturePath = (char *)calloc((size_t)texturePathLen + 1, sizeof(*newMap.texturePath));
-        strncpy(newMap.texturePath, newTexturePath, texturePathLen);
-
+        newMap.tileDefCount = (newTexEntry.texture.width / TILE_W) * (newTexEntry.texture.height / TILE_W);
         newMap.tileDefs = (TileDef *)calloc(newMap.tileDefCount, sizeof(*tileDefs));
         for (int i = 0; i < newMap.tileDefCount; i++) {
             TileDef &dst = newMap.tileDefs[i];
-            int tilesPerRow = texture.width / TILE_W;
+            int tilesPerRow = newTexEntry.texture.width / TILE_W;
             dst.x = i % tilesPerRow * TILE_W;
             dst.y = i / tilesPerRow * TILE_W;
 
@@ -397,6 +389,10 @@ Err Tilemap::ChangeTileset(Tilemap &map, const char *newTexturePath, double now)
                 TileDef &src = map.tileDefs[i];
                 dst.collide = src.collide;
             }
+        }
+        for (int i = 0; i < newMap.tileDefCount; i++) {
+            TileDef &tileDef = newMap.tileDefs[i];
+            tileDef.color = GetImageColor(newTexEntry.image, tileDef.x, tileDef.y);
         }
 
         // TODO(dlb): If we want to be able to change the size of tileset images
@@ -416,21 +412,10 @@ Err Tilemap::ChangeTileset(Tilemap &map, const char *newTexturePath, double now)
             Tile &dst = newMap.tiles[i];
             dst = src >= newMap.tileDefCount ? 0 : src;
         }
-
-        img = LoadImage(newMap.texturePath);
-        if (!img.width) {
-            err = RN_BAD_FILE_READ; break;
-        }
-        for (int i = 0; i < newMap.tileDefCount; i++) {
-            TileDef &tileDef = newMap.tileDefs[i];
-            tileDef.color = GetImageColor(img, tileDef.x, tileDef.y);
-        }
     } while(0);
-    if (img.width) UnloadImage(img);
 
     if (!err) {
-        rnTextureCatalog.Unload(map.texturePath);
-        free(map.texturePath);
+        rnTextureCatalog.Unload(map.textureId);
         free(map.tileDefs);
         free(map.tiles);
         //free(pathNodes);
@@ -440,8 +425,7 @@ Err Tilemap::ChangeTileset(Tilemap &map, const char *newTexturePath, double now)
         // HACK(dlb): The weird zeroing logic here is so that newMap's
         // destructor does not unload all the new data we just created above.
 
-        map.texturePath = newMap.texturePath;
-        newMap.texturePath = 0;
+        map.textureId = newMap.textureId;
         map.tileDefCount = newMap.tileDefCount;
         //map.width = newMap.width;
         //map.height = newMap.width;
@@ -464,8 +448,7 @@ Err Tilemap::ChangeTileset(Tilemap &map, const char *newTexturePath, double now)
 
 void Tilemap::Unload(void)
 {
-    rnTextureCatalog.Unload(texturePath);
-    free(texturePath);
+    rnTextureCatalog.Unload(textureId);
     free(tileDefs);
     free(tiles);
     free(pathNodes);
@@ -653,7 +636,7 @@ Color Tilemap::TileDefAvgColor(Tile tile)
 
 void Tilemap::DrawTile(Tile tile, Vector2 position)
 {
-    const Texture tex = rnTextureCatalog.ById(textureId);
+    const Texture tex = rnTextureCatalog.GetTexture(textureId);
     const Rectangle texRect = TileDefRect(tile);
     DrawTextureRec(tex, texRect, position, WHITE);
 }
