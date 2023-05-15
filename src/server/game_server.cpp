@@ -59,7 +59,7 @@ void tick_player(GameServer &server, uint32_t entityId, double dt)
         }
     }
 
-    ePlayer.Tick(server.now, SV_TICK_DT);
+    ePlayer.Tick(dt);
 }
 
 void tick_bot(GameServer &server, uint32_t entityId, double dt)
@@ -109,14 +109,14 @@ void tick_bot(GameServer &server, uint32_t entityId, double dt)
 #endif
     }
 
-    entity.Tick(server.now, SV_TICK_DT);
+    entity.Tick(dt);
 }
 
 void tick_projectile(GameServer &server, uint32_t entityId, double dt)
 {
     Entity &eProjectile = server.world->entities[entityId];
     //eProjectile.ApplyForce({ 0, 5 });
-    eProjectile.Tick(server.now, dt);
+    eProjectile.Tick(dt);
 
     if (server.now - eProjectile.spawnedAt > 1.0) {
         server.world->DespawnEntity(server, entityId);
@@ -152,7 +152,7 @@ void GameServer::OnClientJoin(int clientIdx)
     entity.size = { 32, 64 };
     entity.radius = 10;
     entity.position = { 680, 1390 };
-    entity.speed = 100;
+    entity.speed = 2000;
     entity.drag = 8.0f;
 
     EntityPlayer &player = entity.data.player;
@@ -445,7 +445,7 @@ void GameServer::Tick(void)
                 } else {
                     entity->position = { 0, 0 }; // TODO world spawn or something?
                 }
-                entity->speed = GetRandomValue(10, 50);
+                entity->speed = GetRandomValue(1000, 5000);
                 entity->drag = 8.0f;
                 world->SpawnEntity(*this, eid_bots[i]);
             }

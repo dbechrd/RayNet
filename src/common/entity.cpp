@@ -123,14 +123,19 @@ void Entity::ApplyForce(Vector2 force)
     forceAccum.y += force.y;
 }
 
-void Entity::Tick(double now, double dt)
+void Entity::Tick(double dt)
 {
-    velocity.x += forceAccum.x;
-    velocity.y += forceAccum.y;
+    velocity.x += forceAccum.x * dt;
+    velocity.y += forceAccum.y * dt;
     forceAccum = {};
 
+#if 1
     velocity.x *= (1.0f - drag * dt);
     velocity.y *= (1.0f - drag * dt);
+#else
+    velocity.x *= 1.0f - powf(drag, dt);
+    velocity.y *= 1.0f - powf(drag, dt);
+#endif
 
     position.x += velocity.x * dt;
     position.y += velocity.y * dt;
@@ -177,7 +182,7 @@ void Entity::DrawHoverInfo(void)
         Vector2 hpBarSize{ 200, 24 };
 
         Rectangle hpBarBg{
-            (float)GetScreenWidth() / 2 - hpBarSize.x / 2 - hpBarPad.x,
+            (float)GetRenderWidth() / 2 - hpBarSize.x / 2 - hpBarPad.x,
             20.0f,
             hpBarSize.x + hpBarPad.x * 2,
             hpBarSize.y + hpBarPad.y * 2

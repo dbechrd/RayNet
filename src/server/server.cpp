@@ -127,15 +127,28 @@ Err Play(GameServer &server)
         bool doNetTick = server.tickAccum >= SV_TICK_DT;
         histogram.Push(frameDtSmooth, doNetTick ? GREEN : RAYWHITE);
 
-        if (io.KeyPressed(KEY_H)) {
-            histogram.paused = !histogram.paused;
+        // Input
+        if (IsKeyPressed(KEY_F11)) {
+            bool isFullScreen = IsWindowState(FLAG_FULLSCREEN_MODE);
+            if (isFullScreen) {
+                ClearWindowState(FLAG_FULLSCREEN_MODE);
+            } else {
+                SetWindowState(FLAG_FULLSCREEN_MODE);
+            }
         }
-        if (io.KeyPressed(KEY_V)) {
+        if (IsKeyPressed(KEY_V)) {
+            bool isFullScreen = IsWindowState(FLAG_FULLSCREEN_MODE);
             if (IsWindowState(FLAG_VSYNC_HINT)) {
                 ClearWindowState(FLAG_VSYNC_HINT);
             } else {
                 SetWindowState(FLAG_VSYNC_HINT);
+                if (isFullScreen) {
+                    SetWindowState(FLAG_FULLSCREEN_MODE);
+                }
             }
+        }
+        if (io.KeyPressed(KEY_H)) {
+            histogram.paused = !histogram.paused;
         }
 
         UpdateCamera(camera);
@@ -230,8 +243,8 @@ Err Play(GameServer &server)
         DrawRectangleLinesEx({
             screenMargin,
             screenMargin,
-            (float)GetScreenWidth() - screenMargin*2,
-            (float)GetScreenHeight() - screenMargin*2,
+            (float)GetRenderWidth() - screenMargin*2,
+            (float)GetRenderHeight() - screenMargin*2,
             }, 1.0f, PINK);
 #endif
 
@@ -267,7 +280,7 @@ Err Play(GameServer &server)
             DRAW_TEXT("time", "%.02f", server.yj_server->GetTime());
             DRAW_TEXT("tick", "%" PRIu64, server.tick);
             DRAW_TEXT("tickAccum", "%.02f", server.tickAccum);
-            DRAW_TEXT("window", "%d, %d", GetScreenWidth(), GetScreenHeight());
+            DRAW_TEXT("window", "%d, %d (render: %d, %d)", GetScreenWidth(), GetScreenHeight(), GetRenderWidth(), GetRenderHeight());
             DRAW_TEXT("cursor", "%d, %d", GetMouseX(), GetMouseY());
             DRAW_TEXT("cursor world", "%.f, %.f", cursorWorldPos.x, cursorWorldPos.y);
             DRAW_TEXT("clients", "%d", server.yj_server->GetNumConnectedClients());
@@ -444,7 +457,7 @@ Err Play(GameServer &server)
         }
 
         EndDrawing();
-        //yojimbo_sleep(0.001);
+        yojimbo_sleep(0.001);
 
         // Nobody else handled it, so user probably wants to quit
         if (WindowShouldClose() || io.KeyPressed(KEY_ESCAPE)) {
@@ -465,8 +478,8 @@ int main(int argc, char *argv[])
     //SetTraceLogLevel(LOG_WARNING);
     SetTraceLogCallback(RN_TraceLogCallback);
 
-    InitWindow(WINDOW_WIDTH, WINDOW_HEIGHT, "RayNet Server");
-    SetWindowState(FLAG_VSYNC_HINT);  // KEEP THIS ENABLED it makes the room cooler
+    InitWindow(1920, 1017, "RayNet Server");
+    //SetWindowState(FLAG_VSYNC_HINT);  // KEEP THIS ENABLED it makes the room cooler
     SetWindowState(FLAG_WINDOW_RESIZABLE);
     SetWindowState(FLAG_WINDOW_MAXIMIZED);
 

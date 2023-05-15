@@ -527,7 +527,7 @@ void Tilemap::ResolveEntityTerrainCollisions(Entity &entity)
         for (int x = xMin; x < xMax; x++) {
             Tile tile{};
             if (AtTry(x, y, tile)) {
-                TileDef &tileDef = tileDefs[tile];
+                const TileDef &tileDef = GetTileDef(tile);
                 if (tileDef.collide) {
                     Rectangle tileRect{};
                     Vector2 tilePos = { (float)x * TILE_W, (float)y * TILE_W };
@@ -600,16 +600,22 @@ void Tilemap::ResolveEntityWarpCollisions(Entity &entity, double now)
     }
 }
 
+const TileDef &Tilemap::GetTileDef(Tile tile)
+{
+    if (tile >= tileDefs.size()) tile = 0;
+    return tileDefs[tile];
+}
+
 Rectangle Tilemap::TileDefRect(Tile tile)
 {
-    const TileDef &tileDef = tileDefs[tile];
+    const TileDef &tileDef = GetTileDef(tile);
     const Rectangle rect{ (float)tileDef.x, (float)tileDef.y, TILE_W, TILE_W };
     return rect;
 }
 
 Color Tilemap::TileDefAvgColor(Tile tile)
 {
-    const TileDef &tileDef = tileDefs[tile];
+    const TileDef &tileDef = GetTileDef(tile);
     return tileDef.color;
 }
 
@@ -670,7 +676,7 @@ void Tilemap::DrawColliders(Camera2D &camera)
     for (int y = yMin; y < yMax; y++) {
         for (int x = xMin; x < xMax; x++) {
             Tile tile = At(x, y);
-            TileDef &tileDef = tileDefs[tile];
+            const TileDef &tileDef = GetTileDef(tile);
             if (tileDef.collide) {
                 Vector2 tilePos = { (float)x * TILE_W, (float)y * TILE_W };
                 const int pad = 1;

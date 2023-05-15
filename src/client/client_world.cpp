@@ -117,7 +117,7 @@ void ClientWorld::UpdateEntities(GameClient &client)
                 InputCmd &inputCmd = client.controller.cmdQueue[cmdIndex];
                 if (inputCmd.seq > lastProcessedInputCmd) {
                     entity.ApplyForce(inputCmd.GenerateMoveForce(entity.speed));
-                    entity.Tick(client.now, SV_TICK_DT);
+                    entity.Tick(SV_TICK_DT);
                     map.ResolveEntityTerrainCollisions(entity);
                 }
             }

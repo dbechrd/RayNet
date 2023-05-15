@@ -414,8 +414,8 @@ void Editor::DrawUI_Tilesheet(UI &uiActionBar, Tilemap &map, double now)
 
     Texture mapTex = rnTextureCatalog.GetTexture(map.textureId);
     Vector2 uiSheetPos{
-        GetScreenWidth() - mapTex.width - 10.0f,
-        GetScreenHeight() - mapTex.height - 10.0f
+        GetRenderWidth() - mapTex.width - 10.0f,
+        GetRenderHeight() - mapTex.height - 10.0f
     };
     UIStyle uiSheetStyle{};
     UI uiSheet{ uiSheetPos, uiSheetStyle };

@@ -99,6 +99,7 @@ struct Tilemap {
     void ResolveEntityTerrainCollisions(Entity &entity);
     void ResolveEntityWarpCollisions(Entity &entity, double now);
 
+    const TileDef &GetTileDef(Tile tile);
     Rectangle TileDefRect(Tile tile);
     Color TileDefAvgColor(Tile tile);
 

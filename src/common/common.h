@@ -14,16 +14,20 @@
 #include <ctime>
 #include <cctype>
 
+#include <fstream>
+#include <iostream>
 #include <queue>
+#include <sstream>
 #include <stack>
+#include <string>
 #include <thread>
 #include <unordered_map>
 #include <vector>
 
 // Stuff that probably shouldn't be here
 
-#define WINDOW_WIDTH 1920
-#define WINDOW_HEIGHT 1016
+//#define WINDOW_WIDTH 1920
+//#define WINDOW_HEIGHT 1016
 
 #define TILE_W 32
 
@@ -67,6 +71,7 @@
 #define CL_MAX_DIALOGS                  32
 #define CL_DIALOG_DURATION_MIN          0.5
 #define CL_DIALOG_DURATION_PER_CHAR     0.1
+#define CL_CAMERA_LERP                  1
 
 #define CL_DBG_ONE_SCREEN      0
 #define CL_DBG_TWO_SCREEN      1

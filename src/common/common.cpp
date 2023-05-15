@@ -209,10 +209,10 @@ Rectangle GetScreenRectWorld(Camera2D &camera)
 #if CL_DBG_TILE_CULLING
     const int screenMargin = 64;
     Vector2 screenTLWorld = GetScreenToWorld2D({ screenMargin, screenMargin }, camera);
-    Vector2 screenBRWorld = GetScreenToWorld2D({ (float)GetScreenWidth() - screenMargin, (float)GetScreenHeight() - screenMargin }, camera);
+    Vector2 screenBRWorld = GetScreenToWorld2D({ (float)GetRenderWidth() - screenMargin, (float)GetRenderHeight() - screenMargin }, camera);
 #else
     const Vector2 screenTLWorld = GetScreenToWorld2D({ 0, 0 }, camera);
-    const Vector2 screenBRWorld = GetScreenToWorld2D({ (float)GetScreenWidth(), (float)GetScreenHeight() }, camera);
+    const Vector2 screenBRWorld = GetScreenToWorld2D({ (float)GetRenderWidth(), (float)GetRenderHeight() }, camera);
 #endif
 
     const Rectangle rectWorld{

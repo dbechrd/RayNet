@@ -1,5 +1,6 @@
 #pragma once
 #include "common.h"
+#include "spritesheet.h"
 
 struct EntitySnapshot;
 struct EntitySpawnEvent;
@@ -62,6 +63,8 @@ struct Entity {
     Vector2 velocity;
     Vector2 position;
 
+    SpriteId spriteId;
+
     // TODO(dlb): Could be a pointer, or could be a type + index into another pool
     union {
         EntityPlayer player;
@@ -77,7 +80,7 @@ struct Entity {
     void ApplySpawnEvent(const EntitySpawnEvent &spawnEvent);
     void ApplyStateInterpolated(const EntitySnapshot &a, const EntitySnapshot &b, double alpha);
     void ApplyForce(Vector2 force);
-    void Tick(double now, double dt);
+    void Tick(double dt);
     Rectangle GetRect(void);
     EntityLife *GetLife(void);
     void DrawHoverInfo(void);

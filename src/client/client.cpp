@@ -14,8 +14,9 @@ int main(int argc, char *argv[])
 
     //SetTraceLogLevel(LOG_WARNING);
 
-    InitWindow(WINDOW_WIDTH, WINDOW_HEIGHT, "RayNet Client");
-    SetWindowState(FLAG_VSYNC_HINT);  // Gahhhhhh Windows fucking sucks at this
+    InitWindow(800, 600, "RayNet Client");
+    //InitWindow(1920, 1017, "RayNet Client");
+    //SetWindowState(FLAG_VSYNC_HINT);  // Gahhhhhh Windows fucking sucks at this
     SetWindowState(FLAG_WINDOW_RESIZABLE);
     SetWindowState(FLAG_WINDOW_MAXIMIZED);
     //SetWindowState(FLAG_FULLSCREEN_MODE);
@@ -55,6 +56,10 @@ int main(int argc, char *argv[])
     );
 #endif
 
+    // TODO: PUT THIS SOMEWHERE LOGICAL
+    Spritesheet foo{};
+    foo.LoadAsSingleRowAnimation("resources/campfire.txt");
+
     //--------------------
     // Client
     GameClient *client = new GameClient;
@@ -73,23 +78,36 @@ int main(int argc, char *argv[])
     bool quit = false;
 
     while (!quit) {
-        UpdateMusicStream(music);
-
-        io.PushScope(IO::IO_Game);
-
         client->now = GetTime();
         frameDt = MIN(client->now - frameStart, SV_TICK_DT);  // arbitrary limit for now
-        frameDtSmooth = LERP(frameDtSmooth, frameDt, 0.1);
+        frameDtSmooth = LERP(frameDtSmooth, frameDt, 0.01);
         frameStart = client->now;
 
         client->controller.sampleInputAccum += frameDt;
         client->netTickAccum += frameDt;
         bool doNetTick = client->netTickAccum >= SV_TICK_DT;
 
+        // TODO: rnAudioSystem.Update();
+        UpdateMusicStream(music);
+
+        io.PushScope(IO::IO_Game);
+
         bool escape = IsKeyPressed(KEY_ESCAPE);
 
         //--------------------
         // Input
+        if (IsKeyPressed(KEY_F11)) {
+            bool isFullScreen = IsWindowState(FLAG_FULLSCREEN_MODE);
+            if (isFullScreen) {
+                ClearWindowState(FLAG_FULLSCREEN_MODE);
+            } else {
+                int monitor = GetCurrentMonitor();
+                int width = GetMonitorWidth(monitor);
+                int height = GetMonitorHeight(monitor);
+                SetWindowSize(width, height);
+                SetWindowState(FLAG_FULLSCREEN_MODE);
+            }
+        }
         if (IsKeyPressed(KEY_V)) {
             bool isFullScreen = IsWindowState(FLAG_FULLSCREEN_MODE);
             if (IsWindowState(FLAG_VSYNC_HINT)) {
@@ -184,8 +202,20 @@ int main(int argc, char *argv[])
             // TODO: Move update code out of draw code and update local player's
             // position before using it to determine camera location... doh!
             {
-                camera .offset = { (float)GetScreenWidth()/2, (float)GetScreenHeight()/2 };
-                camera .target = { localPlayer->position.x, localPlayer->position.y };
+                camera.offset = { (float)GetRenderWidth()/2, (float)GetRenderHeight()/2 };
+
+                if (!IsKeyDown(KEY_SPACE)) {
+#if CL_CAMERA_LERP
+                    // https://www.gamedeveloper.com/programming/improved-lerp-smoothing-
+                    const float halfLife = 8.0f;
+                    float alpha = 1.0f - exp2f(-halfLife * frameDt);
+                    camera.target.x = LERP(camera.target.x, localPlayer->position.x, alpha);
+                    camera.target.y = LERP(camera.target.y, localPlayer->position.y, alpha);
+#else
+                    camera.target.x = localPlayer->position.x;
+                    camera.target.y = localPlayer->position.y;
+#endif
+                }
 
                 // Zoom based on mouse wheel
                 float wheel = GetMouseWheelMove();
@@ -213,9 +243,11 @@ int main(int argc, char *argv[])
                 if (!entity) {
                     continue;
                 }
-                EntityGhost &ghost = client->world->ghosts[entityId];
+
+                const Color origColor = entity->color;
 
                 if (CL_DBG_SNAPSHOT_SHADOWS) {
+                    EntityGhost &ghost = client->world->ghosts[entityId];
                     Entity ghostInstance = *entity;
                     for (int i = 0; i < ghost.snapshots.size(); i++) {
                         if (!ghost.snapshots[i].serverTime) {
@@ -231,34 +263,37 @@ int main(int argc, char *argv[])
 #if CL_CLIENT_SIDE_PREDICT
                     // NOTE(dlb): These aren't actually snapshot shadows, they're client-side prediction shadows
                     if (entityId == client->LocalPlayerEntityId()) {
-                        Entity predictionInstance = *entity;
-
                         uint32_t lastProcessedInputCmd = 0;
                         const EntitySnapshot &latestSnapshot = ghost.snapshots.newest();
                         if (latestSnapshot.serverTime) {
-                            predictionInstance.ApplyStateInterpolated(latestSnapshot, latestSnapshot, 0);
+                            entity->ApplyStateInterpolated(latestSnapshot, latestSnapshot, 0);
                             lastProcessedInputCmd = latestSnapshot.lastProcessedInputCmd;
                         }
 
                         //predictionInstance.color = Fade(SKYBLUE, 0.5);
-                        predictionInstance.color = Fade(DARKGRAY, 0.5);
+                        entity->color = Fade(DARKGRAY, 0.5);
 
                         //const double cmdAccumDt = client->now - client->controller.lastInputSampleAt;
                         for (size_t cmdIndex = 0; cmdIndex < client->controller.cmdQueue.size(); cmdIndex++) {
                             InputCmd &inputCmd = client->controller.cmdQueue[cmdIndex];
                             if (inputCmd.seq > lastProcessedInputCmd) {
-                                predictionInstance.ApplyForce(inputCmd.GenerateMoveForce(predictionInstance.speed));
-                                predictionInstance.Tick(client->now, SV_TICK_DT);
-                                client->world->map.ResolveEntityTerrainCollisions(predictionInstance);
-                                predictionInstance.Draw(fntHackBold20, inputCmd.seq, 1);
+                                entity->ApplyForce(inputCmd.GenerateMoveForce(entity->speed));
+                                entity->Tick(SV_TICK_DT);
+                                client->world->map.ResolveEntityTerrainCollisions(*entity);
+                                entity->Draw(fntHackBold20, inputCmd.seq, 1);
                             }
                         }
-                        //predictionInstance.Tick(&client->controller.cmdAccum, cmdAccumDt);
+                        //entity->Tick(&client->controller.cmdAccum, cmdAccumDt);
+                        if (client->controller.lastInputSampleAt > client->now) {
+                            entity->ApplyForce(client->controller.cmdAccum.GenerateMoveForce(entity->speed));
+                            entity->Tick(client->now - client->controller.lastInputSampleAt);
+                            client->world->map.ResolveEntityTerrainCollisions(*entity);
+                            //printf("%.2f\n", client->now - client->controller.lastInputSampleAt);
+                        }
                     }
 #endif
                 }
 
-                const Color origColor = entity->color;
                 bool hover = dlb_CheckCollisionPointRec(cursorWorldPos, entity->GetRect());
                 if (hover) {
                     entity->color = ColorBrightness(entity->color, 0.2f);
@@ -344,7 +379,7 @@ int main(int argc, char *argv[])
                 }
 
                 // Draw font atlas for SDF font
-                //DrawTexture(fntHackBold32.texture, GetScreenWidth() - fntHackBold32.texture.width, 0, WHITE);
+                //DrawTexture(fntHackBold32.texture, GetRenderWidth() - fntHackBold32.texture.width, 0, WHITE);
 
             }
 
@@ -381,7 +416,7 @@ int main(int argc, char *argv[])
                 // TODO: fpsHistogram.update() which checks input and calls TogglePause?
                 fpsHistogram.paused = !fpsHistogram.paused;
             }
-            fpsHistogram.Push(frameDtSmooth, doNetTick ? GREEN : RAYWHITE);
+            fpsHistogram.Push(frameDt, doNetTick ? GREEN : RAYWHITE);
 
             hackNewCursor.x += 8;
             hackNewCursor.y += 8;
@@ -409,9 +444,11 @@ int main(int argc, char *argv[])
             #define DRAW_TEXT(label, fmt, ...) \
                 DRAW_TEXT_MEASURE((Rectangle *)0, label, fmt, __VA_ARGS__)
 
-            DRAW_TEXT("frameDt", "%.2f fps (%.2f ms) (vsync=%s)", 1.0 / frameDt, frameDt * 1000.0, IsWindowState(FLAG_VSYNC_HINT) ? "on" : "off");
+            DRAW_TEXT("frameDt", "%.2f fps (%.2f ms) (vsync=%s)", 1.0 / frameDtSmooth, frameDtSmooth * 1000.0, IsWindowState(FLAG_VSYNC_HINT) ? "on" : "off");
             DRAW_TEXT("serverTime", "%.2f (%s%.2f)", client->ServerNow(), client->clientTimeDeltaVsServer > 0 ? "+" : "", client->clientTimeDeltaVsServer);
             DRAW_TEXT("localTime", "%.2f", client->now);
+            DRAW_TEXT("window", "%d, %d", GetScreenWidth(), GetScreenHeight());
+            DRAW_TEXT("render", "%d, %d", GetRenderWidth(), GetRenderHeight());
             DRAW_TEXT("cursor", "%d, %d (world: %.f, %.f)", GetMouseX(), GetMouseY(), cursorWorldPos.x, cursorWorldPos.y);
 
             const char *clientStateStr = "unknown";
@@ -466,7 +503,9 @@ int main(int argc, char *argv[])
         }
 
         EndDrawing();
-        //yojimbo_sleep(0.001);
+        if (!IsWindowState(FLAG_VSYNC_HINT)) {
+            yojimbo_sleep(0.001);
+        }
 
         // Nobody else handled it, so user probably wants to disconnect or quit
         // TODO: Show a menu when in-game
