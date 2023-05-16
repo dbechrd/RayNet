@@ -561,3 +561,7 @@ int main(int argc, char *argv[])
 
     return err;
 }
+
+#include "../common/common.cpp"
+#include "game_server.cpp"
+#include "server_world.cpp"

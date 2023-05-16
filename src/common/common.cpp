@@ -61,6 +61,8 @@ Err InitCommon(void)
 
     rnSoundSystem.Init();
     rnTextureCatalog.Init();
+    rnSpritesheetCatalog.Init();
+    rnSpritesheetCatalog.FindOrLoad("resources/campfire.txt");
 
     return err;
 }
@@ -73,8 +75,9 @@ void FreeCommon(void)
     UnloadTexture(texLily);
     UnloadMusicStream(musAmbientOutdoors);
     UnloadMusicStream(musCave);
-    rnSoundSystem.Free();
+    rnSpritesheetCatalog.Free();
     rnTextureCatalog.Free();
+    rnSoundSystem.Free();
 }
 
 // Load font from memory buffer, fileType refers to extension: i.e. ".ttf"
@@ -261,3 +264,16 @@ Rectangle RectGrow(const Rectangle &rect, float pixels)
     grown.height += pixels * 2;
     return grown;
 }
+
+#include "audio/audio.cpp"
+#include "net/net.cpp"
+#include "ui/ui.cpp"
+#include "collision.cpp"
+#include "editor.cpp"
+#include "entity.cpp"
+#include "file_utils.cpp"
+#include "histogram.cpp"
+#include "spritesheet.cpp"
+#include "texture_catalog.cpp"
+#include "tilemap.cpp"
+#include "wang.cpp"

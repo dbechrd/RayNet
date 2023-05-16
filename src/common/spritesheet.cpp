@@ -227,9 +227,12 @@ Err ParseAnimation(TokenStream &tokenStream, Animation &animation)
             err = ParseInt(tokenStream, animation.frameStart);
         } else if (token.key == "frame_count") {
             err = ParseInt(tokenStream, animation.frameCount);
+        } else if (token.key == "frame_duration") {
+            err = ParseFloat(tokenStream, animation.frameDuration);
         } else if (token.key == "loop") {
             err = ParseBoolean(tokenStream, animation.loop);
         } else if (token.key == "}") {
+            tokenStream.Next();
             break;
         } else {
             printf("[%s:%d] Unexpected field '%s = %s' in animation object.\n",
@@ -271,15 +274,17 @@ Err ParseSpritesheet(TokenStream &tokenStream, Spritesheet &spritesheet)
             err = ParseInt(tokenStream, spritesheet.frameWidth);
         } else if (token.key == "frame_height") {
             err = ParseInt(tokenStream, spritesheet.frameHeight);
-        } else if (token.key == "frame_duration") {
-            err = ParseFloat(tokenStream, spritesheet.frameDuration);
         } else if (token.key == "[") {
             if (token.value == "animations") {
                 tokenStream.Next();
-                Animation animation{};
-                err = ParseAnimation(tokenStream, animation);
-                if (!err) {
+                while (tokenStream.Peek().key != "]") {
+                    Animation animation{};
+                    err = ParseAnimation(tokenStream, animation);
+                    if (err) break;
                     spritesheet.animations.push_back(animation);
+                }
+                if (!err) {
+                    tokenStream.Next();
                 }
             } else {
                 printf("[%s:%d] Unexpected array '%s' in spritesheet object.\n",
@@ -290,6 +295,7 @@ Err ParseSpritesheet(TokenStream &tokenStream, Spritesheet &spritesheet)
                 err = RN_BAD_FILE_READ;
             }
         } else if (token.key == "}") {
+            tokenStream.Next();
             break;
         } else {
             printf("[%s:%d] Unexpected field '%s = %s' in spritesheet object.\n",
@@ -305,7 +311,7 @@ Err ParseSpritesheet(TokenStream &tokenStream, Spritesheet &spritesheet)
     return err;
 }
 
-Err Spritesheet::LoadAsSingleRowAnimation(std::string path)
+Err Spritesheet::Load(std::string path)
 {
     Err err = RN_SUCCESS;
     printf("Loading spritesheet %s...\n", path.c_str());
@@ -315,5 +321,104 @@ Err Spritesheet::LoadAsSingleRowAnimation(std::string path)
     if (err) return err;
 
     err = ParseSpritesheet(tokenStream, *this);
+    if (!err) {
+        filename = path;
+    }
     return err;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+
+void Sprite::Draw(Vector2 pos, double now)
+{
+    const Spritesheet &spritesheet = rnSpritesheetCatalog.GetSpritesheet(spritesheetId);
+    const Texture &texture = rnTextureCatalog.GetTexture(spritesheet.textureId);
+    const Animation &animation = spritesheet.animations[animationId];
+    //animation.
+
+    if (now - frameStartedAt >= animation.frameDuration && (frame < animation.frameCount || animation.loop)) {
+        frame++;
+        if (frame >= animation.frameCount) {
+            frame = 0;
+        }
+        frameStartedAt = now;
+    }
+
+    int framesPerRow = texture.width / spritesheet.frameWidth;
+    int absoluteFrame = animation.frameStart + frame;
+    int frameX = absoluteFrame % framesPerRow;
+    int frameY = absoluteFrame / framesPerRow;
+    float x = (float)frameX * spritesheet.frameWidth;
+    float y = (float)frameY * spritesheet.frameHeight;
+    Rectangle frameRect{
+        x,
+        y,
+        spritesheet.frameWidth,
+        spritesheet.frameHeight
+    };
+    Vector2 dest{
+        pos.x - spritesheet.frameWidth / 2,
+        pos.y
+    };
+    DrawTextureRec(texture, frameRect, dest, WHITE);
+}
+
+////////////////////////////////////////////////////////////////////////////////
+
+SpritesheetCatalog rnSpritesheetCatalog;
+
+void SpritesheetCatalog::Init(void)
+{
+    size_t spritesheetId = entries.size();
+    Spritesheet spritesheet{};
+    spritesheet.textureId = rnTextureCatalog.FindOrLoad("PLACEHOLDER");
+    spritesheet.version = 1;
+    spritesheet.frameWidth = 32;
+    spritesheet.frameHeight = 32;
+    Animation animation{};
+    animation.name = "PLACEHOLDER";
+    animation.frameStart = 0;
+    animation.frameCount = 1;
+    animation.frameDuration = 1;
+    animation.loop = true;
+    spritesheet.animations.push_back(animation);
+    entries.push_back(spritesheet);
+    entriesByPath["PLACEHOLDER"] = spritesheetId;
+}
+
+void SpritesheetCatalog::Free(void)
+{
+    //for (auto &entry: entries) {
+    //    nothin to do here
+    //}
+}
+
+SpritesheetId SpritesheetCatalog::FindOrLoad(std::string path)
+{
+    SpritesheetId id = 0;
+    const auto &entry = entriesByPath.find(path);
+    if (entry != entriesByPath.end()) {
+        id = entry->second;
+    } else {
+        Spritesheet spritesheet{};
+        if (spritesheet.Load(path) == RN_SUCCESS) {
+            id = entries.size();
+            entries.emplace_back(spritesheet);
+            entriesByPath[path] = id;
+        }
+    }
+    return id;
+}
+
+const Spritesheet &SpritesheetCatalog::GetSpritesheet(SpritesheetId id)
+{
+    if (id >= 0 && id < entries.size()) {
+        return entries[id];
+    }
+    return entries[0];
+}
+
+void SpritesheetCatalog::Unload(SpritesheetId id)
+{
+    // TODO: unload it eventually (ref count?)
 }

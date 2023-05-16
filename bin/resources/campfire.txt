@@ -3,13 +3,20 @@ spritesheet {
     texture_path    "resources/campfire.png"
     frame_width     256
     frame_height    256
-    frame_duration  0.1
     animations [
         animation {
-            name        "campfire"
-            frame_start 0
-            frame_count 9
-            loop        true
+            name            "campfire_idle"
+            frame_start     0
+            frame_count     1
+            frame_duration  0.1
+            loop            false
+        }
+        animation {
+            name            "campfire_lit"
+            frame_start     1
+            frame_count     8
+            frame_duration  0.1
+            loop            true
         }
     ]
 }

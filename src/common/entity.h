@@ -68,7 +68,7 @@ struct Entity {
     // TODO(dlb): Could be a pointer, or could be a type + index into another pool
     union {
         EntityPlayer player;
-        EntityBot bot;
+        EntityBot bot{};
     } data;
 
     uint32_t latestDialog;

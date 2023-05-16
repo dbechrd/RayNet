@@ -56,10 +56,6 @@ int main(int argc, char *argv[])
     );
 #endif
 
-    // TODO: PUT THIS SOMEWHERE LOGICAL
-    Spritesheet foo{};
-    foo.LoadAsSingleRowAnimation("resources/campfire.txt");
-
     //--------------------
     // Client
     GameClient *client = new GameClient;
@@ -325,8 +321,6 @@ int main(int argc, char *argv[])
             uiStyleMenu.alignH = TextAlign_Center;
             UI uiMenu{ uiPosition, uiStyleMenu };
 
-            BeginShaderMode(shdSdfText);    // Activate SDF font shader
-
             const char *connectingStrs[] = {
                 "Connecting   ",
                 "Connecting.  ",
@@ -348,9 +342,23 @@ int main(int argc, char *argv[])
             }
 
             if (client->yj_client->IsConnected()) {
+                BeginShaderMode(shdSdfText);
                 uiMenu.Text("Loading...");
+                EndShaderMode();
             } else if (client->yj_client->IsConnecting()) {
+                BeginShaderMode(shdSdfText);
                 uiMenu.Text(connectingStrs[connectingDotIdx]);
+                EndShaderMode();
+                uiMenu.Newline();
+
+                static Sprite campfire{};
+                if (!campfire.animationId) {
+                    campfire.spritesheetId = rnSpritesheetCatalog.FindOrLoad("resources/campfire.txt");
+                    campfire.animationId = 1;
+                }
+                Vector2 campfirePos = uiMenu.CursorScreen();
+                campfirePos.x -= 40;
+                campfire.Draw(campfirePos, client->now);
             } else {
                 const Vector2 screenHalfSize{ GetScreenWidth()/2.0f, GetScreenHeight()/2.0f };
                 const Vector2 screenCenter{ screenHalfSize.x, screenHalfSize.y };
@@ -365,6 +373,8 @@ int main(int argc, char *argv[])
                     //DrawRectangleLinesEx(menuBgRect, 20, BLACK);
                 }
 
+                BeginShaderMode(shdSdfText);
+
                 UIState connectButton = uiMenu.Button("Play");
                 if (connectButton.clicked) {
                     //rnSoundSystem.Play(RN_Sound_Lily_Introduction);
@@ -378,12 +388,12 @@ int main(int argc, char *argv[])
                     quit = true;
                 }
 
+                EndShaderMode();
+
                 // Draw font atlas for SDF font
                 //DrawTexture(fntHackBold32.texture, GetRenderWidth() - fntHackBold32.texture.width, 0, WHITE);
-
             }
 
-            EndShaderMode();
             io.PopScope();
         }
 
@@ -545,3 +555,8 @@ int main(int argc, char *argv[])
 
     return err;
 }
+
+#include "../common/common.cpp"
+#include "client_world.cpp"
+#include "game_client.cpp"
+#include "todo.cpp"

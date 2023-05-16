@@ -28,8 +28,6 @@ void TextureCatalog::Free(void)
         UnloadImage(entry.image);
         UnloadTexture(entry.texture);
     }
-    entries.clear();
-    entriesByPath.clear();
 }
 
 TextureId TextureCatalog::FindOrLoad(std::string path)

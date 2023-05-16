@@ -15,22 +15,6 @@
     <ClCompile Include="include\tinyfiledialogs.c" />
     <ClCompile Include="include\tracy\TracyClient.cpp" />
     <ClCompile Include="src\client\client.cpp" />
-    <ClCompile Include="src\client\client_world.cpp" />
-    <ClCompile Include="src\client\game_client.cpp" />
-    <ClCompile Include="src\client\todo.cpp" />
-    <ClCompile Include="src\common\audio\audio.cpp" />
-    <ClCompile Include="src\common\collision.cpp" />
-    <ClCompile Include="src\common\common.cpp" />
-    <ClCompile Include="src\common\editor.cpp" />
-    <ClCompile Include="src\common\entity.cpp" />
-    <ClCompile Include="src\common\file_utils.cpp" />
-    <ClCompile Include="src\common\histogram.cpp" />
-    <ClCompile Include="src\common\net\net.cpp" />
-    <ClCompile Include="src\common\spritesheet.cpp" />
-    <ClCompile Include="src\common\texture_catalog.cpp" />
-    <ClCompile Include="src\common\tilemap.cpp" />
-    <ClCompile Include="src\common\ui\ui.cpp" />
-    <ClCompile Include="src\common\wang.cpp" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="res\client.ico" />
