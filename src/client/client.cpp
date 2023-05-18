@@ -38,23 +38,24 @@ int main(int argc, char *argv[])
     SetWindowIcon(icon);
     UnloadImage(icon);
 
-    Vector2 screenSize = { (float)GetRenderWidth(), (float)GetRenderHeight() };
-
-#if CL_DBG_ONE_SCREEN
-    const int monitorWidth = GetMonitorWidth(0);
-    const int monitorHeight = GetMonitorHeight(0);
-    SetWindowPosition(
-        monitorWidth / 2, // - (int)screenSize.x / 2,
-        monitorHeight / 2 - (int)screenSize.y / 2
-    );
-#elif CL_DBG_TWO_SCREEN
-    const int monitorWidth = GetMonitorWidth(0);
-    const int monitorHeight = GetMonitorHeight(0);
-    SetWindowPosition(
-        monitorWidth / 2 - (int)screenSize.x / 2,
-        monitorHeight / 2 - (int)screenSize.y / 2
-    );
-#endif
+    {
+        Vector2 screenSize = { (float)GetRenderWidth(), (float)GetRenderHeight() };
+        #if CL_DBG_ONE_SCREEN
+            const int monitorWidth = GetMonitorWidth(0);
+            const int monitorHeight = GetMonitorHeight(0);
+            SetWindowPosition(
+                monitorWidth / 2, // - (int)screenSize.x / 2,
+                monitorHeight / 2 - (int)screenSize.y / 2
+            );
+        #elif CL_DBG_TWO_SCREEN
+            const int monitorWidth = GetMonitorWidth(0);
+            const int monitorHeight = GetMonitorHeight(0);
+            SetWindowPosition(
+                monitorWidth / 2 - (int)screenSize.x / 2,
+                monitorHeight / 2 - (int)screenSize.y / 2
+            );
+        #endif
+    }
 
     //--------------------
     // Client
@@ -76,6 +77,13 @@ int main(int argc, char *argv[])
     while (!quit) {
         client->now = GetTime();
         frameDt = MIN(client->now - frameStart, SV_TICK_DT);  // arbitrary limit for now
+
+        const int refreshRate = GetMonitorRefreshRate(GetCurrentMonitor());
+        const float refreshDt = 1.0f / refreshRate;
+        if (IsWindowState(FLAG_VSYNC_HINT) && fabsf(frameDt - refreshDt) < 0.005f) {
+            frameDt = refreshDt;
+        }
+
         frameDtSmooth = LERP(frameDtSmooth, frameDt, 0.01);
         frameStart = client->now;
 
@@ -185,8 +193,6 @@ int main(int argc, char *argv[])
         BeginDrawing();
         ClearBackground(GRAYISH_BLUE);
 
-        uint32_t hoveredEntityId = 0;
-
         localPlayer = client->LocalPlayer();
         if (localPlayer) {
             if (client->LocalPlayerEntityId() != 1) {
@@ -201,15 +207,19 @@ int main(int argc, char *argv[])
                 camera.offset = { (float)GetRenderWidth()/2, (float)GetRenderHeight()/2 };
 
                 if (!IsKeyDown(KEY_SPACE)) {
+                    Entity *target = localPlayer;
+#if 0
+                    target = client->world->GetEntity(9);
+#endif
 #if CL_CAMERA_LERP
                     // https://www.gamedeveloper.com/programming/improved-lerp-smoothing-
                     const float halfLife = 8.0f;
                     float alpha = 1.0f - exp2f(-halfLife * frameDt);
-                    camera.target.x = LERP(camera.target.x, localPlayer->position.x, alpha);
-                    camera.target.y = LERP(camera.target.y, localPlayer->position.y, alpha);
+                    camera.target.x = LERP(camera.target.x, target->position.x, alpha);
+                    camera.target.y = LERP(camera.target.y, target->position.y, alpha);
 #else
-                    camera.target.x = localPlayer->position.x;
-                    camera.target.y = localPlayer->position.y;
+                    camera.target.x = target->position.x;
+                    camera.target.y = target->position.y;
 #endif
                 }
 
@@ -240,8 +250,6 @@ int main(int argc, char *argv[])
                     continue;
                 }
 
-                const Color origColor = entity->color;
-
                 if (CL_DBG_SNAPSHOT_SHADOWS) {
                     EntityGhost &ghost = client->world->ghosts[entityId];
                     Entity ghostInstance = *entity;
@@ -250,57 +258,48 @@ int main(int argc, char *argv[])
                             continue;
                         }
                         ghostInstance.ApplyStateInterpolated(ghost.snapshots[i], ghost.snapshots[i], 0.0);
-                        ghostInstance.color = Fade(GRAY, 0.5);
 
                         const float scalePer = 1.0f / (CL_SNAPSHOT_COUNT + 1);
-                        ghostInstance.Draw(fntHackBold20, i, scalePer + i * scalePer);
+                        Rectangle ghostRect = ghostInstance.GetRect();
+                        ghostRect = RectShrink(ghostRect, scalePer);
+                        DrawRectangleRec(ghostRect, Fade(RED, 0.2f));
                     }
 
-#if CL_CLIENT_SIDE_PREDICT
                     // NOTE(dlb): These aren't actually snapshot shadows, they're client-side prediction shadows
                     if (entityId == client->LocalPlayerEntityId()) {
+#if CL_CLIENT_SIDE_PREDICT
                         uint32_t lastProcessedInputCmd = 0;
                         const EntitySnapshot &latestSnapshot = ghost.snapshots.newest();
                         if (latestSnapshot.serverTime) {
-                            entity->ApplyStateInterpolated(latestSnapshot, latestSnapshot, 0);
+                            ghostInstance.ApplyStateInterpolated(latestSnapshot, latestSnapshot, 0);
                             lastProcessedInputCmd = latestSnapshot.lastProcessedInputCmd;
                         }
-
-                        //predictionInstance.color = Fade(SKYBLUE, 0.5);
-                        entity->color = Fade(DARKGRAY, 0.5);
 
                         //const double cmdAccumDt = client->now - client->controller.lastInputSampleAt;
                         for (size_t cmdIndex = 0; cmdIndex < client->controller.cmdQueue.size(); cmdIndex++) {
                             InputCmd &inputCmd = client->controller.cmdQueue[cmdIndex];
                             if (inputCmd.seq > lastProcessedInputCmd) {
-                                entity->ApplyForce(inputCmd.GenerateMoveForce(entity->speed));
-                                entity->Tick(SV_TICK_DT);
-                                client->world->map.ResolveEntityTerrainCollisions(*entity);
-                                entity->Draw(fntHackBold20, inputCmd.seq, 1);
+                                ghostInstance.ApplyForce(inputCmd.GenerateMoveForce(ghostInstance.speed));
+                                ghostInstance.Tick(SV_TICK_DT);
+                                client->world->map.ResolveEntityTerrainCollisions(ghostInstance);
+                                DrawRectangleRec(ghostInstance.GetRect(), Fade(GREEN, 0.2f));
                             }
                         }
-                        //entity->Tick(&client->controller.cmdAccum, cmdAccumDt);
-                        if (client->controller.lastInputSampleAt > client->now) {
-                            entity->ApplyForce(client->controller.cmdAccum.GenerateMoveForce(entity->speed));
-                            entity->Tick(client->now - client->controller.lastInputSampleAt);
-                            client->world->map.ResolveEntityTerrainCollisions(*entity);
-                            //printf("%.2f\n", client->now - client->controller.lastInputSampleAt);
-                        }
-                    }
 #endif
+#if 0
+                        const double cmdAccumDt = client->now - client->controller.lastInputSampleAt;
+                        if (cmdAccumDt > 0) {
+                            ghostInstance.ApplyForce(client->controller.cmdAccum.GenerateMoveForce(ghostInstance.speed));
+                            ghostInstance.Tick(cmdAccumDt);
+                            client->world->map.ResolveEntityTerrainCollisions(ghostInstance);
+                            DrawRectangleRec(ghostInstance.GetRect(), Fade(BLUE, 0.2f));
+                            printf("%.3f\n", cmdAccumDt);
+                        }
+#endif
+                    }
                 }
 
-                bool hover = dlb_CheckCollisionPointRec(cursorWorldPos, entity->GetRect());
-                if (hover) {
-                    entity->color = ColorBrightness(entity->color, 0.2f);
-                    bool down = IsMouseButtonPressed(MOUSE_BUTTON_LEFT);
-                    if (down) {
-                        client->SendEntityInteract(entityId);
-                    }
-                    hoveredEntityId = entityId;
-                }
-                entity->Draw(fntHackBold20, entityId, 1);
-                entity->color = origColor;
+                entity->Draw(client->now);
             }
 
             //--------------------
@@ -312,20 +311,28 @@ int main(int argc, char *argv[])
             SetMasterVolume(1);
 
             io.PushScope(IO::IO_EditorUI);
-            Vector2 uiPosition{ screenSize.x / 2, screenSize.y / 2 - 50 };
+
             UIStyle uiStyleMenu {};
+            uiStyleMenu.margin = {};
             uiStyleMenu.pad = { 16, 4 };
             uiStyleMenu.bgColor = BLANK;
             uiStyleMenu.fgColor = RAYWHITE;
             uiStyleMenu.font = &fntHackBold32;
             uiStyleMenu.alignH = TextAlign_Center;
+
+            Vector2 uiPosition{ floorf(GetRenderWidth() / 2.0f), floorf(GetRenderHeight() / 2.0f) };
+            if (client->yj_client->IsDisconnected()) {
+                uiPosition.y -= 50;
+            } else if (client->yj_client->IsConnecting()) {
+                uiPosition.y -= 150;
+            }
             UI uiMenu{ uiPosition, uiStyleMenu };
 
             const char *connectingStrs[] = {
-                "Connecting   ",
-                "Connecting.  ",
-                "Connecting.. ",
-                "Connecting..."
+                "  Connecting   ",
+                "  Connecting.  ",
+                "  Connecting.. ",
+                "  Connecting..."
             };
             static int connectingDotIdx = 0;
             static double connectingDotIdxLastUpdatedAt = 0;
@@ -342,41 +349,38 @@ int main(int argc, char *argv[])
             }
 
             if (client->yj_client->IsConnected()) {
-                BeginShaderMode(shdSdfText);
                 uiMenu.Text("Loading...");
-                EndShaderMode();
             } else if (client->yj_client->IsConnecting()) {
-                BeginShaderMode(shdSdfText);
                 uiMenu.Text(connectingStrs[connectingDotIdx]);
-                EndShaderMode();
                 uiMenu.Newline();
 
                 static Sprite campfire{};
                 if (!campfire.animationId) {
                     campfire.spritesheetId = rnSpritesheetCatalog.FindOrLoad("resources/campfire.txt");
-                    campfire.animationId = 1;
+                    campfire.animationId = 0;
                 }
-                Vector2 campfirePos = uiMenu.CursorScreen();
-                campfirePos.x -= 40;
-                campfire.Draw(campfirePos, client->now);
+
+                Vector2 campfireSize = campfire.GetSize();
+                Vector2 campfirePos = Vector2Subtract(uiMenu.CursorScreen(), { campfireSize.x / 2, 0 });
+                campfire.Draw(campfirePos, 1.0f, client->now);
             } else {
-                const Vector2 screenHalfSize{ GetScreenWidth()/2.0f, GetScreenHeight()/2.0f };
+#if 0
+                // Draw weird squares animation
+                const Vector2 screenHalfSize{ GetRenderWidth()/2.0f, GetRenderHeight()/2.0f };
                 const Vector2 screenCenter{ screenHalfSize.x, screenHalfSize.y };
                 for (float scale = 0.0f; scale < 1.1f; scale += 0.1f) {
                     const float modScale = fmodf(texMenuBgScale + scale, 1);
                     Rectangle menuBgRect{
                         screenCenter.x - screenHalfSize.x * modScale,
                         screenCenter.y - screenHalfSize.y * modScale,
-                        screenSize.x * modScale,
-                        screenSize.y * modScale
+                        GetRenderWidth() * modScale,
+                        GetRenderHeight() * modScale
                     };
-                    //DrawRectangleLinesEx(menuBgRect, 20, BLACK);
+                    DrawRectangleLinesEx(menuBgRect, 20, BLACK);
                 }
-
-                BeginShaderMode(shdSdfText);
-
+#endif
                 UIState connectButton = uiMenu.Button("Play");
-                if (connectButton.clicked) {
+                if (connectButton.released) {
                     //rnSoundSystem.Play(RN_Sound_Lily_Introduction);
                     client->TryConnect();
                 }
@@ -384,11 +388,9 @@ int main(int argc, char *argv[])
                 uiMenu.Button("Options");
                 uiMenu.Newline();
                 UIState quitButton = uiMenu.Button("Quit");
-                if (quitButton.clicked) {
+                if (quitButton.released) {
                     quit = true;
                 }
-
-                EndShaderMode();
 
                 // Draw font atlas for SDF font
                 //DrawTexture(fntHackBold32.texture, GetRenderWidth() - fntHackBold32.texture.width, 0, WHITE);
@@ -398,8 +400,8 @@ int main(int argc, char *argv[])
         }
 
         // HP bar
-        if (hoveredEntityId) {
-            Entity *entity = client->world->GetEntity(hoveredEntityId);
+        if (client->hoveredEntityId) {
+            Entity *entity = client->world->GetEntity(client->hoveredEntityId);
             assert(entity); // huh?
             if (entity) {
                 entity->DrawHoverInfo();

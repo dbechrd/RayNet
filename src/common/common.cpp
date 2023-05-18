@@ -190,6 +190,7 @@ void RandTests(void)
 
 void DrawTextShadowEx(Font font, const char *text, Vector2 pos, Color color)
 {
+    BeginShaderMode(shdSdfText);
 #if 1
     Vector2 shadowPos = Vector2Add(pos, { 1, 1 });
     if (font.baseSize > 32) {
@@ -205,6 +206,7 @@ void DrawTextShadowEx(Font font, const char *text, Vector2 pos, Color color)
 #else
     DrawTextEx(font, text, pos, font.baseSize, 1, color);
 #endif
+    EndShaderMode();
 }
 
 Rectangle GetScreenRectWorld(Camera2D &camera)
@@ -273,6 +275,7 @@ Rectangle RectGrow(const Rectangle &rect, float pixels)
 #include "entity.cpp"
 #include "file_utils.cpp"
 #include "histogram.cpp"
+#include "sprite.cpp"
 #include "spritesheet.cpp"
 #include "texture_catalog.cpp"
 #include "tilemap.cpp"

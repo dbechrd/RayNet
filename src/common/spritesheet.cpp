@@ -329,42 +329,6 @@ Err Spritesheet::Load(std::string path)
 
 ////////////////////////////////////////////////////////////////////////////////
 
-void Sprite::Draw(Vector2 pos, double now)
-{
-    const Spritesheet &spritesheet = rnSpritesheetCatalog.GetSpritesheet(spritesheetId);
-    const Texture &texture = rnTextureCatalog.GetTexture(spritesheet.textureId);
-    const Animation &animation = spritesheet.animations[animationId];
-    //animation.
-
-    if (now - frameStartedAt >= animation.frameDuration && (frame < animation.frameCount || animation.loop)) {
-        frame++;
-        if (frame >= animation.frameCount) {
-            frame = 0;
-        }
-        frameStartedAt = now;
-    }
-
-    int framesPerRow = texture.width / spritesheet.frameWidth;
-    int absoluteFrame = animation.frameStart + frame;
-    int frameX = absoluteFrame % framesPerRow;
-    int frameY = absoluteFrame / framesPerRow;
-    float x = (float)frameX * spritesheet.frameWidth;
-    float y = (float)frameY * spritesheet.frameHeight;
-    Rectangle frameRect{
-        x,
-        y,
-        spritesheet.frameWidth,
-        spritesheet.frameHeight
-    };
-    Vector2 dest{
-        pos.x - spritesheet.frameWidth / 2,
-        pos.y
-    };
-    DrawTextureRec(texture, frameRect, dest, WHITE);
-}
-
-////////////////////////////////////////////////////////////////////////////////
-
 SpritesheetCatalog rnSpritesheetCatalog;
 
 void SpritesheetCatalog::Init(void)

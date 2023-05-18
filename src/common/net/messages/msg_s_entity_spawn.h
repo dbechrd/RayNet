@@ -11,12 +11,6 @@ struct Msg_S_EntitySpawn : public yojimbo::Message
         serialize_uint32(stream, entitySpawnEvent.id);
 
         serialize_uint32(stream, (uint32_t&)entitySpawnEvent.entity.type);
-        serialize_bits(stream, entitySpawnEvent.entity.color.r, 8);
-        serialize_bits(stream, entitySpawnEvent.entity.color.g, 8);
-        serialize_bits(stream, entitySpawnEvent.entity.color.b, 8);
-        serialize_bits(stream, entitySpawnEvent.entity.color.a, 8);
-        serialize_float(stream, entitySpawnEvent.entity.size.x);
-        serialize_float(stream, entitySpawnEvent.entity.size.y);
         serialize_float(stream, entitySpawnEvent.entity.radius);
         serialize_float(stream, entitySpawnEvent.entity.drag);
         serialize_float(stream, entitySpawnEvent.entity.speed);

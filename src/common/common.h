@@ -63,15 +63,15 @@
 //#define CL_PORT                 30000
 #define CL_BANDWIDTH_SMOOTHING_FACTOR   0.95f
 #define CL_SAMPLE_INPUT_DT              SV_TICK_DT //(1.0/120.0)
-#define CL_SEND_INPUT_COUNT             8
+#define CL_SEND_INPUT_COUNT             32
 #define CL_SEND_INPUT_DT                SV_TICK_DT //(1.0/120.0)
 #define CL_SNAPSHOT_COUNT               16
 #define CL_RENDER_DISTANCE              1
+#define CL_CAMERA_LERP                  0
 #define CL_CLIENT_SIDE_PREDICT          1
 #define CL_MAX_DIALOGS                  32
 #define CL_DIALOG_DURATION_MIN          0.5
 #define CL_DIALOG_DURATION_PER_CHAR     0.1
-#define CL_CAMERA_LERP                  1
 
 #define CL_DBG_ONE_SCREEN      0
 #define CL_DBG_TWO_SCREEN      1

@@ -8,8 +8,6 @@ void Entity::Serialize(uint32_t entityId, EntitySpawnEvent &entitySpawnEvent, do
     entitySpawnEvent.id = entityId;
 
     SPAWN_PROP(type);
-    SPAWN_PROP(color);
-    SPAWN_PROP(size);
     SPAWN_PROP(radius);
     SPAWN_PROP(drag);
     SPAWN_PROP(speed);
@@ -59,8 +57,6 @@ void Entity::Serialize(uint32_t entityId, EntitySnapshot &entitySnapshot, double
 void Entity::ApplySpawnEvent(const EntitySpawnEvent &entitySpawnEvent)
 {
     APPLY_PROP(type);
-    APPLY_PROP(color);
-    APPLY_PROP(size);
     APPLY_PROP(radius);
     APPLY_PROP(drag);
     APPLY_PROP(speed);
@@ -143,8 +139,19 @@ void Entity::Tick(double dt)
 
 Rectangle Entity::GetRect(void)
 {
-    Rectangle rect{ position.x - size.x / 2, position.y - size.y, size.x, size.y };
+    const Vector2 size = sprite.GetSize();
+    const Rectangle rect{ position.x - size.x / 2, position.y - size.y, size.x, size.y };
     return rect;
+}
+
+Vector2 Entity::TopCenter(void)
+{
+    const Rectangle rect = GetRect();
+    const Vector2 topCenter{
+        rect.x + rect.width / 2,
+        rect.y
+    };
+    return topCenter;
 }
 
 EntityLife *Entity::GetLife(void)
@@ -211,84 +218,7 @@ void Entity::DrawHoverInfo(void)
 }
 
 // TODO: Refactor out into drawrectangle or some shit
-void Entity::Draw(const Font &font, int clientIdx, float scale) {
-    if (!color.a) {
-        return;
-    }
-
-    // Scale
-    float sx = size.x * scale;
-    float sy = size.y * scale;
-
-    // Position (after scaling)
-    float x = position.x;
-    float y = position.y - (size.y - sy) / 2;
-
-    if (type == Entity_Bot) {
-        DrawTextureV(texLily, { position.x - texLily.width / 2, position.y - texLily.height }, WHITE);
-    } else {
-#if 0
-#if 1
-    DrawRectanglePro(
-        { x, y, sx, sy },
-        { sx / 2, sy },
-        0,
-        color
-    );
-#else
-    // Windows Logo
-    DrawRectanglePro(
-        { x, y, sx, sy },
-        { sx / 2, sy },
-        0,
-        RED
-    );
-    DrawRectangleLinesEx({ x - sx / 2, y - sy, sx, sy }, 10, BLACK);
-
-    DrawRectanglePro(
-        { x + sx, y, sx, sy },
-        { sx / 2, sy },
-        0,
-        GREEN
-    );
-    DrawRectangleLinesEx({ x + sx - sx / 2, y - sy, sx, sy }, 10, BLACK);
-
-    DrawRectanglePro(
-        { x, y + sy, sx, sy },
-        { sx / 2, sy },
-        0,
-        BLUE
-    );
-    DrawRectangleLinesEx({ x - sx / 2, y + sy - sy, sx, sy }, 10, BLACK);
-
-    DrawRectanglePro(
-        { x + sx, y + sy, sx, sy },
-        { sx / 2, sy },
-        0,
-        YELLOW
-    );
-    DrawRectangleLinesEx({ x + sx - sx / 2, y + sy - sy, sx, sy }, 10, BLACK);
-#endif
-
-#else
-    DrawRectangleRounded(
-        { x - sx / 2, y - sy, sx, sy },
-        0.5f,
-        4,
-        color
-    );
-#endif
-    }
-
-#if CL_DBG_SNAPSHOT_IDS
-    const char *str = TextFormat("Bob #%d", clientIdx);
-    Vector2 strSize = MeasureTextEx(font, str, (float)font.baseSize, 1.0f);
-    DrawTextShadowEx(font, str,
-        {
-            position.x - strSize.x / 2,
-            position.y - sy - strSize.y
-        },
-        (float)font.baseSize, RAYWHITE
-    );
-#endif
+void Entity::Draw(double now) {
+    const Rectangle rect = GetRect();
+    sprite.Draw({ rect.x, rect.y }, 1.0f, now);
 }

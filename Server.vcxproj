@@ -43,6 +43,7 @@
     <ClInclude Include="src\common\net\messages\msg_s_tile_chunk.h" />
     <ClInclude Include="src\common\net\net.h" />
     <ClInclude Include="src\common\ring_buffer.h" />
+    <ClInclude Include="src\common\sprite.h" />
     <ClInclude Include="src\common\spritesheet.h" />
     <ClInclude Include="src\common\texture_catalog.h" />
     <ClInclude Include="src\common\tilemap.h" />

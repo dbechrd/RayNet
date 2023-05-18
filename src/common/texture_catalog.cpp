@@ -5,7 +5,7 @@ TextureCatalog rnTextureCatalog;
 void TextureCatalog::Init(void)
 {
     // If this fails, we're doomed. There's probably no graphics device or something wack af.
-    Image missingImg = GenImageChecked(32, 32, 8, 8, MAGENTA, PURPLE);
+    Image missingImg = GenImageChecked(32, 32, 4, 4, MAGENTA, WHITE);
     if (!missingImg.width) {
         printf("failed to generate placeholder image\n");
         exit(EXIT_FAILURE);

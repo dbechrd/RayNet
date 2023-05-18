@@ -92,6 +92,7 @@ void ClientWorld::RemoveExpiredDialogs(GameClient &gameClient)
 
 void ClientWorld::UpdateEntities(GameClient &client)
 {
+    client.hoveredEntityId = 0;
     for (uint32_t entityId = 0; entityId < SV_MAX_ENTITIES; entityId++) {
         Entity &entity = entities[entityId];
         if (entity.type == Entity_None) {
@@ -112,7 +113,6 @@ void ClientWorld::UpdateEntities(GameClient &client)
 
 #if CL_CLIENT_SIDE_PREDICT
             // Apply unacked input
-            const double cmdAccumDt = client.now - client.controller.lastInputSampleAt;
             for (size_t cmdIndex = 0; cmdIndex < client.controller.cmdQueue.size(); cmdIndex++) {
                 InputCmd &inputCmd = client.controller.cmdQueue[cmdIndex];
                 if (inputCmd.seq > lastProcessedInputCmd) {
@@ -121,13 +121,19 @@ void ClientWorld::UpdateEntities(GameClient &client)
                     map.ResolveEntityTerrainCollisions(entity);
                 }
             }
-            //entity.Tick(&client.controller.cmdAccum, cmdAccumDt);
+
+            const double cmdAccumDt = client.now - client.controller.lastInputSampleAt;
+            if (cmdAccumDt > 0) {
+                entity.ApplyForce(client.controller.cmdAccum.GenerateMoveForce(entity.speed));
+                entity.Tick(cmdAccumDt);
+                map.ResolveEntityTerrainCollisions(entity);
+            }
 #endif
 
             // Check for ignored input packets
             uint32_t oldestInput = client.controller.cmdQueue.oldest().seq;
             if (oldestInput > lastProcessedInputCmd + 1) {
-                //printf(" localPlayer: %d inputs dropped\n", oldestInput - lastProcessedInputCmd - 1);
+                printf(" localPlayer: %d inputs dropped\n", oldestInput - lastProcessedInputCmd - 1);
             }
         } else {
             // TODO(dlb): Find snapshots nearest to (GetTime() - clientTimeDeltaVsServer)
@@ -161,6 +167,16 @@ void ClientWorld::UpdateEntities(GameClient &client)
             }
 
             entity.ApplyStateInterpolated(*snapshotA, *snapshotB, alpha);
+
+            const Vector2 cursorWorldPos = GetScreenToWorld2D(GetMousePosition(), camera2d);
+            bool hover = dlb_CheckCollisionPointRec(cursorWorldPos, entity.GetRect());
+            if (hover) {
+                bool down = IsMouseButtonPressed(MOUSE_BUTTON_LEFT);
+                if (down) {
+                    client.SendEntityInteract(entityId);
+                }
+                client.hoveredEntityId = entityId;
+            }
         }
     }
 }
@@ -199,11 +215,8 @@ void ClientWorld::DrawDialogs(void)
         Dialog &dialog = dialogs[i];
         Entity &entity = entities[dialog.entityId];
         if (entity.type && !entity.despawnedAt) {
-            Vector2 entityTopCenter{
-                entity.position.x,
-                entity.position.y - entity.size.y
-            };
-            DrawDialog(dialog, entityTopCenter);
+            const Vector2 topCenter = entity.TopCenter();
+            DrawDialog(dialog, topCenter);
         }
     }
 }

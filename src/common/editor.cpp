@@ -241,7 +241,7 @@ UIState Editor::DrawUI_ActionBar(Vector2 position, Tilemap &map, double now)
 
     uiActionBar.Text(TextFormat("v%d", map.version));
     UIState mapPath = uiActionBar.Text(GetFileName(map.filename.c_str()), WHITE);
-    if (mapPath.clicked) {
+    if (mapPath.released) {
         system("explorer maps");
     }
     uiActionBar.Newline();
@@ -251,7 +251,7 @@ UIState Editor::DrawUI_ActionBar(Vector2 position, Tilemap &map, double now)
     static std::string saveAsRequest;
 
     UIState openButton = uiActionBar.Button("Open");
-    if (openButton.clicked) {
+    if (openButton.released) {
         std::string filename = map.filename;
         std::thread openFileThread([filename, mapFileFilter]{
             const char *openRequestBuf = tinyfd_openFileDialog(
@@ -279,7 +279,7 @@ UIState Editor::DrawUI_ActionBar(Vector2 position, Tilemap &map, double now)
     }
 
     UIState saveButton = uiActionBar.Button("Save");
-    if (saveButton.clicked) {
+    if (saveButton.released) {
         Err err = map.Save(map.filename);
         if (err) {
             std::string filename = map.filename;
@@ -292,7 +292,7 @@ UIState Editor::DrawUI_ActionBar(Vector2 position, Tilemap &map, double now)
     }
 
     UIState saveAsButton = uiActionBar.Button("Save As");
-    if (saveAsButton.clicked) {
+    if (saveAsButton.released) {
         std::string filename = map.filename;
         std::thread saveAsThread([filename, mapFileFilter]{
             const char *saveAsRequestBuf = tinyfd_saveFileDialog(
@@ -318,7 +318,7 @@ UIState Editor::DrawUI_ActionBar(Vector2 position, Tilemap &map, double now)
     }
 
     UIState reloadButton = uiActionBar.Button("Reload");
-    if (reloadButton.clicked) {
+    if (reloadButton.released) {
         Err err = map.Load(map.filename, now);
         if (err) {
             std::string filename = map.filename;
@@ -341,7 +341,7 @@ UIState Editor::DrawUI_ActionBar(Vector2 position, Tilemap &map, double now)
     uiActionBar.Space({ 16, 0 });
 
     UIState showCollidersButton = uiActionBar.Button("Show Colliders", state.showColliders ? RED : GRAY);
-    if (showCollidersButton.clicked) {
+    if (showCollidersButton.released) {
         state.showColliders = !state.showColliders;
     }
 
@@ -374,7 +374,7 @@ void Editor::DrawUI_TileActions(UI &uiActionBar, Tilemap &map, double now)
     const char *mapFileFilter[1] = { "*.png" };
     static const char *openRequest = 0;
 
-    if (uiActionBar.Button("Change tileset", ColorBrightness(ORANGE, -0.2f)).clicked) {
+    if (uiActionBar.Button("Change tileset", ColorBrightness(ORANGE, -0.2f)).released) {
         std::string filename = rnTextureCatalog.GetEntry(map.textureId).path;
         std::thread openFileThread([filename, mapFileFilter]{
             openRequest = tinyfd_openFileDialog(
@@ -403,7 +403,7 @@ void Editor::DrawUI_TileActions(UI &uiActionBar, Tilemap &map, double now)
 
     uiActionBar.Text("Flags:", BLACK);
     UIState editCollisionButton = uiActionBar.Button("Collide", state.tiles.editCollision ? RED : GRAY);
-    if (editCollisionButton.clicked) {
+    if (editCollisionButton.released) {
         state.tiles.editCollision = !state.tiles.editCollision;
     }
 }

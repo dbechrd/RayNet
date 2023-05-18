@@ -26,6 +26,7 @@ struct GameClient {
     double now{};                      // current time for this frame
 
     Controller controller{};
+    uint32_t hoveredEntityId{};
     ClientWorld *world{};
     TodoList todoList{};
 

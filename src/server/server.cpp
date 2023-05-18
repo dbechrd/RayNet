@@ -177,7 +177,7 @@ Err Play(GameServer &server)
         for (int entityId = 0; entityId < SV_MAX_ENTITIES; entityId++) {
             Entity &entity = server.world->entities[entityId];
             if (entity.type) {
-                entity.Draw(fntHackBold20, entityId, 1);
+                entity.Draw(server.now);
                 if (editor.active && editor.state.showColliders) {
                     // [Debug] Draw colliders
                     if (entity.radius) {
@@ -274,13 +274,14 @@ Err Play(GameServer &server)
             }
 
 #define DRAW_TEXT(label, fmt, ...) \
-                DRAW_TEXT_MEASURE((Rectangle *)0, label, fmt, __VA_ARGS__)
+            DRAW_TEXT_MEASURE((Rectangle *)0, label, fmt, __VA_ARGS__)
 
             DRAW_TEXT((const char *)0, "%.2f fps (%.2f ms) (vsync=%s)", 1.0 / frameDt, frameDt * 1000.0, IsWindowState(FLAG_VSYNC_HINT) ? "on" : "off");
             DRAW_TEXT("time", "%.02f", server.yj_server->GetTime());
             DRAW_TEXT("tick", "%" PRIu64, server.tick);
             DRAW_TEXT("tickAccum", "%.02f", server.tickAccum);
-            DRAW_TEXT("window", "%d, %d (render: %d, %d)", GetScreenWidth(), GetScreenHeight(), GetRenderWidth(), GetRenderHeight());
+            DRAW_TEXT("window", "%d, %d", GetScreenWidth(), GetScreenHeight());
+            DRAW_TEXT("render", "%d, %d", GetRenderWidth(), GetRenderHeight());
             DRAW_TEXT("cursor", "%d, %d", GetMouseX(), GetMouseY());
             DRAW_TEXT("cursor world", "%.f, %.f", cursorWorldPos.x, cursorWorldPos.y);
             DRAW_TEXT("clients", "%d", server.yj_server->GetNumConnectedClients());

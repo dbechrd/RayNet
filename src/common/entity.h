@@ -1,6 +1,6 @@
 #pragma once
 #include "common.h"
-#include "spritesheet.h"
+#include "sprite.h"
 
 struct EntitySnapshot;
 struct EntitySpawnEvent;
@@ -52,8 +52,6 @@ struct Entity {
     double spawnedAt;
     double despawnedAt;
 
-    Color color;
-    Vector2 size;
     float radius;    // collision
     bool colliding;  // not sync'd, local flag for debugging colliders
 
@@ -63,12 +61,12 @@ struct Entity {
     Vector2 velocity;
     Vector2 position;
 
-    SpriteId spriteId;
+    Sprite sprite;
 
     // TODO(dlb): Could be a pointer, or could be a type + index into another pool
     union {
         EntityPlayer player;
-        EntityBot bot{};
+        EntityBot bot;
     } data;
 
     uint32_t latestDialog;
@@ -82,7 +80,8 @@ struct Entity {
     void ApplyForce(Vector2 force);
     void Tick(double dt);
     Rectangle GetRect(void);
+    Vector2 TopCenter(void);
     EntityLife *GetLife(void);
     void DrawHoverInfo(void);
-    void Draw(const Font &font, int clientIdx, float scale);
+    void Draw(double now);
 };

@@ -1,13 +1,13 @@
 spritesheet {
     version         1
-    texture_path    "resources/campfire.png"
-    frame_width     256
-    frame_height    256
+    texture_path    "resources/flag.png"
+    frame_width     32
+    frame_height    55
     animations [
         animation {
-            name            "campfire_lit"
+            name            "flag"
             frame_start     0
-            frame_count     8
+            frame_count     5
             frame_duration  0.1
             loop            true
         }

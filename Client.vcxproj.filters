@@ -42,5 +42,6 @@
     <ClInclude Include="src\client\resource.h" />
     <ClInclude Include="src\common\texture_catalog.h" />
     <ClInclude Include="src\common\spritesheet.h" />
+    <ClInclude Include="src\common\sprite.h" />
   </ItemGroup>
 </Project>

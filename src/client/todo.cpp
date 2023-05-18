@@ -131,7 +131,7 @@ void TodoList::Draw(Vector2 position)
     UI ui{ position, uiStyle };
 
     UIState loadButton = ui.Button("Load");
-    if (loadButton.clicked) {
+    if (loadButton.released) {
         Load(TODO_LIST_PATH);
     }
 
@@ -141,7 +141,7 @@ void TodoList::Draw(Vector2 position)
     } else {
         saveButton = ui.Button("Save");
     }
-    if (saveButton.clicked) {
+    if (saveButton.released) {
         Save(TODO_LIST_PATH);
     }
 
@@ -154,13 +154,13 @@ void TodoList::Draw(Vector2 position)
     for (int i = 0; i < itemCount; i++) {
         if (items[i].done) {
             UIState doneButton = ui.Button("Done", DARKGREEN);
-            if (doneButton.clicked) {
+            if (doneButton.released) {
                 items[i].done = false;
                 dirty = true;
             }
         } else {
             UIState todoButton = ui.Button("Todo", MAROON);
-            if (todoButton.clicked) {
+            if (todoButton.released) {
                 items[i].done = true;
                 dirty = true;
             }
@@ -187,7 +187,7 @@ void TodoList::Draw(Vector2 position)
         // Ugly up and down buttons, we have drag now wooo
         if (i > 0) {
             UIState moveUpButton = UIButton(fntHackBold20, BLUE, "^", uiPosition, uiCursor);
-            if (moveUpButton.clicked) {
+            if (moveUpButton.released) {
                 TrySwapItems(i, i - 1);
             }
         } else {
@@ -197,7 +197,7 @@ void TodoList::Draw(Vector2 position)
 
         if (i < itemCount - 1) {
             UIState moveDownButton = UIButton(fntHackBold20, BLUE, "v", uiPosition, uiCursor);
-            if (moveDownButton.clicked) {
+            if (moveDownButton.released) {
                 TrySwapItems(i, i + 1);
             }
         } else {

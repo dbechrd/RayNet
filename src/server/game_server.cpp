@@ -42,8 +42,6 @@ void tick_player(GameServer &server, uint32_t entityId, double dt)
             uint32_t idBullet = server.world->CreateEntity(Entity_Projectile);
             if (idBullet) {
                 Entity &eBullet = server.world->entities[idBullet];
-                eBullet.color = ORANGE;
-                eBullet.size = { 5, 5 };
                 eBullet.position = { ePlayer.position.x, ePlayer.position.y - 32 };
                 // Shoot in facing direction
                 Vector2 direction = Vector2Scale(inputCmd->facing, 100);
@@ -148,8 +146,8 @@ void GameServer::OnClientJoin(int clientIdx)
 
     Entity &entity = world->entities[serverPlayer.entityId];
     entity.type = Entity_Player;
-    entity.color = playerColors[clientIdx % (sizeof(playerColors) / sizeof(playerColors[0]))];
-    entity.size = { 32, 64 };
+    //entity.color = playerColors[clientIdx % (sizeof(playerColors) / sizeof(playerColors[0]))];
+    //entity.size = { 32, 64 };
     entity.radius = 10;
     entity.position = { 680, 1390 };
     entity.speed = 2000;
@@ -436,8 +434,8 @@ void GameServer::Tick(void)
                 bot.pathId = 0;
 
                 entity->type = Entity_Bot;
-                entity->color = DARKPURPLE;
-                entity->size = { 32, 64 };
+                //entity->color = DARKPURPLE;
+                //entity->size = { 32, 64 };
                 entity->radius = 10;
                 AiPathNode *aiPathNode = world->map.GetPathNode(bot.pathId, 0);
                 if (aiPathNode) {
@@ -447,6 +445,8 @@ void GameServer::Tick(void)
                 }
                 entity->speed = GetRandomValue(1000, 5000);
                 entity->drag = 8.0f;
+                entity->sprite.spritesheetId = rnSpritesheetCatalog.FindOrLoad("resources/lily.txt");
+                entity->sprite.animationId = 0;
                 world->SpawnEntity(*this, eid_bots[i]);
             }
         }
@@ -475,18 +475,8 @@ void GameServer::Tick(void)
                     EntityLife &life = target.data.bot.life;
                     if (life.Dead()) continue;
 
-                    Rectangle projectileHitbox{
-                        projectile.position.x - projectile.size.x / 2,
-                        projectile.position.y - projectile.size.y,
-                        projectile.size.x,
-                        projectile.size.y
-                    };
-                    Rectangle botHitbox{
-                        target.position.x - target.size.x / 2,
-                        target.position.y - target.size.y,
-                        target.size.x,
-                        target.size.y
-                    };
+                    Rectangle projectileHitbox = projectile.GetRect();
+                    Rectangle botHitbox = target.GetRect();
                     if (CheckCollisionRecs(projectileHitbox, botHitbox)) {
                         life.TakeDamage(GetRandomValue(3, 8));
                         if (life.Alive()) {

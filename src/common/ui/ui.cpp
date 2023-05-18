@@ -71,7 +71,7 @@ UIState CalcState(Rectangle &ctrlRect, HoverHash &prevHoverHash)
                 state.pressed = true;
             }
         } else if (io.MouseButtonReleased(MOUSE_BUTTON_LEFT)) {
-            state.clicked = true;
+            state.released = true;
         }
         prevHoverHash = hash;
     } else if (prevHoveredCtrl) {
@@ -82,7 +82,7 @@ UIState CalcState(Rectangle &ctrlRect, HoverHash &prevHoverHash)
 
 void UI::UpdateAudio(const UIState &uiState)
 {
-    if (uiState.clicked) {
+    if (uiState.released) {
         rnSoundSystem.Play(RN_Sound_Tick_Hard);
     } else if (uiState.entered) {
         rnSoundSystem.Play(RN_Sound_Tick_Soft, false);
@@ -123,12 +123,12 @@ UIState UI::Text(const char *text)
     };
 
     Vector2 textSize = MeasureTextEx(*style.font, text, style.font->baseSize, 1.0f);
+    Align(style, ctrlPosition, textSize);
     Vector2 ctrlSize{
         style.pad.left + textSize.x + style.pad.right,
         style.pad.top + textSize.y + style.pad.bottom
     };
 
-    Align(style, ctrlPosition, ctrlSize);
 
     Rectangle ctrlRect = {
         ctrlPosition.x,

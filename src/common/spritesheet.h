@@ -4,7 +4,6 @@
 
 typedef int AnimationId;
 typedef int SpritesheetId;
-typedef int SpriteId;
 
 struct Animation {
     std::string name;
@@ -23,15 +22,6 @@ struct Spritesheet {
     std::vector<Animation> animations;
 
     Err Load(std::string path);
-};
-
-struct Sprite {
-    SpritesheetId spritesheetId;
-    AnimationId animationId;
-    int frame;
-    double frameStartedAt;
-
-    void Draw(Vector2 pos, double now);
 };
 
 struct SpritesheetCatalog {

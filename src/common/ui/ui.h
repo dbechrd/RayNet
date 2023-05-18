@@ -65,11 +65,11 @@ struct UIStyle {
 };
 
 struct UIState {
-    bool entered;  // first hover frame
-    bool hover;
-    bool pressed;  // first down frame
-    bool down;
-    bool clicked;  // frame after last down frame (released)
+    bool entered;   // mouse hovering control (first frame)
+    bool hover;     // mouse hovering control
+    bool pressed;   // mouse hovering and button down (first frame)
+    bool down;      // mouse hovering and button down
+    bool released;  // mouse hovering and button up (first frame, i.e. was down last frame)
     Vector2 contentTopLeft;
 };
 
