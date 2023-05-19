@@ -1,5 +1,6 @@
 #include "common.h"
 #include "audio/audio.h"
+#include "spritesheet.h"
 #include "texture_catalog.h"
 
 #define RAYMATH_IMPLEMENTATION
@@ -43,6 +44,16 @@ Err InitCommon(void)
 {
     Err err = RN_SUCCESS;
 
+    rnStringCatalog.Init();
+
+    rnSoundCatalog.Init();
+
+    rnTextureCatalog.Init();
+
+    rnSpritesheetCatalog.Init();
+    rnSpritesheetCatalog.Load(STR_SHT_CAMPFIRE);
+    rnSpritesheetCatalog.Load(STR_SHT_LILY);
+
     // Load SDF required shader (we use default vertex shader)
     shdSdfText = LoadShader(0, "resources/shaders/sdf.fs");
 
@@ -59,11 +70,6 @@ Err InitCommon(void)
     musAmbientOutdoors = LoadMusicStream("resources/copyright/345470__philip_goddard__branscombe-landslip-birds-and-sea-echoes-ese-from-cave-track.ogg");
     musCave = LoadMusicStream("resources/copyright/69391__zixem__cave_amb.wav");
 
-    rnSoundSystem.Init();
-    rnTextureCatalog.Init();
-    rnSpritesheetCatalog.Init();
-    rnSpritesheetCatalog.FindOrLoad("resources/campfire.txt");
-
     return err;
 }
 
@@ -77,7 +83,7 @@ void FreeCommon(void)
     UnloadMusicStream(musCave);
     rnSpritesheetCatalog.Free();
     rnTextureCatalog.Free();
-    rnSoundSystem.Free();
+    rnSoundCatalog.Free();
 }
 
 // Load font from memory buffer, fileType refers to extension: i.e. ".ttf"
@@ -277,6 +283,7 @@ Rectangle RectGrow(const Rectangle &rect, float pixels)
 #include "histogram.cpp"
 #include "sprite.cpp"
 #include "spritesheet.cpp"
+#include "strings.cpp"
 #include "texture_catalog.cpp"
 #include "tilemap.cpp"
 #include "wang.cpp"

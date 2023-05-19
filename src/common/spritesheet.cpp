@@ -222,7 +222,11 @@ Err ParseAnimation(TokenStream &tokenStream, Animation &animation)
     while (!tokenStream.Eof()) {
         const Token &token = tokenStream.Peek();
         if (token.key == "name") {
-            err = ParseString(tokenStream, animation.name);
+            std::string animationName{};
+            err = ParseString(tokenStream, animationName);
+            if (!err) {
+                animation.id = rnStringCatalog.AddString(animationName);
+            }
         } else if (token.key == "frame_start") {
             err = ParseInt(tokenStream, animation.frameStart);
         } else if (token.key == "frame_count") {
@@ -268,7 +272,7 @@ Err ParseSpritesheet(TokenStream &tokenStream, Spritesheet &spritesheet)
             std::string texturePath{};
             err = ParseString(tokenStream, texturePath);
             if (!err) {
-                spritesheet.textureId = rnTextureCatalog.FindOrLoad(texturePath);
+                spritesheet.textureId = rnStringCatalog.AddString(texturePath);
             }
         } else if (token.key == "frame_width") {
             err = ParseInt(tokenStream, spritesheet.frameWidth);
@@ -321,9 +325,6 @@ Err Spritesheet::Load(std::string path)
     if (err) return err;
 
     err = ParseSpritesheet(tokenStream, *this);
-    if (!err) {
-        filename = path;
-    }
     return err;
 }
 
@@ -335,19 +336,20 @@ void SpritesheetCatalog::Init(void)
 {
     size_t spritesheetId = entries.size();
     Spritesheet spritesheet{};
-    spritesheet.textureId = rnTextureCatalog.FindOrLoad("PLACEHOLDER");
+    spritesheet.textureId = STR_NULL;
     spritesheet.version = 1;
     spritesheet.frameWidth = 32;
     spritesheet.frameHeight = 32;
     Animation animation{};
-    animation.name = "PLACEHOLDER";
+    animation.id = STR_NULL;
     animation.frameStart = 0;
     animation.frameCount = 1;
     animation.frameDuration = 1;
     animation.loop = true;
     spritesheet.animations.push_back(animation);
+
     entries.push_back(spritesheet);
-    entriesByPath["PLACEHOLDER"] = spritesheetId;
+    entriesById[STR_NULL] = spritesheetId;
 }
 
 void SpritesheetCatalog::Free(void)
@@ -357,32 +359,33 @@ void SpritesheetCatalog::Free(void)
     //}
 }
 
-SpritesheetId SpritesheetCatalog::FindOrLoad(std::string path)
+void SpritesheetCatalog::Load(StringId id)
 {
-    SpritesheetId id = 0;
-    const auto &entry = entriesByPath.find(path);
-    if (entry != entriesByPath.end()) {
-        id = entry->second;
-    } else {
+    size_t entryIdx = entriesById[id];
+    if (!entryIdx) {
         Spritesheet spritesheet{};
+        std::string path = rnStringCatalog.GetString(id);
         if (spritesheet.Load(path) == RN_SUCCESS) {
-            id = entries.size();
+            entryIdx = entries.size();
             entries.emplace_back(spritesheet);
-            entriesByPath[path] = id;
+            entriesById[id] = entryIdx;
         }
     }
-    return id;
 }
 
-const Spritesheet &SpritesheetCatalog::GetSpritesheet(SpritesheetId id)
-{
-    if (id >= 0 && id < entries.size()) {
-        return entries[id];
-    }
-    return entries[0];
-}
-
-void SpritesheetCatalog::Unload(SpritesheetId id)
+void SpritesheetCatalog::Unload(StringId id)
 {
     // TODO: unload it eventually (ref count?)
+}
+
+const Spritesheet &SpritesheetCatalog::GetSpritesheet(StringId id)
+{
+    const auto &entry = entriesById.find(id);
+    if (entry != entriesById.end()) {
+        size_t entryIdx = entry->second;
+        if (entryIdx >= 0 && entryIdx < entries.size()) {
+            return entries[entryIdx];
+        }
+    }
+    return entries[0];
 }

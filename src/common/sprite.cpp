@@ -28,7 +28,7 @@ void Sprite::Draw(Vector2 pos, float scale, double now)
         frameStartedAt = now;
     }
 
-    int framesPerRow = texture.width / spritesheet.frameWidth;
+    int framesPerRow = MAX(1, texture.width / spritesheet.frameWidth);
     int absoluteFrame = animation.frameStart + frame;
     int frameX = absoluteFrame % framesPerRow;
     int frameY = absoluteFrame / framesPerRow;

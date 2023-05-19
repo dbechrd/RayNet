@@ -1,12 +1,12 @@
 #pragma once
 #include "common.h"
+#include "strings.h"
 #include "texture_catalog.h"
 
 typedef int AnimationId;
-typedef int SpritesheetId;
 
 struct Animation {
-    std::string name;
+    StringId id;
     int frameStart;  // index into spritesheet
     int frameCount;
     float frameDuration;
@@ -14,12 +14,11 @@ struct Animation {
 };
 
 struct Spritesheet {
-    std::string filename;
     int version;
-    TextureId textureId;
+    StringId textureId;
     int frameWidth;
     int frameHeight;
-    std::vector<Animation> animations;
+    std::vector<Animation> animations;  // TODO(dlb): Make this an unordered_map by StringId?
 
     Err Load(std::string path);
 };
@@ -27,13 +26,13 @@ struct Spritesheet {
 struct SpritesheetCatalog {
     void Init(void);
     void Free(void);
-    SpritesheetId FindOrLoad(std::string path);
-    const Spritesheet &GetSpritesheet(SpritesheetId id);
-    void Unload(SpritesheetId id);
+    void Load(StringId id);
+    void Unload(StringId id);
+    const Spritesheet &GetSpritesheet(StringId id);
 
 private:
     std::vector<Spritesheet> entries{};
-    std::unordered_map<std::string, SpritesheetId> entriesByPath{};
+    std::unordered_map<StringId, size_t> entriesById{};
 };
 
 extern SpritesheetCatalog rnSpritesheetCatalog;

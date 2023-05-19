@@ -1,5 +1,6 @@
 #include "../common/collision.h"
 #include "../common/histogram.h"
+#include "../common/spritesheet.h"
 #include "../common/ui/ui.h"
 #include "client_world.h"
 #include "game_client.h"
@@ -356,8 +357,8 @@ int main(int argc, char *argv[])
 
                 static Sprite campfire{};
                 if (!campfire.animationId) {
-                    campfire.spritesheetId = rnSpritesheetCatalog.FindOrLoad("resources/campfire.txt");
-                    campfire.animationId = 0;
+                    campfire.spritesheetId = STR_SHT_CAMPFIRE;
+                    campfire.animationId = STR_NULL;
                 }
 
                 Vector2 campfireSize = campfire.GetSize();
@@ -381,7 +382,7 @@ int main(int argc, char *argv[])
 #endif
                 UIState connectButton = uiMenu.Button("Play");
                 if (connectButton.released) {
-                    //rnSoundSystem.Play(RN_Sound_Lily_Introduction);
+                    //rnSoundCatalog.Play(RN_Sound_Lily_Introduction);
                     client->TryConnect();
                 }
                 uiMenu.Newline();

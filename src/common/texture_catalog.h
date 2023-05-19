@@ -1,28 +1,25 @@
 #pragma once
 #include "common.h"
 
-typedef int TextureId;
-
-struct TextureCatalogEntry {
-    std::string path;
-    Image image;
-    Texture texture;
-
-    TextureCatalogEntry(std::string path, Image &image, Texture &texture)
-        : path(path), image(image), texture(texture) {}
-};
-
 struct TextureCatalog {
+    struct Entry {
+        Image image;
+        Texture texture;
+
+        Entry(Image &image, Texture &texture)
+            : image(image), texture(texture) {}
+    };
+
     void Init(void);
     void Free(void);
-    TextureId FindOrLoad(std::string path);
-    const TextureCatalogEntry &GetEntry(TextureId id);
-    const Texture &GetTexture(TextureId id);
-    void Unload(TextureId id);
+    void Load(StringId id);
+    const Entry &GetEntry(StringId id);
+    const Texture &GetTexture(StringId id);
+    void Unload(StringId id);
 
 private:
-    std::vector<TextureCatalogEntry> entries{};
-    std::unordered_map<std::string, TextureId> entriesByPath{};
+    std::vector<Entry> entries{};
+    std::unordered_map<StringId, size_t> entriesById{};
 };
 
 extern TextureCatalog rnTextureCatalog;

@@ -14,6 +14,7 @@
 #include <ctime>
 #include <cctype>
 
+#include <array>
 #include <fstream>
 #include <iostream>
 #include <queue>

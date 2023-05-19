@@ -18,6 +18,7 @@ struct Msg_S_EntitySpawn : public yojimbo::Message
         serialize_float(stream, entitySpawnEvent.entity.velocity.y);
         serialize_float(stream, entitySpawnEvent.entity.position.x);
         serialize_float(stream, entitySpawnEvent.entity.position.y);
+        serialize_uint32(stream, entitySpawnEvent.entity.sprite.spritesheetId);
         switch (entitySpawnEvent.entity.type) {
             case Entity_Player: {
                 serialize_varint32(stream, entitySpawnEvent.entity.data.player.life.maxHealth);

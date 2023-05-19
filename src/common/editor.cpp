@@ -375,7 +375,7 @@ void Editor::DrawUI_TileActions(UI &uiActionBar, Tilemap &map, double now)
     static const char *openRequest = 0;
 
     if (uiActionBar.Button("Change tileset", ColorBrightness(ORANGE, -0.2f)).released) {
-        std::string filename = rnTextureCatalog.GetEntry(map.textureId).path;
+        std::string filename = rnStringCatalog.GetString(map.textureId);
         std::thread openFileThread([filename, mapFileFilter]{
             openRequest = tinyfd_openFileDialog(
                 "Open File",
@@ -389,7 +389,8 @@ void Editor::DrawUI_TileActions(UI &uiActionBar, Tilemap &map, double now)
         openFileThread.detach();
     }
     if (openRequest) {
-        Err err = Tilemap::ChangeTileset(map, openRequest, now);
+        StringId newTextureId = rnStringCatalog.AddString(openRequest);
+        Err err = Tilemap::ChangeTileset(map, newTextureId, now);
         if (err) {
             std::thread errorThread([err]{
                 const char *msg = TextFormat("Failed to load file %s. %s\n", openRequest, ErrStr(err));

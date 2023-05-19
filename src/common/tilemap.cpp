@@ -60,7 +60,7 @@ Err Tilemap::Save(std::string path)
         fwrite(&MAGIC, sizeof(MAGIC), 1, file);
         fwrite(&VERSION, sizeof(VERSION), 1, file);
 
-        const std::string texturePath = rnTextureCatalog.GetEntry(textureId).path;
+        const std::string texturePath = rnStringCatalog.GetString(textureId);
         const int texturePathLen = texturePath.size();
         fwrite(&texturePathLen, sizeof(texturePathLen), 1, file);
         fwrite(texturePath.c_str(), 1, texturePathLen, file);
@@ -165,8 +165,10 @@ Err Tilemap::Load(std::string path, double now)
         char texturePathBuf[PATH_LEN_MAX + 1]{};
         fread(texturePathBuf, 1, texturePathLen, file);
 
-        textureId = rnTextureCatalog.FindOrLoad(texturePathBuf);
-        const TextureCatalogEntry &texEntry = rnTextureCatalog.GetEntry(textureId);
+        std::string texturePath{ texturePathBuf };
+        textureId = rnStringCatalog.AddString(texturePath);
+        rnTextureCatalog.Load(textureId);
+        const TextureCatalog::Entry &texEntry = rnTextureCatalog.GetEntry(textureId);
         if (!texEntry.image.width) {
             err = RN_BAD_FILE_READ; break;
         }
@@ -189,6 +191,10 @@ Err Tilemap::Load(std::string path, double now)
         fread(&pathCount, sizeof(pathCount), 1, file);
         fread(&warpCount, sizeof(warpCount), 1, file);
 
+        // TODO(dlb): This is broken.. if texture is missing, then we can't load it
+        // which means we don't know the width/height and also cannot read the
+        // rest of this file, which requires having an accurate tileDefCount
+        // for the fread()s.
         size_t tileDefCount = ((size_t)texEntry.texture.width / TILE_W) * (texEntry.texture.height / TILE_W);
         tileDefs.resize(tileDefCount);
         tiles.resize((size_t)width * height);
@@ -212,7 +218,8 @@ Err Tilemap::Load(std::string path, double now)
         for (Tile &tile : tiles) {
             fread(&tile, sizeof(tile), 1, file);
             if (tile >= tileDefCount) {
-                err = RN_OUT_OF_BOUNDS; break;
+                tile = 0;
+                //err = RN_OUT_OF_BOUNDS; break;
             }
         }
         chunkLastUpdatedAt = now;
@@ -297,22 +304,23 @@ Err Tilemap::Load(std::string path, double now)
     return err;
 }
 
-Err Tilemap::ChangeTileset(Tilemap &map, std::string newTexturePath, double now)
+Err Tilemap::ChangeTileset(Tilemap &map, StringId newTextureId, double now)
 {
     Err err = RN_SUCCESS;
 
-    const TextureCatalogEntry &texEntry = rnTextureCatalog.GetEntry(map.textureId);
+    const TextureCatalog::Entry &texEntry = rnTextureCatalog.GetEntry(map.textureId);
 
     // TODO(dlb): Is this valid?? comparing a std::string to a const char *
-    if (texEntry.path == newTexturePath) {
+    if (newTextureId == map.textureId) {
         assert(!"u wot mate?");
         return RN_SUCCESS;
     }
 
     Tilemap newMap{};
     do {
-        newMap.textureId = rnTextureCatalog.FindOrLoad(newTexturePath);
-        const TextureCatalogEntry &newTexEntry = rnTextureCatalog.GetEntry(newMap.textureId);
+        newMap.textureId = newTextureId;
+        rnTextureCatalog.Load(newMap.textureId);
+        const TextureCatalog::Entry &newTexEntry = rnTextureCatalog.GetEntry(newMap.textureId);
         if (newTexEntry.texture.width % TILE_W != 0 || newTexEntry.texture.height % TILE_W != 0) {
             err = RN_INVALID_SIZE; break;
         }
@@ -376,7 +384,7 @@ void Tilemap::Unload(void)
     rnTextureCatalog.Unload(textureId);
 
     version = 0;
-    textureId = 0;
+    textureId = STR_NULL;
     tileDefs.clear();
     tiles.clear();
     pathNodes.clear();

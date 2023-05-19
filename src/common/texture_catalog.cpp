@@ -16,10 +16,10 @@ void TextureCatalog::Init(void)
         exit(EXIT_FAILURE);
     }
 
-    const char *missingPath = "PLACEHOLDER";
-    size_t textureId = entries.size();
-    entries.emplace_back(missingPath, missingImg, missingTex);
-    entriesByPath[missingPath] = textureId;
+    Entry entry{ missingImg, missingTex };
+    size_t entryIdx = entries.size();
+    entries.push_back(entry);
+    entriesById[STR_NULL] = entryIdx;
 }
 
 void TextureCatalog::Free(void)
@@ -30,43 +30,47 @@ void TextureCatalog::Free(void)
     }
 }
 
-TextureId TextureCatalog::FindOrLoad(std::string path)
+void TextureCatalog::Load(StringId id)
 {
-    TextureId id = 0;
-    const auto &entry = entriesByPath.find(path);
-    if (entry != entriesByPath.end()) {
-        id = entry->second;
-    } else {
+    const auto &entry = entriesById.find(id);
+    if (entry == entriesById.end()) {
+        std::string path = rnStringCatalog.GetString(id);
         Image image = LoadImage(path.c_str());
         if (image.width) {
             Texture texture = LoadTextureFromImage(image);
             if (texture.width) {
-                id = entries.size();
-                entries.emplace_back(path, image, texture);
-                entriesByPath[path] = id;
+                Entry entry{ image, texture };
+                size_t entryIdx = entries.size();
+                entries.push_back(entry);
+                entriesById[id] = entryIdx;
             }
         } else {
             // Not really necessary, but seems weird to have a image when texture load fails?
             UnloadImage(image);
         }
     }
-    return id;
 }
 
-const TextureCatalogEntry &TextureCatalog::GetEntry(TextureId id)
+const TextureCatalog::Entry &TextureCatalog::GetEntry(StringId id)
 {
-    if (id >= 0 && id < entries.size()) {
-        return entries[id];
+    const auto &entry = entriesById.find(id);
+    if (entry != entriesById.end()) {
+        size_t entryIdx = entry->second;
+        if (entryIdx >= 0 && entryIdx < entries.size()) {
+            return entries[entryIdx];
+        }
     }
     return entries[0];
 }
 
-const Texture &TextureCatalog::GetTexture(TextureId id)
+const Texture &TextureCatalog::GetTexture(StringId id)
 {
-    return GetEntry(id).texture;
+    Load(id);
+    const auto &entry = GetEntry(id);
+    return entry.texture;
 }
 
-void TextureCatalog::Unload(TextureId id)
+void TextureCatalog::Unload(StringId id)
 {
     // TODO: unload it eventually (ref count?)
 }

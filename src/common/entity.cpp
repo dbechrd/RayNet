@@ -13,6 +13,7 @@ void Entity::Serialize(uint32_t entityId, EntitySpawnEvent &entitySpawnEvent, do
     SPAWN_PROP(speed);
     SPAWN_PROP(velocity);
     SPAWN_PROP(position);
+    SPAWN_PROP(sprite.spritesheetId);
     switch (type) {
         case Entity_Player: {
             SPAWN_PROP(data.player.life.maxHealth);
@@ -62,6 +63,7 @@ void Entity::ApplySpawnEvent(const EntitySpawnEvent &entitySpawnEvent)
     APPLY_PROP(speed);
     APPLY_PROP(velocity);
     APPLY_PROP(position);
+    APPLY_PROP(sprite.spritesheetId);
     switch (type) {
         case Entity_Player: {
             APPLY_PROP(data.player.life.maxHealth);

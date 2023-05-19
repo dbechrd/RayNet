@@ -12,35 +12,4 @@
   <ItemGroup>
     <Image Include="res\server.ico" />
   </ItemGroup>
-  <ItemGroup>
-    <ClInclude Include="src\server\server_world.h" />
-    <ClInclude Include="src\common\ui\ui.h" />
-    <ClInclude Include="src\common\collision.h" />
-    <ClInclude Include="src\common\common.h" />
-    <ClInclude Include="src\common\editor.h" />
-    <ClInclude Include="src\common\entity.h" />
-    <ClInclude Include="src\common\file_utils.h" />
-    <ClInclude Include="src\common\histogram.h" />
-    <ClInclude Include="src\common\input_command.h" />
-    <ClInclude Include="src\common\ring_buffer.h" />
-    <ClInclude Include="src\common\tilemap.h" />
-    <ClInclude Include="src\common\wang.h" />
-    <ClInclude Include="src\common\audio\audio.h" />
-    <ClInclude Include="src\common\net\entity_snapshot.h" />
-    <ClInclude Include="src\common\net\net.h" />
-    <ClInclude Include="src\common\net\messages\msg_c_entity_interact.h" />
-    <ClInclude Include="src\common\net\messages\msg_c_input_commands.h" />
-    <ClInclude Include="src\common\net\messages\msg_c_tile_interact.h" />
-    <ClInclude Include="src\common\net\messages\msg_s_clock_sync.h" />
-    <ClInclude Include="src\common\net\messages\msg_s_entity_despawn.h" />
-    <ClInclude Include="src\common\net\messages\msg_s_entity_say.h" />
-    <ClInclude Include="src\common\net\messages\msg_s_entity_snapshot.h" />
-    <ClInclude Include="src\common\net\messages\msg_s_entity_spawn.h" />
-    <ClInclude Include="src\common\net\messages\msg_s_tile_chunk.h" />
-    <ClInclude Include="src\server\resource.h" />
-    <ClInclude Include="src\server\game_server.h" />
-    <ClInclude Include="src\common\texture_catalog.h" />
-    <ClInclude Include="src\common\spritesheet.h" />
-    <ClInclude Include="src\common\sprite.h" />
-  </ItemGroup>
 </Project>

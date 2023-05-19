@@ -445,8 +445,8 @@ void GameServer::Tick(void)
                 }
                 entity->speed = GetRandomValue(1000, 5000);
                 entity->drag = 8.0f;
-                entity->sprite.spritesheetId = rnSpritesheetCatalog.FindOrLoad("resources/lily.txt");
-                entity->sprite.animationId = 0;
+                entity->sprite.spritesheetId = STR_SHT_LILY;
+                entity->sprite.animationId = STR_NULL;
                 world->SpawnEntity(*this, eid_bots[i]);
             }
         }

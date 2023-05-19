@@ -1,57 +1,69 @@
 #include "audio.h"
 
-RN_SoundSystem rnSoundSystem;
+SoundCatalog rnSoundCatalog;
 
-void RN_SoundSystem::Init(void)
+void SoundCatalog::Init(void)
 {
-    Load(RN_Sound_Tick_Soft, "resources/soft_tick.wav", 0.03f);
-    Load(RN_Sound_Tick_Hard, "resources/hard_tick.wav", 0.03f);
-    Load(RN_Sound_Lily_Introduction, "resources/mic_test.wav");
+    // TODO: Load default sound at index 0
 
-    for (int i = 0; i < RN_Sound_Count; i++) {
-        RN_Sound &rnSound = rnSounds[i];
-        if (rnSound.filename) {
-            rnSound.sound = LoadSound(rnSound.filename);
-        }
-    }
+    Load(STR_SND_HARD_TICK, 0.03f);
+    Load(STR_SND_SOFT_TICK, 0.03f);
+    Load(STR_SND_MIC_TEST);
 }
 
-void RN_SoundSystem::Free(void)
+void SoundCatalog::Free(void)
 {
-    for (int i = 0; i < RN_Sound_Count; i++) {
-        RN_Sound &rnSound = rnSounds[i];
-        if (rnSound.sound.frameCount) {
-            rnSound.filename = 0;
-            UnloadSound(rnSound.sound);
-        }
+    for (const auto &entry : entries) {
+        UnloadSound(entry.sound);
     }
+    entries.clear();
+    entriesById.clear();
 }
 
-void RN_SoundSystem::Load(RN_SoundType soundType, const char *filename, float pitchVariance)
+void SoundCatalog::Load(StringId id, float pitchVariance)
 {
-    RN_Sound &rnSound = rnSounds[soundType];
-    if (!rnSound.filename) {
+    size_t entryIdx = entriesById[id];
+    if (!entryIdx) {
+        std::string str = rnStringCatalog.GetString(id);
+        const char *filename = str.c_str();
         Sound sound = LoadSound(filename);
         if (sound.frameCount) {
-            rnSound.filename = filename;
-            rnSound.sound = sound;
-            rnSound.pitchVariance = pitchVariance;
+            Entry entry{};
+            entry.id = id;
+            entry.sound = sound;
+            entry.pitchVariance = pitchVariance;
+
+            entryIdx = entries.size();
+            entries.push_back(entry);
+            entriesById[id] = entryIdx;
         } else {
             printf("[sound_system] Failed to load sound %s\n", filename);
         }
     }
 }
 
-void RN_SoundSystem::Play(RN_SoundType soundType, bool multi, float pitchVariance)
+const SoundCatalog::Entry &SoundCatalog::GetEntry(StringId id)
 {
-    RN_Sound &rnSound = rnSounds[soundType];
+    const auto &entry = entriesById.find(id);
+    if (entry != entriesById.end()) {
+        size_t entryIdx = entry->second;
+        if (entryIdx >= 0 && entryIdx < entries.size()) {
+            return entries[entryIdx];
+        }
+    }
+    return entries[0];
+}
 
-    float variance = pitchVariance ? pitchVariance : rnSound.pitchVariance;
-    SetSoundPitch(rnSound.sound, 1.0f + GetRandomFloatVariance(variance));
+void SoundCatalog::Play(StringId id, bool multi, float pitchVariance)
+{
+    const Entry &entry = GetEntry(id);
+
+    float variance = pitchVariance ? pitchVariance : entry.pitchVariance;
+    SetSoundPitch(entry.sound, 1.0f + GetRandomFloatVariance(variance));
 
     if (multi) {
-        PlaySoundMulti(rnSound.sound);
-    } else if (!IsSoundPlaying(rnSound.sound)) {
-        PlaySound(rnSound.sound);
+        PlaySoundMulti(entry.sound);
+    } else if (!IsSoundPlaying(entry.sound)) {
+        PlaySound(entry.sound);
     }
 }

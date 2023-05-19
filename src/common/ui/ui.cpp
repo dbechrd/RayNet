@@ -83,9 +83,9 @@ UIState CalcState(Rectangle &ctrlRect, HoverHash &prevHoverHash)
 void UI::UpdateAudio(const UIState &uiState)
 {
     if (uiState.released) {
-        rnSoundSystem.Play(RN_Sound_Tick_Hard);
+        rnSoundCatalog.Play(STR_SND_HARD_TICK);
     } else if (uiState.entered) {
-        rnSoundSystem.Play(RN_Sound_Tick_Soft, false);
+        rnSoundCatalog.Play(STR_SND_SOFT_TICK, false);
     }
 }
 

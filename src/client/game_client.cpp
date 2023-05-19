@@ -191,7 +191,7 @@ void GameClient::ProcessMessages(void)
                         *entity = {};
                         entity->ApplySpawnEvent(msg->entitySpawnEvent);
                         if (entity->type == Entity_Projectile) {
-                            rnSoundSystem.Play(RN_Sound_Tick_Soft);
+                            rnSoundCatalog.Play(STR_SND_SOFT_TICK);
                         }
                     }
                     break;

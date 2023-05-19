@@ -61,7 +61,7 @@ struct Tilemap {
 
     uint32_t version;
     std::string filename;
-    TextureId textureId;  // generated upon load, used to look up in rnTextureCatalog
+    StringId textureId;  // generated upon load, used to look up in rnTextureCatalog
 
     uint32_t width;  // width of map in tiles
     uint32_t height;  // height of map in tiles
@@ -84,7 +84,7 @@ struct Tilemap {
 
     Err Save(std::string path);
     Err Load(std::string path, double now);
-    static Err ChangeTileset(Tilemap &map, std::string newTexturePath, double now);
+    static Err ChangeTileset(Tilemap &map, StringId newTextureId, double now);
     void Unload(void);
 
     // Tiles

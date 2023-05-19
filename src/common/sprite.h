@@ -1,10 +1,10 @@
 #pragma once
 #include "common.h"
-#include "spritesheet.h"
+#include "strings.h"
 
 struct Sprite {
-    SpritesheetId spritesheetId;
-    AnimationId animationId;
+    StringId spritesheetId;
+    StringId animationId;
     int frame;
     double frameStartedAt;
 
