@@ -51,8 +51,10 @@ Err InitCommon(void)
     rnTextureCatalog.Init();
 
     rnSpritesheetCatalog.Init();
+    rnSpritesheetCatalog.Load(STR_SHT_BULLET);
     rnSpritesheetCatalog.Load(STR_SHT_CAMPFIRE);
     rnSpritesheetCatalog.Load(STR_SHT_LILY);
+    rnSpritesheetCatalog.Load(STR_SHT_PLAYER);
 
     // Load SDF required shader (we use default vertex shader)
     shdSdfText = LoadShader(0, "resources/shaders/sdf.fs");
@@ -273,6 +275,7 @@ Rectangle RectGrow(const Rectangle &rect, float pixels)
     return grown;
 }
 
+#include "aspect_sprite.cpp"
 #include "audio/audio.cpp"
 #include "net/net.cpp"
 #include "ui/ui.cpp"
@@ -281,7 +284,6 @@ Rectangle RectGrow(const Rectangle &rect, float pixels)
 #include "entity.cpp"
 #include "file_utils.cpp"
 #include "histogram.cpp"
-#include "sprite.cpp"
 #include "spritesheet.cpp"
 #include "strings.cpp"
 #include "texture_catalog.cpp"

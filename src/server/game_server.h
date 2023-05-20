@@ -1,7 +1,50 @@
 #pragma once
-#include "server_world.h"
+#include "../common/input_command.h"
+#include "../common/tilemap.h"
 
-struct ServerWorld;
+// Q: when the player goes to a new level, they see all the wrong entities
+// A: entities needs to be scoped by level
+
+// Q: in the editor, you're implicitly editing the actual, live game map, which
+//    means i can't edit things like herringbone tiles using my nice editor tools
+// A: the editor needs to be able to be editing things (maps?) other than the
+//    live game world, but it would be cool to still have that work.
+
+// Q: i want to have multiple kinds of entities, each with unique properties,
+//    but I don't want a million branches in my code for updating and
+//    serializing every distinct type of object
+// A: i need some global "entities" array, at least per-level, with a unique
+//    entity id that allows me to identity enties clearly and consistently
+//    locally and across the network (and in save files?)
+
+// Q: MSVC keeps whining about some dumb union initialize deleted constructor
+//    bullshit that wouldn't happen if I just used C instead of C++.
+// A:
+//    - Fix the error. Somehow. How does C++ work? Nobody knows. Except ca2.
+//    - Remove the union? This is the only choice?
+//      - Allocate giant fixed-size buffer like: custom_data[entity_custom_data_size]
+//      - Each entity type has e.g. custom_data_projectile that we stick in the buffer
+//    - Ignore the error? Definitely not.
+//    - Use C instead of C++? No.
+//    - Use std::variant. No. Fuck that.
+
+struct Msg_S_EntitySpawn;
+
+struct TileChunkRecord {
+    Tilemap::Coord coord{};
+    double lastSentAt{};  // when we last sent this chunk to the client
+};
+
+struct ServerPlayer {
+    //uint32_t clientIdx      {};  // yj_client index
+    double   joinedAt       {};
+    bool     needsClockSync {};
+    uint32_t entityId       {};
+    uint32_t lastInputSeq   {};  // sequence number of last input command we processed
+    RingBuffer<InputCmd, CL_SEND_INPUT_COUNT> inputQueue{};
+    // TODO(dlb): Also send tile chunks whenever a client enters the render distance of it
+    RingBuffer<TileChunkRecord, CL_RENDER_DISTANCE*CL_RENDER_DISTANCE> chunkList{};
+};
 
 class GameServerNetAdapter : public NetAdapter
 {
@@ -16,13 +59,18 @@ public:
 struct GameServer {
     GameServerNetAdapter adapter{ this };
     yojimbo::Server *yj_server{};
+    ServerPlayer players[SV_MAX_PLAYERS]{};  // note: playerIdx = entityId - 1
 
     uint64_t tick{};
     double tickAccum{};
     double lastTickedAt{};
-    double now{};
 
-    ServerWorld *world{};
+    ////////////////////////////////////////////////////////////////////////////
+    // TODO: Move these to "World" shared on both client and server
+    // TODO: Extract aspects back out of Tilemap into new "World" class
+    double now{};
+    Tilemap map{};
+    ////////////////////////////////////////////////////////////////////////////
 
     void OnClientJoin(int clientIdx);
     void OnClientLeave(int clientIdx);
@@ -37,12 +85,23 @@ struct GameServer {
     void SendTileChunk(int clientIdx, uint32_t x, uint32_t y);
     void BroadcastTileChunk(uint32_t x, uint32_t y);
     void ProcessMessages(void);
-    void Tick(void);
     void SendClientSnapshots(void);
-    void DestroyDespawnedEntities(void);
     void SendClockSync(void);
     void Update(void);
     void Stop(void);
+
+    void SerializeSpawn(uint32_t entityId, Msg_S_EntitySpawn &entitySpawn);
+    void SerializeSnapshot(uint32_t entityId, Msg_S_EntitySnapshot &entitySnapshot, uint32_t lastProcessedInputCmd);  // TODO: Remove lastProcessedInputCmd from args list, shouldn't need it
+
+    ////////////////////////////////////////////////////////////////////////////
+    // TODO: Move this stuff to ServerWorld
+    void Tick(void);
+    void DestroyDespawnedEntities(void);
+    ////////////////////////////////////////////////////////////////////////////
+
+    uint32_t GetPlayerEntityId(uint32_t clientIdx);
+    void SpawnEntity(uint32_t entityId);
+    void DespawnEntity(uint32_t entityId);
 };
 
 extern Rectangle lastCollisionA;

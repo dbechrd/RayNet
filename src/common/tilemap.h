@@ -1,5 +1,6 @@
 #pragma once
 #include "common.h"
+#include "entity.h"
 #include "net/net.h"
 #include "texture_catalog.h"
 
@@ -77,6 +78,19 @@ struct Tilemap {
     // TODO: Actually have more than 1 chunk..
     double chunkLastUpdatedAt;  // used by server to know when chunks are dirty on clients
 
+    // [0]: reserved for safe null
+    // [1, SV_MAX_PLAYERS]: reserved for player entities
+    // [SV_MAX_PLAYERS + 1, SV_MAX_ENTITIES - 1]: dynamic entities (uses freelist)
+    uint32_t entity_freelist;
+
+    // TODO: Rename these so they don't collide with local variables all the time
+    Entity          entities  [SV_MAX_ENTITIES];
+    AspectPhysics   physics   [SV_MAX_ENTITIES];
+    AspectCollision collision [SV_MAX_ENTITIES];
+    AspectLife      life      [SV_MAX_ENTITIES];
+    AspectPathfind  pathfind  [SV_MAX_ENTITIES];
+    AspectSprite    sprite    [SV_MAX_ENTITIES];
+
     void SV_SerializeChunk(Msg_S_TileChunk &tileChunk, uint32_t x, uint32_t y);
     void CL_DeserializeChunk(Msg_S_TileChunk &tileChunk);
 
@@ -96,8 +110,8 @@ struct Tilemap {
     void Set(uint32_t x, uint32_t y, Tile tile, double now);
     void SetFromWangMap(WangMap &wangMap, double now);
     void Fill(uint32_t x, uint32_t y, int tileDefId, double now);
-    void ResolveEntityTerrainCollisions(Entity &entity);
-    void ResolveEntityWarpCollisions(Entity &entity, double now);
+    void ResolveEntityTerrainCollisions(uint32_t entityId);
+    void ResolveEntityWarpCollisions(uint32_t entityId, double now);
 
     const TileDef &GetTileDef(Tile tile);
     Rectangle TileDefRect(Tile tile);
@@ -110,6 +124,12 @@ struct Tilemap {
     void DrawTile(Tile tile, Vector2 position);
     void Draw(Camera2D &camera);
     void DrawColliders(Camera2D &camera);
+
+    uint32_t CreateEntity(EntityType entityType);
+    bool SpawnEntity(uint32_t entityId, double now);
+    Entity *GetEntity(uint32_t entityId);
+    bool DespawnEntity(uint32_t entityId, double now);
+    void DestroyEntity(uint32_t entityId);
 
 private:
     bool NeedsFill(uint32_t x, uint32_t y, int tileDefFill);

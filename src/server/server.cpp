@@ -3,7 +3,6 @@
 #include "../common/histogram.h"
 #include "../common/ui/ui.h"
 #include "../common/wang.h"
-#include "server_world.h"
 #include "game_server.h"
 #include "stb_herringbone_wang_tile.h"
 
@@ -79,7 +78,8 @@ Err Play(GameServer &server)
 {
     Err err = RN_SUCCESS;
 
-    err = server.world->map.Load(LEVEL_001, server.now);
+    Tilemap &map = server.map;
+    err = map.Load(LEVEL_001, server.now);
     if (err) {
         printf("Failed to load map with code %d\n", err);
         assert(!"oops");
@@ -87,7 +87,6 @@ Err Play(GameServer &server)
         // until dismissed
     }
 
-    Tilemap &map = server.world->map;
     Camera2D camera{};
     camera.zoom = 1;
 
@@ -166,7 +165,7 @@ Err Play(GameServer &server)
         BeginMode2D(camera);
 
         // [World] Tilemap
-        server.world->map.Draw(camera);
+        map.Draw(camera);
 
         // [Editor] Overlays
         editor.DrawOverlays(map, camera, server.now);
@@ -174,14 +173,17 @@ Err Play(GameServer &server)
         DrawRectangleLinesEx(lastCollisionA, 1, RED);
         DrawRectangleLinesEx(lastCollisionB, 1, GREEN);
 
+        // NOTE(dlb): We could build an array of { entityId, position.y } and sort it
+        // each frame, then render the entities in that order.
         for (int entityId = 0; entityId < SV_MAX_ENTITIES; entityId++) {
-            Entity &entity = server.world->entities[entityId];
+            Entity &entity = map.entities[entityId];
             if (entity.type) {
-                entity.Draw(server.now);
+                entity.Draw(map, entityId, server.now);
                 if (editor.active && editor.state.showColliders) {
                     // [Debug] Draw colliders
-                    if (entity.radius) {
-                        DrawCircle(entity.position.x, entity.position.y, entity.radius, entity.colliding ? Fade(RED, 0.5) : Fade(LIME, 0.5));
+                    AspectCollision &collider = map.collision[entityId];
+                    if (collider.radius) {
+                        DrawCircle(entity.position.x, entity.position.y, collider.radius, collider.colliding ? Fade(RED, 0.5) : Fade(LIME, 0.5));
                     }
                 }
 
@@ -206,7 +208,7 @@ Err Play(GameServer &server)
         {
             const Vector2 cursorWorldPos = GetScreenToWorld2D({ (float)GetMouseX(), (float)GetMouseY() }, camera);
             Tile tile{};
-            if (server.world->map.AtTry(0, 0, tile)) {
+            if (map.AtTry(0, 0, tile)) {
                 Rectangle tileRect{};
                 Vector2 tilePos = { 0, 0 };
                 tileRect.x = tilePos.x;
@@ -528,14 +530,6 @@ int main(int argc, char *argv[])
     server->now = GetTime();
 
     //--------------------
-    // Create world
-    server->world = new ServerWorld;
-    if (!server->world) {
-        printf("error: failed to allocate world\n");
-        return RN_BAD_ALLOC;
-    }
-
-    //--------------------
     // Start the server
     err = server->Start();
     if (err) {
@@ -565,4 +559,3 @@ int main(int argc, char *argv[])
 
 #include "../common/common.cpp"
 #include "game_server.cpp"
-#include "server_world.cpp"

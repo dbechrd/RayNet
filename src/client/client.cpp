@@ -251,17 +251,22 @@ int main(int argc, char *argv[])
                     continue;
                 }
 
+#if 0
+                // TODO: Everything that says "ghostInstance" needs to be an entity_id, but we don't
+                // want to modify the actual entity... so perhaps we need a "temp" entity that we can
+                // use for drawing shadows? Or some other way to simulate the entity moving without
+                // modifying the actual entity.
                 if (CL_DBG_SNAPSHOT_SHADOWS) {
-                    EntityGhost &ghost = client->world->ghosts[entityId];
+                    Ghost &ghost = client->world->ghosts[entityId];
                     Entity ghostInstance = *entity;
-                    for (int i = 0; i < ghost.snapshots.size(); i++) {
-                        if (!ghost.snapshots[i].serverTime) {
+                    for (int i = 0; i < ghost.size(); i++) {
+                        if (!ghost[i].serverTime) {
                             continue;
                         }
-                        ghostInstance.ApplyStateInterpolated(ghost.snapshots[i], ghost.snapshots[i], 0.0);
+                        client->world->ApplyStateInterpolated(ghostInstance, ghost[i], ghost[i], 0.0);
 
                         const float scalePer = 1.0f / (CL_SNAPSHOT_COUNT + 1);
-                        Rectangle ghostRect = ghostInstance.GetRect();
+                        Rectangle ghostRect = ghostInstance.GetRect(client->world->map, ghostInstance);
                         ghostRect = RectShrink(ghostRect, scalePer);
                         DrawRectangleRec(ghostRect, Fade(RED, 0.2f));
                     }
@@ -270,9 +275,9 @@ int main(int argc, char *argv[])
                     if (entityId == client->LocalPlayerEntityId()) {
 #if CL_CLIENT_SIDE_PREDICT
                         uint32_t lastProcessedInputCmd = 0;
-                        const EntitySnapshot &latestSnapshot = ghost.snapshots.newest();
+                        const GhostSnapshot &latestSnapshot = ghost.newest();
                         if (latestSnapshot.serverTime) {
-                            ghostInstance.ApplyStateInterpolated(latestSnapshot, latestSnapshot, 0);
+                            client->world->ApplyStateInterpolated(ghostInstance, latestSnapshot, latestSnapshot, 0);
                             lastProcessedInputCmd = latestSnapshot.lastProcessedInputCmd;
                         }
 
@@ -280,14 +285,18 @@ int main(int argc, char *argv[])
                         for (size_t cmdIndex = 0; cmdIndex < client->controller.cmdQueue.size(); cmdIndex++) {
                             InputCmd &inputCmd = client->controller.cmdQueue[cmdIndex];
                             if (inputCmd.seq > lastProcessedInputCmd) {
-                                ghostInstance.ApplyForce(inputCmd.GenerateMoveForce(ghostInstance.speed));
-                                ghostInstance.Tick(SV_TICK_DT);
+                                const AspectPhysics &physics = client->world->map.physics[ghostInstance];
+                                ghostInstance.ApplyForce(client->world->map, ghostInstance, inputCmd.GenerateMoveForce(physics.speed));
+                                ghostInstance.Tick(client->world->map, ghostInstance, SV_TICK_DT);
                                 client->world->map.ResolveEntityTerrainCollisions(ghostInstance);
-                                DrawRectangleRec(ghostInstance.GetRect(), Fade(GREEN, 0.2f));
+                                DrawRectangleRec(ghostInstance.GetRect(client->world->map, entityId), Fade(GREEN, 0.2f));
                             }
                         }
 #endif
+
 #if 0
+                        // We don't really need to draw a blue rect at currently entity position unless
+                        // the entity is invisible.
                         const double cmdAccumDt = client->now - client->controller.lastInputSampleAt;
                         if (cmdAccumDt > 0) {
                             ghostInstance.ApplyForce(client->controller.cmdAccum.GenerateMoveForce(ghostInstance.speed));
@@ -299,8 +308,9 @@ int main(int argc, char *argv[])
 #endif
                     }
                 }
+#endif
 
-                entity->Draw(client->now);
+                entity->Draw(client->world->map, entityId, client->now);
             }
 
             //--------------------
@@ -355,7 +365,7 @@ int main(int argc, char *argv[])
                 uiMenu.Text(connectingStrs[connectingDotIdx]);
                 uiMenu.Newline();
 
-                static Sprite campfire{};
+                static AspectSprite campfire{};
                 if (!campfire.animationId) {
                     campfire.spritesheetId = STR_SHT_CAMPFIRE;
                     campfire.animationId = STR_NULL;
@@ -405,7 +415,7 @@ int main(int argc, char *argv[])
             Entity *entity = client->world->GetEntity(client->hoveredEntityId);
             assert(entity); // huh?
             if (entity) {
-                entity->DrawHoverInfo();
+                entity->DrawHoverInfo(client->world->map, client->hoveredEntityId);
             }
         }
 

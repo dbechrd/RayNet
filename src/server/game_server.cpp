@@ -1,4 +1,6 @@
 #include "game_server.h"
+#include "../common/net/messages/msg_s_entity_spawn.h"
+#include "../common/net/messages/msg_s_entity_snapshot.h"
 
 Rectangle lastCollisionA{};
 Rectangle lastCollisionB{};
@@ -20,10 +22,11 @@ void GameServerNetAdapter::OnServerClientDisconnected(int clientIdx)
 
 void tick_player(GameServer &server, uint32_t entityId, double dt)
 {
-    Entity &ePlayer = server.world->entities[entityId];
+    Tilemap &map = server.map;
+    Entity &entity = map.entities[entityId];
 
     const InputCmd *inputCmd = 0;
-    ServerPlayer &player = server.world->players[ePlayer.data.player.playerId];
+    ServerPlayer &player = server.players[entityId - 1];
     for (int i = 0; i < player.inputQueue.size(); i++) {
         const InputCmd &cmd = player.inputQueue[i];
         if (cmd.seq > player.lastInputSeq) {
@@ -35,57 +38,69 @@ void tick_player(GameServer &server, uint32_t entityId, double dt)
     }
 
     if (inputCmd) {
-        Vector2 moveForce = inputCmd->GenerateMoveForce(ePlayer.speed);
-        ePlayer.ApplyForce(moveForce);
+        AspectPhysics &physics = map.physics[entityId];
+        Vector2 moveForce = inputCmd->GenerateMoveForce(physics.speed);
+        entity.ApplyForce(map, entityId, moveForce);
 
         if (inputCmd->fire) {
-            uint32_t idBullet = server.world->CreateEntity(Entity_Projectile);
+            uint32_t idBullet = map.CreateEntity(Entity_Projectile);
             if (idBullet) {
-                Entity &eBullet = server.world->entities[idBullet];
-                eBullet.position = { ePlayer.position.x, ePlayer.position.y - 32 };
+                Entity &bulletEntity = map.entities[idBullet];
+                AspectPhysics &bulletPhysics = map.physics[idBullet];
+
+                bulletEntity.position = { entity.position.x, entity.position.y - 32 };
                 // Shoot in facing direction
                 Vector2 direction = Vector2Scale(inputCmd->facing, 100);
                 // Add a bit of random spread
                 direction.x += GetRandomValue(-20, 20);
                 direction.y += GetRandomValue(-20, 20);
                 direction = Vector2Normalize(direction);
+                Vector2 bulletVelocity = Vector2Scale(direction, 400); //GetRandomValue(800, 1000));;
                 // Random speed
-                eBullet.velocity = Vector2Scale(direction, 400); //GetRandomValue(800, 1000));
-                eBullet.drag = 0.02f;
-                server.world->SpawnEntity(server, idBullet);
+                bulletPhysics.velocity = bulletVelocity;
+                bulletPhysics.drag = 0.02f;
+                server.SpawnEntity(idBullet);
+
+                // Recoil
+                Vector2 recoilForce = Vector2Negate(bulletVelocity);
+                entity.ApplyForce(map, entityId, recoilForce);
             }
         }
     }
 
-    ePlayer.Tick(dt);
+    entity.Tick(map, entityId, dt);
 }
 
 void tick_bot(GameServer &server, uint32_t entityId, double dt)
 {
-    Entity &entity = server.world->entities[entityId];
-    EntityBot &bot = entity.data.bot;
-    AiPathNode *aiPathNode = server.world->map.GetPathNode(bot.pathId, bot.pathNodeTarget);
+    Tilemap &map = server.map;
+    Entity &entity = map.entities[entityId];
+
+    // TODO: tick_pathfind?
+    AspectPathfind &pathfind = map.pathfind[entityId];
+    AiPathNode *aiPathNode = map.GetPathNode(pathfind.pathId, pathfind.pathNodeTarget);
     if (aiPathNode) {
         Vector2 target = aiPathNode->pos;
         Vector2 toTarget = Vector2Subtract(target, entity.position);
         if (Vector2LengthSqr(toTarget) < 10 * 10) {
-            if (bot.pathNodeLastArrivedAt != bot.pathNodeTarget) {
+            if (pathfind.pathNodeLastArrivedAt != pathfind.pathNodeTarget) {
                 // Arrived at a new node
-                bot.pathNodeLastArrivedAt = bot.pathNodeTarget;
-                bot.pathNodeArrivedAt = server.now;
+                pathfind.pathNodeLastArrivedAt = pathfind.pathNodeTarget;
+                pathfind.pathNodeArrivedAt = server.now;
             }
-            if (server.now - bot.pathNodeArrivedAt > aiPathNode->waitFor) {
+            if (server.now - pathfind.pathNodeArrivedAt > aiPathNode->waitFor) {
                 // Been at node long enough, move on
-                bot.pathNodeTarget = server.world->map.GetNextPathNodeIndex(bot.pathId, bot.pathNodeTarget);
+                pathfind.pathNodeTarget = map.GetNextPathNodeIndex(pathfind.pathId, pathfind.pathNodeTarget);
             }
         } else {
-            bot.pathNodeLastArrivedAt = 0;
-            bot.pathNodeArrivedAt = 0;
+            pathfind.pathNodeLastArrivedAt = 0;
+            pathfind.pathNodeArrivedAt = 0;
 
+            AspectPhysics &physics = map.physics[entityId];
             Vector2 moveForce = toTarget;
             moveForce = Vector2Normalize(moveForce);
-            moveForce = Vector2Scale(moveForce, entity.speed);
-            entity.ApplyForce(moveForce);
+            moveForce = Vector2Scale(moveForce, physics.speed);
+            entity.ApplyForce(map, entityId, moveForce);
         }
 
 #if 0
@@ -107,17 +122,19 @@ void tick_bot(GameServer &server, uint32_t entityId, double dt)
 #endif
     }
 
-    entity.Tick(dt);
+    entity.Tick(map, entityId, dt);
 }
 
 void tick_projectile(GameServer &server, uint32_t entityId, double dt)
 {
-    Entity &eProjectile = server.world->entities[entityId];
-    //eProjectile.ApplyForce({ 0, 5 });
-    eProjectile.Tick(dt);
+    Tilemap &map = server.map;
+    Entity &entity = map.entities[entityId];
 
-    if (server.now - eProjectile.spawnedAt > 1.0) {
-        server.world->DespawnEntity(server, entityId);
+    //entity.ApplyForce({ 0, 5 });
+    entity.Tick(map, entityId, dt);
+
+    if (server.now - entity.spawnedAt > 1.0) {
+        server.DespawnEntity(entityId);
     }
 }
 
@@ -137,28 +154,27 @@ void GameServer::OnClientJoin(int clientIdx)
         SKYBLUE
     };
 
-    uint32_t entityId = world->GetPlayerEntityId(clientIdx);
+    uint32_t entityId = GetPlayerEntityId(clientIdx);
 
-    ServerPlayer &serverPlayer = world->players[clientIdx];
+    ServerPlayer &serverPlayer = players[clientIdx];
     serverPlayer.needsClockSync = true;
     serverPlayer.joinedAt = now;
     serverPlayer.entityId = entityId;
 
-    Entity &entity = world->entities[serverPlayer.entityId];
+    Entity &entity = map.entities[entityId];
+    AspectCollision &collision = map.collision[entityId];
+    AspectLife &life = map.life[entityId];
+    AspectPhysics &physics = map.physics[entityId];
+
     entity.type = Entity_Player;
-    //entity.color = playerColors[clientIdx % (sizeof(playerColors) / sizeof(playerColors[0]))];
-    //entity.size = { 32, 64 };
-    entity.radius = 10;
     entity.position = { 680, 1390 };
-    entity.speed = 2000;
-    entity.drag = 8.0f;
+    collision.radius = 10;
+    life.maxHealth = 100;
+    life.health = life.maxHealth;
+    physics.speed = 2000;
+    physics.drag = 8.0f;
 
-    EntityPlayer &player = entity.data.player;
-    player.playerId = clientIdx;
-    player.life.maxHealth = 100;
-    player.life.health = player.life.maxHealth;
-
-    world->SpawnEntity(*this, entityId);
+    SpawnEntity(entityId);
 
     TileChunkRecord mainMap{};
     serverPlayer.chunkList.push(mainMap);
@@ -166,11 +182,9 @@ void GameServer::OnClientJoin(int clientIdx)
 
 void GameServer::OnClientLeave(int clientIdx)
 {
-    ServerPlayer &serverPlayer = world->players[clientIdx];
-    Entity &entity = world->entities[serverPlayer.entityId];
-    entity = {};
+    ServerPlayer &serverPlayer = players[clientIdx];
+    map.DestroyEntity(serverPlayer.entityId);
     serverPlayer = {};
-    //serverPlayer.entity.color = GRAY;
 }
 
 Err GameServer::Start(void)
@@ -252,7 +266,7 @@ Err GameServer::Start(void)
 void GameServer::SendEntitySpawn(int clientIdx, uint32_t entityId)
 {
     // TODO: Send only if the client is nearby, or the message is a global event
-    Entity &entity = world->entities[entityId];
+    Entity &entity = map.entities[entityId];
     if (!entity.type) {
         return;
     }
@@ -260,7 +274,7 @@ void GameServer::SendEntitySpawn(int clientIdx, uint32_t entityId)
     if (yj_server->CanSendMessage(clientIdx, CHANNEL_R_ENTITY_EVENT)) {
         Msg_S_EntitySpawn *msg = (Msg_S_EntitySpawn *)yj_server->CreateMessage(clientIdx, MSG_S_ENTITY_SPAWN);
         if (msg) {
-            entity.Serialize(entityId, msg->entitySpawnEvent, lastTickedAt);
+            SerializeSpawn(entityId, *msg);
             yj_server->SendMessage(clientIdx, CHANNEL_R_ENTITY_EVENT, msg);
         }
     }
@@ -280,7 +294,7 @@ void GameServer::BroadcastEntitySpawn(uint32_t entityId)
 void GameServer::SendEntityDespawn(int clientIdx, uint32_t entityId)
 {
     // TODO: Send only if the client is nearby, or the message is a global event
-    Entity &entity = world->entities[entityId];
+    Entity &entity = map.entities[entityId];
     if (!entity.type) {
         return;
     }
@@ -308,7 +322,7 @@ void GameServer::BroadcastEntityDespawn(uint32_t entityId)
 void GameServer::SendEntitySay(int clientIdx, uint32_t entityId, uint32_t messageLength, const char *message)
 {
     // TODO: Send only if the client is nearby, or the message is a global event
-    Entity &entity = world->entities[entityId];
+    Entity &entity = map.entities[entityId];
     if (!entity.type) {
         return;
     }
@@ -341,7 +355,7 @@ void GameServer::SendTileChunk(int clientIdx, uint32_t x, uint32_t y)
     if (yj_server->CanSendMessage(clientIdx, CHANNEL_R_TILE_EVENT)) {
         Msg_S_TileChunk *msg = (Msg_S_TileChunk *)yj_server->CreateMessage(clientIdx, MSG_S_TILE_CHUNK);
         if (msg) {
-            world->map.SV_SerializeChunk(*msg, x, y);
+            map.SV_SerializeChunk(*msg, x, y);
             yj_server->SendMessage(clientIdx, CHANNEL_R_TILE_EVENT, msg);
         }
     }
@@ -372,39 +386,25 @@ void GameServer::ProcessMessages(void)
                     case MSG_C_ENTITY_INTERACT:
                     {
                         Msg_C_EntityInteract *msg = (Msg_C_EntityInteract *)yjMsg;
-                        Entity *entity = world->GetEntity(msg->entityId);
-                        if (entity && entity->type == Entity_Bot) {
+                        Entity *entity = map.GetEntity(msg->entityId);
+                        if (entity && entity->type == Entity_NPC) {
                             //const char *text = TextFormat("Lily says: TPS is %d", (int)(1.0/SV_TICK_DT));
-                            //SendEntitySay(clientIdx, msg->entityId, (uint32_t)strlen(text), text);
+                            //SendEntitySay(clientIdx, msg->targetId, (uint32_t)strlen(text), text);
                         }
                         break;
                     }
                     case MSG_C_INPUT_COMMANDS:
                     {
                         Msg_C_InputCommands *msg = (Msg_C_InputCommands *)yjMsg;
-                        world->players[clientIdx].inputQueue = msg->cmdQueue;
+                        players[clientIdx].inputQueue = msg->cmdQueue;
                         break;
                     }
                     case MSG_C_TILE_INTERACT:
                     {
                         Msg_C_TileInteract *msg = (Msg_C_TileInteract *)yjMsg;
                         Tile tile{};
-                        if (world->map.AtTry(msg->x, msg->y, tile)) {
-                            //world->map.Set(msg->x, msg->y, 0);
-#if 0
-                            // TODO: If player is currently holding the magic tile inspector tool
-                            uint32_t idLabel = world->CreateEntity(Entity_Projectile);
-                            if (idLabel) {
-                                Entity &eLabel = world->entities[idLabel];
-                                eLabel.color = SKYBLUE;
-                                eLabel.size = { 5, 5 };
-                                eLabel.position = { (float)msg->x * TILE_W, (float)msg->y * TILE_W };
-                                world->SpawnEntity(*this, idLabel);
-
-                                const char *text = TextFormat("Tile type is %u", tile);
-                                SendEntitySay(clientIdx, idLabel, (uint32_t)strlen(text), text);
-                            }
-#endif
+                        if (map.AtTry(msg->x, msg->y, tile)) {
+                            //map.Set(msg->x, msg->y, 0);
                         }
                         break;
                     }
@@ -421,73 +421,78 @@ void GameServer::Tick(void)
     // Spawn entities
     static uint32_t eid_bots[10];
     for (int i = 0; i < ARRAY_SIZE(eid_bots); i++) {
-        if (!world->GetEntity(eid_bots[i])) {
-            eid_bots[i] = 0;
+        uint32_t entityId = eid_bots[i];
+        if (!map.GetEntity(entityId)) {
+            entityId = 0;
         }
-        if (!eid_bots[i] && ((int)tick % 100 == i * 10)) {
-            eid_bots[i] = world->CreateEntity(Entity_Bot);
-            if (eid_bots[i]) {
-                Entity *entity = world->GetEntity(eid_bots[i]);
-                EntityBot &bot = entity->data.bot;
-                bot.life.maxHealth = 100;
-                bot.life.health = bot.life.maxHealth;
-                bot.pathId = 0;
+        if (!entityId && ((int)tick % 100 == i * 10)) {
+            eid_bots[i] = map.CreateEntity(Entity_NPC);
+            entityId = eid_bots[i];
+            if (entityId) {
+                Entity &entity = map.entities[entityId];
+                AspectCollision &collision = map.collision[entityId];
+                AspectLife &life = map.life[entityId];
+                AspectPathfind &pathfind = map.pathfind[entityId];
+                AspectPhysics &physics = map.physics[entityId];
+                AspectSprite &sprite = map.sprite[entityId];
 
-                entity->type = Entity_Bot;
-                //entity->color = DARKPURPLE;
-                //entity->size = { 32, 64 };
-                entity->radius = 10;
-                AiPathNode *aiPathNode = world->map.GetPathNode(bot.pathId, 0);
+                life.maxHealth = 100;
+                life.health = life.maxHealth;
+                pathfind.pathId = 0;
+
+                entity.type = Entity_NPC;
+                collision.radius = 10;
+                AiPathNode *aiPathNode = map.GetPathNode(pathfind.pathId, 0);
                 if (aiPathNode) {
-                    entity->position = aiPathNode->pos;
+                    entity.position = aiPathNode->pos;
                 } else {
-                    entity->position = { 0, 0 }; // TODO world spawn or something?
+                    entity.position = { 0, 0 }; // TODO world spawn or something?
                 }
-                entity->speed = GetRandomValue(1000, 5000);
-                entity->drag = 8.0f;
-                entity->sprite.spritesheetId = STR_SHT_LILY;
-                entity->sprite.animationId = STR_NULL;
-                world->SpawnEntity(*this, eid_bots[i]);
+                physics.speed = GetRandomValue(1000, 5000);
+                physics.drag = 8.0f;
+                sprite.spritesheetId = STR_SHT_LILY;
+                sprite.animationId = STR_NULL;
+                SpawnEntity(entityId);
             }
         }
     }
 
     // Tick entites
     for (int entityId = 0; entityId < SV_MAX_ENTITIES; entityId++) {
-        Entity &entity = world->entities[entityId];
+        Entity &entity = map.entities[entityId];
         if (!entity.type || entity.despawnedAt) {
             continue;
         }
 
-        // TODO(dlb): Where should this live?
-        entity.forceAccum = {};
+        AspectPhysics &physics = map.physics[entityId];
+        physics.forceAccum = {};
         entity_ticker[entity.type](*this, entityId, SV_TICK_DT);
-        world->map.ResolveEntityTerrainCollisions(entity);
-        world->map.ResolveEntityWarpCollisions(entity, now);
+        map.ResolveEntityTerrainCollisions(entityId);
+        map.ResolveEntityWarpCollisions(entityId, now);
     }
 
     for (int projectileId = 0; projectileId < SV_MAX_ENTITIES; projectileId++) {
-        Entity &projectile = world->entities[projectileId];
+        Entity &projectile = map.entities[projectileId];
         if (projectile.type == Entity_Projectile && !projectile.despawnedAt) {
             for (int targetId = 0; targetId < SV_MAX_ENTITIES && !projectile.despawnedAt; targetId++) {
-                Entity &target = world->entities[targetId];
-                if (target.type == Entity_Bot && !target.despawnedAt) {
-                    EntityLife &life = target.data.bot.life;
+                Entity &target = map.entities[targetId];
+                if (target.type == Entity_NPC && !target.despawnedAt) {
+                    AspectLife &life = map.life[targetId];
                     if (life.Dead()) continue;
 
-                    Rectangle projectileHitbox = projectile.GetRect();
-                    Rectangle botHitbox = target.GetRect();
-                    if (CheckCollisionRecs(projectileHitbox, botHitbox)) {
+                    Rectangle projectileHitbox = projectile.GetRect(map, projectileId);
+                    Rectangle targetHitbox = target.GetRect(map, targetId);
+                    if (CheckCollisionRecs(projectileHitbox, targetHitbox)) {
                         life.TakeDamage(GetRandomValue(3, 8));
                         if (life.Alive()) {
                             const char *msg = "Ouch!";
                             BroadcastEntitySay(targetId, strlen(msg), msg);
                         } else {
-                            world->DespawnEntity(*this, targetId);
+                            DespawnEntity(targetId);
                         }
-                        world->DespawnEntity(*this, projectileId);
+                        DespawnEntity(projectileId);
                         lastCollisionA = projectileHitbox;
-                        lastCollisionB = botHitbox;
+                        lastCollisionB = targetHitbox;
                     }
                 }
             }
@@ -498,6 +503,68 @@ void GameServer::Tick(void)
     lastTickedAt = yj_server->GetTime();
 }
 
+void GameServer::SerializeSpawn(uint32_t entityId, Msg_S_EntitySpawn &entitySpawn)
+{
+    entitySpawn.serverTime = lastTickedAt;
+
+    Entity          &entity    = map.entities[entityId];
+    AspectCollision &collision = map.collision[entityId];
+    AspectPhysics   &physics   = map.physics[entityId];
+    AspectLife      &life      = map.life[entityId];
+
+    // Entity
+    entitySpawn.id       = entityId;
+    entitySpawn.type     = entity.type;
+    entitySpawn.position = entity.position;
+
+    // Collision
+    entitySpawn.radius = collision.radius;
+
+    // Physics
+    entitySpawn.drag     = physics.drag;
+    entitySpawn.speed    = physics.speed;
+    entitySpawn.velocity = physics.velocity;
+
+    // Life
+    entitySpawn.maxHealth = life.maxHealth;
+    entitySpawn.health    = life.health;
+
+    //SPAWN_PROP(sprite.spritesheetId);
+}
+
+void GameServer::SerializeSnapshot(uint32_t entityId, Msg_S_EntitySnapshot &entitySnapshot, uint32_t lastProcessedInputCmd)
+{
+    entitySnapshot.serverTime = lastTickedAt;
+
+    Entity          &entity    = map.entities[entityId];
+    AspectCollision &collision = map.collision[entityId];
+    AspectPhysics   &physics   = map.physics[entityId];
+    AspectLife      &life      = map.life[entityId];
+
+    // Entity
+    entitySnapshot.id       = entityId;
+    entitySnapshot.type     = entity.type;
+    entitySnapshot.position = entity.position;
+
+    // Collision
+    //entitySnapshot.radius = collision.radius;
+
+    // Physics
+    //entitySnapshot.drag     = bulletPhysics.drag;
+    entitySnapshot.speed    = physics.speed;
+    entitySnapshot.velocity = physics.velocity;
+
+    // Life
+    entitySnapshot.maxHealth = life.maxHealth;
+    entitySnapshot.health    = life.health;
+
+    // Only for Entity_Player
+    // TODO: Only send this to the player who actually owns this player entity,
+    //       otherwise we're leaking info about other players' connections.
+    // clientIdx
+    entitySnapshot.lastProcessedInputCmd = lastProcessedInputCmd;
+}
+
 void GameServer::SendClientSnapshots(void)
 {
     for (int clientIdx = 0; clientIdx < SV_MAX_PLAYERS; clientIdx++) {
@@ -505,11 +572,11 @@ void GameServer::SendClientSnapshots(void)
             continue;
         }
 
-        ServerPlayer &serverPlayer = world->players[clientIdx];
+        ServerPlayer &serverPlayer = players[clientIdx];
 
         for (int tileChunkIdx = 0; tileChunkIdx < serverPlayer.chunkList.size(); tileChunkIdx++) {
             TileChunkRecord &chunkRec = serverPlayer.chunkList[tileChunkIdx];
-            if (chunkRec.lastSentAt < world->map.chunkLastUpdatedAt) {
+            if (chunkRec.lastSentAt < map.chunkLastUpdatedAt) {
                 SendTileChunk(clientIdx, chunkRec.coord.x, chunkRec.coord.y);
                 chunkRec.lastSentAt = now;
                 printf("Sending chunk to client\n");
@@ -518,7 +585,7 @@ void GameServer::SendClientSnapshots(void)
 
         // TODO: Send only the world state that's relevant to this particular client
         for (int entityId = 0; entityId < SV_MAX_ENTITIES; entityId++) {
-            Entity &entity = world->entities[entityId];
+            Entity &entity = map.entities[entityId];
             if (!entity.type) {
                 continue;
             }
@@ -527,7 +594,7 @@ void GameServer::SendClientSnapshots(void)
                 if (yj_server->CanSendMessage(clientIdx, CHANNEL_R_ENTITY_EVENT)) {
                     Msg_S_EntitySpawn *msg = (Msg_S_EntitySpawn *)yj_server->CreateMessage(clientIdx, MSG_S_ENTITY_SPAWN);
                     if (msg) {
-                        entity.Serialize(entityId, msg->entitySpawnEvent, lastTickedAt);
+                        SerializeSpawn(entityId, *msg);
                         yj_server->SendMessage(clientIdx, CHANNEL_R_ENTITY_EVENT, msg);
                     }
                 }
@@ -543,7 +610,7 @@ void GameServer::SendClientSnapshots(void)
                 if (yj_server->CanSendMessage(clientIdx, CHANNEL_U_ENTITY_SNAPSHOT)) {
                     Msg_S_EntitySnapshot *msg = (Msg_S_EntitySnapshot *)yj_server->CreateMessage(clientIdx, MSG_S_ENTITY_SNAPSHOT);
                     if (msg) {
-                        entity.Serialize(entityId, msg->entitySnapshot, lastTickedAt, serverPlayer.lastInputSeq);
+                        SerializeSnapshot(entityId, *msg, serverPlayer.lastInputSeq);
                         yj_server->SendMessage(clientIdx, CHANNEL_U_ENTITY_SNAPSHOT, msg);
                     }
                 }
@@ -555,9 +622,9 @@ void GameServer::SendClientSnapshots(void)
 void GameServer::DestroyDespawnedEntities(void)
 {
     for (int entityId = 0; entityId < SV_MAX_ENTITIES; entityId++) {
-        Entity &entity = world->entities[entityId];
+        Entity &entity = map.entities[entityId];
         if (entity.type && entity.despawnedAt) {
-            world->DestroyEntity(entityId);
+            map.DestroyEntity(entityId);
         }
     }
 }
@@ -569,7 +636,7 @@ void GameServer::SendClockSync(void)
             continue;
         }
 
-        ServerPlayer &serverPlayer = world->players[clientIdx];
+        ServerPlayer &serverPlayer = players[clientIdx];
         if (serverPlayer.needsClockSync && yj_server->CanSendMessage(clientIdx, CHANNEL_R_CLOCK_SYNC)) {
             Msg_S_ClockSync *msg = (Msg_S_ClockSync *)yj_server->CreateMessage(clientIdx, MSG_S_CLOCK_SYNC);
             if (msg) {
@@ -610,7 +677,23 @@ void GameServer::Update(void)
 void GameServer::Stop(void)
 {
     yj_server->Stop();
+}
 
-    delete world;
-    world = {};
+uint32_t GameServer::GetPlayerEntityId(uint32_t clientIdx)
+{
+    return clientIdx + 1;
+}
+
+void GameServer::SpawnEntity(uint32_t entityId)
+{
+    if (map.SpawnEntity(entityId, now)) {
+        BroadcastEntitySpawn(entityId);
+    }
+}
+
+void GameServer::DespawnEntity(uint32_t entityId)
+{
+    if (map.DespawnEntity(entityId, now)) {
+        BroadcastEntityDespawn(entityId);
+    }
 }

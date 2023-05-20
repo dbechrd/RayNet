@@ -1,10 +1,30 @@
 #include "client_world.h"
 #include "game_client.h"
+#include "../common/entity.h"
+#include "../common/net/messages/msg_s_entity_spawn.h"
+#include "../common/net/messages/msg_s_entity_snapshot.h"
+
+GhostSnapshot::GhostSnapshot(Msg_S_EntitySnapshot &msg)
+{
+    serverTime            = msg.serverTime;
+    lastProcessedInputCmd = msg.lastProcessedInputCmd;
+
+    // Entity
+    position = msg.position;
+
+    // Physics
+    speed    = msg.speed;
+    velocity = msg.velocity;
+
+    // Life
+    maxHealth = msg.maxHealth;
+    health    = msg.health;
+}
 
 Entity *ClientWorld::GetEntity(uint32_t entityId)
 {
     if (entityId < SV_MAX_ENTITIES) {
-        Entity &entity = entities[entityId];
+        Entity &entity = map.entities[entityId];
         if (entity.type && !entity.despawnedAt) {
             return &entity;
         }
@@ -17,11 +37,68 @@ Entity *ClientWorld::GetEntity(uint32_t entityId)
 Entity *ClientWorld::GetEntityDeadOrAlive(uint32_t entityId)
 {
     if (entityId < SV_MAX_ENTITIES) {
-        return &entities[entityId];
+        return &map.entities[entityId];
     } else {
         printf("error: entityId %u out of range\n", entityId);
     }
     return 0;
+}
+
+void ClientWorld::ApplySpawnEvent(const Msg_S_EntitySpawn &entitySpawn)
+{
+    uint32_t entityId = entitySpawn.id;
+    if (entityId >= SV_MAX_ENTITIES) {
+        printf("[client_world] WARN: Failed to spawn entity. ID %u out of range.\n", entityId);
+        return;
+    }
+
+    Entity          &entity    = map.entities[entityId];
+    AspectCollision &collision = map.collision[entityId];
+    AspectPhysics   &physics   = map.physics[entityId];
+    AspectLife      &life      = map.life[entityId];
+    AspectSprite    &sprite    = map.sprite[entityId];
+
+    entity.type      = entitySpawn.type;
+    entity.position  = entitySpawn.position;
+    collision.radius = entitySpawn.radius;
+    physics.drag     = entitySpawn.drag;
+    physics.speed    = entitySpawn.speed;
+    physics.velocity = entitySpawn.velocity;
+    life.maxHealth   = entitySpawn.maxHealth;
+    life.health      = entitySpawn.health;
+
+    // TODO: Look it up from somewhere based on entity type?
+    switch (entity.type) {
+        case Entity_NPC: {
+            sprite.spritesheetId = STR_SHT_LILY;
+            break;
+        }
+        case Entity_Player: {
+            sprite.spritesheetId = STR_SHT_PLAYER;
+            break;
+        }
+        case Entity_Projectile: {
+            sprite.spritesheetId = STR_SHT_BULLET;
+            break;
+        };
+    }
+}
+
+void ClientWorld::ApplyStateInterpolated(uint32_t entityId, const GhostSnapshot &a, const GhostSnapshot &b, double alpha)
+{
+    Entity        &entity  = map.entities[entityId];
+    AspectPhysics &physics = map.physics[entityId];
+    AspectLife    &life    = map.life[entityId];
+
+    entity.position.x = LERP(a.position.x, b.position.x, alpha);
+    entity.position.y = LERP(a.position.y, b.position.y, alpha);
+
+    physics.velocity.x = LERP(a.velocity.x, b.velocity.x, alpha);
+    physics.velocity.y = LERP(a.velocity.y, b.velocity.y, alpha);
+
+    // TODO(dlb): Should we lerp max health?
+    life.maxHealth = a.maxHealth;
+    life.health = LERP(a.health, b.health, alpha);
 }
 
 Err ClientWorld::CreateDialog(uint32_t entityId, uint32_t messageLength, const char *message, double now)
@@ -94,20 +171,22 @@ void ClientWorld::UpdateEntities(GameClient &client)
 {
     client.hoveredEntityId = 0;
     for (uint32_t entityId = 0; entityId < SV_MAX_ENTITIES; entityId++) {
-        Entity &entity = entities[entityId];
+        Entity &entity = map.entities[entityId];
         if (entity.type == Entity_None) {
             continue;
         }
-        EntityGhost &ghost = ghosts[entityId];
+
+        AspectPhysics &physics = map.physics[entityId];
+        Ghost &ghost = ghosts[entityId];
 
         // Local player
         if (entityId == client.LocalPlayerEntityId()) {
             uint32_t lastProcessedInputCmd = 0;
 
             // Apply latest snapshot
-            const EntitySnapshot &latestSnapshot = ghost.snapshots.newest();
+            const GhostSnapshot &latestSnapshot = ghost.newest();
             if (latestSnapshot.serverTime) {
-                entity.ApplyStateInterpolated(ghost.snapshots.newest(), ghost.snapshots.newest(), 0);
+                ApplyStateInterpolated(entityId, ghost.newest(), ghost.newest(), 0);
                 lastProcessedInputCmd = latestSnapshot.lastProcessedInputCmd;
             }
 
@@ -116,17 +195,17 @@ void ClientWorld::UpdateEntities(GameClient &client)
             for (size_t cmdIndex = 0; cmdIndex < client.controller.cmdQueue.size(); cmdIndex++) {
                 InputCmd &inputCmd = client.controller.cmdQueue[cmdIndex];
                 if (inputCmd.seq > lastProcessedInputCmd) {
-                    entity.ApplyForce(inputCmd.GenerateMoveForce(entity.speed));
-                    entity.Tick(SV_TICK_DT);
-                    map.ResolveEntityTerrainCollisions(entity);
+                    entity.ApplyForce(map, entityId, inputCmd.GenerateMoveForce(physics.speed));
+                    entity.Tick(map, entityId, SV_TICK_DT);
+                    map.ResolveEntityTerrainCollisions(entityId);
                 }
             }
 
             const double cmdAccumDt = client.now - client.controller.lastInputSampleAt;
             if (cmdAccumDt > 0) {
-                entity.ApplyForce(client.controller.cmdAccum.GenerateMoveForce(entity.speed));
-                entity.Tick(cmdAccumDt);
-                map.ResolveEntityTerrainCollisions(entity);
+                entity.ApplyForce(map, entityId, client.controller.cmdAccum.GenerateMoveForce(physics.speed));
+                entity.Tick(map, entityId, cmdAccumDt);
+                map.ResolveEntityTerrainCollisions(entityId);
             }
 #endif
 
@@ -140,24 +219,24 @@ void ClientWorld::UpdateEntities(GameClient &client)
             const double renderAt = client.ServerNow() - SV_TICK_DT;
 
             size_t snapshotBIdx = 0;
-            while (snapshotBIdx < ghost.snapshots.size()
-                && ghost.snapshots[snapshotBIdx].serverTime <= renderAt)
+            while (snapshotBIdx < ghost.size()
+                && ghost[snapshotBIdx].serverTime <= renderAt)
             {
                 snapshotBIdx++;
             }
 
-            const EntitySnapshot *snapshotA = 0;
-            const EntitySnapshot *snapshotB = 0;
+            const GhostSnapshot *snapshotA = 0;
+            const GhostSnapshot *snapshotB = 0;
 
             if (snapshotBIdx <= 0) {
-                snapshotA = &ghost.snapshots.oldest();
-                snapshotB = &ghost.snapshots.oldest();
+                snapshotA = &ghost.oldest();
+                snapshotB = &ghost.oldest();
             } else if (snapshotBIdx >= CL_SNAPSHOT_COUNT) {
-                snapshotA = &ghost.snapshots.newest();
-                snapshotB = &ghost.snapshots.newest();
+                snapshotA = &ghost.newest();
+                snapshotB = &ghost.newest();
             } else {
-                snapshotA = &ghost.snapshots[snapshotBIdx - 1];
-                snapshotB = &ghost.snapshots[snapshotBIdx];
+                snapshotA = &ghost[snapshotBIdx - 1];
+                snapshotB = &ghost[snapshotBIdx];
             }
 
             float alpha = 0;
@@ -166,10 +245,10 @@ void ClientWorld::UpdateEntities(GameClient &client)
                     (snapshotB->serverTime - snapshotA->serverTime);
             }
 
-            entity.ApplyStateInterpolated(*snapshotA, *snapshotB, alpha);
+            ApplyStateInterpolated(entityId, *snapshotA, *snapshotB, alpha);
 
             const Vector2 cursorWorldPos = GetScreenToWorld2D(GetMousePosition(), camera2d);
-            bool hover = dlb_CheckCollisionPointRec(cursorWorldPos, entity.GetRect());
+            bool hover = dlb_CheckCollisionPointRec(cursorWorldPos, entity.GetRect(map, entityId));
             if (hover) {
                 bool down = IsMouseButtonPressed(MOUSE_BUTTON_LEFT);
                 if (down) {
@@ -213,9 +292,9 @@ void ClientWorld::DrawDialogs(void)
 {
     for (int i = 0; i < ARRAY_SIZE(dialogs); i++) {
         Dialog &dialog = dialogs[i];
-        Entity &entity = entities[dialog.entityId];
+        Entity &entity = map.entities[dialog.entityId];
         if (entity.type && !entity.despawnedAt) {
-            const Vector2 topCenter = entity.TopCenter();
+            const Vector2 topCenter = entity.TopCenter(map, dialog.entityId);
             DrawDialog(dialog, topCenter);
         }
     }

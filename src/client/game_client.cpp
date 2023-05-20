@@ -150,9 +150,8 @@ void GameClient::ProcessMessages(void)
                     Entity *entity = world->GetEntity(msg->entityId);
                     if (entity) {
                         world->DestroyDialog(entity->latestDialog);
-                        *entity = {};
-                        EntityGhost &ghost = world->ghosts[msg->entityId];
-                        ghost.snapshots = {};
+                        world->map.DestroyEntity(msg->entityId);
+                        world->ghosts[msg->entityId] = {};
                     }
                     break;
                 }
@@ -176,20 +175,22 @@ void GameClient::ProcessMessages(void)
                 case MSG_S_ENTITY_SNAPSHOT:
                 {
                     Msg_S_EntitySnapshot *msg = (Msg_S_EntitySnapshot *)yjMsg;
-                    EntityGhost &ghost = world->ghosts[msg->entitySnapshot.id];
-                    ghost.snapshots.push(msg->entitySnapshot);
+                    Ghost &ghost = world->ghosts[msg->id];
+
+                    GhostSnapshot ghostSnapshot{ *msg };
+                    ghost.push(ghostSnapshot);
                     break;
                 }
                 case MSG_S_ENTITY_SPAWN:
                 {
                     Msg_S_EntitySpawn *msg = (Msg_S_EntitySpawn *)yjMsg;
-                    uint32_t entityId = msg->entitySpawnEvent.id;
-                    Entity *entity = world->GetEntityDeadOrAlive(msg->entitySpawnEvent.id);
+                    uint32_t entityId = msg->id;
+                    Entity *entity = world->GetEntityDeadOrAlive(msg->id);
                     if (entity) {
                         // WARN(dlb): Other things could refer to a previous version of this entityId.
                         // TODO(dlb): Generations?
                         *entity = {};
-                        entity->ApplySpawnEvent(msg->entitySpawnEvent);
+                        world->ApplySpawnEvent(*msg);
                         if (entity->type == Entity_Projectile) {
                             rnSoundCatalog.Play(STR_SND_SOFT_TICK);
                         }

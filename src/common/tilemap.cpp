@@ -49,7 +49,7 @@ Err Tilemap::Save(std::string path)
         }
         // this isn't technically necessary, but it seems really bizarre to save
         // a tilemap that points to the placeholder texture. the user should
-        // really pick a valid tileset image before saving the map.
+        // really pick a valid tileset image before saving the map
         if (!textureId) {
             err = RN_INVALID_PATH; break;
         }
@@ -390,6 +390,12 @@ void Tilemap::Unload(void)
     pathNodes.clear();
     pathNodeIndices.clear();
     paths.clear();
+
+    entity_freelist = SV_FIRST_ENTITY_IDX;  // 0 reserved, 1-MAX_PLAYERS reserved
+    for (uint32_t i = entity_freelist; i < SV_MAX_ENTITIES - 1; i++) {
+        Entity &entity = entities[i];
+        entities[i].freelist_next = i + 1;
+    }
 }
 
 Tile Tilemap::At(uint32_t x, uint32_t y)
@@ -509,21 +515,27 @@ void Tilemap::Fill(uint32_t x, uint32_t y, int tileDefId, double now)
     }
 }
 
-void Tilemap::ResolveEntityTerrainCollisions(Entity &entity)
+void Tilemap::ResolveEntityTerrainCollisions(uint32_t entityId)
 {
-    if (!entity.radius) {
+    Entity &entity = entities[entityId];
+    if (!entity.type) {
         return;
     }
 
-    entity.colliding = false;
+    AspectCollision &eCollision = collision[entityId];
+    if (!eCollision.radius) {
+        return;
+    }
+
+    eCollision.colliding = false;
 
     Vector2 topLeft{
-        entity.position.x - entity.radius,
-        entity.position.y - entity.radius
+        entity.position.x - eCollision.radius,
+        entity.position.y - eCollision.radius
     };
     Vector2 bottomRight{
-        entity.position.x + entity.radius,
-        entity.position.y + entity.radius
+        entity.position.x + eCollision.radius,
+        entity.position.y + eCollision.radius
     };
 
     int yMin = CLAMP(floorf(topLeft.y / TILE_W), 0, height);
@@ -544,9 +556,10 @@ void Tilemap::ResolveEntityTerrainCollisions(Entity &entity)
                     tileRect.width = TILE_W;
                     tileRect.height = TILE_W;
                     Manifold manifold{};
-                    if (dlb_CheckCollisionCircleRec(entity.position, entity.radius, tileRect, &manifold)) {
-                        entity.colliding = true;
-                        if (Vector2DotProduct(entity.velocity, manifold.normal) < 0) {
+                    if (dlb_CheckCollisionCircleRec(entity.position, eCollision.radius, tileRect, &manifold)) {
+                        eCollision.colliding = true;
+                        AspectPhysics &ePhysics = physics[entityId];
+                        if (Vector2DotProduct(ePhysics.velocity, manifold.normal) < 0) {
                             entity.position.x += manifold.normal.x * manifold.depth;
                             entity.position.y += manifold.normal.y * manifold.depth;
                         }
@@ -557,14 +570,20 @@ void Tilemap::ResolveEntityTerrainCollisions(Entity &entity)
     }
 }
 
-void Tilemap::ResolveEntityWarpCollisions(Entity &entity, double now)
+void Tilemap::ResolveEntityWarpCollisions(uint32_t entityId, double now)
 {
-    if (!entity.radius || entity.type != Entity_Player) {
+    Entity &entity = entities[entityId];
+    if (entity.type != Entity_Player) {
+        return;
+    }
+
+    AspectCollision &eCollision = collision[entityId];
+    if (!eCollision.radius) {
         return;
     }
 
     for (Warp warp : warps) {
-        if (dlb_CheckCollisionCircleRec(entity.position, entity.radius, warp.collider, 0)) {
+        if (dlb_CheckCollisionCircleRec(entity.position, eCollision.radius, warp.collider, 0)) {
             if (warp.destMap.size()) {
                 Err err = Load(warp.destMap, now);
                 if (err) {
@@ -648,6 +667,80 @@ AiPathNode *Tilemap::GetPathNode(uint32_t pathId, uint32_t pathNodeIndex) {
         return &pathNodes[pathNodeId];
     }
     return 0;
+}
+
+uint32_t Tilemap::CreateEntity(EntityType entityType)
+{
+    uint32_t entityId = entity_freelist;
+    if (entity_freelist) {
+        Entity &e = entities[entity_freelist];
+        entity_freelist = e.freelist_next;
+        e.freelist_next = 0;
+        e.type = entityType;
+    }
+    return entityId;
+}
+
+bool Tilemap::SpawnEntity(uint32_t entityId, double now)
+{
+    if (entityId < SV_MAX_ENTITIES) {
+        Entity &entity = entities[entityId];
+        if (entity.type) {
+            entity.spawnedAt = now;
+            return true;
+        }
+    } else {
+        printf("error: entityId %u out of range\n", entityId);
+    }
+    return false;
+}
+
+Entity *Tilemap::GetEntity(uint32_t entityId)
+{
+    if (entityId < SV_MAX_ENTITIES) {
+        Entity &entity = entities[entityId];
+        if (entity.type) {
+            return &entity;
+        }
+    } else {
+        printf("error: entityId %u out of range\n", entityId);
+    }
+    return 0;
+}
+
+bool Tilemap::DespawnEntity(uint32_t entityId, double now)
+{
+    if (entityId < SV_MAX_ENTITIES) {
+        Entity &entity = entities[entityId];
+        if (entity.type) {
+            entity.despawnedAt = now;
+            return true;
+        }
+    } else {
+        printf("error: entityId %u out of range\n", entityId);
+    }
+    return false;
+}
+
+void Tilemap::DestroyEntity(uint32_t entityId)
+{
+    if (entityId < SV_MAX_ENTITIES) {
+        Entity &entity = entities[entityId];
+        if (entity.type) {
+            entities  [entityId] = {};
+            physics   [entityId] = {};
+            collision [entityId] = {};
+            life      [entityId] = {};
+            pathfind  [entityId] = {};
+            sprite    [entityId] = {};
+            if (entityId >= SV_FIRST_ENTITY_IDX) {
+                entity.freelist_next = entity_freelist;
+                entity_freelist = entityId;
+            }
+        }
+    } else {
+        printf("error: entityId %u out of range\n", entityId);
+    }
 }
 
 void Tilemap::DrawTile(Tile tile, Vector2 position)

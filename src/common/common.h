@@ -57,7 +57,10 @@
 #define SV_PORT                     4040 //40000
 #define SV_TICK_DT                  (1.0/30.0)
 #define SV_MAX_PLAYERS              8
-#define SV_MAX_ENTITIES             SV_MAX_PLAYERS + 32
+#define SV_FIRST_ENTITY_IDX         (1 + SV_MAX_PLAYERS)  // note: 0 slot reserved + N player slots
+#define SV_MAX_NPCS                 32  // people + mobs etc. for the moment
+#define SV_MAX_PROJECTILES          32  // obvious
+#define SV_MAX_ENTITIES             (SV_MAX_PLAYERS + SV_MAX_NPCS + SV_MAX_PROJECTILES)
 #define SV_MAX_ENTITY_SAY_MSG_LEN   1024
 #define SV_TILE_CHUNK_WIDTH         64
 

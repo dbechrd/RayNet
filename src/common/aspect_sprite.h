@@ -2,7 +2,7 @@
 #include "common.h"
 #include "strings.h"
 
-struct Sprite {
+struct AspectSprite {
     StringId spritesheetId;
     StringId animationId;
     int frame;

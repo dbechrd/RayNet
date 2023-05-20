@@ -1,33 +1,68 @@
 #pragma once
 #include "../../common.h"
-#include "../entity_snapshot.h"
 
 struct Msg_S_EntitySnapshot : public yojimbo::Message
 {
-    EntitySnapshot entitySnapshot{};
+    double      serverTime {};
+
+    // Entity
+    uint32_t    id         {};
+    EntityType  type       {};  // doesn't change, but needed for switch statements in deserializer
+    Vector2     position   {};
+
+    // Collision
+    //float       radius     {};  // when would this ever change? doesn't.. for now.
+
+    // Physics
+    float       speed      {};
+    Vector2     velocity   {};
+
+    // Life
+    int         maxHealth  {};
+    int         health     {};
+
+    // Only for Entity_Player
+    // TODO: Only send this to the player who actually owns this player entity,
+    //       otherwise we're leaking info about other players' connections.
+    int         clientIdx  {};  // TODO: Populate this for lastprocessinputcmd
+    uint32_t    lastProcessedInputCmd {};
 
     template <typename Stream> bool Serialize(Stream &stream)
     {
-        serialize_double(stream, entitySnapshot.serverTime);
-        serialize_uint32(stream, entitySnapshot.id);
+        serialize_double(stream, serverTime);
 
-        serialize_uint32(stream, (uint32_t &)entitySnapshot.entity.type);
-        serialize_float(stream, entitySnapshot.entity.velocity.x);
-        serialize_float(stream, entitySnapshot.entity.velocity.y);
-        serialize_float(stream, entitySnapshot.entity.position.x);
-        serialize_float(stream, entitySnapshot.entity.position.y);
-        switch (entitySnapshot.entity.type) {
-            case Entity_Player: {
-                serialize_uint32(stream, entitySnapshot.lastProcessedInputCmd);
-                serialize_varint32(stream, entitySnapshot.entity.data.player.life.maxHealth);
-                serialize_varint32(stream, entitySnapshot.entity.data.player.life.health);
+        // Entity
+        serialize_uint32(stream, id);
+        serialize_uint32(stream, (uint32_t &)type);
+        serialize_float(stream, position.x);
+        serialize_float(stream, position.y);
+
+        // Physics
+        switch (type) {
+            case Entity_NPC:
+            case Entity_Player:
+            case Entity_Projectile:
+            {
+                serialize_float(stream, velocity.x);
+                serialize_float(stream, velocity.y);
+            }
+        }
+
+        // Life
+        switch (type) {
+            case Entity_NPC:
+            case Entity_Player:
+            {
+                serialize_varint32(stream, maxHealth);
+                serialize_varint32(stream, health);
                 break;
             }
-            case Entity_Bot: {
-                serialize_varint32(stream, entitySnapshot.entity.data.bot.life.maxHealth);
-                serialize_varint32(stream, entitySnapshot.entity.data.bot.life.health);
-                break;
-            }
+        }
+
+        // TODO: Also check if player is the clientIdx player. I.e. don't leak
+        //       input info to all other players.
+        if (type == Entity_Player) {
+            serialize_uint32(stream, lastProcessedInputCmd);
         }
 
         return true;

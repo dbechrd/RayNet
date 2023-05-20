@@ -1,21 +1,24 @@
 #pragma once
 #include "common.h"
-#include "sprite.h"
+#include "aspect_sprite.h"
 
-struct EntitySnapshot;
-struct EntitySpawnEvent;
+struct Tilemap;
 
-enum EntityType {
-    Entity_None,
-    Entity_Player,
-    Entity_Bot,
-    Entity_Projectile,
-    Entity_Count,
+struct AspectPhysics {
+    float drag;
+    float speed;
+    Vector2 forceAccum;
+    Vector2 velocity;
 };
 
-struct EntityLife {
-    int maxHealth{};
-    int health{};
+struct AspectCollision {
+    float radius;    // collision
+    bool colliding;  // not sync'd, local flag for debugging colliders
+};
+
+struct AspectLife {
+    int maxHealth;
+    int health;
 
     void TakeDamage(int damage) {
         if (damage >= health) {
@@ -34,54 +37,49 @@ struct EntityLife {
     }
 };
 
-struct EntityPlayer {
-    EntityLife life{};
-    uint32_t playerId{};
+struct AspectPathfind {
+    int pathId;
+    int pathNodeLastArrivedAt;
+    int pathNodeTarget;
+    double pathNodeArrivedAt;
 };
 
-struct EntityBot {
-    EntityLife life{};
-    int pathId{};
-    int pathNodeLastArrivedAt{};
-    int pathNodeTarget{};
-    double pathNodeArrivedAt{};
+enum EntityType {
+    Entity_None,
+    Entity_Player,
+    Entity_NPC,
+    Entity_Projectile,
+    Entity_Count,
 };
 
 struct Entity {
     EntityType type;
     double spawnedAt;
     double despawnedAt;
-
-    float radius;    // collision
-    bool colliding;  // not sync'd, local flag for debugging colliders
-
-    float drag;
-    float speed;
-    Vector2 forceAccum;
-    Vector2 velocity;
     Vector2 position;
 
-    Sprite sprite;
+    //template <typename Stream> bool Serialize(Stream &stream)
 
-    // TODO(dlb): Could be a pointer, or could be a type + index into another pool
-    union {
-        EntityPlayer player;
-        EntityBot bot;
-    } data;
-
+    // Kind of an intrusive index of sorts.. used by dialog system to determine
+    // if entity has a currently active dialog. Probably dialog system should
+    // just maintain a map <entityid, dialogid> itself. How to handle dead
+    // entities cleaning up their dialogs? I suppose the map could enable that.
     uint32_t latestDialog;
+
+    //uint8_t custom_data[1024];
+    //union {
+    //    EntityPlayer player;
+    //    EntityNPC npc;
+    //    EntityProjectile projectile;
+    //};
 
     uint32_t freelist_next;
 
-    void Serialize(uint32_t entityId, EntitySpawnEvent &entitySpawnEvent, double serverTime);
-    void Serialize(uint32_t entityId, EntitySnapshot &entitySnapshot, double serverTime, uint32_t lastProcessedInputCmd);
-    void ApplySpawnEvent(const EntitySpawnEvent &spawnEvent);
-    void ApplyStateInterpolated(const EntitySnapshot &a, const EntitySnapshot &b, double alpha);
-    void ApplyForce(Vector2 force);
-    void Tick(double dt);
-    Rectangle GetRect(void);
-    Vector2 TopCenter(void);
-    EntityLife *GetLife(void);
-    void DrawHoverInfo(void);
-    void Draw(double now);
+    static void ApplyForce(Tilemap &map, uint32_t entityId, Vector2 force);
+    static void Tick(Tilemap &map, uint32_t entityId, double dt);
+    static Rectangle GetRect(Tilemap &map, uint32_t entityId);
+    static Vector2 TopCenter(Tilemap &map, uint32_t entityId);
+    //static AspectLife *GetLife(Tilemap &map, uint32_t entityId, void);
+    static void DrawHoverInfo(Tilemap &map, uint32_t entityId);
+    static void Draw(Tilemap &map, uint32_t entityId, double now);
 };

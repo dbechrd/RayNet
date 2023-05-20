@@ -7,8 +7,10 @@ enum {
     STR_NULL,
 
     // Resource IDs (internal, not for users)
+    STR_SHT_BULLET,
     STR_SHT_CAMPFIRE,
     STR_SHT_LILY,
+    STR_SHT_PLAYER,
 
     STR_SND_HARD_TICK,
     STR_SND_MIC_TEST,

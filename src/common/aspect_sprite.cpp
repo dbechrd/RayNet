@@ -1,6 +1,6 @@
-#include "sprite.h"
+#include "aspect_sprite.h"
 
-Vector2 Sprite::GetSize(void)
+Vector2 AspectSprite::GetSize(void)
 {
     const Spritesheet &spritesheet = rnSpritesheetCatalog.GetSpritesheet(spritesheetId);
     const Vector2 size{
@@ -10,7 +10,7 @@ Vector2 Sprite::GetSize(void)
     return size;
 }
 
-void Sprite::Draw(Vector2 pos, float scale, double now)
+void AspectSprite::Draw(Vector2 pos, float scale, double now)
 {
     // Position (after scaling)
     //float x = position.x;
