@@ -1,4 +1,5 @@
 #include "../common/collision.h"
+#include "../common/data.h"
 #include "../common/histogram.h"
 #include "../common/spritesheet.h"
 #include "../common/ui/ui.h"
@@ -67,6 +68,7 @@ int main(int argc, char *argv[])
     double frameStart = GetTime();
     double frameDt = 0;
     double frameDtSmooth = 60;
+    double animAccum = 0;
 
     bool showNetInfo = false;
     bool showTodoList = false;
@@ -87,6 +89,13 @@ int main(int argc, char *argv[])
 
         frameDtSmooth = LERP(frameDtSmooth, frameDt, 0.01);
         frameStart = client->now;
+
+        bool doAnim = false;
+        animAccum += frameDt;
+        if (animAccum > CL_ANIM_DT) {
+            doAnim = true;
+            animAccum -= CL_ANIM_DT;
+        }
 
         client->controller.sampleInputAccum += frameDt;
         client->netTickAccum += frameDt;
@@ -263,7 +272,7 @@ int main(int argc, char *argv[])
                         if (!ghost[i].serverTime) {
                             continue;
                         }
-                        client->world->ApplyStateInterpolated(ghostInstance, ghost[i], ghost[i], 0.0);
+                        client->world->ApplyStateInterpolated(ghostInstance, ghost[i], ghost[i], 0);
 
                         const float scalePer = 1.0f / (CL_SNAPSHOT_COUNT + 1);
                         Rectangle ghostRect = ghostInstance.GetRect(client->world->map, ghostInstance);
@@ -359,21 +368,28 @@ int main(int argc, char *argv[])
                 connectingDotIdxLastUpdatedAt = 0;
             }
 
+            static diabs::Sprite campfire{};
+            if (!campfire.anims[0]) {
+                campfire.anims[0] = diabs::GFX_ANIM_CAMPFIRE;
+            }
+
+            if (!client->yj_client->IsConnecting()) {
+                diabs::ResetSprite(campfire);
+            }
+
             if (client->yj_client->IsConnected()) {
                 uiMenu.Text("Loading...");
             } else if (client->yj_client->IsConnecting()) {
                 uiMenu.Text(connectingStrs[connectingDotIdx]);
                 uiMenu.Newline();
 
-                static AspectSprite campfire{};
-                if (!campfire.animationId) {
-                    campfire.spritesheetId = STR_SHT_CAMPFIRE;
-                    campfire.animationId = STR_NULL;
+                if (doAnim) {
+                    diabs::UpdateSprite(campfire);
                 }
 
-                Vector2 campfireSize = campfire.GetSize();
+                Vector2 campfireSize = diabs::GetSpriteSize(campfire);
                 Vector2 campfirePos = Vector2Subtract(uiMenu.CursorScreen(), { campfireSize.x / 2, 0 });
-                campfire.Draw(campfirePos, 1.0f, client->now);
+                diabs::DrawSprite(campfire, campfirePos);
             } else {
 #if 0
                 // Draw weird squares animation

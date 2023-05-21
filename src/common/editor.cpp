@@ -239,7 +239,6 @@ UIState Editor::DrawUI_ActionBar(Vector2 position, Tilemap &map, double now)
 #endif
     uiState.hover = dlb_CheckCollisionPointRec(GetMousePosition(), actionBarRect);
 
-    uiActionBar.Text(TextFormat("v%d", map.version));
     UIState mapPath = uiActionBar.Text(GetFileName(map.filename.c_str()), WHITE);
     if (mapPath.released) {
         system("explorer maps");
@@ -280,6 +279,7 @@ UIState Editor::DrawUI_ActionBar(Vector2 position, Tilemap &map, double now)
 
     UIState saveButton = uiActionBar.Button("Save");
     if (saveButton.released) {
+        //map.SaveKV(map.filename + ".txt");
         Err err = map.Save(map.filename);
         if (err) {
             std::string filename = map.filename;

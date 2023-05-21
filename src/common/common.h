@@ -60,7 +60,8 @@
 #define SV_FIRST_ENTITY_IDX         (1 + SV_MAX_PLAYERS)  // note: 0 slot reserved + N player slots
 #define SV_MAX_NPCS                 32  // people + mobs etc. for the moment
 #define SV_MAX_PROJECTILES          32  // obvious
-#define SV_MAX_ENTITIES             (SV_MAX_PLAYERS + SV_MAX_NPCS + SV_MAX_PROJECTILES)
+#define SV_MAX_ENT_RESERVED         (1024 - (SV_MAX_PLAYERS + SV_MAX_NPCS + SV_MAX_PROJECTILES))
+#define SV_MAX_ENTITIES             (SV_MAX_PLAYERS + SV_MAX_NPCS + SV_MAX_PROJECTILES + SV_MAX_ENT_RESERVED)
 #define SV_MAX_ENTITY_SAY_MSG_LEN   1024
 #define SV_TILE_CHUNK_WIDTH         64
 
@@ -76,6 +77,7 @@
 #define CL_MAX_DIALOGS                  32
 #define CL_DIALOG_DURATION_MIN          0.5
 #define CL_DIALOG_DURATION_PER_CHAR     0.1
+#define CL_ANIM_DT                      (1.0/60.0)
 
 #define CL_DBG_ONE_SCREEN      0
 #define CL_DBG_TWO_SCREEN      1

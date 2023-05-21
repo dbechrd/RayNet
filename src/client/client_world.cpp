@@ -84,7 +84,7 @@ void ClientWorld::ApplySpawnEvent(const Msg_S_EntitySpawn &entitySpawn)
     }
 }
 
-void ClientWorld::ApplyStateInterpolated(uint32_t entityId, const GhostSnapshot &a, const GhostSnapshot &b, double alpha)
+void ClientWorld::ApplyStateInterpolated(uint32_t entityId, const GhostSnapshot &a, const GhostSnapshot &b, float alpha)
 {
     Entity        &entity  = map.entities[entityId];
     AspectPhysics &physics = map.physics[entityId];

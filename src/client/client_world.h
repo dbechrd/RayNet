@@ -48,7 +48,7 @@ struct ClientWorld {
     Entity *GetEntity(uint32_t entityId);
     Entity *GetEntityDeadOrAlive(uint32_t entityId);
     void ApplySpawnEvent(const Msg_S_EntitySpawn &entitySpawn);
-    void ApplyStateInterpolated(uint32_t entityId, const GhostSnapshot &a, const GhostSnapshot &b, double alpha);
+    void ApplyStateInterpolated(uint32_t entityId, const GhostSnapshot &a, const GhostSnapshot &b, float alpha);
     Err CreateDialog(uint32_t entityId, uint32_t messageLength, const char *message, double now);
     Err DestroyDialog(uint32_t dialogId);
     void Update(GameClient &gameClient);

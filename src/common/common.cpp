@@ -43,6 +43,7 @@ const char *ErrStr(Err err)
 Err InitCommon(void)
 {
     Err err = RN_SUCCESS;
+    diabs::Init();
 
     rnStringCatalog.Init();
 
@@ -86,6 +87,7 @@ void FreeCommon(void)
     rnSpritesheetCatalog.Free();
     rnTextureCatalog.Free();
     rnSoundCatalog.Free();
+    diabs::Init();
 }
 
 // Load font from memory buffer, fileType refers to extension: i.e. ".ttf"
@@ -277,15 +279,16 @@ Rectangle RectGrow(const Rectangle &rect, float pixels)
 
 #include "aspect_sprite.cpp"
 #include "audio/audio.cpp"
-#include "net/net.cpp"
-#include "ui/ui.cpp"
 #include "collision.cpp"
+#include "data.cpp"
 #include "editor.cpp"
 #include "entity.cpp"
 #include "file_utils.cpp"
 #include "histogram.cpp"
+#include "net/net.cpp"
 #include "spritesheet.cpp"
 #include "strings.cpp"
 #include "texture_catalog.cpp"
 #include "tilemap.cpp"
+#include "ui/ui.cpp"
 #include "wang.cpp"

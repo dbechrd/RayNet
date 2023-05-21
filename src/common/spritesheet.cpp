@@ -49,8 +49,12 @@ Err ReadKVFile(std::string path, TokenStream &tokenStream)
 {
     Err err = RN_SUCCESS;
 
+    std::ifstream file{ path, std::ifstream::binary };
+    if (file.fail()) {
+        return RN_BAD_FILE_READ;
+    }
+
     tokenStream.path = path;
-    std::ifstream file{ path, std::ios::binary };
 
     int line = 0;
     std::string lineBuf{};
@@ -369,6 +373,8 @@ void SpritesheetCatalog::Load(StringId id)
             entryIdx = entries.size();
             entries.emplace_back(spritesheet);
             entriesById[id] = entryIdx;
+        } else {
+            printf("[spritesheet_catalog] ERROR: Failed to load spritesheet %s\n", path.c_str());
         }
     }
 }

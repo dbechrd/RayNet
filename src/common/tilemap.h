@@ -60,7 +60,6 @@ struct Tilemap {
     // v5: added warps
     const uint32_t VERSION = 5;
 
-    uint32_t version;
     std::string filename;
     StringId textureId;  // generated upon load, used to look up in rnTextureCatalog
 
@@ -69,7 +68,7 @@ struct Tilemap {
 
     // TODO(dlb): Move these to a global pool, each has its own textureId
     std::vector<TileDef> tileDefs;
-    std::vector<Tile> tiles;
+    std::vector<uint8_t> tiles;
     std::vector<AiPathNode> pathNodes; // 94 19 56 22 57
     std::vector<uint32_t> pathNodeIndices;  // 0 1 2 | 3 4 5
     std::vector<AiPath> paths;  // offset, length | 0, 3 | 3, 3
@@ -97,6 +96,7 @@ struct Tilemap {
     ~Tilemap();
 
     Err Save(std::string path);
+    Err SaveKV(std::string path);
     Err Load(std::string path, double now);
     static Err ChangeTileset(Tilemap &map, StringId newTextureId, double now);
     void Unload(void);
