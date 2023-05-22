@@ -40,8 +40,8 @@ struct ClientWorld {
     Camera2D camera2d{};
     Tilemap map{};
 
-    // TODO: This should go in Tilemap on client, but not on server. Where's the
-    //       right place for it to go then?
+    // TODO: This should go in Tilemap on client, but server doesn't need it.
+    //       Where's the right place for it to go then?
     Ghost ghosts[SV_MAX_ENTITIES]{};
     Dialog dialogs[CL_MAX_DIALOGS]{};
 

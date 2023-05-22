@@ -2,14 +2,6 @@
 #include "net/net.h"
 #include "tilemap.h"
 
-void Entity::ApplyForce(Tilemap &map, uint32_t entityId, Vector2 force)
-{
-    AspectPhysics &physics = map.physics[entityId];
-
-    physics.forceAccum.x += force.x;
-    physics.forceAccum.y += force.y;
-}
-
 void Entity::Tick(Tilemap &map, uint32_t entityId, double dt)
 {
     Entity &entity = map.entities[entityId];
@@ -34,10 +26,13 @@ void Entity::Tick(Tilemap &map, uint32_t entityId, double dt)
 Rectangle Entity::GetRect(Tilemap &map, uint32_t entityId)
 {
     Entity &entity = map.entities[entityId];
-    AspectSprite &sprite = map.sprite[entityId];
-
-    const Vector2 size = sprite.GetSize();
-    const Rectangle rect{ entity.position.x - size.x / 2, entity.position.y - size.y, size.x, size.y };
+    const data::GfxFrame &frame = data::GetSpriteFrame(map.sprite[entityId]);
+    const Rectangle rect{
+        entity.position.x - (float)(frame.w / 2),
+        entity.position.y - (float)frame.h,
+        (float)frame.w,
+        (float)frame.h
+    };
     return rect;
 }
 
@@ -55,14 +50,6 @@ void Entity::DrawHoverInfo(Tilemap &map, uint32_t entityId)
 {
     AspectLife &life = map.life[entityId];
     if (life.maxHealth) {
-#if 0
-        Rectangle hpBar{
-            position.x - maxHealth / 2,
-            position.y - size.y - 10,
-            maxHealth,
-            10
-        };
-#else
         const float borderWidth = 1;
         const float pad = 1;
         Vector2 hpBarPad{ pad, pad };
@@ -82,7 +69,6 @@ void Entity::DrawHoverInfo(Tilemap &map, uint32_t entityId)
             hpBarSize.y
         };
 
-#endif
         DrawRectangleRec(hpBarBg, Fade(BLACK, 0.5));
         float pctHealth = CLAMP((float)life.health / life.maxHealth, 0, 1);
         hpBar.width = CLAMP(ceilf(hpBarSize.x * pctHealth), 0, hpBarSize.x);
@@ -97,10 +83,13 @@ void Entity::DrawHoverInfo(Tilemap &map, uint32_t entityId)
     }
 }
 
-// TODO: Refactor out into drawrectangle or some shit
 void Entity::Draw(Tilemap &map, uint32_t entityId, double now) {
-    AspectSprite &sprite = map.sprite[entityId];
+    const Entity &entity = map.entities[entityId];
+    const data::Sprite &sprite = map.sprite[entityId];
 
     const Rectangle rect = GetRect(map, entityId);
-    sprite.Draw({ rect.x, rect.y }, 1.0f, now);
+    if (entity.type == Entity_Player) {
+        printf("");
+    }
+    data::DrawSprite(sprite, { rect.x, rect.y });
 }

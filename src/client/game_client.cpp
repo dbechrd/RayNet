@@ -149,7 +149,8 @@ void GameClient::ProcessMessages(void)
                     Msg_S_EntityDespawn *msg = (Msg_S_EntityDespawn *)yjMsg;
                     Entity *entity = world->GetEntity(msg->entityId);
                     if (entity) {
-                        world->DestroyDialog(entity->latestDialog);
+                        AspectDialog &dialog = world->map.dialog[msg->entityId];
+                        world->DestroyDialog(dialog.latestDialog);
                         world->map.DestroyEntity(msg->entityId);
                         world->ghosts[msg->entityId] = {};
                     }

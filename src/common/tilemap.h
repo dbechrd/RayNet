@@ -1,5 +1,6 @@
 #pragma once
 #include "common.h"
+#include "data.h"
 #include "entity.h"
 #include "net/net.h"
 #include "texture_catalog.h"
@@ -60,35 +61,36 @@ struct Tilemap {
     // v5: added warps
     const uint32_t VERSION = 5;
 
-    std::string filename;
-    StringId textureId;  // generated upon load, used to look up in rnTextureCatalog
+    std::string filename{};
+    StringId textureId{};  // generated upon load, used to look up in rnTextureCatalog
 
-    uint32_t width;  // width of map in tiles
-    uint32_t height;  // height of map in tiles
+    uint32_t width{};  // width of map in tiles
+    uint32_t height{};  // height of map in tiles
 
     // TODO(dlb): Move these to a global pool, each has its own textureId
-    std::vector<TileDef> tileDefs;
-    std::vector<uint8_t> tiles;
-    std::vector<AiPathNode> pathNodes; // 94 19 56 22 57
-    std::vector<uint32_t> pathNodeIndices;  // 0 1 2 | 3 4 5
-    std::vector<AiPath> paths;  // offset, length | 0, 3 | 3, 3
-    std::vector<Warp> warps;
+    std::vector<TileDef> tileDefs{};
+    std::vector<uint8_t> tiles{};
+    std::vector<AiPathNode> pathNodes{}; // 94 19 56 22 57
+    std::vector<uint32_t> pathNodeIndices{};  // 0 1 2 | 3 4 5
+    std::vector<AiPath> paths{};  // offset, length | 0, 3 | 3, 3
+    std::vector<Warp> warps{};
 
     // TODO: Actually have more than 1 chunk..
-    double chunkLastUpdatedAt;  // used by server to know when chunks are dirty on clients
+    double chunkLastUpdatedAt{};  // used by server to know when chunks are dirty on clients
 
     // [0]: reserved for safe null
     // [1, SV_MAX_PLAYERS]: reserved for player entities
     // [SV_MAX_PLAYERS + 1, SV_MAX_ENTITIES - 1]: dynamic entities (uses freelist)
-    uint32_t entity_freelist;
+    uint32_t entity_freelist{};
 
     // TODO: Rename these so they don't collide with local variables all the time
-    Entity          entities  [SV_MAX_ENTITIES];
-    AspectPhysics   physics   [SV_MAX_ENTITIES];
-    AspectCollision collision [SV_MAX_ENTITIES];
-    AspectLife      life      [SV_MAX_ENTITIES];
-    AspectPathfind  pathfind  [SV_MAX_ENTITIES];
-    AspectSprite    sprite    [SV_MAX_ENTITIES];
+    AspectCollision collision [SV_MAX_ENTITIES]{};
+    AspectDialog    dialog    [SV_MAX_ENTITIES]{};
+    Entity          entities  [SV_MAX_ENTITIES]{};
+    AspectLife      life      [SV_MAX_ENTITIES]{};
+    AspectPathfind  pathfind  [SV_MAX_ENTITIES]{};
+    AspectPhysics   physics   [SV_MAX_ENTITIES]{};
+    data::Sprite    sprite    [SV_MAX_ENTITIES]{};
 
     void SV_SerializeChunk(Msg_S_TileChunk &tileChunk, uint32_t x, uint32_t y);
     void CL_DeserializeChunk(Msg_S_TileChunk &tileChunk);

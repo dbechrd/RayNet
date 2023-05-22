@@ -1,5 +1,6 @@
 #pragma once
 #include "common.h"
+#include "../common/strings.h"
 
 struct TextureCatalog {
     struct Entry {

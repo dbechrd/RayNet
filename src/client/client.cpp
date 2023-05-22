@@ -368,13 +368,13 @@ int main(int argc, char *argv[])
                 connectingDotIdxLastUpdatedAt = 0;
             }
 
-            static diabs::Sprite campfire{};
+            static data::Sprite campfire{};
             if (!campfire.anims[0]) {
-                campfire.anims[0] = diabs::GFX_ANIM_CAMPFIRE;
+                campfire.anims[0] = data::GFX_ANIM_OBJ_CAMPFIRE;
             }
 
             if (!client->yj_client->IsConnecting()) {
-                diabs::ResetSprite(campfire);
+                data::ResetSprite(campfire);
             }
 
             if (client->yj_client->IsConnected()) {
@@ -384,12 +384,12 @@ int main(int argc, char *argv[])
                 uiMenu.Newline();
 
                 if (doAnim) {
-                    diabs::UpdateSprite(campfire);
+                    data::UpdateSprite(campfire);
                 }
 
-                Vector2 campfireSize = diabs::GetSpriteSize(campfire);
-                Vector2 campfirePos = Vector2Subtract(uiMenu.CursorScreen(), { campfireSize.x / 2, 0 });
-                diabs::DrawSprite(campfire, campfirePos);
+                const data::GfxFrame &campfireFrame = data::GetSpriteFrame(campfire);
+                Vector2 campfirePos = Vector2Subtract(uiMenu.CursorScreen(), { (float)(campfireFrame.w / 2), 0 });
+                data::DrawSprite(campfire, campfirePos);
             } else {
 #if 0
                 // Draw weird squares animation

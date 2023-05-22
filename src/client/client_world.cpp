@@ -56,7 +56,7 @@ void ClientWorld::ApplySpawnEvent(const Msg_S_EntitySpawn &entitySpawn)
     AspectCollision &collision = map.collision[entityId];
     AspectPhysics   &physics   = map.physics[entityId];
     AspectLife      &life      = map.life[entityId];
-    AspectSprite    &sprite    = map.sprite[entityId];
+    data::Sprite    &sprite    = map.sprite[entityId];
 
     entity.type      = entitySpawn.type;
     entity.position  = entitySpawn.position;
@@ -70,15 +70,15 @@ void ClientWorld::ApplySpawnEvent(const Msg_S_EntitySpawn &entitySpawn)
     // TODO: Look it up from somewhere based on entity type?
     switch (entity.type) {
         case Entity_NPC: {
-            sprite.spritesheetId = STR_SHT_LILY;
+            sprite.anims[0] = data::GFX_ANIM_NPC_LILY_N;
             break;
         }
         case Entity_Player: {
-            sprite.spritesheetId = STR_SHT_PLAYER;
+            sprite.anims[0] = data::GFX_ANIM_CHR_MAGE_N;
             break;
         }
         case Entity_Projectile: {
-            sprite.spritesheetId = STR_SHT_BULLET;
+            sprite.anims[0] = data::GFX_ANIM_PRJ_BULLET;
             break;
         };
     }
@@ -129,7 +129,8 @@ Err ClientWorld::CreateDialog(uint32_t entityId, uint32_t messageLength, const c
         }
         strncpy(dialog->message, message, messageLength);
 
-        entity->latestDialog = dialogId;
+        AspectDialog &dialog = map.dialog[entityId];
+        dialog.latestDialog = dialogId;
     } else {
         return RN_BAD_ALLOC;
     }
@@ -156,7 +157,8 @@ void ClientWorld::RemoveExpiredDialogs(GameClient &gameClient)
             continue;
         }
 
-        if (entity->latestDialog != dialogId) {
+        AspectDialog &aspectDialog = map.dialog[dialog.entityId];
+        if (aspectDialog.latestDialog != dialogId) {
             DestroyDialog(dialogId);
         }
 
@@ -195,7 +197,7 @@ void ClientWorld::UpdateEntities(GameClient &client)
             for (size_t cmdIndex = 0; cmdIndex < client.controller.cmdQueue.size(); cmdIndex++) {
                 InputCmd &inputCmd = client.controller.cmdQueue[cmdIndex];
                 if (inputCmd.seq > lastProcessedInputCmd) {
-                    entity.ApplyForce(map, entityId, inputCmd.GenerateMoveForce(physics.speed));
+                    physics.ApplyForce(inputCmd.GenerateMoveForce(physics.speed));
                     entity.Tick(map, entityId, SV_TICK_DT);
                     map.ResolveEntityTerrainCollisions(entityId);
                 }
@@ -203,7 +205,7 @@ void ClientWorld::UpdateEntities(GameClient &client)
 
             const double cmdAccumDt = client.now - client.controller.lastInputSampleAt;
             if (cmdAccumDt > 0) {
-                entity.ApplyForce(map, entityId, client.controller.cmdAccum.GenerateMoveForce(physics.speed));
+                physics.ApplyForce(client.controller.cmdAccum.GenerateMoveForce(physics.speed));
                 entity.Tick(map, entityId, cmdAccumDt);
                 map.ResolveEntityTerrainCollisions(entityId);
             }

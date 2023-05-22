@@ -1,5 +1,6 @@
 #include "common.h"
 #include "audio/audio.h"
+#include "data.h"
 #include "spritesheet.h"
 #include "texture_catalog.h"
 
@@ -43,7 +44,7 @@ const char *ErrStr(Err err)
 Err InitCommon(void)
 {
     Err err = RN_SUCCESS;
-    diabs::Init();
+    data::Init();
 
     rnStringCatalog.Init();
 
@@ -87,7 +88,7 @@ void FreeCommon(void)
     rnSpritesheetCatalog.Free();
     rnTextureCatalog.Free();
     rnSoundCatalog.Free();
-    diabs::Init();
+    data::Init();
 }
 
 // Load font from memory buffer, fileType refers to extension: i.e. ".ttf"
@@ -277,7 +278,6 @@ Rectangle RectGrow(const Rectangle &rect, float pixels)
     return grown;
 }
 
-#include "aspect_sprite.cpp"
 #include "audio/audio.cpp"
 #include "collision.cpp"
 #include "data.cpp"

@@ -20,6 +20,36 @@ void GameServerNetAdapter::OnServerClientDisconnected(int clientIdx)
     server->OnClientLeave(clientIdx);
 }
 
+uint32_t spawn_projectile(GameServer &server, Vector2 position, Vector2 direction)
+{
+    Tilemap &map = server.map;
+
+    uint32_t idBullet = map.CreateEntity(Entity_Projectile);
+    if (idBullet) {
+        Entity &bulletEntity = map.entities[idBullet];
+        bulletEntity.position = position;
+
+        //  Shoot in facing bulletDirection
+        Vector2 bulletDirection = Vector2Scale(direction, 100);
+        //  Add a bit of random spread
+        bulletDirection.x += GetRandomValue(-20, 20);
+        bulletDirection.y += GetRandomValue(-20, 20);
+        bulletDirection = Vector2Normalize(bulletDirection);
+        Vector2 bulletVelocity = Vector2Scale(bulletDirection, 200); //GetRandomValue(800, 1000));;
+        //  Random speed
+        AspectPhysics &bulletPhysics = map.physics[idBullet];
+        bulletPhysics.velocity = bulletVelocity;
+        bulletPhysics.drag = 0.02f;
+
+        // Sprite
+        data::Sprite &bulletSprite = map.sprite[idBullet];
+        bulletSprite.anims[0] = data::GFX_ANIM_PRJ_BULLET;
+
+        server.SpawnEntity(idBullet);
+    }
+    return idBullet;
+}
+
 void tick_player(GameServer &server, uint32_t entityId, double dt)
 {
     Tilemap &map = server.map;
@@ -40,30 +70,17 @@ void tick_player(GameServer &server, uint32_t entityId, double dt)
     if (inputCmd) {
         AspectPhysics &physics = map.physics[entityId];
         Vector2 moveForce = inputCmd->GenerateMoveForce(physics.speed);
-        entity.ApplyForce(map, entityId, moveForce);
+        physics.ApplyForce(moveForce);
 
         if (inputCmd->fire) {
-            uint32_t idBullet = map.CreateEntity(Entity_Projectile);
-            if (idBullet) {
-                Entity &bulletEntity = map.entities[idBullet];
-                AspectPhysics &bulletPhysics = map.physics[idBullet];
-
-                bulletEntity.position = { entity.position.x, entity.position.y - 32 };
-                // Shoot in facing direction
-                Vector2 direction = Vector2Scale(inputCmd->facing, 100);
-                // Add a bit of random spread
-                direction.x += GetRandomValue(-20, 20);
-                direction.y += GetRandomValue(-20, 20);
-                direction = Vector2Normalize(direction);
-                Vector2 bulletVelocity = Vector2Scale(direction, 400); //GetRandomValue(800, 1000));;
-                // Random speed
-                bulletPhysics.velocity = bulletVelocity;
-                bulletPhysics.drag = 0.02f;
-                server.SpawnEntity(idBullet);
+            Vector2 projSpawnLoc{ entity.position.x, entity.position.y - 24 };
+            uint32_t bulletId = spawn_projectile(server, projSpawnLoc, inputCmd->facing);
+            if (bulletId) {
+                const AspectPhysics &bulletPhysics = map.physics[bulletId];
 
                 // Recoil
-                Vector2 recoilForce = Vector2Negate(bulletVelocity);
-                entity.ApplyForce(map, entityId, recoilForce);
+                Vector2 recoilForce = Vector2Negate(bulletPhysics.velocity);
+                physics.ApplyForce(recoilForce);
             }
         }
     }
@@ -100,7 +117,7 @@ void tick_bot(GameServer &server, uint32_t entityId, double dt)
             Vector2 moveForce = toTarget;
             moveForce = Vector2Normalize(moveForce);
             moveForce = Vector2Scale(moveForce, physics.speed);
-            entity.ApplyForce(map, entityId, moveForce);
+            physics.ApplyForce(moveForce);
         }
 
 #if 0
@@ -165,6 +182,7 @@ void GameServer::OnClientJoin(int clientIdx)
     AspectCollision &collision = map.collision[entityId];
     AspectLife &life = map.life[entityId];
     AspectPhysics &physics = map.physics[entityId];
+    data::Sprite &sprite = map.sprite[entityId];
 
     entity.type = Entity_Player;
     entity.position = { 680, 1390 };
@@ -173,6 +191,7 @@ void GameServer::OnClientJoin(int clientIdx)
     life.health = life.maxHealth;
     physics.speed = 2000;
     physics.drag = 8.0f;
+    sprite.anims[0] = data::GFX_ANIM_CHR_MAGE_N;
 
     SpawnEntity(entityId);
 
@@ -434,7 +453,7 @@ void GameServer::Tick(void)
                 AspectLife &life = map.life[entityId];
                 AspectPathfind &pathfind = map.pathfind[entityId];
                 AspectPhysics &physics = map.physics[entityId];
-                AspectSprite &sprite = map.sprite[entityId];
+                data::Sprite &sprite = map.sprite[entityId];
 
                 life.maxHealth = 100;
                 life.health = life.maxHealth;
@@ -450,8 +469,7 @@ void GameServer::Tick(void)
                 }
                 physics.speed = GetRandomValue(1000, 5000);
                 physics.drag = 8.0f;
-                sprite.spritesheetId = STR_SHT_LILY;
-                sprite.animationId = STR_NULL;
+                sprite.anims[0] = data::GFX_ANIM_NPC_LILY_N;
                 SpawnEntity(entityId);
             }
         }
@@ -469,6 +487,9 @@ void GameServer::Tick(void)
         entity_ticker[entity.type](*this, entityId, SV_TICK_DT);
         map.ResolveEntityTerrainCollisions(entityId);
         map.ResolveEntityWarpCollisions(entityId, now);
+
+        data::Sprite &sprite = map.sprite[entityId];
+        data::UpdateSprite(sprite);
     }
 
     for (int projectileId = 0; projectileId < SV_MAX_ENTITIES; projectileId++) {
@@ -529,7 +550,7 @@ void GameServer::SerializeSpawn(uint32_t entityId, Msg_S_EntitySpawn &entitySpaw
     entitySpawn.maxHealth = life.maxHealth;
     entitySpawn.health    = life.health;
 
-    //SPAWN_PROP(sprite.spritesheetId);
+    //SPAWN_PROP(bulletSprite.spritesheetId);
 }
 
 void GameServer::SerializeSnapshot(uint32_t entityId, Msg_S_EntitySnapshot &entitySnapshot, uint32_t lastProcessedInputCmd)
