@@ -1,17 +1,35 @@
-#include "audio/audio.h"
+﻿#include "audio/audio.h"
 #include "collision.h"
 #include "editor.h"
+#include "stb_herringbone_wang_tile.h"
 #include "texture_catalog.h"
 #include "tilemap.h"
 #include "tinyfiledialogs.h"
 #include "ui/ui.h"
 
+Err Editor::Init(Tilemap &map)
+{
+    Err err = RN_SUCCESS;
+    err = state.wang.wangTileset.GenerateTemplate("resources/wang/template.png");
+    if (err) return err;
+
+    err = state.wang.wangTileset.Load(map, "resources/wang/tileset2x2.png");
+    if (err) return err;
+
+    WangMap wangMap{};
+    err = state.wang.wangTileset.GenerateMap(map.width, map.height, map, wangMap);
+    if (err) return err;
+    return err;
+}
+
 const char *EditModeStr(EditMode mode)
 {
     switch (mode) {
-        case EditMode_Tiles: return "Tiles";
-        case EditMode_Paths: return "Paths";
-        case EditMode_Warps: return "Warps";
+        case EditMode_Tiles:    return "Tiles";
+        case EditMode_Wang:     return "Wang";
+        case EditMode_Entities: return "Entities";
+        case EditMode_Paths:    return "Paths";
+        case EditMode_Warps:    return "Warps";
         default: return "<null>";
     }
 }
@@ -43,6 +61,9 @@ void Editor::DrawOverlays(Tilemap &map, Camera2D &camera, double now)
     if (state.showColliders) {
         map.DrawColliders(camera);
     }
+    if (state.showTileIds) {
+        map.DrawTileIds(camera);
+    }
 
     if (active) {
         switch (mode) {
@@ -50,12 +71,20 @@ void Editor::DrawOverlays(Tilemap &map, Camera2D &camera, double now)
                 DrawOverlay_Tiles(map, camera, now);
                 break;
             }
+            case EditMode_Wang: {
+                DrawOverlay_Wang(map, camera, now);
+                break;
+            }
+            case EditMode_Entities: {
+                DrawOverlay_Entities(map, camera, now);
+                break;
+            }
             case EditMode_Paths: {
-                DrawOverlay_Paths(map, camera);
+                DrawOverlay_Paths(map, camera, now);
                 break;
             }
             case EditMode_Warps: {
-                DrawOverlay_Warps(map, camera);
+                DrawOverlay_Warps(map, camera, now);
                 break;
             }
         }
@@ -95,7 +124,21 @@ void Editor::DrawOverlay_Tiles(Tilemap &map, Camera2D &camera, double now)
     }
 }
 
-void Editor::DrawOverlay_Paths(Tilemap &map, Camera2D &camera)
+void Editor::DrawOverlay_Wang(Tilemap &map, Camera2D &camera, double now)
+{
+}
+
+void Editor::DrawOverlay_Entities(Tilemap &map, Camera2D &camera, double now)
+{
+    for (uint32_t entityId = 0; entityId < ARRAY_SIZE(map.entities); entityId++) {
+        const Entity &entity = map.entities[entityId];
+        if (entity.type) {
+            DrawRectangleRec(entity.GetRect(map, entityId), Fade(SKYBLUE, 0.7f));
+        }
+    }
+}
+
+void Editor::DrawOverlay_Paths(Tilemap &map, Camera2D &camera, double now)
 {
     auto &cursor = state.pathNodes.cursor;
     const Vector2 cursorWorldPos = GetScreenToWorld2D({ (float)GetMouseX(), (float)GetMouseY() }, camera);
@@ -199,7 +242,7 @@ void Editor::DrawOverlay_Paths(Tilemap &map, Camera2D &camera)
     }
 }
 
-void Editor::DrawOverlay_Warps(Tilemap &map, Camera2D &camera)
+void Editor::DrawOverlay_Warps(Tilemap &map, Camera2D &camera, double now)
 {
     for (const Warp &warp : map.warps) {
         DrawRectangleRec(warp.collider, Fade(SKYBLUE, 0.7f));
@@ -229,21 +272,15 @@ UIState Editor::DrawUI_ActionBar(Vector2 position, Tilemap &map, double now)
 
     // TODO: UI::Panel
     UIState uiState{};
-    const Rectangle actionBarRect{ position.x, position.y, 840, 160 };
+    const Rectangle actionBarRect{ position.x, position.y, 430, GetRenderHeight() - 8 };
 #if 0
     DrawRectangleRounded(actionBarRect, 0.15f, 8, ASESPRITE_BEIGE);
     DrawRectangleRoundedLines(actionBarRect, 0.15f, 8, 2.0f, BLACK);
 #else
-    DrawRectangleRec(actionBarRect, Fade(ASESPRITE_BEIGE, 0.7f));
+    DrawRectangleRec(actionBarRect, GREEN_DESAT); //ASESPRITE_BEIGE);
     DrawRectangleLinesEx(actionBarRect, 2.0f, BLACK);
 #endif
     uiState.hover = dlb_CheckCollisionPointRec(GetMousePosition(), actionBarRect);
-
-    UIState mapPath = uiActionBar.Text(GetFileName(map.filename.c_str()), WHITE);
-    if (mapPath.released) {
-        system("explorer maps");
-    }
-    uiActionBar.Newline();
 
     const char *mapFileFilter[1] = { "*.dat" };
     static std::string openRequest;
@@ -329,31 +366,47 @@ UIState Editor::DrawUI_ActionBar(Vector2 position, Tilemap &map, double now)
             errorThread.detach();
         }
     }
+    uiActionBar.Newline();
 
-    uiActionBar.Space({ 16, 0 });
-
-    for (int i = 0; i < EditMode_Count; i++) {
-        if (uiActionBar.Button(EditModeStr((EditMode)i), mode == i, DARKBLUE).pressed) {
-            mode = (EditMode)i;
-        }
+    UIState mapPath = uiActionBar.Text(GetFileName(map.filename.c_str()), WHITE);
+    if (mapPath.released) {
+        system("explorer maps");
     }
+    uiActionBar.Newline();
 
-    uiActionBar.Space({ 16, 0 });
-
-    UIState showCollidersButton = uiActionBar.Button("Show Colliders", state.showColliders ? RED : GRAY);
+    uiActionBar.Text("Show:");
+    UIState showCollidersButton = uiActionBar.Button("Collision", state.showColliders, GRAY, MAROON);
     if (showCollidersButton.released) {
         state.showColliders = !state.showColliders;
+    }
+    UIState showTileIdsButton = uiActionBar.Button("Tile IDs", state.showTileIds, GRAY, LIGHTGRAY);
+    if (showTileIdsButton.released) {
+        state.showTileIds = !state.showTileIds;
     }
 
     uiActionBar.Newline();
 
-    uiActionBar.Text("--------------------------------------------------------------");
+    for (int i = 0; i < EditMode_Count; i++) {
+        if (uiActionBar.Button(EditModeStr((EditMode)i), mode == i, BLUE, DARKBLUE).pressed) {
+            mode = (EditMode)i;
+        }
+    }
+    uiActionBar.Newline();
+
+    uiActionBar.Text("--------------------------------------", LIGHTGRAY);
     uiActionBar.Newline();
 
     switch (mode) {
         case EditMode_Tiles: {
             DrawUI_TileActions(uiActionBar, map, now);
-            DrawUI_Tilesheet(uiActionBar, map, now);
+            break;
+        }
+        case EditMode_Wang: {
+            DrawUI_Wang(uiActionBar, map, now);
+            break;
+        }
+        case EditMode_Entities: {
+            DrawUI_EntityActions(uiActionBar, map, now);
             break;
         }
         case EditMode_Paths: {
@@ -402,11 +455,14 @@ void Editor::DrawUI_TileActions(UI &uiActionBar, Tilemap &map, double now)
     }
     uiActionBar.Newline();
 
-    uiActionBar.Text("Flags:", BLACK);
-    UIState editCollisionButton = uiActionBar.Button("Collide", state.tiles.editCollision ? RED : GRAY);
+    uiActionBar.Text("Edit:");
+    UIState editCollisionButton = uiActionBar.Button("Collision", state.tiles.editCollision, GRAY, MAROON);
     if (editCollisionButton.released) {
         state.tiles.editCollision = !state.tiles.editCollision;
     }
+    uiActionBar.Newline();
+
+    DrawUI_Tilesheet(uiActionBar, map, now);
 }
 
 void Editor::DrawUI_Tilesheet(UI &uiActionBar, Tilemap &map, double now)
@@ -414,12 +470,6 @@ void Editor::DrawUI_Tilesheet(UI &uiActionBar, Tilemap &map, double now)
     // TODO: Support multi-select (big rectangle?), and figure out where this lives
 
     Texture mapTex = rnTextureCatalog.GetTexture(map.textureId);
-    Vector2 uiSheetPos{
-        GetRenderWidth() - mapTex.width - 10.0f,
-        GetRenderHeight() - mapTex.height - 10.0f
-    };
-    UIStyle uiSheetStyle{};
-    UI uiSheet{ uiSheetPos, uiSheetStyle };
 
     static Texture checkerboard{};
     if (checkerboard.width != mapTex.width || checkerboard.height != mapTex.height) {
@@ -428,8 +478,12 @@ void Editor::DrawUI_Tilesheet(UI &uiActionBar, Tilemap &map, double now)
         );
     }
 
-    UIState sheet = uiSheet.Image(checkerboard);
+    UIStyle blackBorderStyle{};
+    blackBorderStyle.borderColor = BLACK;
+    uiActionBar.PushStyle(blackBorderStyle);
+    UIState sheet = uiActionBar.Image(checkerboard);
     DrawTextureEx(mapTex, sheet.contentTopLeft, 0, 1, WHITE);
+    uiActionBar.PopStyle();
 
     Vector2 imgTL = sheet.contentTopLeft;
 
@@ -486,12 +540,172 @@ void Editor::DrawUI_Tilesheet(UI &uiActionBar, Tilemap &map, double now)
         }
     }
 
-    // Draw highlight around currently selected tiledef in draw mode
+    // Draw highlight around currently styleSelected tiledef in draw mode
     if (state.tiles.cursor.tileDefId >= 0) {
         Rectangle tileDefRectScreen = map.TileDefRect(state.tiles.cursor.tileDefId);
         tileDefRectScreen.x += imgTL.x;
         tileDefRectScreen.y += imgTL.y;
         DrawRectangleLinesEx(tileDefRectScreen, 2, WHITE);
+    }
+}
+
+void Editor::DrawUI_Wang(UI &uiActionBar, Tilemap &map, double now)
+{
+    WangTileset &wangTileset = state.wang.wangTileset;
+    WangMap &wangMap = state.wang.wangMap;
+
+    UIStyle uiWangStyle4x{};
+    uiWangStyle4x.scale = 4;
+    uiActionBar.PushStyle(uiWangStyle4x);
+
+    UIStyle styleSelected{ uiWangStyle4x };
+    styleSelected.borderColor = WHITE;
+
+    static int hTex = -1;
+    static int vTex = -1;
+    for (int i = 0; i < wangTileset.ts.num_h_tiles; i++) {
+        stbhw_tile *wangTile = wangTileset.ts.h_tiles[i];
+        Rectangle srcRect{
+            (float)wangTile->x,
+            (float)wangTile->y,
+            (float)wangTileset.ts.short_side_len * 2,
+            (float)wangTileset.ts.short_side_len
+        };
+        bool stylePushed = false;
+        if (i == hTex) {
+            uiActionBar.PushStyle(styleSelected);
+            stylePushed = true;
+        }
+        if (uiActionBar.Image(wangTileset.thumbnail, srcRect).pressed) {
+            hTex = hTex == i ? -1 : i;
+            vTex = -1;
+        }
+        if (stylePushed) {
+            uiActionBar.PopStyle();
+        }
+    }
+    Vector2 cursorEndOfFirstLine = uiActionBar.CursorScreen();
+    uiActionBar.Newline();
+
+    for (int i = 0; i < wangTileset.ts.num_v_tiles; i++) {
+        stbhw_tile *wangTile = wangTileset.ts.v_tiles[i];
+        Rectangle srcRect{
+            (float)wangTile->x,
+            (float)wangTile->y,
+            (float)wangTileset.ts.short_side_len,
+            (float)wangTileset.ts.short_side_len * 2
+        };
+        bool stylePushed = false;
+        if (i == vTex) {
+            uiActionBar.PushStyle(styleSelected);
+            stylePushed = true;
+        }
+        if (uiActionBar.Image(wangTileset.thumbnail, srcRect).pressed) {
+            hTex = -1;
+            vTex = vTex == i ? -1 : i;
+        }
+        if (stylePushed) {
+            uiActionBar.PopStyle();
+        }
+    }
+    uiActionBar.Newline();
+
+    if (uiActionBar.Button("Export tileset").pressed) {
+        ExportImage(wangTileset.ts.img, wangTileset.filename.c_str());
+    }
+    uiActionBar.Newline();
+    uiActionBar.Image(wangTileset.thumbnail);
+    uiActionBar.Newline();
+
+    uiActionBar.PopStyle();
+    UIStyle uiWangStyle2x{};
+    uiWangStyle2x.scale = 2;
+    uiActionBar.PushStyle(uiWangStyle2x);
+
+    if (uiActionBar.Button("Re-generate Map").pressed) {
+        wangTileset.GenerateMap(map.width, map.height, map, wangMap);
+    }
+    uiActionBar.Newline();
+
+    static Tilemap wangTilemap{};
+    if (uiActionBar.Image(wangMap.colorized).pressed) {
+        map.SetFromWangMap(wangMap, now);
+    }
+
+    if (hTex >= 0 || vTex >= 0) {
+        Tile selectedTile = state.tiles.cursor.tileDefId;
+        static double lastUpdatedAt = 0;
+        static double lastChangedAt = 0;
+        const double updateDelay = 0.02;
+
+        Rectangle wangBg{ cursorEndOfFirstLine.x + 8, cursorEndOfFirstLine.y + 8, 560, 560 };
+        DrawRectangleRec(wangBg, Fade(BLACK, 0.5f));
+
+        UIStyle uiWangTileStyle{};
+        uiWangTileStyle.margin = 0;
+        uiWangTileStyle.imageBorderThickness = 1;
+        UI uiWangTile{ { wangBg.x + 8, wangBg.y + 8 }, uiWangTileStyle };
+        if (hTex >= 0) {
+            stbhw_tile *wangTile = wangTileset.ts.h_tiles[hTex];
+            for (int y = 0; y < wangTileset.ts.short_side_len; y++) {
+                for (int x = 0; x < wangTileset.ts.short_side_len*2; x++) {
+                    int templateX = wangTile->x + x;
+                    int templateY = wangTile->y + y;
+                    uint8_t *pixel = &((uint8_t *)wangTileset.ts.img.data)[(templateY * wangTileset.ts.img.width + templateX) * 3];
+                    uint8_t tile = pixel[0] < map.tileDefs.size() ? pixel[0] : 0;
+
+                    Texture mapTex = rnTextureCatalog.GetTexture(map.textureId);
+                    const Rectangle tileRect = map.TileDefRect(tile);
+                    if (uiWangTile.Image(mapTex, tileRect).down) {
+                        pixel[0] = selectedTile; //^ (selectedTile*55);
+                        pixel[1] = selectedTile; //^ (selectedTile*55);
+                        pixel[2] = selectedTile; //^ (selectedTile*55);
+                        lastChangedAt = now;
+                    }
+                }
+                uiWangTile.Newline();
+            }
+        } else if (vTex >= 0) {
+            stbhw_tile *wangTile = wangTileset.ts.v_tiles[vTex];
+            for (int y = 0; y < wangTileset.ts.short_side_len*2; y++) {
+                for (int x = 0; x < wangTileset.ts.short_side_len; x++) {
+                    int templateX = wangTile->x + x;
+                    int templateY = wangTile->y + y;
+                    uint8_t *pixel = &((uint8_t *)wangTileset.ts.img.data)[(templateY * wangTileset.ts.img.width + templateX) * 3];
+                    uint8_t tile = pixel[0] < map.tileDefs.size() ? pixel[0] : 0;
+
+                    Texture mapTex = rnTextureCatalog.GetTexture(map.textureId);
+                    const Rectangle tileRect = map.TileDefRect(tile);
+                    if (uiWangTile.Image(mapTex, tileRect).down) {
+                        pixel[0] = selectedTile; //^ (selectedTile*55);
+                        pixel[1] = selectedTile; //^ (selectedTile*55);
+                        pixel[2] = selectedTile; //^ (selectedTile*55);
+                        lastChangedAt = now;
+                    }
+                }
+                uiWangTile.Newline();
+            }
+        }
+
+        // Update if dirty on a slight delay (to make dragging more efficient)
+        if (lastChangedAt > lastUpdatedAt && (now - lastChangedAt) > updateDelay) {
+            UnloadTexture(wangTileset.thumbnail);
+            wangTileset.thumbnail = wangTileset.GenerateColorizedTexture(wangTileset.ts.img, map);
+            lastUpdatedAt = now;
+        }
+    }
+    uiActionBar.PopStyle();
+}
+
+void Editor::DrawUI_EntityActions(UI &uiActionBar, Tilemap &map, double now)
+{
+    if (uiActionBar.Button("Despawn all", MAROON).pressed) {
+        for (uint32_t entityId = 0; entityId < ARRAY_SIZE(map.entities); entityId++) {
+            const Entity &entity = map.entities[entityId];
+            if (entity.type) {
+                map.DespawnEntity(entityId, now);
+            }
+        }
     }
 }
 

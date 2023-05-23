@@ -49,6 +49,8 @@
 
 #define ASESPRITE_BEIGE CLITERAL(Color){ 210, 203, 190, 255 } // Asesprite Beige
 #define GRAYISH_BLUE CLITERAL(Color){ 29, 58, 61, 255 } // Some kinda gray-ish blue
+#define BLUE_DESAT CLITERAL(Color){ 77, 116, 137, 255 }
+#define GREEN_DESAT CLITERAL(Color){ 90, 127, 110, 255 }
 
 // Networking
 
@@ -60,7 +62,7 @@
 #define SV_FIRST_ENTITY_IDX         (1 + SV_MAX_PLAYERS)  // note: 0 slot reserved + N player slots
 #define SV_MAX_NPCS                 32  // people + mobs etc. for the moment
 #define SV_MAX_PROJECTILES          32  // obvious
-#define SV_MAX_ENT_RESERVED         (1024 - (SV_MAX_PLAYERS + SV_MAX_NPCS + SV_MAX_PROJECTILES))
+#define SV_MAX_ENT_RESERVED         (256 - (SV_MAX_PLAYERS + SV_MAX_NPCS + SV_MAX_PROJECTILES))
 #define SV_MAX_ENTITIES             (SV_MAX_PLAYERS + SV_MAX_NPCS + SV_MAX_PROJECTILES + SV_MAX_ENT_RESERVED)
 #define SV_MAX_ENTITY_SAY_MSG_LEN   1024
 #define SV_TILE_CHUNK_WIDTH         64

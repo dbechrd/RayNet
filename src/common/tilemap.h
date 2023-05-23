@@ -21,19 +21,14 @@ struct AiPath {
 
 typedef int TileMatId;
 struct TileMat {
-    bool collide;
-
-    // TODO(dlb): Footsteps per material?
-    //SoundId sndFootstepId;
+    StringId sndFootstep;
 };
 
 struct TileDef {
     uint32_t x, y;  // position in spritesheet
-    int index;  // position in spritesheet
-
-    TileMatId materialId;
     bool collide;
     Color color;  // color for minimap/wang tile editor (top left pixel of tile)
+    TileMatId materialId;
 };
 
  struct Warp {
@@ -98,7 +93,6 @@ struct Tilemap {
     ~Tilemap();
 
     Err Save(std::string path);
-    Err SaveKV(std::string path);
     Err Load(std::string path, double now);
     static Err ChangeTileset(Tilemap &map, StringId newTextureId, double now);
     void Unload(void);
@@ -126,6 +120,7 @@ struct Tilemap {
     void DrawTile(Tile tile, Vector2 position);
     void Draw(Camera2D &camera);
     void DrawColliders(Camera2D &camera);
+    void DrawTileIds(Camera2D &camera);
 
     uint32_t CreateEntity(EntityType entityType);
     bool SpawnEntity(uint32_t entityId, double now);

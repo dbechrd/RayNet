@@ -201,7 +201,11 @@ UIState UI::Image(Texture &texture, Rectangle srcRect)
     UIState state = CalcState(ctrlRect, prevHoverHash);
 
     // Draw border
-    DrawRectangleLinesEx(ctrlRect, style.imageBorderThickness, state.hover ? YELLOW : BLACK);
+    Color borderColor = state.hover ? YELLOW : BLACK;
+    if (style.borderColor.a) {
+        borderColor = style.borderColor;
+    }
+    DrawRectangleLinesEx(ctrlRect, style.imageBorderThickness, borderColor);
 
     // Draw image
     DrawTexturePro(texture, srcRect, contentRect, {}, 0, WHITE);
@@ -295,18 +299,13 @@ UIState UI::Button(const char *text, Color bgColor)
     return state;
 }
 
-UIState UI::Button(const char *text, bool pressed, Color pressedColor)
+UIState UI::Button(const char *text, bool pressed, Color bgColor, Color bgColorPressed)
 {
-    UIState state{};
-    if (pressed) {
-        UIStyle style = GetStyle();
-        style.bgColor = pressedColor;
-        style.buttonPressed = pressed;
-        PushStyle(style);
-    }
-    state = Button(text);
-    if (pressed) {
-        PopStyle();
-    }
+    UIStyle style = GetStyle();
+    style.bgColor = pressed ? bgColorPressed : bgColor;
+    style.buttonPressed = pressed;
+    PushStyle(style);
+    UIState state = Button(text);
+    PopStyle();
     return state;
 }

@@ -55,6 +55,7 @@ struct UIStyle {
     UIMargin margin{ 6, 0, 0, 6 };
     float buttonBorderThickness{ 1 };
     float imageBorderThickness{ 2 };
+    Color borderColor{ BLANK };
     UIPad pad{ 8, 2 };
     float scale{ 1 };
     Color bgColor{ BLUE };
@@ -86,7 +87,7 @@ struct UI {
     UIState Image(Texture &texture, Rectangle srcRect = {});
     UIState Button(const char *text);
     UIState Button(const char *text, Color bgColor);
-    UIState Button(const char *text, bool pressed, Color pressedColor);
+    UIState Button(const char *text, bool pressed, Color bgColor, Color bgColorPressed);
 
     inline Vector2 CursorScreen(void) {
         return Vector2Add(position, cursor);
