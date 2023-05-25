@@ -169,7 +169,7 @@ void TodoList::Draw(Vector2 position)
         UIState dragButton = ui.Button(" ", i == textDraggingIndex ? ORANGE : DARKGRAY);
         if (dragButton.pressed) {
             textDraggingIndex = i;
-        } else if (textDraggingIndex == i && !IsMouseButtonDown(MOUSE_BUTTON_LEFT)) {
+        } else if (textDraggingIndex == i && !io.MouseButtonDown(MOUSE_BUTTON_LEFT)) {
             textDraggingIndex = -1;
         }
 

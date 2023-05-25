@@ -9,6 +9,339 @@
 
 static bool CL_DBG_SNAPSHOT_SHADOWS = false;
 
+void draw_menu_main(GameClient &client, bool &quit)
+{
+    Vector2 uiPosition{ floorf(GetRenderWidth() / 2.0f), floorf(GetRenderHeight() / 2.0f) };
+    uiPosition.y -= 50;
+    UIStyle uiStyleMenu {};
+    uiStyleMenu.margin = {};
+    uiStyleMenu.pad = { 16, 4 };
+    uiStyleMenu.bgColor = BLANK;
+    uiStyleMenu.fgColor = RAYWHITE;
+    uiStyleMenu.font = &fntHackBold32;
+    uiStyleMenu.alignH = TextAlign_Center;
+    UI uiMenu{ uiPosition, uiStyleMenu };
+
+#if 0
+    // Draw weird squares animation
+    const Vector2 screenHalfSize{ GetRenderWidth()/2.0f, GetRenderHeight()/2.0f };
+    const Vector2 screenCenter{ screenHalfSize.x, screenHalfSize.y };
+    for (float scale = 0.0f; scale < 1.1f; scale += 0.1f) {
+        const float modScale = fmodf(texMenuBgScale + scale, 1);
+        Rectangle menuBgRect{
+            screenCenter.x - screenHalfSize.x * modScale,
+            screenCenter.y - screenHalfSize.y * modScale,
+            GetRenderWidth() * modScale,
+            GetRenderHeight() * modScale
+        };
+        DrawRectangleLinesEx(menuBgRect, 20, BLACK);
+    }
+#endif
+    UIState connectButton = uiMenu.Button("Play");
+    if (connectButton.released) {
+        //rnSoundCatalog.Play(RN_Sound_Lily_Introduction);
+        client.TryConnect();
+    }
+    uiMenu.Newline();
+    uiMenu.Button("Options");
+    uiMenu.Newline();
+    UIState quitButton = uiMenu.Button("Quit");
+    if (quitButton.released) {
+        quit = true;
+    }
+
+    // Draw font atlas for SDF font
+    //DrawTexture(fntHackBold32.texture, GetRenderWidth() - fntHackBold32.texture.width, 0, WHITE);
+}
+
+void draw_menu_connecting(GameClient &client)
+{
+    static data::Sprite campfire{};
+    if (!campfire.anims[0]) {
+        campfire.anims[0] = data::GFX_ANIM_OBJ_CAMPFIRE;
+    }
+
+    static const char *connectingStrs[] = {
+        "   Connecting   ",
+        "   Connecting.  ",
+        "   Connecting.. ",
+        "   Connecting..."
+    };
+    static int connectingDotIdx = 0;
+    static double connectingDotIdxLastUpdatedAt = 0;
+
+    if (client.yj_client->IsDisconnected()) {
+        // TODO: This never gets hit -_-
+        data::ResetSprite(campfire);
+        connectingDotIdx = 0;
+        connectingDotIdxLastUpdatedAt = 0;
+    } else {
+        data::UpdateSprite(campfire, client.frameDt);
+        if (!connectingDotIdxLastUpdatedAt) {
+            connectingDotIdxLastUpdatedAt = client.now;
+        } else if (client.now > connectingDotIdxLastUpdatedAt + 0.5) {
+            connectingDotIdxLastUpdatedAt = client.now;
+            connectingDotIdx = ((size_t)connectingDotIdx + 1) % ARRAY_SIZE(connectingStrs);
+        }
+    }
+
+    const data::GfxFrame &campfireFrame = data::GetSpriteFrame(campfire);
+
+    Vector2 uiPosition{ floorf(GetRenderWidth() / 2.0f), floorf(GetRenderHeight() / 2.0f) };
+    uiPosition.y -= campfireFrame.h / 1.5;
+    UIStyle uiStyleMenu {};
+    uiStyleMenu.margin = {};
+    uiStyleMenu.pad = { 16, 4 };
+    uiStyleMenu.bgColor = BLANK;
+    uiStyleMenu.fgColor = RAYWHITE;
+    uiStyleMenu.font = &fntHackBold32;
+    uiStyleMenu.alignH = TextAlign_Center;
+    UI uiMenu{ uiPosition, uiStyleMenu };
+
+    Vector2 campfirePos = Vector2Subtract(uiMenu.CursorScreen(), { (float)(campfireFrame.w / 2), 0 });
+    data::DrawSprite(campfire, campfirePos);
+    uiMenu.Space({ 0, (float)campfireFrame.h + uiStyleMenu.font->baseSize });
+
+    if (client.yj_client->IsConnecting()) {
+        uiMenu.Text(connectingStrs[connectingDotIdx]);
+    } else {
+        uiMenu.Text("   Loading...");
+    }
+    uiMenu.Newline();
+}
+
+void update_camera(Camera2D &camera, Vector2 target)
+{
+    camera.offset = { (float)GetRenderWidth()/2, (float)GetRenderHeight()/2 };
+
+    if (!io.KeyDown(KEY_SPACE)) {
+#if CL_CAMERA_LERP
+        // https://www.gamedeveloper.com/programming/improved-lerp-smoothing-
+        const float halfLife = 8.0f;
+        float alpha = 1.0f - exp2f(-halfLife * frameDt);
+        camera.target.x = LERP(camera.target.x, target->position.x, alpha);
+        camera.target.y = LERP(camera.target.y, target->position.y, alpha);
+#else
+        camera.target.x = target.x;
+        camera.target.y = target.y;
+#endif
+    }
+
+    // Zoom based on mouse wheel
+    float wheel = GetMouseWheelMove();
+    if (wheel != 0) {
+        // Get the world point that is under the mouse
+        Vector2 mouseWorldPos = GetScreenToWorld2D(GetMousePosition(), camera );
+
+        // Zoom increment
+        const float zoomIncrement = 0.125f;
+        camera.zoom += (wheel * zoomIncrement * camera.zoom);
+        if (camera.zoom < zoomIncrement) camera.zoom = zoomIncrement;
+    }
+}
+
+void draw_game(GameClient &client)
+{
+    Camera2D &camera = client.world->camera2d;
+    Vector2 cursorWorldPos = GetScreenToWorld2D(GetMousePosition(), camera);
+
+    //--------------------
+    // Draw the map
+    BeginMode2D(camera);
+    client.world->map.Draw(camera);
+
+    //--------------------
+    // Draw the entities
+    cursorWorldPos = GetScreenToWorld2D(GetMousePosition(), camera);
+    for (uint32_t entityId = 0; entityId < SV_MAX_ENTITIES; entityId++) {
+        Entity *entity = client.world->GetEntity(entityId);
+        if (!entity) {
+            continue;
+        }
+
+#if 0
+        // TODO: Everything that says "ghostInstance" needs to be an entity_id, but we don't
+        // want to modify the actual entity... so perhaps we need a "temp" entity that we can
+        // use for drawing shadows? Or some other way to simulate the entity moving without
+        // modifying the actual entity.
+        if (CL_DBG_SNAPSHOT_SHADOWS) {
+            Ghost &ghost = client.world->ghosts[entityId];
+            Entity ghostInstance = *entity;
+            for (int i = 0; i < ghost.size(); i++) {
+                if (!ghost[i].serverTime) {
+                    continue;
+                }
+                client.world->ApplyStateInterpolated(ghostInstance, ghost[i], ghost[i], 0);
+
+                const float scalePer = 1.0f / (CL_SNAPSHOT_COUNT + 1);
+                Rectangle ghostRect = ghostInstance.GetRect(client.world->map, ghostInstance);
+                ghostRect = RectShrink(ghostRect, scalePer);
+                DrawRectangleRec(ghostRect, Fade(RED, 0.2f));
+            }
+
+            // NOTE(dlb): These aren't actually snapshot shadows, they're client-side prediction shadows
+            if (entityId == client.LocalPlayerEntityId()) {
+#if CL_CLIENT_SIDE_PREDICT
+                uint32_t lastProcessedInputCmd = 0;
+                const GhostSnapshot &latestSnapshot = ghost.newest();
+                if (latestSnapshot.serverTime) {
+                    client.world->ApplyStateInterpolated(ghostInstance, latestSnapshot, latestSnapshot, 0);
+                    lastProcessedInputCmd = latestSnapshot.lastProcessedInputCmd;
+                }
+
+                //const double cmdAccumDt = client.now - client.controller.lastInputSampleAt;
+                for (size_t cmdIndex = 0; cmdIndex < client.controller.cmdQueue.size(); cmdIndex++) {
+                    InputCmd &inputCmd = client.controller.cmdQueue[cmdIndex];
+                    if (inputCmd.seq > lastProcessedInputCmd) {
+                        const AspectPhysics &physics = client.world->map.physics[ghostInstance];
+                        ghostInstance.ApplyForce(client.world->map, ghostInstance, inputCmd.GenerateMoveForce(physics.speed));
+                        ghostInstance.Tick(client.world->map, ghostInstance, SV_TICK_DT);
+                        client.world->map.ResolveEntityTerrainCollisions(ghostInstance);
+                        DrawRectangleRec(ghostInstance.GetRect(client.world->map, entityId), Fade(GREEN, 0.2f));
+                    }
+                }
+#endif
+
+#if 0
+                // We don't really need to draw a blue rect at currently entity position unless
+                // the entity is invisible.
+                const double cmdAccumDt = client.now - client.controller.lastInputSampleAt;
+                if (cmdAccumDt > 0) {
+                    ghostInstance.ApplyForce(client.controller.cmdAccum.GenerateMoveForce(ghostInstance.speed));
+                    ghostInstance.Tick(cmdAccumDt);
+                    client.world->map.ResolveEntityTerrainCollisions(ghostInstance);
+                    DrawRectangleRec(ghostInstance.GetRect(), Fade(BLUE, 0.2f));
+                    printf("%.3f\n", cmdAccumDt);
+                }
+#endif
+            }
+        }
+#endif
+
+        entity->Draw(client.world->map, entityId, client.now);
+    }
+
+    //--------------------
+    // Draw the dialogs
+    client.world->Draw();
+
+    //--------------------
+    // Draw entity info
+    if (client.hoveredEntityId) {
+        Entity *entity = client.world->GetEntity(client.hoveredEntityId);
+        assert(entity); // huh?
+        if (entity) {
+            entity->DrawHoverInfo(client.world->map, client.hoveredEntityId);
+        }
+    }
+
+    EndMode2D();
+
+    //--------------------
+    // Draw in-game menu
+    io.PushScope(IO::IO_GameHUD);
+    //io.CaptureMouse();
+
+    UIStyle uiHUDMenuStyle{};
+    UI uiHUDMenu{ {}, uiHUDMenuStyle };
+
+    // TODO: Add Quit button to the menu at the very least
+    uiHUDMenu.Button("Menu");
+    uiHUDMenu.Button("Quests");
+    uiHUDMenu.Button("Inventory");
+    uiHUDMenu.Button("Map");
+    uiHUDMenu.Newline();
+
+    io.PopScope();
+}
+
+void draw_f3_menu(GameClient &client)
+{
+    io.PushScope(IO::IO_F3Menu);
+
+    //Vector2 hudCursor{ GetRenderWidth() - 360.0f - 8.0f, 8.0f };
+    Vector2 hudCursor{ 8.0f, 48.0f };
+    // TODO: ui.histogram(histogram);
+    client.fpsHistogram.Draw(hudCursor);
+    hudCursor.y += client.fpsHistogram.histoHeight + 8;
+
+    char buf[128];
+#define DRAW_TEXT_MEASURE(measureRect, label, fmt, ...) { \
+                snprintf(buf, sizeof(buf), "%-11s : " fmt, label, __VA_ARGS__); \
+                DrawTextShadowEx(fntHackBold20, buf, hudCursor, RAYWHITE); \
+                if (measureRect) { \
+                    Vector2 measure = MeasureTextEx(fntHackBold20, buf, (float)fntHackBold20.baseSize, 1.0); \
+                    *measureRect = { hudCursor.x, hudCursor.y, measure.x, measure.y }; \
+                } \
+                hudCursor.y += fntHackBold20.baseSize; \
+            }
+
+#define DRAW_TEXT(label, fmt, ...) \
+                DRAW_TEXT_MEASURE((Rectangle *)0, label, fmt, __VA_ARGS__)
+
+    DRAW_TEXT("frameDt", "%.2f fps (%.2f ms) (vsync=%s)", 1.0 / client.frameDtSmooth, client.frameDtSmooth * 1000.0, IsWindowState(FLAG_VSYNC_HINT) ? "on" : "off");
+    DRAW_TEXT("serverTime", "%.2f (%s%.2f)", client.ServerNow(), client.clientTimeDeltaVsServer > 0 ? "+" : "", client.clientTimeDeltaVsServer);
+    DRAW_TEXT("localTime", "%.2f", client.now);
+    DRAW_TEXT("window", "%d, %d", GetScreenWidth(), GetScreenHeight());
+    DRAW_TEXT("render", "%d, %d", GetRenderWidth(), GetRenderHeight());
+    DRAW_TEXT("cursorScn", "%d, %d", GetMouseX(), GetMouseY());
+    if (client.LocalPlayer()) {
+        Camera2D &camera = client.world->camera2d;
+        Vector2 cursorWorldPos = GetScreenToWorld2D(GetMousePosition(), camera);
+        DRAW_TEXT("cursorWld", "%.f, %.f", cursorWorldPos.x, cursorWorldPos.y);
+    }
+
+    const char *clientStateStr = "unknown";
+    yojimbo::ClientState clientState = client.yj_client->GetClientState();
+    switch (clientState) {
+        case yojimbo::CLIENT_STATE_ERROR:        clientStateStr = "CLIENT_STATE_ERROR"; break;
+        case yojimbo::CLIENT_STATE_DISCONNECTED: clientStateStr = "CLIENT_STATE_DISCONNECTED"; break;
+        case yojimbo::CLIENT_STATE_CONNECTING:   clientStateStr = "CLIENT_STATE_CONNECTING"; break;
+        case yojimbo::CLIENT_STATE_CONNECTED:    clientStateStr = "CLIENT_STATE_CONNECTED"; break;
+    }
+
+    Rectangle netInfoRect{};
+    DRAW_TEXT_MEASURE(&netInfoRect,
+        client.showNetInfo ? "[-] state" : "[+] state",
+        "%s", clientStateStr
+    );
+    bool hudHover = CheckCollisionPointRec({ (float)GetMouseX(), (float)GetMouseY() }, netInfoRect);
+    if (hudHover) {
+        io.CaptureMouse();
+        if (io.MouseButtonPressed(MOUSE_BUTTON_LEFT)) {
+            client.showNetInfo = !client.showNetInfo;
+        }
+    }
+    if (client.showNetInfo) {
+        hudCursor.x += 16.0f;
+        yojimbo::NetworkInfo netInfo{};
+        client.yj_client->GetNetworkInfo(netInfo);
+        DRAW_TEXT("rtt", "%.2f", netInfo.RTT);
+        DRAW_TEXT("% loss", "%.2f", netInfo.packetLoss);
+        DRAW_TEXT("sent (kbps)", "%.2f", netInfo.sentBandwidth);
+        DRAW_TEXT("recv (kbps)", "%.2f", netInfo.receivedBandwidth);
+        DRAW_TEXT("ack  (kbps)", "%.2f", netInfo.ackedBandwidth);
+        DRAW_TEXT("sent (pckt)", "%" PRIu64, netInfo.numPacketsSent);
+        DRAW_TEXT("recv (pckt)", "%" PRIu64, netInfo.numPacketsReceived);
+        DRAW_TEXT("ack  (pckt)", "%" PRIu64, netInfo.numPacketsAcked);
+        hudCursor.x -= 16.0f;
+    }
+
+    Rectangle todoListRect{};
+    DRAW_TEXT_MEASURE(&todoListRect, client.showTodoList ? "[-] todo" : "[+] todo", "");
+    if (io.MouseButtonPressed(MOUSE_BUTTON_LEFT)
+        && CheckCollisionPointRec({ (float)GetMouseX(), (float)GetMouseY() }, todoListRect))
+    {
+        client.showTodoList = !client.showTodoList;
+    }
+    if (client.showTodoList) {
+        hudCursor.y += 8;
+        client.todoList.Draw(hudCursor);
+    }
+
+    io.PopScope();
+}
+
 int main(int argc, char *argv[])
 //int __stdcall WinMain(void *hInstance, void *hPrevInstance, char *pCmdLine, int nCmdShow)
 {
@@ -65,13 +398,6 @@ int main(int argc, char *argv[])
     client->now = GetTime();
     client->Start();
 
-    double frameStart = GetTime();
-    double frameDt = 0;
-    double frameDtSmooth = 60;
-    double animAccum = 0;
-
-    bool showNetInfo = false;
-    bool showTodoList = false;
     static float texMenuBgScale = 0;
 
     SetExitKey(0);
@@ -79,38 +405,32 @@ int main(int argc, char *argv[])
 
     while (!quit) {
         client->now = GetTime();
-        frameDt = MIN(client->now - frameStart, SV_TICK_DT);  // arbitrary limit for now
+        client->frameDt = MIN(client->now - client->frameStart, SV_TICK_DT);  // arbitrary limit for now
 
         const int refreshRate = GetMonitorRefreshRate(GetCurrentMonitor());
         const float refreshDt = 1.0f / refreshRate;
-        if (IsWindowState(FLAG_VSYNC_HINT) && fabsf(frameDt - refreshDt) < 0.005f) {
-            frameDt = refreshDt;
+        if (IsWindowState(FLAG_VSYNC_HINT) && fabsf(client->frameDt - refreshDt) < 0.005f) {
+            client->frameDt = refreshDt;
         }
 
-        frameDtSmooth = LERP(frameDtSmooth, frameDt, 0.01);
-        frameStart = client->now;
+        client->frameDtSmooth = LERP(client->frameDtSmooth, client->frameDt, 0.01);
+        client->frameStart = client->now;
 
-        bool doAnim = false;
-        animAccum += frameDt;
-        if (animAccum > CL_ANIM_DT) {
-            doAnim = true;
-            animAccum -= CL_ANIM_DT;
-        }
-
-        client->controller.sampleInputAccum += frameDt;
-        client->netTickAccum += frameDt;
+        client->controller.sampleInputAccum += client->frameDt;
+        client->netTickAccum += client->frameDt;
         bool doNetTick = client->netTickAccum >= SV_TICK_DT;
+        client->fpsHistogram.Push(client->frameDt, doNetTick ? GREEN : RAYWHITE);
 
         // TODO: rnAudioSystem.Update();
         UpdateMusicStream(music);
 
-        io.PushScope(IO::IO_Game);
-
-        bool escape = IsKeyPressed(KEY_ESCAPE);
-
         //--------------------
         // Input
-        if (IsKeyPressed(KEY_F11)) {
+        io.PushScope(IO::IO_Game);
+
+        bool escape = io.KeyPressed(KEY_ESCAPE);
+
+        if (io.KeyPressed(KEY_F11)) {
             bool isFullScreen = IsWindowState(FLAG_FULLSCREEN_MODE);
             if (isFullScreen) {
                 ClearWindowState(FLAG_FULLSCREEN_MODE);
@@ -122,7 +442,7 @@ int main(int argc, char *argv[])
                 SetWindowState(FLAG_FULLSCREEN_MODE);
             }
         }
-        if (IsKeyPressed(KEY_V)) {
+        if (io.KeyPressed(KEY_V)) {
             bool isFullScreen = IsWindowState(FLAG_FULLSCREEN_MODE);
             if (IsWindowState(FLAG_VSYNC_HINT)) {
                 ClearWindowState(FLAG_VSYNC_HINT);
@@ -134,47 +454,60 @@ int main(int argc, char *argv[])
             }
         }
 
-        if (IsKeyPressed(KEY_C)) {
+        if (io.KeyPressed(KEY_C)) {
             client->TryConnect();
         }
-        if (IsKeyPressed(KEY_X)) {
+        if (io.KeyPressed(KEY_X)) {
             client->Stop();
         }
-        if (IsKeyPressed(KEY_Z)) {
+        if (io.KeyPressed(KEY_Z)) {
             CL_DBG_SNAPSHOT_SHADOWS = !CL_DBG_SNAPSHOT_SHADOWS;
         }
-        if (IsKeyPressed(KEY_T)) {
-            showTodoList = !showTodoList;
-            if (showTodoList) {
+        if (io.KeyPressed(KEY_T)) {
+            client->showTodoList = !client->showTodoList;
+            if (client->showTodoList) {
                 client->todoList.Load(TODO_LIST_PATH);
             }
         }
-
-        Vector2 cursorWorldPos{};
-
-        Camera2D &camera = client->world->camera2d;
+        if (io.KeyPressed(KEY_H)) {
+            // TODO: fpsHistogram.update() which checks input and calls TogglePause?
+            client->fpsHistogram.paused = !client->fpsHistogram.paused;
+        }
+        if (io.KeyPressed(KEY_F3)) {
+            client->showF3Menu = !client->showF3Menu;
+        }
 
         //--------------------
         // Accmulate input every frame
         Entity *localPlayer = client->LocalPlayer();
         if (localPlayer) {
-            client->controller.cmdAccum.north |= IsKeyDown(KEY_W);
-            client->controller.cmdAccum.west |= IsKeyDown(KEY_A);
-            client->controller.cmdAccum.south |= IsKeyDown(KEY_S);
-            client->controller.cmdAccum.east |= IsKeyDown(KEY_D);
-            client->controller.cmdAccum.fire |= IsMouseButtonDown(MOUSE_LEFT_BUTTON);
-
+            // TODO: Update facing direction elsewhere, then just get localPlayer.facing here?
+            Camera2D &camera = client->world->camera2d;
+            Vector2 cursorWorldPos = GetScreenToWorld2D(GetMousePosition(), camera);
             cursorWorldPos = GetScreenToWorld2D(GetMousePosition(), camera);
             Vector2 facing = Vector2Subtract(cursorWorldPos, localPlayer->position);
             facing = Vector2Normalize(facing);
             client->controller.cmdAccum.facing = facing;
-        }
 
-        if (client->yj_client->IsConnected()) {
-            if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
-                Tilemap::Coord coord{};
-                if (client->world->map.WorldToTileIndex(cursorWorldPos.x, cursorWorldPos.y, coord)) {
-                    client->SendTileInteract(coord.x, coord.y);
+            client->controller.cmdAccum.north |= io.KeyDown(KEY_W);
+            client->controller.cmdAccum.west |= io.KeyDown(KEY_A);
+            client->controller.cmdAccum.south |= io.KeyDown(KEY_S);
+            client->controller.cmdAccum.east |= io.KeyDown(KEY_D);
+
+            // TODO: Actually check hand
+            bool holdingWeapon = true;
+            if (holdingWeapon) {
+                client->controller.cmdAccum.fire |= io.MouseButtonDown(MOUSE_LEFT_BUTTON);
+            }
+
+            // TODO: Actually check hand
+            bool holdingShovel = true;
+            if (holdingShovel) {
+                if (io.MouseButtonPressed(MOUSE_BUTTON_LEFT)) {
+                    Tilemap::Coord coord{};
+                    if (client->world->map.WorldToTileIndex(cursorWorldPos.x, cursorWorldPos.y, coord)) {
+                        client->SendTileInteract(coord.x, coord.y);
+                    }
                 }
             }
         }
@@ -191,11 +524,15 @@ int main(int argc, char *argv[])
             client->lastNetTick = client->now;
             client->netTickAccum -= SV_TICK_DT;
         }
+        localPlayer = client->LocalPlayer();
 
         //--------------------
         // Update
-        if (client->yj_client->IsConnected()) {
+        if (localPlayer) {
+            // Update world
             client->world->Update(*client);
+            // Update camera
+            update_camera(client->world->camera2d, client->LocalPlayer()->position);
         }
 
         //--------------------
@@ -203,342 +540,20 @@ int main(int argc, char *argv[])
         BeginDrawing();
         ClearBackground(GRAYISH_BLUE);
 
-        localPlayer = client->LocalPlayer();
-        if (localPlayer) {
-            if (client->LocalPlayerEntityId() != 1) {
-                SetMasterVolume(0);
-            }
-
-            //--------------------
-            // Camera
-            // TODO: Move update code out of draw code and update local player's
-            // position before using it to determine camera location... doh!
-            {
-                camera.offset = { (float)GetRenderWidth()/2, (float)GetRenderHeight()/2 };
-
-                if (!IsKeyDown(KEY_SPACE)) {
-                    Entity *target = localPlayer;
-#if 0
-                    target = client->world->GetEntity(9);
-#endif
-#if CL_CAMERA_LERP
-                    // https://www.gamedeveloper.com/programming/improved-lerp-smoothing-
-                    const float halfLife = 8.0f;
-                    float alpha = 1.0f - exp2f(-halfLife * frameDt);
-                    camera.target.x = LERP(camera.target.x, target->position.x, alpha);
-                    camera.target.y = LERP(camera.target.y, target->position.y, alpha);
-#else
-                    camera.target.x = target->position.x;
-                    camera.target.y = target->position.y;
-#endif
-                }
-
-                // Zoom based on mouse wheel
-                float wheel = GetMouseWheelMove();
-                if (wheel != 0) {
-                    // Get the world point that is under the mouse
-                    Vector2 mouseWorldPos = GetScreenToWorld2D(GetMousePosition(), camera );
-
-                    // Zoom increment
-                    const float zoomIncrement = 0.125f;
-                    camera.zoom += (wheel * zoomIncrement * camera.zoom);
-                    if (camera.zoom < zoomIncrement) camera.zoom = zoomIncrement;
-                }
-            }
-
-            //--------------------
-            // Draw the map
-            BeginMode2D(camera);
-            client->world->map.Draw(camera);
-
-            //--------------------
-            // Draw the entities
-            cursorWorldPos = GetScreenToWorld2D(GetMousePosition(), camera);
-            for (uint32_t entityId = 0; entityId < SV_MAX_ENTITIES; entityId++) {
-                Entity *entity = client->world->GetEntity(entityId);
-                if (!entity) {
-                    continue;
-                }
-
-#if 0
-                // TODO: Everything that says "ghostInstance" needs to be an entity_id, but we don't
-                // want to modify the actual entity... so perhaps we need a "temp" entity that we can
-                // use for drawing shadows? Or some other way to simulate the entity moving without
-                // modifying the actual entity.
-                if (CL_DBG_SNAPSHOT_SHADOWS) {
-                    Ghost &ghost = client->world->ghosts[entityId];
-                    Entity ghostInstance = *entity;
-                    for (int i = 0; i < ghost.size(); i++) {
-                        if (!ghost[i].serverTime) {
-                            continue;
-                        }
-                        client->world->ApplyStateInterpolated(ghostInstance, ghost[i], ghost[i], 0);
-
-                        const float scalePer = 1.0f / (CL_SNAPSHOT_COUNT + 1);
-                        Rectangle ghostRect = ghostInstance.GetRect(client->world->map, ghostInstance);
-                        ghostRect = RectShrink(ghostRect, scalePer);
-                        DrawRectangleRec(ghostRect, Fade(RED, 0.2f));
-                    }
-
-                    // NOTE(dlb): These aren't actually snapshot shadows, they're client-side prediction shadows
-                    if (entityId == client->LocalPlayerEntityId()) {
-#if CL_CLIENT_SIDE_PREDICT
-                        uint32_t lastProcessedInputCmd = 0;
-                        const GhostSnapshot &latestSnapshot = ghost.newest();
-                        if (latestSnapshot.serverTime) {
-                            client->world->ApplyStateInterpolated(ghostInstance, latestSnapshot, latestSnapshot, 0);
-                            lastProcessedInputCmd = latestSnapshot.lastProcessedInputCmd;
-                        }
-
-                        //const double cmdAccumDt = client->now - client->controller.lastInputSampleAt;
-                        for (size_t cmdIndex = 0; cmdIndex < client->controller.cmdQueue.size(); cmdIndex++) {
-                            InputCmd &inputCmd = client->controller.cmdQueue[cmdIndex];
-                            if (inputCmd.seq > lastProcessedInputCmd) {
-                                const AspectPhysics &physics = client->world->map.physics[ghostInstance];
-                                ghostInstance.ApplyForce(client->world->map, ghostInstance, inputCmd.GenerateMoveForce(physics.speed));
-                                ghostInstance.Tick(client->world->map, ghostInstance, SV_TICK_DT);
-                                client->world->map.ResolveEntityTerrainCollisions(ghostInstance);
-                                DrawRectangleRec(ghostInstance.GetRect(client->world->map, entityId), Fade(GREEN, 0.2f));
-                            }
-                        }
-#endif
-
-#if 0
-                        // We don't really need to draw a blue rect at currently entity position unless
-                        // the entity is invisible.
-                        const double cmdAccumDt = client->now - client->controller.lastInputSampleAt;
-                        if (cmdAccumDt > 0) {
-                            ghostInstance.ApplyForce(client->controller.cmdAccum.GenerateMoveForce(ghostInstance.speed));
-                            ghostInstance.Tick(cmdAccumDt);
-                            client->world->map.ResolveEntityTerrainCollisions(ghostInstance);
-                            DrawRectangleRec(ghostInstance.GetRect(), Fade(BLUE, 0.2f));
-                            printf("%.3f\n", cmdAccumDt);
-                        }
-#endif
-                    }
-                }
-#endif
-
-                entity->Draw(client->world->map, entityId, client->now);
-            }
-
-            //--------------------
-            // Draw the dialogs
-            client->world->Draw();
-
-            EndMode2D();
-        } else {
-            SetMasterVolume(1);
-
-            io.PushScope(IO::IO_EditorUI);
-
-            UIStyle uiStyleMenu {};
-            uiStyleMenu.margin = {};
-            uiStyleMenu.pad = { 16, 4 };
-            uiStyleMenu.bgColor = BLANK;
-            uiStyleMenu.fgColor = RAYWHITE;
-            uiStyleMenu.font = &fntHackBold32;
-            uiStyleMenu.alignH = TextAlign_Center;
-
-            Vector2 uiPosition{ floorf(GetRenderWidth() / 2.0f), floorf(GetRenderHeight() / 2.0f) };
+        if (!localPlayer) {
+            // Not connected, at the menu still
             if (client->yj_client->IsDisconnected()) {
-                uiPosition.y -= 50;
-            } else if (client->yj_client->IsConnecting()) {
-                uiPosition.y -= 150;
-            }
-            UI uiMenu{ uiPosition, uiStyleMenu };
-
-            const char *connectingStrs[] = {
-                "  Connecting   ",
-                "  Connecting.  ",
-                "  Connecting.. ",
-                "  Connecting..."
-            };
-            static int connectingDotIdx = 0;
-            static double connectingDotIdxLastUpdatedAt = 0;
-            if (client->yj_client->IsConnecting()) {
-                if (!connectingDotIdxLastUpdatedAt) {
-                    connectingDotIdxLastUpdatedAt = client->now;
-                } else if (client->now > connectingDotIdxLastUpdatedAt + 0.5) {
-                    connectingDotIdxLastUpdatedAt = client->now;
-                    connectingDotIdx = ((size_t)connectingDotIdx + 1) % ARRAY_SIZE(connectingStrs);
-                }
+                draw_menu_main(*client, quit);
             } else {
-                connectingDotIdx = 0;
-                connectingDotIdxLastUpdatedAt = 0;
+                draw_menu_connecting(*client);
             }
-
-            static data::Sprite campfire{};
-            if (!campfire.anims[0]) {
-                campfire.anims[0] = data::GFX_ANIM_OBJ_CAMPFIRE;
-            }
-
-            if (!client->yj_client->IsConnecting()) {
-                data::ResetSprite(campfire);
-            }
-
-            if (client->yj_client->IsConnected()) {
-                uiMenu.Text("Loading...");
-            } else if (client->yj_client->IsConnecting()) {
-                uiMenu.Text(connectingStrs[connectingDotIdx]);
-                uiMenu.Newline();
-
-                if (doAnim) {
-                    data::UpdateSprite(campfire);
-                }
-
-                const data::GfxFrame &campfireFrame = data::GetSpriteFrame(campfire);
-                Vector2 campfirePos = Vector2Subtract(uiMenu.CursorScreen(), { (float)(campfireFrame.w / 2), 0 });
-                data::DrawSprite(campfire, campfirePos);
-            } else {
-#if 0
-                // Draw weird squares animation
-                const Vector2 screenHalfSize{ GetRenderWidth()/2.0f, GetRenderHeight()/2.0f };
-                const Vector2 screenCenter{ screenHalfSize.x, screenHalfSize.y };
-                for (float scale = 0.0f; scale < 1.1f; scale += 0.1f) {
-                    const float modScale = fmodf(texMenuBgScale + scale, 1);
-                    Rectangle menuBgRect{
-                        screenCenter.x - screenHalfSize.x * modScale,
-                        screenCenter.y - screenHalfSize.y * modScale,
-                        GetRenderWidth() * modScale,
-                        GetRenderHeight() * modScale
-                    };
-                    DrawRectangleLinesEx(menuBgRect, 20, BLACK);
-                }
-#endif
-                UIState connectButton = uiMenu.Button("Play");
-                if (connectButton.released) {
-                    //rnSoundCatalog.Play(RN_Sound_Lily_Introduction);
-                    client->TryConnect();
-                }
-                uiMenu.Newline();
-                uiMenu.Button("Options");
-                uiMenu.Newline();
-                UIState quitButton = uiMenu.Button("Quit");
-                if (quitButton.released) {
-                    quit = true;
-                }
-
-                // Draw font atlas for SDF font
-                //DrawTexture(fntHackBold32.texture, GetRenderWidth() - fntHackBold32.texture.width, 0, WHITE);
-            }
-
-            io.PopScope();
+        } else {
+            // We're connected, draw all the things
+            draw_game(*client);
         }
 
-        // HP bar
-        if (client->hoveredEntityId) {
-            Entity *entity = client->world->GetEntity(client->hoveredEntityId);
-            assert(entity); // huh?
-            if (entity) {
-                entity->DrawHoverInfo(client->world->map, client->hoveredEntityId);
-            }
-        }
-
-        // TODO: Quit button
-        UIStyle uiHUDMenuStyle{};
-        UI uiHUDMenu{ {}, uiHUDMenuStyle };
-
-        uiHUDMenu.Button("Menu");
-        uiHUDMenu.Button("Quests");
-        uiHUDMenu.Button("Inventory");
-        uiHUDMenu.Button("Map");
-        uiHUDMenu.Newline();
-
-        Vector2 hackNewCursor{ uiHUDMenu.CursorScreen() };
-
-        // TODO: ui.histogram(histogram);
-        {
-            static Histogram fpsHistogram{};
-
-            if (IsKeyPressed(KEY_H)) {
-                // TODO: fpsHistogram.update() which checks input and calls TogglePause?
-                fpsHistogram.paused = !fpsHistogram.paused;
-            }
-            fpsHistogram.Push(frameDt, doNetTick ? GREEN : RAYWHITE);
-
-            hackNewCursor.x += 8;
-            hackNewCursor.y += 8;
-            fpsHistogram.Draw(hackNewCursor);
-            hackNewCursor.y += fpsHistogram.histoHeight + 8;
-        }
-
-        Vector2 uiPosition{ hackNewCursor };
-
-        // Debug HUD
-        {
-            io.PushScope(IO::IO_HUD);
-
-            char buf[128];
-            #define DRAW_TEXT_MEASURE(measureRect, label, fmt, ...) { \
-                snprintf(buf, sizeof(buf), "%-11s : " fmt, label, __VA_ARGS__); \
-                DrawTextShadowEx(fntHackBold20, buf, uiPosition, RAYWHITE); \
-                if (measureRect) { \
-                    Vector2 measure = MeasureTextEx(fntHackBold20, buf, (float)fntHackBold20.baseSize, 1.0); \
-                    *measureRect = { uiPosition.x, uiPosition.y, measure.x, measure.y }; \
-                } \
-                uiPosition.y += fntHackBold20.baseSize; \
-            }
-
-            #define DRAW_TEXT(label, fmt, ...) \
-                DRAW_TEXT_MEASURE((Rectangle *)0, label, fmt, __VA_ARGS__)
-
-            DRAW_TEXT("frameDt", "%.2f fps (%.2f ms) (vsync=%s)", 1.0 / frameDtSmooth, frameDtSmooth * 1000.0, IsWindowState(FLAG_VSYNC_HINT) ? "on" : "off");
-            DRAW_TEXT("serverTime", "%.2f (%s%.2f)", client->ServerNow(), client->clientTimeDeltaVsServer > 0 ? "+" : "", client->clientTimeDeltaVsServer);
-            DRAW_TEXT("localTime", "%.2f", client->now);
-            DRAW_TEXT("window", "%d, %d", GetScreenWidth(), GetScreenHeight());
-            DRAW_TEXT("render", "%d, %d", GetRenderWidth(), GetRenderHeight());
-            DRAW_TEXT("cursor", "%d, %d (world: %.f, %.f)", GetMouseX(), GetMouseY(), cursorWorldPos.x, cursorWorldPos.y);
-
-            const char *clientStateStr = "unknown";
-            yojimbo::ClientState clientState = client->yj_client->GetClientState();
-            switch (clientState) {
-                case yojimbo::CLIENT_STATE_ERROR:        clientStateStr = "CLIENT_STATE_ERROR"; break;
-                case yojimbo::CLIENT_STATE_DISCONNECTED: clientStateStr = "CLIENT_STATE_DISCONNECTED"; break;
-                case yojimbo::CLIENT_STATE_CONNECTING:   clientStateStr = "CLIENT_STATE_CONNECTING"; break;
-                case yojimbo::CLIENT_STATE_CONNECTED:    clientStateStr = "CLIENT_STATE_CONNECTED"; break;
-            }
-
-            Rectangle netInfoRect{};
-            DRAW_TEXT_MEASURE(&netInfoRect,
-                showNetInfo ? "[-] state" : "[+] state",
-                "%s", clientStateStr
-            );
-            bool hudHover = CheckCollisionPointRec({ (float)GetMouseX(), (float)GetMouseY() }, netInfoRect);
-            if (hudHover) {
-                io.CaptureMouse();
-                if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
-                    showNetInfo = !showNetInfo;
-                }
-            }
-            if (showNetInfo) {
-                uiPosition.x += 16.0f;
-                yojimbo::NetworkInfo netInfo{};
-                client->yj_client->GetNetworkInfo(netInfo);
-                DRAW_TEXT("rtt", "%.2f", netInfo.RTT);
-                DRAW_TEXT("% loss", "%.2f", netInfo.packetLoss);
-                DRAW_TEXT("sent (kbps)", "%.2f", netInfo.sentBandwidth);
-                DRAW_TEXT("recv (kbps)", "%.2f", netInfo.receivedBandwidth);
-                DRAW_TEXT("ack  (kbps)", "%.2f", netInfo.ackedBandwidth);
-                DRAW_TEXT("sent (pckt)", "%" PRIu64, netInfo.numPacketsSent);
-                DRAW_TEXT("recv (pckt)", "%" PRIu64, netInfo.numPacketsReceived);
-                DRAW_TEXT("ack  (pckt)", "%" PRIu64, netInfo.numPacketsAcked);
-                uiPosition.x -= 16.0f;
-            }
-
-            Rectangle todoListRect{};
-            DRAW_TEXT_MEASURE(&todoListRect, showTodoList ? "[-] todo" : "[+] todo", "");
-            if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)
-                && CheckCollisionPointRec({ (float)GetMouseX(), (float)GetMouseY() }, todoListRect))
-            {
-                showTodoList = !showTodoList;
-            }
-            if (showTodoList) {
-                uiPosition.y += 8;
-                client->todoList.Draw(uiPosition);
-            }
-
-            io.PopScope();
+        if (client->showF3Menu) {
+            draw_f3_menu(*client);
         }
 
         EndDrawing();

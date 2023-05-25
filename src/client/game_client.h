@@ -25,6 +25,16 @@ struct GameClient {
     double lastNetTick{};              // for fixed-step networking updates
     double now{};                      // current time for this frame
 
+    Histogram fpsHistogram{};
+    double frameStart = GetTime();
+    double frameDt = 0;
+    double frameDtSmooth = 60;
+    double animAccum = 0;
+
+    bool showF3Menu = false;
+    bool showNetInfo = false;
+    bool showTodoList = false;
+
     Controller controller{};
     uint32_t hoveredEntityId{};
     ClientWorld *world{};

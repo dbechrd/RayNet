@@ -16,7 +16,7 @@ struct WangMap {
 };
 
 struct WangTileset {
-    const PixelFormat format = PIXELFORMAT_UNCOMPRESSED_R8G8B8;
+    static const PixelFormat format = PIXELFORMAT_UNCOMPRESSED_R8G8B8;
 
     std::string filename{};
     stbhw_tileset ts{};
@@ -29,7 +29,7 @@ struct WangTileset {
 
     Err Load(Tilemap &map, std::string path);
 
-    Err GenerateTemplate(std::string path);
+    static Err GenerateTemplate(std::string path);
     Texture GenerateColorizedTexture(Image &image, Tilemap &map);
     Err GenerateMap(uint32_t w, uint32_t h, Tilemap &map, WangMap &wangMap);
 

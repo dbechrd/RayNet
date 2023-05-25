@@ -79,7 +79,6 @@
 #define CL_MAX_DIALOGS                  32
 #define CL_DIALOG_DURATION_MIN          0.5
 #define CL_DIALOG_DURATION_PER_CHAR     0.1
-#define CL_ANIM_DT                      (1.0/60.0)
 
 #define CL_DBG_ONE_SCREEN      0
 #define CL_DBG_TWO_SCREEN      1
@@ -138,10 +137,11 @@ struct IO {
     enum Scope {
         IO_None,
         IO_Game,
+        IO_GameHUD,
         IO_EditorOverlay,
         IO_EditorUI,
         IO_EditorDrag,
-        IO_HUD,
+        IO_F3Menu,
         IO_Count
     };
 

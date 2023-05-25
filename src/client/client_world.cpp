@@ -252,7 +252,7 @@ void ClientWorld::UpdateEntities(GameClient &client)
             const Vector2 cursorWorldPos = GetScreenToWorld2D(GetMousePosition(), camera2d);
             bool hover = dlb_CheckCollisionPointRec(cursorWorldPos, entity.GetRect(map, entityId));
             if (hover) {
-                bool down = IsMouseButtonPressed(MOUSE_BUTTON_LEFT);
+                bool down = io.MouseButtonPressed(MOUSE_BUTTON_LEFT);
                 if (down) {
                     client.SendEntityInteract(entityId);
                 }

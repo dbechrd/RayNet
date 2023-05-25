@@ -489,7 +489,7 @@ void GameServer::Tick(void)
         map.ResolveEntityWarpCollisions(entityId, now);
 
         data::Sprite &sprite = map.sprite[entityId];
-        data::UpdateSprite(sprite);
+        data::UpdateSprite(sprite, SV_TICK_DT);
     }
 
     for (int projectileId = 0; projectileId < SV_MAX_ENTITIES; projectileId++) {

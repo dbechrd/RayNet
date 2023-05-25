@@ -115,7 +115,7 @@ Err Play(GameServer &server)
         histogram.Push(frameDtSmooth, doNetTick ? GREEN : RAYWHITE);
 
         // Input
-        if (IsKeyPressed(KEY_F11)) {
+        if (io.KeyPressed(KEY_F11)) {
             bool isFullScreen = IsWindowState(FLAG_FULLSCREEN_MODE);
             if (isFullScreen) {
                 ClearWindowState(FLAG_FULLSCREEN_MODE);
@@ -123,7 +123,7 @@ Err Play(GameServer &server)
                 SetWindowState(FLAG_FULLSCREEN_MODE);
             }
         }
-        if (IsKeyPressed(KEY_V)) {
+        if (io.KeyPressed(KEY_V)) {
             bool isFullScreen = IsWindowState(FLAG_FULLSCREEN_MODE);
             if (IsWindowState(FLAG_VSYNC_HINT)) {
                 ClearWindowState(FLAG_VSYNC_HINT);
@@ -241,9 +241,8 @@ Err Play(GameServer &server)
         editor.DrawUI({}, map, server.now);
 
         {
-            io.PushScope(IO::IO_HUD);
+            io.PushScope(IO::IO_F3Menu);
 
-            const Vector2 cursorWorldPos = GetScreenToWorld2D({ (float)GetMouseX(), (float)GetMouseY() }, camera);
             Vector2 hudCursor{
                 GetRenderWidth() - 360.0f - 8.0f,
                 8.0f
@@ -276,8 +275,9 @@ Err Play(GameServer &server)
             DRAW_TEXT("tickAccum", "%.02f", server.tickAccum);
             DRAW_TEXT("window", "%d, %d", GetScreenWidth(), GetScreenHeight());
             DRAW_TEXT("render", "%d, %d", GetRenderWidth(), GetRenderHeight());
-            DRAW_TEXT("cursor", "%d, %d", GetMouseX(), GetMouseY());
-            DRAW_TEXT("cursor world", "%.f, %.f", cursorWorldPos.x, cursorWorldPos.y);
+            DRAW_TEXT("cursorScn", "%d, %d", GetMouseX(), GetMouseY());
+            const Vector2 cursorWorldPos = GetScreenToWorld2D({ (float)GetMouseX(), (float)GetMouseY() }, camera);
+            DRAW_TEXT("cursorWld", "%.f, %.f", cursorWorldPos.x, cursorWorldPos.y);
             DRAW_TEXT("clients", "%d", server.yj_server->GetNumConnectedClients());
 
             static bool showClientInfo[yojimbo::MaxClients];

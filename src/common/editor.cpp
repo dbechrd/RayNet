@@ -10,15 +10,7 @@
 Err Editor::Init(Tilemap &map)
 {
     Err err = RN_SUCCESS;
-    err = state.wang.wangTileset.GenerateTemplate("resources/wang/template.png");
-    if (err) return err;
-
     err = state.wang.wangTileset.Load(map, "resources/wang/tileset2x2.png");
-    if (err) return err;
-
-    WangMap wangMap{};
-    err = state.wang.wangTileset.GenerateMap(map.width, map.height, map, wangMap);
-    if (err) return err;
     return err;
 }
 
@@ -272,7 +264,7 @@ UIState Editor::DrawUI_ActionBar(Vector2 position, Tilemap &map, double now)
 
     // TODO: UI::Panel
     UIState uiState{};
-    const Rectangle actionBarRect{ position.x, position.y, 430, GetRenderHeight() - 8 };
+    const Rectangle actionBarRect{ position.x, position.y, 430.0f, GetRenderHeight() - 8.0f };
 #if 0
     DrawRectangleRounded(actionBarRect, 0.15f, 8, ASESPRITE_BEIGE);
     DrawRectangleRoundedLines(actionBarRect, 0.15f, 8, 2.0f, BLACK);
@@ -551,6 +543,15 @@ void Editor::DrawUI_Tilesheet(UI &uiActionBar, Tilemap &map, double now)
 
 void Editor::DrawUI_Wang(UI &uiActionBar, Tilemap &map, double now)
 {
+    if (uiActionBar.Button("Generate template").pressed) {
+        Err err = WangTileset::GenerateTemplate("resources/wang/template.png");
+        if (err) {
+            // TODO: Show the user
+            printf("[editor] Failed to generate wang tileset template\n");
+        }
+    }
+    uiActionBar.Newline();
+
     WangTileset &wangTileset = state.wang.wangTileset;
     WangMap &wangMap = state.wang.wangMap;
 

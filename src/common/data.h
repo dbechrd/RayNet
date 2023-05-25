@@ -92,6 +92,7 @@ namespace data {
     struct GfxAnim {
         GfxAnimId id;
         SfxFileId sound;
+        uint8_t frameRate;
         uint8_t frameCount;
         uint8_t frameDelay;
         GfxFrameId frames[8];
@@ -101,7 +102,7 @@ namespace data {
         Direction dir;
         GfxAnimId anims[8];  // for each direction
         uint8_t animFrame; // current frame index
-        uint8_t animAccum; // frames since last update
+        double animAccum; // time since last update
     };
 
     enum TileMatId {
@@ -151,7 +152,7 @@ namespace data {
     void Free(void);
 
     const GfxFrame &GetSpriteFrame(const Sprite &sprite);
-    void UpdateSprite(Sprite &sprite);
+    void UpdateSprite(Sprite &sprite, double dt);
     void ResetSprite(Sprite &sprite);
     void DrawSprite(const Sprite &sprite, Vector2 pos);
 }

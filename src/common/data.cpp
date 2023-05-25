@@ -42,15 +42,15 @@ namespace data {
 
     GfxAnim gfxAnims[] = {
         { GFX_ANIM_NONE },
-        // id                      sound effect       frmCount  frmDelay    frames
-        { GFX_ANIM_CHR_MAGE_N,     SFX_FILE_NONE,            1,        0, { GFX_FRAME_CHR_MAGE_N_0 }},
-        { GFX_ANIM_NPC_LILY_N,     SFX_FILE_NONE,            1,        0, { GFX_FRAME_NPC_LILY_N_0 }},
-        { GFX_ANIM_OBJ_CAMPFIRE,   SFX_FILE_CAMPFIRE,        8,        4, { GFX_FRAME_OBJ_CAMPFIRE_0, GFX_FRAME_OBJ_CAMPFIRE_1, GFX_FRAME_OBJ_CAMPFIRE_2, GFX_FRAME_OBJ_CAMPFIRE_3, GFX_FRAME_OBJ_CAMPFIRE_4, GFX_FRAME_OBJ_CAMPFIRE_5, GFX_FRAME_OBJ_CAMPFIRE_6, GFX_FRAME_OBJ_CAMPFIRE_7 }},
-        { GFX_ANIM_PRJ_BULLET,     SFX_FILE_NONE,            1,        0, { GFX_FRAME_PRJ_BULLET_0 }},
-        { GFX_ANIM_TIL_GRASS,      SFX_FILE_NONE,            1,        0, { GFX_FRAME_TIL_GRASS }},
-        { GFX_ANIM_TIL_STONE_PATH, SFX_FILE_NONE,            1,        0, { GFX_FRAME_TIL_STONE_PATH }},
-        { GFX_ANIM_TIL_WALL,       SFX_FILE_NONE,            1,        0, { GFX_FRAME_TIL_WALL }},
-        { GFX_ANIM_TIL_WATER,      SFX_FILE_NONE,            1,        0, { GFX_FRAME_TIL_WATER_0 }},
+        // id                      sound effect       frmRate  frmCount  frmDelay    frames
+        { GFX_ANIM_CHR_MAGE_N,     SFX_FILE_NONE,          60,        1,        0, { GFX_FRAME_CHR_MAGE_N_0 }},
+        { GFX_ANIM_NPC_LILY_N,     SFX_FILE_NONE,          60,        1,        0, { GFX_FRAME_NPC_LILY_N_0 }},
+        { GFX_ANIM_OBJ_CAMPFIRE,   SFX_FILE_CAMPFIRE,      60,        8,        4, { GFX_FRAME_OBJ_CAMPFIRE_0, GFX_FRAME_OBJ_CAMPFIRE_1, GFX_FRAME_OBJ_CAMPFIRE_2, GFX_FRAME_OBJ_CAMPFIRE_3, GFX_FRAME_OBJ_CAMPFIRE_4, GFX_FRAME_OBJ_CAMPFIRE_5, GFX_FRAME_OBJ_CAMPFIRE_6, GFX_FRAME_OBJ_CAMPFIRE_7 }},
+        { GFX_ANIM_PRJ_BULLET,     SFX_FILE_NONE,          60,        1,        0, { GFX_FRAME_PRJ_BULLET_0 }},
+        { GFX_ANIM_TIL_GRASS,      SFX_FILE_NONE,          60,        1,        0, { GFX_FRAME_TIL_GRASS }},
+        { GFX_ANIM_TIL_STONE_PATH, SFX_FILE_NONE,          60,        1,        0, { GFX_FRAME_TIL_STONE_PATH }},
+        { GFX_ANIM_TIL_WALL,       SFX_FILE_NONE,          60,        1,        0, { GFX_FRAME_TIL_WALL }},
+        { GFX_ANIM_TIL_WATER,      SFX_FILE_NONE,          60,        1,        0, { GFX_FRAME_TIL_WATER_0 }},
     };
 
     TileMat tileMats[] = {
@@ -116,18 +116,19 @@ namespace data {
         return frame;
     }
 
-    void UpdateSprite(Sprite &sprite)
+    void UpdateSprite(Sprite &sprite, double dt)
     {
-        sprite.animAccum++;
+        sprite.animAccum += dt;
 
         const GfxAnimId animId = sprite.anims[sprite.dir];
         const GfxAnim &anim = gfxAnims[animId];
-        if (sprite.animAccum >= anim.frameDelay) {
+        const double animFrameTime = (1.0 / anim.frameRate) * anim.frameDelay;
+        if (sprite.animAccum >= animFrameTime) {
             sprite.animFrame++;
             if (sprite.animFrame >= anim.frameCount) {
                 sprite.animFrame = 0;
             }
-            sprite.animAccum = 0;
+            sprite.animAccum -= animFrameTime;
         }
 
         if (anim.sound) {
