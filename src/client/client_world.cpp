@@ -198,7 +198,7 @@ void ClientWorld::UpdateEntities(GameClient &client)
                 InputCmd &inputCmd = client.controller.cmdQueue[cmdIndex];
                 if (inputCmd.seq > lastProcessedInputCmd) {
                     physics.ApplyForce(inputCmd.GenerateMoveForce(physics.speed));
-                    entity.Tick(map, entityId, SV_TICK_DT);
+                    map.EntityTick(entityId, SV_TICK_DT);
                     map.ResolveEntityTerrainCollisions(entityId);
                 }
             }
@@ -206,7 +206,7 @@ void ClientWorld::UpdateEntities(GameClient &client)
             const double cmdAccumDt = client.now - client.controller.lastInputSampleAt;
             if (cmdAccumDt > 0) {
                 physics.ApplyForce(client.controller.cmdAccum.GenerateMoveForce(physics.speed));
-                entity.Tick(map, entityId, cmdAccumDt);
+                map.EntityTick(entityId, cmdAccumDt);
                 map.ResolveEntityTerrainCollisions(entityId);
             }
 #endif
@@ -250,7 +250,7 @@ void ClientWorld::UpdateEntities(GameClient &client)
             ApplyStateInterpolated(entityId, *snapshotA, *snapshotB, alpha);
 
             const Vector2 cursorWorldPos = GetScreenToWorld2D(GetMousePosition(), camera2d);
-            bool hover = dlb_CheckCollisionPointRec(cursorWorldPos, entity.GetRect(map, entityId));
+            bool hover = dlb_CheckCollisionPointRec(cursorWorldPos, map.EntityRect(entityId));
             if (hover) {
                 bool down = io.MouseButtonPressed(MOUSE_BUTTON_LEFT);
                 if (down) {
@@ -296,7 +296,7 @@ void ClientWorld::DrawDialogs(void)
         Dialog &dialog = dialogs[i];
         Entity &entity = map.entities[dialog.entityId];
         if (entity.type && !entity.despawnedAt) {
-            const Vector2 topCenter = entity.TopCenter(map, dialog.entityId);
+            const Vector2 topCenter = map.EntityTopCenter(dialog.entityId);
             DrawDialog(dialog, topCenter);
         }
     }

@@ -125,7 +125,7 @@ void Editor::DrawOverlay_Entities(Tilemap &map, Camera2D &camera, double now)
     for (uint32_t entityId = 0; entityId < ARRAY_SIZE(map.entities); entityId++) {
         const Entity &entity = map.entities[entityId];
         if (entity.type) {
-            DrawRectangleRec(entity.GetRect(map, entityId), Fade(SKYBLUE, 0.7f));
+            DrawRectangleRec(map.EntityRect(entityId), Fade(SKYBLUE, 0.7f));
         }
     }
 }

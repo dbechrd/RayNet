@@ -85,7 +85,7 @@ void tick_player(GameServer &server, uint32_t entityId, double dt)
         }
     }
 
-    entity.Tick(map, entityId, dt);
+    map.EntityTick(entityId, dt);
 }
 
 void tick_bot(GameServer &server, uint32_t entityId, double dt)
@@ -139,7 +139,7 @@ void tick_bot(GameServer &server, uint32_t entityId, double dt)
 #endif
     }
 
-    entity.Tick(map, entityId, dt);
+    map.EntityTick(entityId, dt);
 }
 
 void tick_projectile(GameServer &server, uint32_t entityId, double dt)
@@ -148,7 +148,7 @@ void tick_projectile(GameServer &server, uint32_t entityId, double dt)
     Entity &entity = map.entities[entityId];
 
     //entity.ApplyForce({ 0, 5 });
-    entity.Tick(map, entityId, dt);
+    map.EntityTick(entityId, dt);
 
     if (server.now - entity.spawnedAt > 1.0) {
         server.DespawnEntity(entityId);
@@ -501,8 +501,8 @@ void GameServer::Tick(void)
                     AspectLife &life = map.life[targetId];
                     if (life.Dead()) continue;
 
-                    Rectangle projectileHitbox = projectile.GetRect(map, projectileId);
-                    Rectangle targetHitbox = target.GetRect(map, targetId);
+                    Rectangle projectileHitbox = map.EntityRect(projectileId);
+                    Rectangle targetHitbox = map.EntityRect(targetId);
                     if (CheckCollisionRecs(projectileHitbox, targetHitbox)) {
                         life.TakeDamage(GetRandomValue(3, 8));
                         if (life.Alive()) {

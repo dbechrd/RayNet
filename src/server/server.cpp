@@ -166,7 +166,7 @@ Err Play(GameServer &server)
         for (int entityId = 0; entityId < SV_MAX_ENTITIES; entityId++) {
             Entity &entity = map.entities[entityId];
             if (entity.type) {
-                entity.Draw(map, entityId, server.now);
+                map.DrawEntity(entityId, server.now);
                 if (editor.active && editor.state.showColliders) {
                     // [Debug] Draw colliders
                     AspectCollision &collider = map.collision[entityId];

@@ -106,8 +106,6 @@ struct Tilemap {
     void Set(uint32_t x, uint32_t y, Tile tile, double now);
     void SetFromWangMap(WangMap &wangMap, double now);
     void Fill(uint32_t x, uint32_t y, int tileDefId, double now);
-    void ResolveEntityTerrainCollisions(uint32_t entityId);
-    void ResolveEntityWarpCollisions(uint32_t entityId, double now);
 
     const TileDef &GetTileDef(Tile tile);
     Rectangle TileDefRect(Tile tile);
@@ -117,16 +115,24 @@ struct Tilemap {
     uint32_t GetNextPathNodeIndex(uint32_t pathId, uint32_t pathNodeIndex);
     AiPathNode *GetPathNode(uint32_t pathId, uint32_t pathNodeIndex);
 
-    void DrawTile(Tile tile, Vector2 position);
-    void Draw(Camera2D &camera);
-    void DrawColliders(Camera2D &camera);
-    void DrawTileIds(Camera2D &camera);
-
     uint32_t CreateEntity(EntityType entityType);
     bool SpawnEntity(uint32_t entityId, double now);
     Entity *GetEntity(uint32_t entityId);
     bool DespawnEntity(uint32_t entityId, double now);
     void DestroyEntity(uint32_t entityId);
+
+    Rectangle EntityRect(uint32_t entityId);
+    Vector2 EntityTopCenter(uint32_t entityId);
+    void EntityTick(uint32_t entityId, double dt);
+    void ResolveEntityTerrainCollisions(uint32_t entityId);
+    void ResolveEntityWarpCollisions(uint32_t entityId, double now);
+
+    void DrawTile(Tile tile, Vector2 position);
+    void Draw(Camera2D &camera);
+    void DrawColliders(Camera2D &camera);
+    void DrawTileIds(Camera2D &camera);
+    void DrawEntityHoverInfo(uint32_t entityId);
+    void DrawEntity(uint32_t entityId, double now);
 
 private:
     bool NeedsFill(uint32_t x, uint32_t y, int tileDefFill);

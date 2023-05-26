@@ -65,6 +65,7 @@ enum EntityType {
 };
 
 struct Entity {
+    //uint32_t id;
     EntityType type;
     double spawnedAt;
     double despawnedAt;
@@ -72,12 +73,6 @@ struct Entity {
 
     // TODO: Separate this out into its own array?
     uint32_t freelist_next;
-
-    static void Tick(Tilemap &map, uint32_t entityId, double dt);
-    static Rectangle GetRect(Tilemap &map, uint32_t entityId);
-    static Vector2 TopCenter(Tilemap &map, uint32_t entityId);
-    static void DrawHoverInfo(Tilemap &map, uint32_t entityId);
-    static void Draw(Tilemap &map, uint32_t entityId, double now);
 };
 
 #if 0

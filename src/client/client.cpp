@@ -54,35 +54,29 @@ void draw_menu_main(GameClient &client, bool &quit)
     //DrawTexture(fntHackBold32.texture, GetRenderWidth() - fntHackBold32.texture.width, 0, WHITE);
 }
 
+static data::Sprite campfire{};
+
+static const char *connectingStrs[] = {
+    "   Connecting   ",
+    "   Connecting.  ",
+    "   Connecting.. ",
+    "   Connecting..."
+};
+static int connectingDotIdx = 0;
+static double connectingDotIdxLastUpdatedAt = 0;
+
 void draw_menu_connecting(GameClient &client)
 {
-    static data::Sprite campfire{};
     if (!campfire.anims[0]) {
         campfire.anims[0] = data::GFX_ANIM_OBJ_CAMPFIRE;
     }
 
-    static const char *connectingStrs[] = {
-        "   Connecting   ",
-        "   Connecting.  ",
-        "   Connecting.. ",
-        "   Connecting..."
-    };
-    static int connectingDotIdx = 0;
-    static double connectingDotIdxLastUpdatedAt = 0;
-
-    if (client.yj_client->IsDisconnected()) {
-        // TODO: This never gets hit -_-
-        data::ResetSprite(campfire);
-        connectingDotIdx = 0;
-        connectingDotIdxLastUpdatedAt = 0;
-    } else {
-        data::UpdateSprite(campfire, client.frameDt);
-        if (!connectingDotIdxLastUpdatedAt) {
-            connectingDotIdxLastUpdatedAt = client.now;
-        } else if (client.now > connectingDotIdxLastUpdatedAt + 0.5) {
-            connectingDotIdxLastUpdatedAt = client.now;
-            connectingDotIdx = ((size_t)connectingDotIdx + 1) % ARRAY_SIZE(connectingStrs);
-        }
+    data::UpdateSprite(campfire, client.frameDt);
+    if (!connectingDotIdxLastUpdatedAt) {
+        connectingDotIdxLastUpdatedAt = client.now;
+    } else if (client.now > connectingDotIdxLastUpdatedAt + 0.5) {
+        connectingDotIdxLastUpdatedAt = client.now;
+        connectingDotIdx = ((size_t)connectingDotIdx + 1) % ARRAY_SIZE(connectingStrs);
     }
 
     const data::GfxFrame &campfireFrame = data::GetSpriteFrame(campfire);
@@ -108,6 +102,13 @@ void draw_menu_connecting(GameClient &client)
         uiMenu.Text("   Loading...");
     }
     uiMenu.Newline();
+}
+
+void reset_menu_connecting(void)
+{
+    data::ResetSprite(campfire);
+    connectingDotIdx = 0;
+    connectingDotIdxLastUpdatedAt = 0;
 }
 
 void update_camera(Camera2D &camera, Vector2 target)
@@ -142,13 +143,14 @@ void update_camera(Camera2D &camera, Vector2 target)
 
 void draw_game(GameClient &client)
 {
+    Tilemap &map = client.world->map;
     Camera2D &camera = client.world->camera2d;
     Vector2 cursorWorldPos = GetScreenToWorld2D(GetMousePosition(), camera);
 
     //--------------------
     // Draw the map
     BeginMode2D(camera);
-    client.world->map.Draw(camera);
+    map.Draw(camera);
 
     //--------------------
     // Draw the entities
@@ -159,22 +161,25 @@ void draw_game(GameClient &client)
             continue;
         }
 
-#if 0
+#if 1
         // TODO: Everything that says "ghostInstance" needs to be an entity_id, but we don't
         // want to modify the actual entity... so perhaps we need a "temp" entity that we can
         // use for drawing shadows? Or some other way to simulate the entity moving without
         // modifying the actual entity.
         if (CL_DBG_SNAPSHOT_SHADOWS) {
+            const uint32_t ghostEntityId = 0; // HACK: Use entity 0 as the ghost placeholder for now
             Ghost &ghost = client.world->ghosts[entityId];
-            Entity ghostInstance = *entity;
+            Entity &ghostEntity = *client.world->GetEntityDeadOrAlive(ghostEntityId);
+            AspectPhysics &ghostPhysics = map.physics[ghostEntityId];
+
             for (int i = 0; i < ghost.size(); i++) {
                 if (!ghost[i].serverTime) {
                     continue;
                 }
-                client.world->ApplyStateInterpolated(ghostInstance, ghost[i], ghost[i], 0);
+                client.world->ApplyStateInterpolated(ghostEntityId, ghost[i], ghost[i], 0);
 
                 const float scalePer = 1.0f / (CL_SNAPSHOT_COUNT + 1);
-                Rectangle ghostRect = ghostInstance.GetRect(client.world->map, ghostInstance);
+                Rectangle ghostRect = map.EntityRect(ghostEntityId);
                 ghostRect = RectShrink(ghostRect, scalePer);
                 DrawRectangleRec(ghostRect, Fade(RED, 0.2f));
             }
@@ -185,7 +190,7 @@ void draw_game(GameClient &client)
                 uint32_t lastProcessedInputCmd = 0;
                 const GhostSnapshot &latestSnapshot = ghost.newest();
                 if (latestSnapshot.serverTime) {
-                    client.world->ApplyStateInterpolated(ghostInstance, latestSnapshot, latestSnapshot, 0);
+                    client.world->ApplyStateInterpolated(ghostEntityId, latestSnapshot, latestSnapshot, 0);
                     lastProcessedInputCmd = latestSnapshot.lastProcessedInputCmd;
                 }
 
@@ -193,11 +198,10 @@ void draw_game(GameClient &client)
                 for (size_t cmdIndex = 0; cmdIndex < client.controller.cmdQueue.size(); cmdIndex++) {
                     InputCmd &inputCmd = client.controller.cmdQueue[cmdIndex];
                     if (inputCmd.seq > lastProcessedInputCmd) {
-                        const AspectPhysics &physics = client.world->map.physics[ghostInstance];
-                        ghostInstance.ApplyForce(client.world->map, ghostInstance, inputCmd.GenerateMoveForce(physics.speed));
-                        ghostInstance.Tick(client.world->map, ghostInstance, SV_TICK_DT);
-                        client.world->map.ResolveEntityTerrainCollisions(ghostInstance);
-                        DrawRectangleRec(ghostInstance.GetRect(client.world->map, entityId), Fade(GREEN, 0.2f));
+                        ghostPhysics.ApplyForce(inputCmd.GenerateMoveForce(ghostPhysics.speed));
+                        map.EntityTick(ghostEntityId, SV_TICK_DT);
+                        map.ResolveEntityTerrainCollisions(ghostEntityId);
+                        DrawRectangleRec(map.EntityRect(ghostEntityId), Fade(GREEN, 0.2f));
                     }
                 }
 #endif
@@ -209,16 +213,19 @@ void draw_game(GameClient &client)
                 if (cmdAccumDt > 0) {
                     ghostInstance.ApplyForce(client.controller.cmdAccum.GenerateMoveForce(ghostInstance.speed));
                     ghostInstance.Tick(cmdAccumDt);
-                    client.world->map.ResolveEntityTerrainCollisions(ghostInstance);
+                    map.ResolveEntityTerrainCollisions(ghostInstance);
                     DrawRectangleRec(ghostInstance.GetRect(), Fade(BLUE, 0.2f));
                     printf("%.3f\n", cmdAccumDt);
                 }
 #endif
             }
+
+            ghostEntity = {};
+            ghostPhysics = {};
         }
 #endif
 
-        entity->Draw(client.world->map, entityId, client.now);
+        map.DrawEntity(entityId, client.now);
     }
 
     //--------------------
@@ -231,7 +238,7 @@ void draw_game(GameClient &client)
         Entity *entity = client.world->GetEntity(client.hoveredEntityId);
         assert(entity); // huh?
         if (entity) {
-            entity->DrawHoverInfo(client.world->map, client.hoveredEntityId);
+            map.DrawEntityHoverInfo(client.hoveredEntityId);
         }
     }
 
@@ -540,16 +547,14 @@ int main(int argc, char *argv[])
         BeginDrawing();
         ClearBackground(GRAYISH_BLUE);
 
-        if (!localPlayer) {
-            // Not connected, at the menu still
-            if (client->yj_client->IsDisconnected()) {
-                draw_menu_main(*client, quit);
-            } else {
-                draw_menu_connecting(*client);
-            }
-        } else {
-            // We're connected, draw all the things
+        if (client->yj_client->IsDisconnected()) {
+            draw_menu_main(*client, quit);
+            reset_menu_connecting();
+        } else if (client->yj_client->IsConnecting() || !localPlayer) {
+            draw_menu_connecting(*client);
+        } else if (client->yj_client->IsConnected()) {
             draw_game(*client);
+            reset_menu_connecting();
         }
 
         if (client->showF3Menu) {
