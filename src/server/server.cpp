@@ -72,6 +72,89 @@ void UpdateCamera(Camera2D &camera)
     }
 }
 
+void draw_f3_menu(GameServer &server, Camera2D &camera)
+{
+    io.PushScope(IO::IO_F3Menu);
+
+    Vector2 hudCursor{
+        GetRenderWidth() - 360.0f - 8.0f,
+        8.0f
+    };
+
+    server.histogram.Draw(hudCursor);
+    hudCursor.y += server.histogram.histoHeight + 8;
+
+    char buf[128];
+#define DRAW_TEXT_MEASURE(measureRect, label, fmt, ...) { \
+            if (label) { \
+                snprintf(buf, sizeof(buf), "%-12s : " fmt, label, __VA_ARGS__); \
+            } else { \
+                snprintf(buf, sizeof(buf), fmt, __VA_ARGS__); \
+            } \
+            DrawTextShadowEx(fntHackBold20, buf, hudCursor, RAYWHITE); \
+            if (measureRect) { \
+                Vector2 measure = MeasureTextEx(fntHackBold20, buf, (float)fntHackBold20.baseSize, 1.0); \
+                *measureRect = { hudCursor.x,hudCursor.y, measure.x, measure.y }; \
+            } \
+            hudCursor.y += fntHackBold20.baseSize; \
+        }
+
+#define DRAW_TEXT(label, fmt, ...) \
+        DRAW_TEXT_MEASURE((Rectangle *)0, label, fmt, __VA_ARGS__)
+
+    DRAW_TEXT((const char *)0, "%.2f fps (%.2f ms) (vsync=%s)",
+        1.0 / server.frameDt,
+        server.frameDt * 1000.0,
+        IsWindowState(FLAG_VSYNC_HINT) ? "on" : "off"
+    );
+    DRAW_TEXT("time", "%.02f", server.yj_server->GetTime());
+    DRAW_TEXT("tick", "%" PRIu64, server.tick);
+    DRAW_TEXT("tickAccum", "%.02f", server.tickAccum);
+    DRAW_TEXT("window", "%d, %d", GetScreenWidth(), GetScreenHeight());
+    DRAW_TEXT("render", "%d, %d", GetRenderWidth(), GetRenderHeight());
+    DRAW_TEXT("cursorScn", "%d, %d", GetMouseX(), GetMouseY());
+    const Vector2 cursorWorldPos = GetScreenToWorld2D({ (float)GetMouseX(), (float)GetMouseY() }, camera);
+    DRAW_TEXT("cursorWld", "%.f, %.f", cursorWorldPos.x, cursorWorldPos.y);
+    DRAW_TEXT("clients", "%d", server.yj_server->GetNumConnectedClients());
+
+    static bool showClientInfo[yojimbo::MaxClients];
+    for (int clientIdx = 0; clientIdx < yojimbo::MaxClients; clientIdx++) {
+        if (!server.yj_server->IsClientConnected(clientIdx)) {
+            continue;
+        }
+
+        Rectangle clientRowRect{};
+        DRAW_TEXT_MEASURE(&clientRowRect,
+            showClientInfo[clientIdx] ? "[-] client" : "[+] client",
+            "%d", clientIdx
+        );
+
+        bool hudHover = CheckCollisionPointRec({ (float)GetMouseX(), (float)GetMouseY() }, clientRowRect);
+        if (hudHover) {
+            io.CaptureMouse();
+            if (io.MouseButtonPressed(MOUSE_BUTTON_LEFT)) {
+                showClientInfo[clientIdx] = !showClientInfo[clientIdx];
+            }
+        }
+        if (showClientInfo[clientIdx]) {
+            hudCursor.x += 16.0f;
+            yojimbo::NetworkInfo netInfo{};
+            server.yj_server->GetNetworkInfo(clientIdx, netInfo);
+            DRAW_TEXT("  rtt", "%.02f", netInfo.RTT);
+            DRAW_TEXT("  % loss", "%.02f", netInfo.packetLoss);
+            DRAW_TEXT("  sent (kbps)", "%.02f", netInfo.sentBandwidth);
+            DRAW_TEXT("  recv (kbps)", "%.02f", netInfo.receivedBandwidth);
+            DRAW_TEXT("  ack  (kbps)", "%.02f", netInfo.ackedBandwidth);
+            DRAW_TEXT("  sent (pckt)", "%" PRIu64, netInfo.numPacketsSent);
+            DRAW_TEXT("  recv (pckt)", "%" PRIu64, netInfo.numPacketsReceived);
+            DRAW_TEXT("  ack  (pckt)", "%" PRIu64, netInfo.numPacketsAcked);
+            hudCursor.x -= 16.0f;
+        }
+    }
+
+    io.PopScope();
+}
+
 Err Play(GameServer &server)
 {
     Err err = RN_SUCCESS;
@@ -88,11 +171,6 @@ Err Play(GameServer &server)
     Camera2D camera{};
     camera.zoom = 1;
 
-    Histogram histogram{};
-    double frameStart = GetTime();
-    double frameDt = 0;
-    double frameDtSmooth = 60;
-
     const Vector2 uiPosition{ 380, 8 };
 
     SetExitKey(0);
@@ -105,17 +183,20 @@ Err Play(GameServer &server)
         io.PushScope(IO::IO_Game);
 
         server.now = GetTime();
-        frameDt = MIN(server.now - frameStart, SV_TICK_DT * 3);  // arbitrary limit for now
-        frameDtSmooth = LERP(frameDtSmooth, frameDt, 0.1);
-        frameStart = server.now;
+        server.frameDt = MIN(server.now - server.frameStart, SV_TICK_DT * 3);  // arbitrary limit for now
+        server.frameDtSmooth = LERP(server.frameDtSmooth, server.frameDt, 0.1);
+        server.frameStart = server.now;
 
-        server.tickAccum += frameDt;
+        server.tickAccum += server.frameDt;
 
         bool doNetTick = server.tickAccum >= SV_TICK_DT;
-        histogram.Push(frameDtSmooth, doNetTick ? GREEN : RAYWHITE);
+        server.histogram.Push(server.frameDtSmooth, doNetTick ? GREEN : RAYWHITE);
 
-        // Input
-        if (io.KeyPressed(KEY_F11)) {
+        // Global Input (ignores io stack; only for function keys)
+        if (IsKeyPressed(KEY_F3)) {
+            server.showF3Menu = !server.showF3Menu;
+        }
+        if (IsKeyPressed(KEY_F11)) {
             bool isFullScreen = IsWindowState(FLAG_FULLSCREEN_MODE);
             if (isFullScreen) {
                 ClearWindowState(FLAG_FULLSCREEN_MODE);
@@ -123,6 +204,8 @@ Err Play(GameServer &server)
                 SetWindowState(FLAG_FULLSCREEN_MODE);
             }
         }
+
+        // Game input (IO layers with higher precedence can steal this input)
         if (io.KeyPressed(KEY_V)) {
             bool isFullScreen = IsWindowState(FLAG_FULLSCREEN_MODE);
             if (IsWindowState(FLAG_VSYNC_HINT)) {
@@ -135,8 +218,10 @@ Err Play(GameServer &server)
             }
         }
         if (io.KeyPressed(KEY_H)) {
-            histogram.paused = !histogram.paused;
+            server.histogram.paused = !server.histogram.paused;
         }
+
+        editor.HandleInput(camera);
 
         UpdateCamera(camera);
 
@@ -148,177 +233,42 @@ Err Play(GameServer &server)
         //--------------------
         // Draw
         BeginDrawing();
-        ClearBackground(BLUE_DESAT);
+            ClearBackground(BLUE_DESAT);
+            BeginMode2D(camera);
 
-        BeginMode2D(camera);
+                // [World] Tilemap
+                map.Draw(camera);
 
-        // [World] Tilemap
-        map.Draw(camera);
+                // [Editor] Overlays
+                editor.DrawGroundOverlays(map, camera, server.now);
 
-        // [Editor] Overlays
-        editor.DrawOverlays(map, camera, server.now);
-
-        DrawRectangleLinesEx(lastCollisionA, 1, RED);
-        DrawRectangleLinesEx(lastCollisionB, 1, GREEN);
-
-        // NOTE(dlb): We could build an array of { entityId, position.y } and sort it
-        // each frame, then render the entities in that order.
-        for (int entityId = 0; entityId < SV_MAX_ENTITIES; entityId++) {
-            Entity &entity = map.entities[entityId];
-            if (entity.type) {
-                map.DrawEntity(entityId, server.now);
-                if (editor.active && editor.state.showColliders) {
-                    // [Debug] Draw colliders
-                    AspectCollision &collider = map.collision[entityId];
-                    if (collider.radius) {
-                        DrawCircle(entity.position.x, entity.position.y, collider.radius, collider.colliding ? Fade(RED, 0.5) : Fade(LIME, 0.5));
+                // [World] Entities
+                // NOTE(dlb): We could build an array of { entityId, position.y } and sort it
+                // each frame, then render the entities in that order.
+                for (int entityId = 0; entityId < SV_MAX_ENTITIES; entityId++) {
+                    Entity &entity = map.entities[entityId];
+                    if (entity.type) {
+                        map.DrawEntity(entityId, server.now);
                     }
                 }
 
-                // [Debug] Draw velocity vectors
-                //DrawLineEx(entity.position, Vector2Add(entity.position, entity.velocity), 2, PINK);
+                // [Editor] Overlays
+                editor.DrawEntityOverlays(map, camera, server.now);
 
-#if CL_DBG_FORCE_ACCUM
-                // [Debug] Draw force vectors
-                if (Vector2LengthSqr(entity.forceAccum)) {
-                    DrawLineEx(
-                        { entity.position.x, entity.position.y },
-                        { entity.position.x + entity.forceAccum.x, entity.position.y + entity.forceAccum.y },
-                        2,
-                        YELLOW
-                    );
-                }
-#endif
+                // [Debug] Last collision
+                DrawRectangleLinesEx(lastCollisionA, 1, RED);
+                DrawRectangleLinesEx(lastCollisionB, 1, GREEN);
+            EndMode2D();
+
+            // [Editor] Menus, action bar, etc.
+            editor.DrawUI({}, map, server.now);
+
+            // [Debug] FPS, clock, etc.
+            if (server.showF3Menu) {
+                draw_f3_menu(server, camera);
             }
-        }
-
-#if CL_DBG_CIRCLE_VS_REC
-        {
-            const Vector2 cursorWorldPos = GetScreenToWorld2D({ (float)GetMouseX(), (float)GetMouseY() }, camera);
-            Tile tile{};
-            if (map.AtTry(0, 0, tile)) {
-                Rectangle tileRect{};
-                Vector2 tilePos = { 0, 0 };
-                tileRect.x = tilePos.x;
-                tileRect.y = tilePos.y;
-                tileRect.width = TILE_W;
-                tileRect.height = TILE_W;
-                Manifold manifold{};
-                if (dlb_CheckCollisionCircleRec(cursorWorldPos, 10, tileRect, &manifold)) {
-                    DrawCircle(cursorWorldPos.x, cursorWorldPos.y, 10, Fade(RED, 0.5f));
-
-                    Vector2 resolve = Vector2Scale(manifold.normal, manifold.depth);
-                    DrawLine(
-                        manifold.contact.x,
-                        manifold.contact.y,
-                        manifold.contact.x + resolve.x,
-                        manifold.contact.y + resolve.y,
-                        ORANGE
-                    );
-                    DrawCircle(manifold.contact.x, manifold.contact.y, 1, BLUE);
-                    DrawCircle(manifold.contact.x + resolve.x, manifold.contact.y + resolve.y, 1, ORANGE);
-
-                    DrawCircle(cursorWorldPos.x + resolve.x, cursorWorldPos.y + resolve.y, 10, Fade(LIME, 0.5f));
-                } else {
-                    DrawCircle(cursorWorldPos.x, cursorWorldPos.y, 10, Fade(GRAY, 0.5f));
-                }
-            }
-        }
-#endif
-
-        EndMode2D();
-
-#if CL_DBG_TILE_CULLING
-        // Screen bounds debug rect for tile culling
-        DrawRectangleLinesEx({
-            screenMargin,
-            screenMargin,
-            (float)GetRenderWidth() - screenMargin*2,
-            (float)GetRenderHeight() - screenMargin*2,
-            }, 1.0f, PINK);
-#endif
-
-        editor.DrawUI({}, map, server.now);
-
-        {
-            io.PushScope(IO::IO_F3Menu);
-
-            Vector2 hudCursor{
-                GetRenderWidth() - 360.0f - 8.0f,
-                8.0f
-            };
-
-            histogram.Draw(hudCursor);
-            hudCursor.y += histogram.histoHeight + 8;
-
-            char buf[128];
-#define DRAW_TEXT_MEASURE(measureRect, label, fmt, ...) { \
-                if (label) { \
-                    snprintf(buf, sizeof(buf), "%-12s : " fmt, label, __VA_ARGS__); \
-                } else { \
-                    snprintf(buf, sizeof(buf), fmt, __VA_ARGS__); \
-                } \
-                DrawTextShadowEx(fntHackBold20, buf, hudCursor, RAYWHITE); \
-                if (measureRect) { \
-                    Vector2 measure = MeasureTextEx(fntHackBold20, buf, (float)fntHackBold20.baseSize, 1.0); \
-                    *measureRect = { hudCursor.x,hudCursor.y, measure.x, measure.y }; \
-                } \
-                hudCursor.y += fntHackBold20.baseSize; \
-            }
-
-#define DRAW_TEXT(label, fmt, ...) \
-            DRAW_TEXT_MEASURE((Rectangle *)0, label, fmt, __VA_ARGS__)
-
-            DRAW_TEXT((const char *)0, "%.2f fps (%.2f ms) (vsync=%s)", 1.0 / frameDt, frameDt * 1000.0, IsWindowState(FLAG_VSYNC_HINT) ? "on" : "off");
-            DRAW_TEXT("time", "%.02f", server.yj_server->GetTime());
-            DRAW_TEXT("tick", "%" PRIu64, server.tick);
-            DRAW_TEXT("tickAccum", "%.02f", server.tickAccum);
-            DRAW_TEXT("window", "%d, %d", GetScreenWidth(), GetScreenHeight());
-            DRAW_TEXT("render", "%d, %d", GetRenderWidth(), GetRenderHeight());
-            DRAW_TEXT("cursorScn", "%d, %d", GetMouseX(), GetMouseY());
-            const Vector2 cursorWorldPos = GetScreenToWorld2D({ (float)GetMouseX(), (float)GetMouseY() }, camera);
-            DRAW_TEXT("cursorWld", "%.f, %.f", cursorWorldPos.x, cursorWorldPos.y);
-            DRAW_TEXT("clients", "%d", server.yj_server->GetNumConnectedClients());
-
-            static bool showClientInfo[yojimbo::MaxClients];
-            for (int clientIdx = 0; clientIdx < yojimbo::MaxClients; clientIdx++) {
-                if (!server.yj_server->IsClientConnected(clientIdx)) {
-                    continue;
-                }
-
-                Rectangle clientRowRect{};
-                DRAW_TEXT_MEASURE(&clientRowRect,
-                    showClientInfo[clientIdx] ? "[-] client" : "[+] client",
-                    "%d", clientIdx
-                );
-
-                bool hudHover = CheckCollisionPointRec({ (float)GetMouseX(), (float)GetMouseY() }, clientRowRect);
-                if (hudHover) {
-                    io.CaptureMouse();
-                    if (io.MouseButtonPressed(MOUSE_BUTTON_LEFT)) {
-                        showClientInfo[clientIdx] = !showClientInfo[clientIdx];
-                    }
-                }
-                if (showClientInfo[clientIdx]) {
-                    hudCursor.x += 16.0f;
-                    yojimbo::NetworkInfo netInfo{};
-                    server.yj_server->GetNetworkInfo(clientIdx, netInfo);
-                    DRAW_TEXT("  rtt", "%.02f", netInfo.RTT);
-                    DRAW_TEXT("  % loss", "%.02f", netInfo.packetLoss);
-                    DRAW_TEXT("  sent (kbps)", "%.02f", netInfo.sentBandwidth);
-                    DRAW_TEXT("  recv (kbps)", "%.02f", netInfo.receivedBandwidth);
-                    DRAW_TEXT("  ack  (kbps)", "%.02f", netInfo.ackedBandwidth);
-                    DRAW_TEXT("  sent (pckt)", "%" PRIu64, netInfo.numPacketsSent);
-                    DRAW_TEXT("  recv (pckt)", "%" PRIu64, netInfo.numPacketsReceived);
-                    DRAW_TEXT("  ack  (pckt)", "%" PRIu64, netInfo.numPacketsAcked);
-                    hudCursor.x -= 16.0f;
-                }
-            }
-
-            io.PopScope();
-        }
-
         EndDrawing();
+
         yojimbo_sleep(0.001);
 
         // Nobody else handled it, so user probably wants to quit

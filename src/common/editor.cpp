@@ -7,6 +7,18 @@
 #include "tinyfiledialogs.h"
 #include "ui/ui.h"
 
+const char *EditModeStr(EditMode mode)
+{
+    switch (mode) {
+        case EditMode_Tiles:    return "Tiles";
+        case EditMode_Wang:     return "Wang";
+        case EditMode_Paths:    return "Paths";
+        case EditMode_Warps:    return "Warps";
+        case EditMode_Entities: return "Entities";
+        default: return "<null>";
+    }
+}
+
 Err Editor::Init(Tilemap &map)
 {
     Err err = RN_SUCCESS;
@@ -14,20 +26,10 @@ Err Editor::Init(Tilemap &map)
     return err;
 }
 
-const char *EditModeStr(EditMode mode)
-{
-    switch (mode) {
-        case EditMode_Tiles:    return "Tiles";
-        case EditMode_Wang:     return "Wang";
-        case EditMode_Entities: return "Entities";
-        case EditMode_Paths:    return "Paths";
-        case EditMode_Warps:    return "Warps";
-        default: return "<null>";
-    }
-}
-
 void Editor::HandleInput(Camera2D &camera)
 {
+    io.PushScope(IO::IO_Editor);
+
     if (io.KeyPressed(KEY_GRAVE)) {
         active = !active;
     }
@@ -41,13 +43,13 @@ void Editor::HandleInput(Camera2D &camera)
     if (active) {
         io.CaptureKeyboard();
     }
+
+    io.PopScope();
 }
 
-void Editor::DrawOverlays(Tilemap &map, Camera2D &camera, double now)
+void Editor::DrawGroundOverlays(Tilemap &map, Camera2D &camera, double now)
 {
-    io.PushScope(IO::IO_EditorOverlay);
-
-    HandleInput(camera);
+    io.PushScope(IO::IO_EditorGroundOverlay);
 
     // Draw tile collision layer
     if (state.showColliders) {
@@ -60,23 +62,22 @@ void Editor::DrawOverlays(Tilemap &map, Camera2D &camera, double now)
     if (active) {
         switch (mode) {
             case EditMode_Tiles: {
-                DrawOverlay_Tiles(map, camera, now);
+                DrawGroundOverlay_Tiles(map, camera, now);
                 break;
             }
             case EditMode_Wang: {
-                DrawOverlay_Wang(map, camera, now);
-                break;
-            }
-            case EditMode_Entities: {
-                DrawOverlay_Entities(map, camera, now);
+                DrawGroundOverlay_Wang(map, camera, now);
                 break;
             }
             case EditMode_Paths: {
-                DrawOverlay_Paths(map, camera, now);
+                DrawGroundOverlay_Paths(map, camera, now);
                 break;
             }
             case EditMode_Warps: {
-                DrawOverlay_Warps(map, camera, now);
+                DrawGroundOverlay_Warps(map, camera, now);
+                break;
+            }
+            case EditMode_Entities: {
                 break;
             }
         }
@@ -84,8 +85,7 @@ void Editor::DrawOverlays(Tilemap &map, Camera2D &camera, double now)
 
     io.PopScope();
 }
-
-void Editor::DrawOverlay_Tiles(Tilemap &map, Camera2D &camera, double now)
+void Editor::DrawGroundOverlay_Tiles(Tilemap &map, Camera2D &camera, double now)
 {
     if (!io.MouseCaptured()) {
         // Draw hover highlight
@@ -115,22 +115,10 @@ void Editor::DrawOverlay_Tiles(Tilemap &map, Camera2D &camera, double now)
         }
     }
 }
-
-void Editor::DrawOverlay_Wang(Tilemap &map, Camera2D &camera, double now)
+void Editor::DrawGroundOverlay_Wang(Tilemap &map, Camera2D &camera, double now)
 {
 }
-
-void Editor::DrawOverlay_Entities(Tilemap &map, Camera2D &camera, double now)
-{
-    for (uint32_t entityId = 0; entityId < ARRAY_SIZE(map.entities); entityId++) {
-        const Entity &entity = map.entities[entityId];
-        if (entity.type) {
-            DrawRectangleRec(map.EntityRect(entityId), Fade(SKYBLUE, 0.7f));
-        }
-    }
-}
-
-void Editor::DrawOverlay_Paths(Tilemap &map, Camera2D &camera, double now)
+void Editor::DrawGroundOverlay_Paths(Tilemap &map, Camera2D &camera, double now)
 {
     auto &cursor = state.pathNodes.cursor;
     const Vector2 cursorWorldPos = GetScreenToWorld2D({ (float)GetMouseX(), (float)GetMouseY() }, camera);
@@ -233,11 +221,75 @@ void Editor::DrawOverlay_Paths(Tilemap &map, Camera2D &camera, double now)
         io.PopScope();
     }
 }
-
-void Editor::DrawOverlay_Warps(Tilemap &map, Camera2D &camera, double now)
+void Editor::DrawGroundOverlay_Warps(Tilemap &map, Camera2D &camera, double now)
 {
     for (const Warp &warp : map.warps) {
         DrawRectangleRec(warp.collider, Fade(SKYBLUE, 0.7f));
+    }
+}
+
+void Editor::DrawEntityOverlays(Tilemap &map, Camera2D &camera, double now)
+{
+    io.PushScope(IO::IO_EditorEntityOverlay);
+
+    if (active) {
+        switch (mode) {
+            case EditMode_Tiles: {
+                break;
+            }
+            case EditMode_Wang: {
+                break;
+            }
+            case EditMode_Paths: {
+                break;
+            }
+            case EditMode_Warps: {
+                break;
+            }
+            case EditMode_Entities: {
+                DrawEntityOverlay_Collision(map, camera, now);
+                break;
+            }
+        }
+    }
+
+    io.PopScope();
+}
+void Editor::DrawEntityOverlay_Collision(Tilemap &map, Camera2D &camera, double now)
+{
+    for (int entityId = 0; entityId < SV_MAX_ENTITIES; entityId++) {
+        Entity &entity = map.entities[entityId];
+        if (entity.type) {
+            // [Debug] Draw entity texture rect
+            //DrawRectangleRec(map.EntityRect(entityId), Fade(SKYBLUE, 0.7f));
+
+            // [Debug] Draw colliders
+            if (state.showColliders) {
+                AspectCollision &collider = map.collision[entityId];
+                if (collider.radius) {
+                    DrawCircle(
+                        entity.position.x, entity.position.y,
+                        collider.radius,
+                        collider.colliding ? Fade(RED, 0.5) : Fade(LIME, 0.5)
+                    );
+                }
+            }
+
+            // [Debug] Draw velocity vectors
+            //DrawLineEx(entity.position, Vector2Add(entity.position, entity.velocity), 2, PINK);
+
+#if CL_DBG_FORCE_ACCUM
+            // [Debug] Draw force vectors
+            if (Vector2LengthSqr(entity.forceAccum)) {
+                DrawLineEx(
+                    { entity.position.x, entity.position.y },
+                    { entity.position.x + entity.forceAccum.x, entity.position.y + entity.forceAccum.y },
+                    2,
+                    YELLOW
+                );
+            }
+#endif
+        }
     }
 }
 
@@ -256,7 +308,6 @@ UIState Editor::DrawUI(Vector2 position, Tilemap &map, double now)
     io.PopScope();
     return state;
 }
-
 UIState Editor::DrawUI_ActionBar(Vector2 position, Tilemap &map, double now)
 {
     UIStyle uiActionBarStyle{};
@@ -413,7 +464,6 @@ UIState Editor::DrawUI_ActionBar(Vector2 position, Tilemap &map, double now)
 
     return uiState;
 }
-
 void Editor::DrawUI_TileActions(UI &uiActionBar, Tilemap &map, double now)
 {
     const char *mapFileFilter[1] = { "*.png" };
@@ -456,7 +506,6 @@ void Editor::DrawUI_TileActions(UI &uiActionBar, Tilemap &map, double now)
 
     DrawUI_Tilesheet(uiActionBar, map, now);
 }
-
 void Editor::DrawUI_Tilesheet(UI &uiActionBar, Tilemap &map, double now)
 {
     // TODO: Support multi-select (big rectangle?), and figure out where this lives
@@ -540,7 +589,6 @@ void Editor::DrawUI_Tilesheet(UI &uiActionBar, Tilemap &map, double now)
         DrawRectangleLinesEx(tileDefRectScreen, 2, WHITE);
     }
 }
-
 void Editor::DrawUI_Wang(UI &uiActionBar, Tilemap &map, double now)
 {
     if (uiActionBar.Button("Generate template").pressed) {
@@ -697,7 +745,6 @@ void Editor::DrawUI_Wang(UI &uiActionBar, Tilemap &map, double now)
     }
     uiActionBar.PopStyle();
 }
-
 void Editor::DrawUI_EntityActions(UI &uiActionBar, Tilemap &map, double now)
 {
     if (uiActionBar.Button("Despawn all", MAROON).pressed) {
@@ -709,7 +756,6 @@ void Editor::DrawUI_EntityActions(UI &uiActionBar, Tilemap &map, double now)
         }
     }
 }
-
 void Editor::DrawUI_PathActions(UI &uiActionBar, Tilemap &map, double now)
 {
     if (state.pathNodes.cursor.dragging) {
@@ -722,7 +768,6 @@ void Editor::DrawUI_PathActions(UI &uiActionBar, Tilemap &map, double now)
         state.pathNodes.cursor.dragPathNodeIndex
     ));
 }
-
 void Editor::DrawUI_WarpActions(UI &uiActionBar, Tilemap &map, double now)
 {
     if (uiActionBar.Button("Delete all warps", MAROON).pressed) {

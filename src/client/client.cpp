@@ -286,8 +286,15 @@ void draw_f3_menu(GameClient &client)
 #define DRAW_TEXT(label, fmt, ...) \
                 DRAW_TEXT_MEASURE((Rectangle *)0, label, fmt, __VA_ARGS__)
 
-    DRAW_TEXT("frameDt", "%.2f fps (%.2f ms) (vsync=%s)", 1.0 / client.frameDtSmooth, client.frameDtSmooth * 1000.0, IsWindowState(FLAG_VSYNC_HINT) ? "on" : "off");
-    DRAW_TEXT("serverTime", "%.2f (%s%.2f)", client.ServerNow(), client.clientTimeDeltaVsServer > 0 ? "+" : "", client.clientTimeDeltaVsServer);
+    DRAW_TEXT("frameDt", "%.2f fps (%.2f ms) (vsync=%s)",
+        1.0 / client.frameDtSmooth,
+        client.frameDtSmooth * 1000.0,
+        IsWindowState(FLAG_VSYNC_HINT) ? "on" : "off"
+    );
+    DRAW_TEXT("serverTime", "%.2f (%s%.2f)",
+        client.ServerNow(),
+        client.clientTimeDeltaVsServer > 0 ? "+" : "", client.clientTimeDeltaVsServer
+    );
     DRAW_TEXT("localTime", "%.2f", client.now);
     DRAW_TEXT("window", "%d, %d", GetScreenWidth(), GetScreenHeight());
     DRAW_TEXT("render", "%d, %d", GetRenderWidth(), GetRenderHeight());
@@ -437,6 +444,7 @@ int main(int argc, char *argv[])
 
         bool escape = io.KeyPressed(KEY_ESCAPE);
 
+        // Global Input (ignores io stack; only for function keys)
         if (io.KeyPressed(KEY_F11)) {
             bool isFullScreen = IsWindowState(FLAG_FULLSCREEN_MODE);
             if (isFullScreen) {
@@ -449,6 +457,11 @@ int main(int argc, char *argv[])
                 SetWindowState(FLAG_FULLSCREEN_MODE);
             }
         }
+        if (io.KeyPressed(KEY_F3)) {
+            client->showF3Menu = !client->showF3Menu;
+        }
+
+        // Game input (IO layers with higher precedence can steal this input)
         if (io.KeyPressed(KEY_V)) {
             bool isFullScreen = IsWindowState(FLAG_FULLSCREEN_MODE);
             if (IsWindowState(FLAG_VSYNC_HINT)) {
@@ -460,7 +473,6 @@ int main(int argc, char *argv[])
                 }
             }
         }
-
         if (io.KeyPressed(KEY_C)) {
             client->TryConnect();
         }
@@ -479,9 +491,6 @@ int main(int argc, char *argv[])
         if (io.KeyPressed(KEY_H)) {
             // TODO: fpsHistogram.update() which checks input and calls TogglePause?
             client->fpsHistogram.paused = !client->fpsHistogram.paused;
-        }
-        if (io.KeyPressed(KEY_F3)) {
-            client->showF3Menu = !client->showF3Menu;
         }
 
         //--------------------
@@ -545,23 +554,23 @@ int main(int argc, char *argv[])
         //--------------------
         // Draw
         BeginDrawing();
-        ClearBackground(GRAYISH_BLUE);
+            ClearBackground(GRAYISH_BLUE);
 
-        if (client->yj_client->IsDisconnected()) {
-            draw_menu_main(*client, quit);
-            reset_menu_connecting();
-        } else if (client->yj_client->IsConnecting() || !localPlayer) {
-            draw_menu_connecting(*client);
-        } else if (client->yj_client->IsConnected()) {
-            draw_game(*client);
-            reset_menu_connecting();
-        }
+            if (client->yj_client->IsDisconnected()) {
+                draw_menu_main(*client, quit);
+                reset_menu_connecting();
+            } else if (client->yj_client->IsConnecting() || !localPlayer) {
+                draw_menu_connecting(*client);
+            } else if (client->yj_client->IsConnected()) {
+                draw_game(*client);
+                reset_menu_connecting();
+            }
 
-        if (client->showF3Menu) {
-            draw_f3_menu(*client);
-        }
-
+            if (client->showF3Menu) {
+                draw_f3_menu(*client);
+            }
         EndDrawing();
+
         if (!IsWindowState(FLAG_VSYNC_HINT)) {
             yojimbo_sleep(0.001);
         }

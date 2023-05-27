@@ -79,9 +79,9 @@ struct Tilemap {
     uint32_t entity_freelist{};
 
     // TODO: Rename these so they don't collide with local variables all the time
+    Entity          entities  [SV_MAX_ENTITIES]{};
     AspectCollision collision [SV_MAX_ENTITIES]{};
     AspectDialog    dialog    [SV_MAX_ENTITIES]{};
-    Entity          entities  [SV_MAX_ENTITIES]{};
     AspectLife      life      [SV_MAX_ENTITIES]{};
     AspectPathfind  pathfind  [SV_MAX_ENTITIES]{};
     AspectPhysics   physics   [SV_MAX_ENTITIES]{};

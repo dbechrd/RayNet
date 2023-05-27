@@ -7,9 +7,9 @@
 enum EditMode {
     EditMode_Tiles,
     EditMode_Wang,
-    EditMode_Entities,
     EditMode_Paths,
     EditMode_Warps,
+    EditMode_Entities,
     EditMode_Count
 };
 
@@ -46,24 +46,25 @@ struct EditModeState {
 };
 
 struct Editor {
-    bool active{};
-
-    EditMode mode{};
-    EditModeState state{};
-
     Err Init(Tilemap &map);
-    void DrawOverlays(Tilemap &map, Camera2D &camera, double now);
+    void HandleInput(Camera2D &camera);
+    void DrawGroundOverlays(Tilemap &map, Camera2D &camera, double now);
+    void DrawEntityOverlays(Tilemap &map, Camera2D &camera, double now);
     UIState DrawUI(Vector2 position, Tilemap &map, double now);
 
 private:
-    void HandleInput(Camera2D &camera);
+    bool active{};
+    EditMode mode{};
+    EditModeState state{};
 
-    // Overlay modes
-    void DrawOverlay_Tiles(Tilemap &map, Camera2D &camera, double now);
-    void DrawOverlay_Wang(Tilemap &map, Camera2D &camera, double now);
-    void DrawOverlay_Entities(Tilemap &map, Camera2D &camera, double now);
-    void DrawOverlay_Paths(Tilemap &map, Camera2D &camera, double now);
-    void DrawOverlay_Warps(Tilemap &map, Camera2D &camera, double now);
+    // Ground overlays (above tiles, below entities)
+    void DrawGroundOverlay_Tiles(Tilemap &map, Camera2D &camera, double now);
+    void DrawGroundOverlay_Wang(Tilemap &map, Camera2D &camera, double now);
+    void DrawGroundOverlay_Paths(Tilemap &map, Camera2D &camera, double now);
+    void DrawGroundOverlay_Warps(Tilemap &map, Camera2D &camera, double now);
+
+    // Entity overlays (above entities)
+    void DrawEntityOverlay_Collision(Tilemap &map, Camera2D &camera, double now);
 
     // Action bar and mode tabs
     UIState DrawUI_ActionBar(Vector2 position, Tilemap &map, double now);

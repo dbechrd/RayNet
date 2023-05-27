@@ -64,11 +64,18 @@ struct GameServer {
     uint64_t tick{};
     double tickAccum{};
     double lastTickedAt{};
+    double now{};
+
+    Histogram histogram{};
+    double frameStart = GetTime();
+    double frameDt = 0;
+    double frameDtSmooth = 60;
+
+    bool showF3Menu = false;
 
     ////////////////////////////////////////////////////////////////////////////
     // TODO: Move these to "World" shared on both client and server
     // TODO: Extract aspects back out of Tilemap into new "World" class
-    double now{};
     Tilemap map{};
     ////////////////////////////////////////////////////////////////////////////
 
