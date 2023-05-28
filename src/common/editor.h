@@ -46,7 +46,7 @@ struct EditModeState {
 };
 
 struct Editor {
-    Err Init(Tilemap &map);
+    Err Init(void);
     void HandleInput(Camera2D &camera);
     void DrawGroundOverlays(Tilemap &map, Camera2D &camera, double now);
     void DrawEntityOverlays(Tilemap &map, Camera2D &camera, double now);

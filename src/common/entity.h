@@ -1,8 +1,6 @@
 #pragma once
 #include "common.h"
 
-struct Tilemap;
-
 struct AspectCollision {
     float radius;    // collision
     bool colliding;  // not sync'd, local flag for debugging colliders
@@ -65,7 +63,7 @@ enum EntityType {
 };
 
 struct Entity {
-    //uint32_t id;
+    uint32_t id;
     EntityType type;
     double spawnedAt;
     double despawnedAt;

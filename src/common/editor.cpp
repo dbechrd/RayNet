@@ -19,10 +19,10 @@ const char *EditModeStr(EditMode mode)
     }
 }
 
-Err Editor::Init(Tilemap &map)
+Err Editor::Init(void)
 {
     Err err = RN_SUCCESS;
-    err = state.wang.wangTileset.Load(map, "resources/wang/tileset2x2.png");
+    err = state.wang.wangTileset.Load("resources/wang/tileset2x2.png");
     return err;
 }
 
@@ -672,7 +672,7 @@ void Editor::DrawUI_Wang(UI &uiActionBar, Tilemap &map, double now)
     uiActionBar.PushStyle(uiWangStyle2x);
 
     if (uiActionBar.Button("Re-generate Map").pressed) {
-        wangTileset.GenerateMap(map.width, map.height, map, wangMap);
+        wangTileset.GenerateMap(map.width, map.height, wangMap);
     }
     uiActionBar.Newline();
 
@@ -739,7 +739,7 @@ void Editor::DrawUI_Wang(UI &uiActionBar, Tilemap &map, double now)
         // Update if dirty on a slight delay (to make dragging more efficient)
         if (lastChangedAt > lastUpdatedAt && (now - lastChangedAt) > updateDelay) {
             UnloadTexture(wangTileset.thumbnail);
-            wangTileset.thumbnail = wangTileset.GenerateColorizedTexture(wangTileset.ts.img, map);
+            wangTileset.thumbnail = wangTileset.GenerateColorizedTexture(wangTileset.ts.img);
             lastUpdatedAt = now;
         }
     }

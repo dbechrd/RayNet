@@ -64,51 +64,74 @@ struct GameServer {
     uint64_t tick{};
     double tickAccum{};
     double lastTickedAt{};
-    double now{};
+    double now;
 
     Histogram histogram{};
-    double frameStart = GetTime();
+    double frameStart;
     double frameDt = 0;
     double frameDtSmooth = 60;
 
     bool showF3Menu = false;
 
-    ////////////////////////////////////////////////////////////////////////////
-    // TODO: Move these to "World" shared on both client and server
-    // TODO: Extract aspects back out of Tilemap into new "World" class
-    Tilemap map{};
-    ////////////////////////////////////////////////////////////////////////////
+    uint32_t nextEntityId = 1;
+    std::vector<Tilemap *> maps{};
+    std::unordered_map<uint32_t, size_t> mapsById{};     // maps by their map id
+    std::unordered_map<uint32_t, size_t> entityMapId{};  // maps by entity id (i.e. which map an entity is currently in)
+
+    GameServer(double now) : now(now), frameStart(now) {};
+    ~GameServer(void);
 
     void OnClientJoin(int clientIdx);
     void OnClientLeave(int clientIdx);
 
-    Err Start(void);
-    void SendEntitySpawn(int clientIdx, uint32_t entityId);
-    void BroadcastEntitySpawn(uint32_t entityId);
-    void SendEntityDespawn(int clientIdx, uint32_t entityId);
-    void BroadcastEntityDespawn(uint32_t entityId);
-    void SendEntitySay(int clientIdx, uint32_t entityId, uint32_t messageLength, const char *message);
-    void BroadcastEntitySay(uint32_t entityId, uint32_t messageLength, const char *message);
-    void SendTileChunk(int clientIdx, uint32_t x, uint32_t y);
-    void BroadcastTileChunk(uint32_t x, uint32_t y);
-    void ProcessMessages(void);
-    void SendClientSnapshots(void);
-    void SendClockSync(void);
-    void Update(void);
-    void Stop(void);
-
-    void SerializeSpawn(uint32_t entityId, Msg_S_EntitySpawn &entitySpawn);
-    void SerializeSnapshot(uint32_t entityId, Msg_S_EntitySnapshot &entitySnapshot, uint32_t lastProcessedInputCmd);  // TODO: Remove lastProcessedInputCmd from args list, shouldn't need it
-
-    ////////////////////////////////////////////////////////////////////////////
-    // TODO: Move this stuff to ServerWorld
-    void Tick(void);
-    void DestroyDespawnedEntities(void);
-    ////////////////////////////////////////////////////////////////////////////
-
     uint32_t GetPlayerEntityId(uint32_t clientIdx);
+
+    Err LoadMap(std::string filename);
+    Err Start(void);
+
+    Tilemap *FindMap(uint32_t mapId);
+    Tilemap *FindEntityMap(uint32_t entityId);
+    Entity *FindEntity(uint32_t entityId);
+
+    uint32_t CreateEntity(Tilemap &map, EntityType type);
     void SpawnEntity(uint32_t entityId);
     void DespawnEntity(uint32_t entityId);
+
+    void Update(void);
+
+    void Stop(void);
+
+private:
+    void DestroyDespawnedEntities(void);
+
+    void SerializeSpawn(Tilemap &map, size_t entityIndex, Msg_S_EntitySpawn &entitySpawn);
+    void SendEntitySpawn(int clientIdx, Tilemap &map, uint32_t entityId);
+    void BroadcastEntitySpawn(Tilemap &map, uint32_t entityId);
+
+    void SendEntityDespawn(int clientIdx, Tilemap &map, uint32_t entityId);
+    void BroadcastEntityDespawn(Tilemap &map, uint32_t entityId);
+
+    void SendEntitySay(int clientIdx, Tilemap &map, uint32_t entityId, uint32_t messageLength, const char *message);
+    void BroadcastEntitySay(Tilemap &map, uint32_t entityId, uint32_t messageLength, const char *message);
+
+    void SendTileChunk(int clientIdx, Tilemap &map, uint32_t x, uint32_t y);
+    void BroadcastTileChunk(Tilemap &map, uint32_t x, uint32_t y);
+
+    // All part of Update()
+    void ProcessMessages(void);
+    uint32_t SpawnProjectile(Tilemap &map, Vector2 position, Vector2 direction);
+    void UpdateServerPlayers(void);
+    void TickSpawnBots(Tilemap &map);
+    void TickEntityBot(Tilemap &map, uint32_t entityIndex, double dt);
+    void TickEntityPlayer(Tilemap &map, uint32_t entityIndex, double dt);
+    void TickEntityProjectile(Tilemap &map, uint32_t entityIndex, double dt);
+    void TickPlayer(Tilemap &map, uint32_t entityId, double dt);
+    void TickBot(Tilemap &map, uint32_t entityId, double dt);
+    void TickProjectile(Tilemap &map, uint32_t entityId, double dt);
+    void Tick(void);
+    void SerializeSnapshot(Tilemap &map, size_t entityId, Msg_S_EntitySnapshot &entitySnapshot, uint32_t lastProcessedInputCmd);  // TODO: Remove lastProcessedInputCmd from args list, shouldn't need it
+    void SendClientSnapshots(void);
+    void SendClockSync(void);
 };
 
 extern Rectangle lastCollisionA;

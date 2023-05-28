@@ -6,6 +6,8 @@
 
 void RN_TraceLogCallback(int logLevel, const char *text, va_list args)
 {
+    return;
+
     const char *outofbounds = "Requested image pixel";
     if (!strncmp(text, "Requested image pixel", strlen(outofbounds))) {
         logLevel = LOG_FATAL;
@@ -159,26 +161,15 @@ Err Play(GameServer &server)
 {
     Err err = RN_SUCCESS;
 
-    Tilemap &map = server.map;
-    err = map.Load(LEVEL_001, server.now);
-    if (err) {
-        printf("Failed to load map with code %d\n", err);
-        assert(!"oops");
-        // TODO: Display error message on screen for N seconds or
-        // until dismissed
-    }
-
     Camera2D camera{};
     camera.zoom = 1;
 
-    const Vector2 uiPosition{ 380, 8 };
-
-    SetExitKey(0);
-    bool quit = false;
+    Tilemap &map0 = *server.maps[0];
 
     Editor editor{};
-    editor.Init(map);
+    editor.Init();
 
+    bool quit = false;
     while (!quit) {
         io.PushScope(IO::IO_Game);
 
@@ -220,6 +211,9 @@ Err Play(GameServer &server)
         if (io.KeyPressed(KEY_H)) {
             server.histogram.paused = !server.histogram.paused;
         }
+        if (io.KeyPressed(KEY_M)) {
+            //server.map =
+        }
 
         editor.HandleInput(camera);
 
@@ -237,23 +231,23 @@ Err Play(GameServer &server)
             BeginMode2D(camera);
 
                 // [World] Tilemap
-                map.Draw(camera);
+                map0.Draw(camera);
 
                 // [Editor] Overlays
-                editor.DrawGroundOverlays(map, camera, server.now);
+                editor.DrawGroundOverlays(map0, camera, server.now);
 
                 // [World] Entities
-                // NOTE(dlb): We could build an array of { entityId, position.y } and sort it
+                // NOTE(dlb): We could build an array of { entityIndex, position.y } and sort it
                 // each frame, then render the entities in that order.
-                for (int entityId = 0; entityId < SV_MAX_ENTITIES; entityId++) {
-                    Entity &entity = map.entities[entityId];
+                for (int entityIndex = 0; entityIndex < SV_MAX_ENTITIES; entityIndex++) {
+                    Entity &entity = map0.entities[entityIndex];
                     if (entity.type) {
-                        map.DrawEntity(entityId, server.now);
+                        map0.DrawEntity(entity.id, server.now);
                     }
                 }
 
                 // [Editor] Overlays
-                editor.DrawEntityOverlays(map, camera, server.now);
+                editor.DrawEntityOverlays(map0, camera, server.now);
 
                 // [Debug] Last collision
                 DrawRectangleLinesEx(lastCollisionA, 1, RED);
@@ -261,7 +255,7 @@ Err Play(GameServer &server)
             EndMode2D();
 
             // [Editor] Menus, action bar, etc.
-            editor.DrawUI({}, map, server.now);
+            editor.DrawUI({}, map0, server.now);
 
             // [Debug] FPS, clock, etc.
             if (server.showF3Menu) {
@@ -287,68 +281,90 @@ int main(int argc, char *argv[])
 //int __stdcall WinMain(void *hInstance, void *hPrevInstance, char *pCmdLine, int nCmdShow)
 {
     Err err = RN_SUCCESS;
-    //SetTraceLogLevel(LOG_WARNING);
-    SetTraceLogCallback(RN_TraceLogCallback);
 
-    InitWindow(1920, 1017, "RayNet Server");
-    //SetWindowState(FLAG_VSYNC_HINT);  // KEEP THIS ENABLED it makes the room cooler
-    SetWindowState(FLAG_WINDOW_RESIZABLE);
-    SetWindowState(FLAG_WINDOW_MAXIMIZED);
+    GameServer *server{};
 
-    InitAudioDevice();
+    do {
+        //SetTraceLogLevel(LOG_WARNING);
+        SetTraceLogCallback(RN_TraceLogCallback);
+        SetExitKey(0);
 
-    // NOTE(dlb): yojimbo uses rand() for network simulator and random_int()/random_float()
-    srand((unsigned int)GetTime());
+        InitWindow(1920, 1017, "RayNet Server");
+        //SetWindowState(FLAG_VSYNC_HINT);  // KEEP THIS ENABLED it makes the room cooler
+        SetWindowState(FLAG_WINDOW_RESIZABLE);
+        SetWindowState(FLAG_WINDOW_MAXIMIZED);
 
-    err = InitCommon();
-    if (err) {
-        printf("Failed to load common resources\n");
-    }
+        InitAudioDevice();
 
-    Image icon = LoadImage("resources/server.png");
-    SetWindowIcon(icon);
-    UnloadImage(icon);
+        // NOTE(dlb): yojimbo uses rand() for network simulator and random_int()/random_float()
+        srand((unsigned int)GetTime());
 
-    Vector2 screenSize = { (float)GetRenderWidth(), (float)GetRenderHeight() };
+        err = InitCommon();
+        if (err) {
+            printf("Failed to load common resources\n");
+            break;
+        }
 
-#if CL_DBG_ONE_SCREEN
-    const int monitorWidth = GetMonitorWidth(0);
-    const int monitorHeight = GetMonitorHeight(0);
-    SetWindowPosition(
-        monitorWidth / 2 - (int)screenSize.x, // / 2,
-        monitorHeight / 2 - (int)screenSize.y / 2
-    );
-#elif CL_DBG_TWO_SCREEN
-    const int monitorWidth = GetMonitorWidth(1);
-    const int monitorHeight = GetMonitorHeight(1);
-    Vector2 monitor2 = GetMonitorPosition(0);
-    SetWindowPosition(
-        monitor2.x + monitorWidth / 2 - (int)screenSize.x / 2,
-        monitor2.y + monitorHeight / 2 - (int)screenSize.y / 2
-    );
-#endif
+        Image icon = LoadImage("resources/server.png");
+        SetWindowIcon(icon);
+        UnloadImage(icon);
 
-    //--------------------
-    // Create server
-    // NOTE(DLB): MUST happen after InitWindow() so that GetTime() is valid!!
-    GameServer *server = new GameServer;
-    if (!server) {
-        printf("error: failed to allocate server\n");
-        return RN_BAD_ALLOC;
-    }
-    server->now = GetTime();
+        Vector2 screenSize = { (float)GetRenderWidth(), (float)GetRenderHeight() };
 
-    //--------------------
-    // Start the server
-    err = server->Start();
-    if (err) {
-        printf("error: failed to start server\n");
-        return err;
-    }
+    #if CL_DBG_ONE_SCREEN
+        const int monitorWidth = GetMonitorWidth(0);
+        const int monitorHeight = GetMonitorHeight(0);
+        SetWindowPosition(
+            monitorWidth / 2 - (int)screenSize.x, // / 2,
+            monitorHeight / 2 - (int)screenSize.y / 2
+        );
+    #elif CL_DBG_TWO_SCREEN
+        const int monitorWidth = GetMonitorWidth(1);
+        const int monitorHeight = GetMonitorHeight(1);
+        Vector2 monitor2 = GetMonitorPosition(0);
+        SetWindowPosition(
+            monitor2.x + monitorWidth / 2 - (int)screenSize.x / 2,
+            monitor2.y + monitorHeight / 2 - (int)screenSize.y / 2
+        );
+    #endif
 
-    //--------------------
-    // Play the game
-    err = Play(*server);
+        double now = GetTime();
+
+        //--------------------
+        // Create server
+        // NOTE(DLB): MUST happen after InitWindow() so that GetTime() is valid!!
+        server = new GameServer(now);
+        if (!server) {
+            printf("error: failed to allocate server\n");
+            err = RN_BAD_ALLOC;
+            break;
+        }
+
+        //--------------------
+        // Load necessary maps
+        err = server->LoadMap(LEVEL_001);
+        if (err) break;
+
+        err = server->LoadMap(LEVEL_002);
+        if (err) break;
+
+        //--------------------
+        // Start the server
+        err = server->Start();
+        if (err) {
+            printf("error: failed to start server\n");
+            break;
+        }
+
+        //--------------------
+        // Play the game
+        err = Play(*server);
+        if (err) {
+            printf("[server] error while playing game\n");
+            break;
+        }
+    } while(0);
+
     if (err) __debugbreak();
 
     //--------------------

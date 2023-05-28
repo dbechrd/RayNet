@@ -6,7 +6,7 @@
 
 void Tilemap::SV_SerializeChunk(Msg_S_TileChunk &tileChunk, uint32_t x, uint32_t y)
 {
-    tileChunk.mapName = filename;
+    tileChunk.mapId = id;
     tileChunk.x = x;
     tileChunk.y = y;
     for (uint32_t ty = y; ty < SV_TILE_CHUNK_WIDTH; ty++) {
@@ -18,9 +18,6 @@ void Tilemap::SV_SerializeChunk(Msg_S_TileChunk &tileChunk, uint32_t x, uint32_t
 
 void Tilemap::CL_DeserializeChunk(Msg_S_TileChunk &tileChunk)
 {
-    if (tileChunk.mapName != filename) {
-        Load(tileChunk.mapName, 0);
-    }
     for (uint32_t ty = tileChunk.y; ty < SV_TILE_CHUNK_WIDTH; ty++) {
         for (uint32_t tx = tileChunk.x; tx < SV_TILE_CHUNK_WIDTH; tx++) {
             Set(tileChunk.x + tx, tileChunk.y + ty, tileChunk.tileDefs[ty * SV_TILE_CHUNK_WIDTH + tx], 0);
@@ -298,6 +295,7 @@ Err Tilemap::Load(std::string path, double now)
 
     if (!err) {
         filename = path;
+        printf("[tilemap] Loaded %s successfully\n", filename.c_str());
     } else {
         Unload();
     }
@@ -393,8 +391,8 @@ void Tilemap::Unload(void)
     pathNodeIndices.clear();
     paths.clear();
 
-    entity_freelist = SV_FIRST_ENTITY_IDX;  // 0 reserved, 1-MAX_PLAYERS reserved
-    for (uint32_t i = entity_freelist; i < SV_MAX_ENTITIES - 1; i++) {
+    entity_freelist = 1;  // 0 is reserved for null entity
+    for (uint32_t i = 1; i < SV_MAX_ENTITIES - 1; i++) {
         Entity &entity = entities[i];
         entities[i].freelist_next = i + 1;
     }
@@ -550,71 +548,85 @@ AiPathNode *Tilemap::GetPathNode(uint32_t pathId, uint32_t pathNodeIndex) {
     return 0;
 }
 
-uint32_t Tilemap::CreateEntity(EntityType entityType)
+bool Tilemap::CreateEntity(uint32_t entityId, EntityType entityType)
 {
-    uint32_t entityId = entity_freelist;
     if (entity_freelist) {
-        Entity &e = entities[entity_freelist];
+        size_t entityIndex = entity_freelist;
+        Entity &e = entities[entityIndex];
         entity_freelist = e.freelist_next;
+
         e.freelist_next = 0;
+        e.id = entityId;
         e.type = entityType;
-    }
-    return entityId;
-}
-bool Tilemap::SpawnEntity(uint32_t entityId, double now)
-{
-    if (entityId < SV_MAX_ENTITIES) {
-        Entity &entity = entities[entityId];
-        if (entity.type) {
-            entity.spawnedAt = now;
-            return true;
-        }
-    } else {
-        printf("error: entityId %u out of range\n", entityId);
+        entityIndexById[entityId] = entityIndex;
+        return true;
     }
     return false;
 }
-Entity *Tilemap::GetEntity(uint32_t entityId)
+size_t Tilemap::FindEntityIndex(uint32_t entityId)
 {
-    if (entityId < SV_MAX_ENTITIES) {
-        Entity &entity = entities[entityId];
-        if (entity.type) {
-            return &entity;
+    const auto &entry = entityIndexById.find(entityId);
+    if (entry != entityIndexById.end()) {
+        size_t entityIndex = entry->second;
+        assert(entityIndex < SV_MAX_ENTITIES);
+        if (entityIndex < SV_MAX_ENTITIES) {
+            return entityIndex;
+        } else {
+            printf("[tilemap] entityId %u is out of range. Max %d\n", entityId, SV_MAX_ENTITIES);
         }
     } else {
-        printf("error: entityId %u out of range\n", entityId);
+        printf("[tilemap] entityId %u not found in map %u\n", entityId, id);
+    }
+    return SV_MAX_ENTITIES;
+}
+Entity *Tilemap::FindEntity(uint32_t entityId)
+{
+    size_t entityIndex = FindEntityIndex(entityId);
+    if (entityIndex < SV_MAX_ENTITIES) {
+        return &entities[entityIndex];
     }
     return 0;
 }
+bool Tilemap::SpawnEntity(uint32_t entityId, double now)
+{
+    Entity *entity = FindEntity(entityId);
+    if (entity) {
+        entity->spawnedAt = now;
+        return true;
+    }
+    return false;
+}
 bool Tilemap::DespawnEntity(uint32_t entityId, double now)
 {
-    if (entityId < SV_MAX_ENTITIES) {
-        Entity &entity = entities[entityId];
-        if (entity.type) {
-            entity.despawnedAt = now;
-            return true;
-        }
-    } else {
-        printf("error: entityId %u out of range\n", entityId);
+    Entity *entity = FindEntity(entityId);
+    if (entity) {
+        entity->despawnedAt = now;
+        return true;
     }
     return false;
 }
 void Tilemap::DestroyEntity(uint32_t entityId)
 {
-    if (entityId < SV_MAX_ENTITIES) {
-        Entity &entity = entities[entityId];
-        if (entity.type) {
-            entities  [entityId] = {};
-            physics   [entityId] = {};
-            collision [entityId] = {};
-            life      [entityId] = {};
-            pathfind  [entityId] = {};
-            sprite    [entityId] = {};
-            if (entityId >= SV_FIRST_ENTITY_IDX) {
-                entity.freelist_next = entity_freelist;
-                entity_freelist = entityId;
-            }
-        }
+    size_t entityIndex = FindEntityIndex(entityId);
+    if (entityIndex < SV_MAX_ENTITIES) {
+        Entity &entity = entities[entityIndex];
+        assert(entity.type); // wtf happened man
+
+        // Clear aspects
+        entities  [entityIndex] = {};
+        collision [entityIndex] = {};
+        dialog    [entityIndex] = {};
+        life      [entityIndex] = {};
+        pathfind  [entityIndex] = {};
+        physics   [entityIndex] = {};
+        sprite    [entityIndex] = {};
+
+        // Remove from map
+        entityIndexById.erase(entityId);
+
+        // Update freelist
+        entity.freelist_next = entity_freelist;
+        entity_freelist = entityIndex;
     } else {
         printf("error: entityId %u out of range\n", entityId);
     }
@@ -622,15 +634,20 @@ void Tilemap::DestroyEntity(uint32_t entityId)
 
 Rectangle Tilemap::EntityRect(uint32_t entityId)
 {
-    Entity &entity = entities[entityId];
-    const data::GfxFrame &frame = data::GetSpriteFrame(sprite[entityId]);
-    const Rectangle rect{
-        entity.position.x - (float)(frame.w / 2),
-        entity.position.y - (float)frame.h,
-        (float)frame.w,
-        (float)frame.h
-    };
-    return rect;
+    size_t entityIndex = FindEntityIndex(entityId);
+    if (entityIndex < SV_MAX_ENTITIES) {
+        Entity &entity = entities[entityIndex];
+        data::Sprite &sprite = this->sprite[entityIndex];
+        const data::GfxFrame &frame = data::GetSpriteFrame(sprite);
+        const Rectangle rect{
+            entity.position.x - (float)(frame.w / 2),
+            entity.position.y - (float)frame.h,
+            (float)frame.w,
+            (float)frame.h
+        };
+        return rect;
+    }
+    return {};
 }
 Vector2 Tilemap::EntityTopCenter(uint32_t entityId)
 {
@@ -643,8 +660,11 @@ Vector2 Tilemap::EntityTopCenter(uint32_t entityId)
 }
 void Tilemap::EntityTick(uint32_t entityId, double dt)
 {
-    Entity &entity = entities[entityId];
-    AspectPhysics &physics = this->physics[entityId];
+    size_t entityIndex = FindEntityIndex(entityId);
+    if (entityIndex == SV_MAX_ENTITIES) return;
+
+    Entity &entity = entities[entityIndex];
+    AspectPhysics &physics = this->physics[entityIndex];
 
     physics.velocity.x += physics.forceAccum.x * dt;
     physics.velocity.y += physics.forceAccum.y * dt;
@@ -663,25 +683,26 @@ void Tilemap::EntityTick(uint32_t entityId, double dt)
 }
 void Tilemap::ResolveEntityTerrainCollisions(uint32_t entityId)
 {
-    Entity &entity = entities[entityId];
-    if (!entity.type) {
-        return;
-    }
+    size_t entityIndex = FindEntityIndex(entityId);
+    if (entityIndex == SV_MAX_ENTITIES) return;
 
-    AspectCollision &eCollision = collision[entityId];
-    if (!eCollision.radius) {
-        return;
-    }
+    Entity &entity = entities[entityIndex];
+    assert(entity.type);
 
-    eCollision.colliding = false;
+    AspectCollision &collision = this->collision[entityIndex];
+    if (!collision.radius) return;
+
+    AspectPhysics &physics = this->physics[entityIndex];
+
+    collision.colliding = false;
 
     Vector2 topLeft{
-        entity.position.x - eCollision.radius,
-        entity.position.y - eCollision.radius
+        entity.position.x - collision.radius,
+        entity.position.y - collision.radius
     };
     Vector2 bottomRight{
-        entity.position.x + eCollision.radius,
-        entity.position.y + eCollision.radius
+        entity.position.x + collision.radius,
+        entity.position.y + collision.radius
     };
 
     int yMin = CLAMP(floorf(topLeft.y / TILE_W), 0, height);
@@ -702,10 +723,9 @@ void Tilemap::ResolveEntityTerrainCollisions(uint32_t entityId)
                     tileRect.width = TILE_W;
                     tileRect.height = TILE_W;
                     Manifold manifold{};
-                    if (dlb_CheckCollisionCircleRec(entity.position, eCollision.radius, tileRect, &manifold)) {
-                        eCollision.colliding = true;
-                        AspectPhysics &ePhysics = physics[entityId];
-                        if (Vector2DotProduct(ePhysics.velocity, manifold.normal) < 0) {
+                    if (dlb_CheckCollisionCircleRec(entity.position, collision.radius, tileRect, &manifold)) {
+                        collision.colliding = true;
+                        if (Vector2DotProduct(physics.velocity, manifold.normal) < 0) {
                             entity.position.x += manifold.normal.x * manifold.depth;
                             entity.position.y += manifold.normal.y * manifold.depth;
                         }
@@ -717,18 +737,21 @@ void Tilemap::ResolveEntityTerrainCollisions(uint32_t entityId)
 }
 void Tilemap::ResolveEntityWarpCollisions(uint32_t entityId, double now)
 {
-    Entity &entity = entities[entityId];
+    size_t entityIndex = FindEntityIndex(entityId);
+    if (entityIndex == SV_MAX_ENTITIES) return;
+
+    Entity &entity = entities[entityIndex];
     if (entity.type != Entity_Player) {
         return;
     }
 
-    AspectCollision &eCollision = collision[entityId];
-    if (!eCollision.radius) {
+    AspectCollision &collision = this->collision[entityIndex];
+    if (!collision.radius) {
         return;
     }
 
     for (Warp warp : warps) {
-        if (dlb_CheckCollisionCircleRec(entity.position, eCollision.radius, warp.collider, 0)) {
+        if (dlb_CheckCollisionCircleRec(entity.position, collision.radius, warp.collider, 0)) {
             if (warp.destMap.size()) {
                 Err err = Load(warp.destMap, now);
                 if (err) {
@@ -751,6 +774,10 @@ void Tilemap::ResolveEntityWarpCollisions(uint32_t entityId, double now)
                 }
 #endif
 
+#if 0
+                // TODO: The GameServer should be making a new map using the
+                // template. Not this function. Return something useful to the
+                // game server (e.g. mapId or mapTemplateId).
                 WangTileset wangTileset{};
                 err = wangTileset.Load(*this, warp.templateTileset);
                 if (err) {
@@ -766,6 +793,7 @@ void Tilemap::ResolveEntityWarpCollisions(uint32_t entityId, double now)
                 }
 
                 SetFromWangMap(wangMap, now);
+#endif
             }
             break;
         }
@@ -841,47 +869,49 @@ void Tilemap::DrawTileIds(Camera2D &camera)
 }
 void Tilemap::DrawEntityHoverInfo(uint32_t entityId)
 {
-    AspectLife &life = this->life[entityId];
-    if (life.maxHealth) {
-        const float borderWidth = 1;
-        const float pad = 1;
-        Vector2 hpBarPad{ pad, pad };
-        Vector2 hpBarSize{ 200, 24 };
+    size_t entityIndex = FindEntityIndex(entityId);
+    if (entityIndex == SV_MAX_ENTITIES) return;
 
-        Rectangle hpBarBg{
-            (float)GetRenderWidth() / 2 - hpBarSize.x / 2 - hpBarPad.x,
-            20.0f,
-            hpBarSize.x + hpBarPad.x * 2,
-            hpBarSize.y + hpBarPad.y * 2
-        };
+    AspectLife &life = this->life[entityIndex];
+    if (!life.maxHealth) return;
 
-        Rectangle hpBar{
-            hpBarBg.x + hpBarPad.x,
-            hpBarBg.y + hpBarPad.y,
-            hpBarSize.x,
-            hpBarSize.y
-        };
+    const float borderWidth = 1;
+    const float pad = 1;
+    Vector2 hpBarPad{ pad, pad };
+    Vector2 hpBarSize{ 200, 24 };
 
-        DrawRectangleRec(hpBarBg, Fade(BLACK, 0.5));
-        float pctHealth = CLAMP((float)life.health / life.maxHealth, 0, 1);
-        hpBar.width = CLAMP(ceilf(hpBarSize.x * pctHealth), 0, hpBarSize.x);
-        DrawRectangleRec(hpBar, ColorBrightness(MAROON, -0.4));
+    Rectangle hpBarBg{
+        (float)GetRenderWidth() / 2 - hpBarSize.x / 2 - hpBarPad.x,
+        20.0f,
+        hpBarSize.x + hpBarPad.x * 2,
+        hpBarSize.y + hpBarPad.y * 2
+    };
 
-        Vector2 labelSize = MeasureTextEx(fntHackBold20, "Lily", fntHackBold20.baseSize, 1);
-        Vector2 labelPos{
-            floorf(hpBarBg.x + hpBarBg.width / 2 - labelSize.x / 2),
-            floorf(hpBarBg.y + hpBarBg.height / 2 - labelSize.y / 2)
-        };
-        DrawTextShadowEx(fntHackBold20, "Lily", labelPos, WHITE);
-    }
+    Rectangle hpBar{
+        hpBarBg.x + hpBarPad.x,
+        hpBarBg.y + hpBarPad.y,
+        hpBarSize.x,
+        hpBarSize.y
+    };
+
+    DrawRectangleRec(hpBarBg, Fade(BLACK, 0.5));
+    float pctHealth = CLAMP((float)life.health / life.maxHealth, 0, 1);
+    hpBar.width = CLAMP(ceilf(hpBarSize.x * pctHealth), 0, hpBarSize.x);
+    DrawRectangleRec(hpBar, ColorBrightness(MAROON, -0.4));
+
+    Vector2 labelSize = MeasureTextEx(fntHackBold20, "Lily", fntHackBold20.baseSize, 1);
+    Vector2 labelPos{
+        floorf(hpBarBg.x + hpBarBg.width / 2 - labelSize.x / 2),
+        floorf(hpBarBg.y + hpBarBg.height / 2 - labelSize.y / 2)
+    };
+    DrawTextShadowEx(fntHackBold20, "Lily", labelPos, WHITE);
 }
 void Tilemap::DrawEntity(uint32_t entityId, double now) {
-    const Entity &entity = entities[entityId];
-    const data::Sprite &sprite = this->sprite[entityId];
+    size_t entityIndex = FindEntityIndex(entityId);
+    if (entityIndex == SV_MAX_ENTITIES) return;
+
+    const data::Sprite &sprite = this->sprite[entityIndex];
 
     const Rectangle rect = EntityRect(entityId);
-    if (entity.type == Entity_Player) {
-        printf("");
-    }
     data::DrawSprite(sprite, { rect.x, rect.y });
 }

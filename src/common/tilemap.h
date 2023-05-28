@@ -42,6 +42,15 @@ struct TileDef {
      std::string templateTileset{};  // wang tileset to use for procgen
  };
 
+ struct TileRef {
+     uint32_t mapIndex;
+     uint32_t x;
+     uint32_t y;
+
+     TileRef(uint32_t mapIndex, uint32_t x, uint32_t y)
+         : mapIndex(mapIndex), x(x), y(y) {};
+ };
+
 typedef uint8_t Tile;
 struct Tilemap {
     struct Coord {
@@ -56,6 +65,7 @@ struct Tilemap {
     // v5: added warps
     const uint32_t VERSION = 5;
 
+    uint32_t id{};
     std::string filename{};
     StringId textureId{};  // generated upon load, used to look up in rnTextureCatalog
 
@@ -72,6 +82,8 @@ struct Tilemap {
 
     // TODO: Actually have more than 1 chunk..
     double chunkLastUpdatedAt{};  // used by server to know when chunks are dirty on clients
+
+    std::unordered_map<uint32_t, size_t> entityIndexById{};
 
     // [0]: reserved for safe null
     // [1, SV_MAX_PLAYERS]: reserved for player entities
@@ -115,9 +127,10 @@ struct Tilemap {
     uint32_t GetNextPathNodeIndex(uint32_t pathId, uint32_t pathNodeIndex);
     AiPathNode *GetPathNode(uint32_t pathId, uint32_t pathNodeIndex);
 
-    uint32_t CreateEntity(EntityType entityType);
+    bool CreateEntity(uint32_t entityId, EntityType entityType);
+    size_t FindEntityIndex(uint32_t entityId);
+    Entity *FindEntity(uint32_t entityId);
     bool SpawnEntity(uint32_t entityId, double now);
-    Entity *GetEntity(uint32_t entityId);
     bool DespawnEntity(uint32_t entityId, double now);
     void DestroyEntity(uint32_t entityId);
 

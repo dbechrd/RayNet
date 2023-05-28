@@ -151,6 +151,7 @@ void GameClient::ProcessMessages(void)
                     if (entity) {
                         AspectDialog &dialog = world->map.dialog[msg->entityId];
                         world->DestroyDialog(dialog.latestDialog);
+                        // TODO: Remove entity from world->entityRefsById
                         world->map.DestroyEntity(msg->entityId);
                         world->ghosts[msg->entityId] = {};
                     }
@@ -176,7 +177,7 @@ void GameClient::ProcessMessages(void)
                 case MSG_S_ENTITY_SNAPSHOT:
                 {
                     Msg_S_EntitySnapshot *msg = (Msg_S_EntitySnapshot *)yjMsg;
-                    Ghost &ghost = world->ghosts[msg->id];
+                    Ghost &ghost = world->ghosts[msg->entityId];
 
                     GhostSnapshot ghostSnapshot{ *msg };
                     ghost.push(ghostSnapshot);
@@ -185,8 +186,8 @@ void GameClient::ProcessMessages(void)
                 case MSG_S_ENTITY_SPAWN:
                 {
                     Msg_S_EntitySpawn *msg = (Msg_S_EntitySpawn *)yjMsg;
-                    uint32_t entityId = msg->id;
-                    Entity *entity = world->GetEntityDeadOrAlive(msg->id);
+                    uint32_t entityId = msg->entityId;
+                    Entity *entity = world->GetEntityDeadOrAlive(entityId);
                     if (entity) {
                         // WARN(dlb): Other things could refer to a previous version of this entityId.
                         // TODO(dlb): Generations?
@@ -201,6 +202,10 @@ void GameClient::ProcessMessages(void)
                 case MSG_S_TILE_CHUNK:
                 {
                     Msg_S_TileChunk *msg = (Msg_S_TileChunk *)yjMsg;
+                    if (msg->mapId != world->map.id) {
+                        // TODO: Load the right map by ID somehow
+                        //world->map.Load(tileChunk.mapName, 0);
+                    }
                     world->map.CL_DeserializeChunk(*msg);
                     break;
                 }

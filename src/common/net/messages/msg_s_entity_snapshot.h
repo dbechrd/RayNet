@@ -6,7 +6,8 @@ struct Msg_S_EntitySnapshot : public yojimbo::Message
     double      serverTime {};
 
     // Entity
-    uint32_t    id         {};
+    uint32_t    mapId      {};
+    uint32_t    entityId   {};
     EntityType  type       {};  // doesn't change, but needed for switch statements in deserializer
     Vector2     position   {};
 
@@ -32,7 +33,8 @@ struct Msg_S_EntitySnapshot : public yojimbo::Message
         serialize_double(stream, serverTime);
 
         // Entity
-        serialize_uint32(stream, id);
+        serialize_uint32(stream, mapId);
+        serialize_uint32(stream, entityId);
         serialize_uint32(stream, (uint32_t &)type);
         serialize_float(stream, position.x);
         serialize_float(stream, position.y);

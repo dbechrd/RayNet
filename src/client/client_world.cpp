@@ -46,7 +46,7 @@ Entity *ClientWorld::GetEntityDeadOrAlive(uint32_t entityId)
 
 void ClientWorld::ApplySpawnEvent(const Msg_S_EntitySpawn &entitySpawn)
 {
-    uint32_t entityId = entitySpawn.id;
+    uint32_t entityId = entitySpawn.entityId;
     if (entityId >= SV_MAX_ENTITIES) {
         printf("[client_world] WARN: Failed to spawn entity. ID %u out of range.\n", entityId);
         return;
