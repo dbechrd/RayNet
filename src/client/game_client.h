@@ -2,19 +2,8 @@
 #include "../common/common.h"
 #include "../common/input_command.h"
 #include "../common/net/net.h"
+#include "client_world.h"
 #include "todo.h"
-
-struct ClientWorld;
-
-struct Controller {
-    int nextSeq{};  // next input command sequence number to use
-
-    InputCmd cmdAccum{};         // accumulate input until we're ready to sample
-    double sampleInputAccum{};   // when this fills up, we are due to sample again
-    double lastInputSampleAt{};  // time we last sampled accumulator
-    double lastCommandSentAt{};  // time we last sent inputs to the server
-    RingBuffer<InputCmd, CL_SEND_INPUT_COUNT> cmdQueue{};  // queue of last N input samples
-};
 
 struct GameClient {
     NetAdapter adapter;
@@ -35,7 +24,6 @@ struct GameClient {
     bool showTodoList = false;
 
     Controller controller{};
-    uint32_t hoveredEntityId{};
     ClientWorld *world{};
     TodoList todoList{};
 

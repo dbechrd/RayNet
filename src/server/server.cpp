@@ -242,7 +242,7 @@ Err Play(GameServer &server)
                 for (int entityIndex = 0; entityIndex < SV_MAX_ENTITIES; entityIndex++) {
                     Entity &entity = map0.entities[entityIndex];
                     if (entity.type) {
-                        map0.DrawEntity(entity.id, server.now);
+                        map0.DrawEntity(entity.id);
                     }
                 }
 

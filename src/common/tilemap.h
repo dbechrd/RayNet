@@ -148,7 +148,7 @@ struct Tilemap {
     void DrawTileIds(Camera2D &camera);
     void DrawEntityIds(Camera2D &camera);
     void DrawEntityHoverInfo(uint32_t entityId);
-    void DrawEntity(uint32_t entityId, double now);
+    void DrawEntity(uint32_t entityId);
 
 private:
     bool NeedsFill(uint32_t x, uint32_t y, int tileDefFill);

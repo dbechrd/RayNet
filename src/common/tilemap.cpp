@@ -979,7 +979,7 @@ void Tilemap::DrawEntityHoverInfo(uint32_t entityId)
     };
     DrawTextShadowEx(fntHackBold20, "Lily", labelPos, WHITE);
 }
-void Tilemap::DrawEntity(uint32_t entityId, double now) {
+void Tilemap::DrawEntity(uint32_t entityId) {
     assert(entityId);
 
     size_t entityIndex = FindEntityIndex(entityId);

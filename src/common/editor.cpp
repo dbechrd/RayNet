@@ -756,7 +756,7 @@ void Editor::DrawUI_Wang(UI &uiActionBar, Tilemap &map, double now)
 void Editor::DrawUI_EntityActions(UI &uiActionBar, Tilemap &map, double now)
 {
     if (uiActionBar.Button("Despawn all", MAROON).pressed) {
-        for (uint32_t entityId = 0; entityId < ARRAY_SIZE(map.entities); entityId++) {
+        for (uint32_t entityId = 0; entityId < SV_MAX_ENTITIES; entityId++) {
             const Entity &entity = map.entities[entityId];
             if (entity.type) {
                 map.DespawnEntity(entityId, now);

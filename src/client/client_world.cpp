@@ -269,7 +269,7 @@ Err ClientWorld::CreateDialog(uint32_t entityId, uint32_t messageLength, const c
 
 void ClientWorld::UpdateEntities(GameClient &client)
 {
-    client.hoveredEntityId = 0;
+    hoveredEntityId = 0;
 
     Tilemap *map = LocalPlayerMap();
     if (!map) {
@@ -362,7 +362,7 @@ void ClientWorld::UpdateEntities(GameClient &client)
                 if (down) {
                     client.SendEntityInteract(entity.id);
                 }
-                client.hoveredEntityId = entity.id;
+                hoveredEntityId = entity.id;
             }
         }
     }
@@ -371,6 +371,85 @@ void ClientWorld::UpdateEntities(GameClient &client)
 void ClientWorld::Update(GameClient &gameClient)
 {
     UpdateEntities(gameClient);
+}
+
+void ClientWorld::DrawEntitySnapshotShadows(uint32_t entityId, Controller &controller, double now)
+{
+    Tilemap *map = FindEntityMap(entityId);
+    if (!map) return;
+
+    size_t entityIndex = map->FindEntityIndex(entityId);
+    Entity &entity = map->entities[entityIndex];
+
+    // TODO: Everything that says "ghostInstance" needs to be an entity_id, but we don't
+    // want to modify the actual entity... so perhaps we need a "temp" entity that we can
+    // use for drawing shadows? Or some other way to simulate the entity moving without
+    // modifying the actual entity.
+    if (CL_DBG_SNAPSHOT_SHADOWS) {
+        AspectGhost &ghost = map->ghosts[entityIndex];
+
+        EntityData ghostData{};
+        CopyEntityData(entity.id, ghostData);
+        // Prevents accidentally overwriting real entities if someone we pass a tuple
+        // to decides to look up the entity by id instead of using the tuple's data.
+        ghostData.entity.id = 0;
+
+        EntityInterpolateTuple ghostInterpData{ ghostData.entity, ghostData.physics, ghostData.life };
+        EntitySpriteTuple ghostSpriteData{ ghostData.entity, ghostData.sprite };
+        EntityTickTuple ghostTickData{ ghostData.entity, ghostData.dialog, ghostData.physics };
+        EntityCollisionTuple ghostCollisionData{ ghostData.entity, ghostData.collision, ghostData.physics };
+
+        for (int i = 0; i < ghost.size(); i++) {
+            if (!ghost[i].serverTime) {
+                continue;
+            }
+            ApplyStateInterpolated(ghostInterpData, ghost[i], ghost[i], 0);
+
+            const float scalePer = 1.0f / (CL_SNAPSHOT_COUNT + 1);
+            Rectangle ghostRect = map->EntityRect(ghostSpriteData);
+            ghostRect = RectShrink(ghostRect, scalePer);
+            DrawRectangleRec(ghostRect, Fade(RED, 0.1f));
+            DrawRectangleLinesEx(ghostRect, 1, Fade(RED, 0.8f));
+        }
+
+        // NOTE(dlb): These aren't actually snapshot shadows, they're client-side prediction shadows
+        if (entity.id == localPlayerEntityId) {
+#if CL_CLIENT_SIDE_PREDICT
+            uint32_t lastProcessedInputCmd = 0;
+            const GhostSnapshot &latestSnapshot = ghost.newest();
+            if (latestSnapshot.serverTime) {
+                ApplyStateInterpolated(ghostInterpData, latestSnapshot, latestSnapshot, 0);
+                lastProcessedInputCmd = latestSnapshot.lastProcessedInputCmd;
+            }
+
+            //const double cmdAccumDt = client.now - client.controller.lastInputSampleAt;
+            for (size_t cmdIndex = 0; cmdIndex < controller.cmdQueue.size(); cmdIndex++) {
+                InputCmd &inputCmd = controller.cmdQueue[cmdIndex];
+                if (inputCmd.seq > lastProcessedInputCmd) {
+                    ghostData.physics.ApplyForce(inputCmd.GenerateMoveForce(ghostData.physics.speed));
+                    map->EntityTick(ghostTickData, SV_TICK_DT, now);
+                    map->ResolveEntityTerrainCollisions(ghostCollisionData);
+                    Rectangle ghostRect = map->EntityRect(ghostSpriteData);
+                    DrawRectangleRec(ghostRect, Fade(GREEN, 0.1f));
+                    DrawRectangleLinesEx(ghostRect, 1, Fade(GREEN, 0.8f));
+                }
+            }
+#endif
+
+#if 0
+            // We don't really need to draw a blue rect at currently entity position unless
+            // the entity is invisible.
+            const double cmdAccumDt = client.now - client.controller.lastInputSampleAt;
+            if (cmdAccumDt > 0) {
+                ghostInstance.ApplyForce(client.controller.cmdAccum.GenerateMoveForce(ghostInstance.speed));
+                ghostInstance.Tick(cmdAccumDt);
+                map->ResolveEntityTerrainCollisions(ghostInstance);
+                DrawRectangleRec(ghostInstance.GetRect(), Fade(BLUE, 0.2f));
+                printf("%.3f\n", cmdAccumDt);
+            }
+#endif
+        }
+    }
 }
 
 // TODO(dlb): Where should this live? Probably not in ClientWorld?
@@ -416,7 +495,53 @@ void ClientWorld::DrawDialogs(void)
     }
 }
 
-void ClientWorld::Draw(void)
+void ClientWorld::Draw(Controller &controller, double now)
 {
+    Tilemap *map = LocalPlayerMap();
+    if (!map) {
+        return;
+    }
+
+    Vector2 cursorWorldPos = GetScreenToWorld2D(GetMousePosition(), camera2d);
+
+    //--------------------
+    // Draw the map
+    BeginMode2D(camera2d);
+    map->Draw(camera2d);
+
+    //--------------------
+    // Draw the entities
+    cursorWorldPos = GetScreenToWorld2D(GetMousePosition(), camera2d);
+    for (uint32_t entityIndex = 0; entityIndex < SV_MAX_ENTITIES; entityIndex++) {
+        Entity &entity = map->entities[entityIndex];
+        if (!entity.id || !entity.type || entity.despawnedAt) {
+            continue;
+        }
+
+        DrawEntitySnapshotShadows(entity.id, controller, now);
+
+        map->DrawEntity(entity.id);
+    }
+
+    //--------------------
+    // Draw the dialogs
+    float zoom = camera2d.zoom;
+    camera2d.zoom = 1;
     DrawDialogs();
+    camera2d.zoom = zoom;
+
+    EndMode2D();
+
+    //--------------------
+    // Draw entity info
+    if (hoveredEntityId) {
+        Entity *entity = FindEntity(hoveredEntityId);
+        if (entity) {
+            map->DrawEntityHoverInfo(hoveredEntityId);
+        } else {
+            // We were probably hovering an entity while it was despawning?
+            assert(!"huh? how can we hover an entity that doesn't exist");
+            hoveredEntityId = 0;
+        }
+    }
 }
