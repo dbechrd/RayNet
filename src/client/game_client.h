@@ -2,7 +2,6 @@
 #include "../common/common.h"
 #include "../common/input_command.h"
 #include "../common/net/net.h"
-#include "../common/ring_buffer.h"
 #include "todo.h"
 
 struct ClientWorld;
@@ -26,7 +25,7 @@ struct GameClient {
     double now{};                      // current time for this frame
 
     Histogram fpsHistogram{};
-    double frameStart = GetTime();
+    double frameStart{};
     double frameDt = 0;
     double frameDtSmooth = 60;
     double animAccum = 0;
@@ -40,13 +39,13 @@ struct GameClient {
     ClientWorld *world{};
     TodoList todoList{};
 
+    GameClient(double now) : now(now), frameStart(now) {};
+
     inline double ServerNow(void) {
         const double serverNow = now - clientTimeDeltaVsServer;
         return serverNow;
     }
 
-    uint32_t LocalPlayerEntityId(void);
-    Entity *LocalPlayer(void);
     Err TryConnect(void);
     void Start(void);
     void SendInput(const Controller &controller);

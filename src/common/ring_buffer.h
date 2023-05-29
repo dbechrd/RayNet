@@ -2,7 +2,7 @@
 
 template <class T, size_t S>
 struct RingBuffer {
-    size_t nextIdx;
+    size_t nextIdx{};
     T data[S];
 
     constexpr size_t size() const {

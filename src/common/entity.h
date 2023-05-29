@@ -1,18 +1,48 @@
 #pragma once
 #include "common.h"
+#include "../common/ring_buffer.h"
+
+struct Msg_S_EntitySnapshot;
 
 struct AspectCollision {
-    float radius;    // collision
-    bool colliding;  // not sync'd, local flag for debugging colliders
+    float radius    {};  // collision
+    bool  colliding {};  // not sync'd, local flag for debugging colliders
 };
 
 struct AspectDialog {
-    // Kind of an intrusive index of sorts.. used by dialog system to determine
-    // if entity has a currently active dialog. Probably dialog system should
-    // just maintain a map <entityid, dialogid> itself. How to handle dead
-    // entities cleaning up their dialogs? I suppose the map could enable that.
-    uint32_t latestDialog;
+    double   spawnedAt     {};  // time when dialog was spawned
+    uint32_t messageLength {};  // how much they're saying
+    char *   message       {};  // what they're saying
+
+    ~AspectDialog(void) {
+        if (message) {
+            free(message);
+        }
+    }
 };
+
+struct GhostSnapshot {
+    double   serverTime {};
+
+    // Entity
+    Vector2  position   {};
+
+    // Physics
+    float    speed      {};
+    Vector2  velocity   {};
+
+    // Life
+    int      maxHealth  {};
+    int      health     {};
+
+    // TODO: Wtf do I do with this shit?
+    uint32_t lastProcessedInputCmd {};
+
+    GhostSnapshot(void) {}
+    GhostSnapshot(Msg_S_EntitySnapshot &msg);
+};
+
+typedef RingBuffer<GhostSnapshot, CL_SNAPSHOT_COUNT> AspectGhost;
 
 struct AspectLife {
     int maxHealth;

@@ -61,7 +61,7 @@ Err InitCommon(void)
     // Load SDF required shader (we use default vertex shader)
     shdSdfText = LoadShader(0, "resources/shaders/sdf.fs");
 
-    fntHackBold20 = LoadFontEx("resources/Hack-Bold.ttf", 20, 0, 0);
+    fntHackBold20 = LoadFontEx("resources/Hack-Bold.ttf", 18, 0, 0);
     if (!fntHackBold20.baseSize) err = RN_RAYLIB_ERROR;
 
     fntHackBold32 = dlb_LoadFontEx("resources/Hack-Bold.ttf", 42, 0, 0, FONT_SDF);

@@ -40,6 +40,7 @@ struct EditModePathNodes {
 struct EditModeState {
     bool showColliders{};
     bool showTileIds{};
+    bool showEntityIds{};
     EditModeTiles tiles;
     EditModeWang wang;
     EditModePathNodes pathNodes;

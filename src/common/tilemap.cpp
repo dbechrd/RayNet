@@ -18,10 +18,14 @@ void Tilemap::SV_SerializeChunk(Msg_S_TileChunk &tileChunk, uint32_t x, uint32_t
 
 void Tilemap::CL_DeserializeChunk(Msg_S_TileChunk &tileChunk)
 {
-    for (uint32_t ty = tileChunk.y; ty < SV_TILE_CHUNK_WIDTH; ty++) {
-        for (uint32_t tx = tileChunk.x; tx < SV_TILE_CHUNK_WIDTH; tx++) {
-            Set(tileChunk.x + tx, tileChunk.y + ty, tileChunk.tileDefs[ty * SV_TILE_CHUNK_WIDTH + tx], 0);
+    if (id = tileChunk.mapId) {
+        for (uint32_t ty = tileChunk.y; ty < SV_TILE_CHUNK_WIDTH; ty++) {
+            for (uint32_t tx = tileChunk.x; tx < SV_TILE_CHUNK_WIDTH; tx++) {
+                Set(tileChunk.x + tx, tileChunk.y + ty, tileChunk.tileDefs[ty * SV_TILE_CHUNK_WIDTH + tx], 0);
+            }
         }
+    } else {
+        printf("[tilemap] Failed to deserialize chunk with mapId %u into map with id %u\n", tileChunk.mapId, id);
     }
 }
 
@@ -132,7 +136,7 @@ Err Tilemap::Save(std::string path)
 // TODO(dlb): This shouldn't load in-place.. it causes the game to crash when
 // the load fails. Instead, return a new a tilemap and switch over to it after
 // it has been loaded successfully.
-Err Tilemap::Load(std::string path, double now)
+Err Tilemap::Load(std::string path)
 {
     Err err = RN_SUCCESS;
 
@@ -219,7 +223,6 @@ Err Tilemap::Load(std::string path, double now)
                 //err = RN_OUT_OF_BOUNDS; break;
             }
         }
-        chunkLastUpdatedAt = now;
 
         for (AiPathNode &aiPathNode : pathNodes) {
             fread(&aiPathNode.pos.x, sizeof(aiPathNode.pos.x), 1, file);
@@ -550,6 +553,8 @@ AiPathNode *Tilemap::GetPathNode(uint32_t pathId, uint32_t pathNodeIndex) {
 
 bool Tilemap::CreateEntity(uint32_t entityId, EntityType entityType)
 {
+    assert(entityId);
+
     if (entity_freelist) {
         size_t entityIndex = entity_freelist;
         Entity &e = entities[entityIndex];
@@ -565,6 +570,8 @@ bool Tilemap::CreateEntity(uint32_t entityId, EntityType entityType)
 }
 size_t Tilemap::FindEntityIndex(uint32_t entityId)
 {
+    assert(entityId);
+
     const auto &entry = entityIndexById.find(entityId);
     if (entry != entityIndexById.end()) {
         size_t entityIndex = entry->second;
@@ -572,10 +579,9 @@ size_t Tilemap::FindEntityIndex(uint32_t entityId)
         if (entityIndex < SV_MAX_ENTITIES) {
             return entityIndex;
         } else {
+            assert(0);
             printf("[tilemap] entityId %u is out of range. Max %d\n", entityId, SV_MAX_ENTITIES);
         }
-    } else {
-        printf("[tilemap] entityId %u not found in map %u\n", entityId, id);
     }
     return SV_MAX_ENTITIES;
 }
@@ -589,6 +595,8 @@ Entity *Tilemap::FindEntity(uint32_t entityId)
 }
 bool Tilemap::SpawnEntity(uint32_t entityId, double now)
 {
+    assert(entityId);
+
     Entity *entity = FindEntity(entityId);
     if (entity) {
         entity->spawnedAt = now;
@@ -598,6 +606,8 @@ bool Tilemap::SpawnEntity(uint32_t entityId, double now)
 }
 bool Tilemap::DespawnEntity(uint32_t entityId, double now)
 {
+    assert(entityId);
+
     Entity *entity = FindEntity(entityId);
     if (entity) {
         entity->despawnedAt = now;
@@ -607,6 +617,8 @@ bool Tilemap::DespawnEntity(uint32_t entityId, double now)
 }
 void Tilemap::DestroyEntity(uint32_t entityId)
 {
+    assert(entityId);
+
     size_t entityIndex = FindEntityIndex(entityId);
     if (entityIndex < SV_MAX_ENTITIES) {
         Entity &entity = entities[entityIndex];
@@ -616,6 +628,7 @@ void Tilemap::DestroyEntity(uint32_t entityId)
         entities  [entityIndex] = {};
         collision [entityIndex] = {};
         dialog    [entityIndex] = {};
+        ghosts    [entityIndex] = {};
         life      [entityIndex] = {};
         pathfind  [entityIndex] = {};
         physics   [entityIndex] = {};
@@ -628,12 +641,15 @@ void Tilemap::DestroyEntity(uint32_t entityId)
         entity.freelist_next = entity_freelist;
         entity_freelist = entityIndex;
     } else {
+        assert(0);
         printf("error: entityId %u out of range\n", entityId);
     }
 }
 
 Rectangle Tilemap::EntityRect(uint32_t entityId)
 {
+    assert(entityId);
+
     size_t entityIndex = FindEntityIndex(entityId);
     if (entityIndex < SV_MAX_ENTITIES) {
         Entity &entity = entities[entityIndex];
@@ -651,6 +667,8 @@ Rectangle Tilemap::EntityRect(uint32_t entityId)
 }
 Vector2 Tilemap::EntityTopCenter(uint32_t entityId)
 {
+    assert(entityId);
+
     const Rectangle rect = EntityRect(entityId);
     const Vector2 topCenter{
         rect.x + rect.width / 2,
@@ -658,8 +676,10 @@ Vector2 Tilemap::EntityTopCenter(uint32_t entityId)
     };
     return topCenter;
 }
-void Tilemap::EntityTick(uint32_t entityId, double dt)
+void Tilemap::EntityTick(uint32_t entityId, double dt, double now)
 {
+    assert(entityId);
+
     size_t entityIndex = FindEntityIndex(entityId);
     if (entityIndex == SV_MAX_ENTITIES) return;
 
@@ -680,9 +700,17 @@ void Tilemap::EntityTick(uint32_t entityId, double dt)
 
     entity.position.x += physics.velocity.x * dt;
     entity.position.y += physics.velocity.y * dt;
+
+    AspectDialog &dialog = this->dialog[entityIndex];
+    const double duration = CL_DIALOG_DURATION_MIN + CL_DIALOG_DURATION_PER_CHAR * dialog.messageLength;
+    if (now - dialog.spawnedAt > duration) {
+        dialog = {};
+    }
 }
 void Tilemap::ResolveEntityTerrainCollisions(uint32_t entityId)
 {
+    assert(entityId);
+
     size_t entityIndex = FindEntityIndex(entityId);
     if (entityIndex == SV_MAX_ENTITIES) return;
 
@@ -737,6 +765,8 @@ void Tilemap::ResolveEntityTerrainCollisions(uint32_t entityId)
 }
 void Tilemap::ResolveEntityWarpCollisions(uint32_t entityId, double now)
 {
+    assert(entityId);
+
     size_t entityIndex = FindEntityIndex(entityId);
     if (entityIndex == SV_MAX_ENTITIES) return;
 
@@ -753,17 +783,23 @@ void Tilemap::ResolveEntityWarpCollisions(uint32_t entityId, double now)
     for (Warp warp : warps) {
         if (dlb_CheckCollisionCircleRec(entity.position, collision.radius, warp.collider, 0)) {
             if (warp.destMap.size()) {
-                Err err = Load(warp.destMap, now);
-                if (err) {
-                    assert(!"UH-OH");
-                    exit(EXIT_FAILURE);
-                }
+                // TODO: This needs to ask GameServer to load the new map and
+                // we also need to move our entity to the new map
+
+                //Err err = Load(warp.destMap);
+                //if (err) {
+                //    assert(!"UH-OH");
+                //    exit(EXIT_FAILURE);
+                //}
             } else {
-                Err err = Load(warp.templateMap, now);
-                if (err) {
-                    assert(!"UH-OH");
-                    exit(EXIT_FAILURE);
-                }
+                // TODO: This needs to ask GameServer to load the new map and
+                // we also need to move our entity to the new map
+
+                //Err err = Load(warp.templateMap);
+                //if (err) {
+                //    assert(!"UH-OH");
+                //    exit(EXIT_FAILURE);
+                //}
 
 #if 0
                 // TODO: Make a copy of the template map if you wanna edit it
@@ -867,8 +903,22 @@ void Tilemap::DrawTileIds(Camera2D &camera)
         }
     }
 }
+void Tilemap::DrawEntityIds(Camera2D &camera)
+{
+    for (Entity &entity : entities) {
+        if (!entity.id || !entity.type) {
+            assert(!entity.id && !entity.type);
+            continue;
+        }
+
+        DrawTextEx(fntHackBold20, TextFormat("%u", entity.id), entity.position,
+            fntHackBold20.baseSize, 1, WHITE);
+    }
+}
 void Tilemap::DrawEntityHoverInfo(uint32_t entityId)
 {
+    assert(entityId);
+
     size_t entityIndex = FindEntityIndex(entityId);
     if (entityIndex == SV_MAX_ENTITIES) return;
 
@@ -907,6 +957,8 @@ void Tilemap::DrawEntityHoverInfo(uint32_t entityId)
     DrawTextShadowEx(fntHackBold20, "Lily", labelPos, WHITE);
 }
 void Tilemap::DrawEntity(uint32_t entityId, double now) {
+    assert(entityId);
+
     size_t entityIndex = FindEntityIndex(entityId);
     if (entityIndex == SV_MAX_ENTITIES) return;
 

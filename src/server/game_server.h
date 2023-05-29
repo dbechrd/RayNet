@@ -64,15 +64,16 @@ struct GameServer {
     uint64_t tick{};
     double tickAccum{};
     double lastTickedAt{};
-    double now;
+    double now{};
 
     Histogram histogram{};
-    double frameStart;
+    double frameStart{};
     double frameDt = 0;
     double frameDtSmooth = 60;
 
     bool showF3Menu = false;
 
+    uint32_t nextMapId = 1;
     uint32_t nextEntityId = 1;
     std::vector<Tilemap *> maps{};
     std::unordered_map<uint32_t, size_t> mapsById{};     // maps by their map id

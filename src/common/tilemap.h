@@ -94,6 +94,7 @@ struct Tilemap {
     Entity          entities  [SV_MAX_ENTITIES]{};
     AspectCollision collision [SV_MAX_ENTITIES]{};
     AspectDialog    dialog    [SV_MAX_ENTITIES]{};
+    AspectGhost     ghosts    [SV_MAX_ENTITIES]{};
     AspectLife      life      [SV_MAX_ENTITIES]{};
     AspectPathfind  pathfind  [SV_MAX_ENTITIES]{};
     AspectPhysics   physics   [SV_MAX_ENTITIES]{};
@@ -105,7 +106,7 @@ struct Tilemap {
     ~Tilemap();
 
     Err Save(std::string path);
-    Err Load(std::string path, double now);
+    Err Load(std::string path);
     static Err ChangeTileset(Tilemap &map, StringId newTextureId, double now);
     void Unload(void);
 
@@ -136,7 +137,7 @@ struct Tilemap {
 
     Rectangle EntityRect(uint32_t entityId);
     Vector2 EntityTopCenter(uint32_t entityId);
-    void EntityTick(uint32_t entityId, double dt);
+    void EntityTick(uint32_t entityId, double dt, double now);
     void ResolveEntityTerrainCollisions(uint32_t entityId);
     void ResolveEntityWarpCollisions(uint32_t entityId, double now);
 
@@ -144,6 +145,7 @@ struct Tilemap {
     void Draw(Camera2D &camera);
     void DrawColliders(Camera2D &camera);
     void DrawTileIds(Camera2D &camera);
+    void DrawEntityIds(Camera2D &camera);
     void DrawEntityHoverInfo(uint32_t entityId);
     void DrawEntity(uint32_t entityId, double now);
 

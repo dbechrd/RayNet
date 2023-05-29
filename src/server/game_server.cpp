@@ -37,7 +37,9 @@ void GameServer::OnClientJoin(int clientIdx)
     };
 
     // TODO: Huh? What dis mean?
-    if (!maps.size()) return;
+    if (!maps.size()) {
+        return;
+    }
 
     Tilemap &map = *maps[0];
     uint32_t entityId = CreateEntity(map, Entity_Player);
@@ -97,11 +99,15 @@ Err GameServer::LoadMap(std::string filename)
             break;
         }
 
-        err = map->Load(filename, now);
+        err = map->Load(filename);
         if (err) {
             printf("Failed to load map %s with code %d\n", filename.c_str(), err);
             break;
         }
+
+        map->id = nextMapId++;
+        map->chunkLastUpdatedAt = now;
+        mapsById[map->id] = maps.size();
         maps.push_back(map);
     } while (0);
     return err;
@@ -109,8 +115,7 @@ Err GameServer::LoadMap(std::string filename)
 Err GameServer::Start(void)
 {
     // NOTE(DLB): MUST happen after InitWindow() so that GetTime() is valid!!
-    if (!InitializeYojimbo())
-    {
+    if (!InitializeYojimbo()) {
         printf("yj: error: failed to initialize Yojimbo!\n");
         return RN_NET_INIT_FAILED;
     }
@@ -220,6 +225,7 @@ uint32_t GameServer::CreateEntity(Tilemap &map, EntityType type)
         return entityId;
     } else {
         // TODO: EntityTypeStr
+        assert(0);
         printf("[game_server] Failed to spawn entity type %u in map id %u\n", type, map.id);
     }
     return 0;
@@ -231,9 +237,11 @@ void GameServer::SpawnEntity(uint32_t entityId)
         if (map->SpawnEntity(entityId, now)) {
             BroadcastEntitySpawn(*map, entityId);
         } else {
+            assert(0);
             printf("[game_server] Failed to spawn entity id %u in map id %u\n", entityId, map->id);
         }
     } else {
+        assert(0);
         printf("[game_server] Failed to spawn entity id %u, could not find map\n", entityId);
     }
 }
@@ -244,9 +252,11 @@ void GameServer::DespawnEntity(uint32_t entityId)
         if (map->DespawnEntity(entityId, now)) {
             BroadcastEntityDespawn(*map, entityId);
         } else {
+            assert(0);
             printf("[game_server] Failed to despawn entity id %u in map id %u\n", entityId, map->id);
         }
     } else {
+        assert(0);
         printf("[game_server] Failed to despawn entity id %u, could not find map\n", entityId);
     }
 }
@@ -257,8 +267,8 @@ void GameServer::DestroyDespawnedEntities(void)
         for (int entityIndex = 0; entityIndex < SV_MAX_ENTITIES; entityIndex++) {
             Entity &entity = map.entities[entityIndex];
             if (entity.type && entity.despawnedAt) {
-                map.DestroyEntity(entityIndex);
-                entityMapId.erase(entityIndex);
+                map.DestroyEntity(entity.id);
+                entityMapId.erase(entity.id);
             }
         }
     }
@@ -266,6 +276,8 @@ void GameServer::DestroyDespawnedEntities(void)
 
 void GameServer::SerializeSpawn(Tilemap &map, size_t entityIndex, Msg_S_EntitySpawn &entitySpawn)
 {
+    assert(entityIndex);
+
     Entity          &entity    = map.entities[entityIndex];
     AspectCollision &collision = map.collision[entityIndex];
     AspectPhysics   &physics   = map.physics[entityIndex];
@@ -297,6 +309,7 @@ void GameServer::SendEntitySpawn(int clientIdx, Tilemap &map, uint32_t entityId)
 {
     size_t entityIndex = map.FindEntityIndex(entityId);
     if (entityIndex == SV_MAX_ENTITIES) {
+        assert(0);
         printf("[game_server] entity id %u has invalid index in map id %u. cannot send spawn msg.\n", entityId, map.id);
         return;
     }
@@ -304,6 +317,7 @@ void GameServer::SendEntitySpawn(int clientIdx, Tilemap &map, uint32_t entityId)
     Entity entity = map.entities[entityIndex];
     if (!entity.id || !entity.type) {
         assert(!entity.id && !entity.type);
+        assert(0);
         printf("[game_server] entity has invalid id %u or type %d. cannot send spawn msg.\n", entityId, entity.type);
         return;
     }
@@ -311,7 +325,7 @@ void GameServer::SendEntitySpawn(int clientIdx, Tilemap &map, uint32_t entityId)
     if (yj_server->CanSendMessage(clientIdx, CHANNEL_R_ENTITY_EVENT)) {
         Msg_S_EntitySpawn *msg = (Msg_S_EntitySpawn *)yj_server->CreateMessage(clientIdx, MSG_S_ENTITY_SPAWN);
         if (msg) {
-            SerializeSpawn(map, entityId, *msg);
+            SerializeSpawn(map, entityIndex, *msg);
             yj_server->SendMessage(clientIdx, CHANNEL_R_ENTITY_EVENT, msg);
         }
     }
@@ -331,6 +345,7 @@ void GameServer::SendEntityDespawn(int clientIdx, Tilemap &map, uint32_t entityI
 {
     size_t entityIndex = map.FindEntityIndex(entityId);
     if (entityIndex == SV_MAX_ENTITIES) {
+        assert(0);
         printf("[game_server] entity id %u has invalid index in map id %u. cannot send despawn msg.\n", entityId, map.id);
         return;
     }
@@ -339,6 +354,7 @@ void GameServer::SendEntityDespawn(int clientIdx, Tilemap &map, uint32_t entityI
     Entity &entity = map.entities[entityIndex];
     if (!entity.id || !entity.type) {
         assert(!entity.id && !entity.type);
+        assert(0);
         printf("[game_server] entity has invalid id %u or type %d. cannot send despawn msg.\n", entityId, entity.type);
         return;
     }
@@ -366,6 +382,7 @@ void GameServer::SendEntitySay(int clientIdx, Tilemap &map, uint32_t entityId, u
 {
     size_t entityIndex = map.FindEntityIndex(entityId);
     if (entityIndex == SV_MAX_ENTITIES) {
+        assert(0);
         printf("[game_server] entity id %u has invalid index in map id %u. cannot send entity say msg.\n", entityId, map.id);
         return;
     }
@@ -541,9 +558,11 @@ void GameServer::UpdateServerPlayers(void)
                         }
                     }
                 } else {
+                    assert(0);
                     printf("[game_server] Player entityId %u out of range. Cannot process inputCmd.\n", player.entityId);
                 }
             } else {
+                assert(0);
                 printf("[game_server] Player entityId %u does not belong to a map!?\n", player.entityId);
             }
         }
@@ -554,10 +573,15 @@ void GameServer::TickSpawnBots(Tilemap &map)
     static uint32_t eid_bots[10];
     for (int i = 0; i < ARRAY_SIZE(eid_bots); i++) {
         uint32_t entityId = eid_bots[i];
-        Entity *entity = map.FindEntity(entityId);
-        if (!entity) {
-            entityId = 0;
+
+        // Make sure entity still exists
+        if (entityId) {
+            Entity *entity = map.FindEntity(entityId);
+            if (!entity) {
+                entityId = 0;
+            }
         }
+
         if (!entityId && ((int)tick % 100 == i * 10)) {
             entityId = CreateEntity(map, Entity_NPC);
             if (entityId) {
@@ -645,12 +669,12 @@ void GameServer::TickEntityBot(Tilemap &map, uint32_t entityIndex, double dt)
 #endif
     }
 
-    map.EntityTick(entity.id, dt);
+    map.EntityTick(entity.id, dt, now);
 }
 void GameServer::TickEntityPlayer(Tilemap &map, uint32_t entityIndex, double dt)
 {
     Entity &entity = map.entities[entityIndex];
-    map.EntityTick(entity.id, dt);
+    map.EntityTick(entity.id, dt, now);
 }
 void GameServer::TickEntityProjectile(Tilemap &map, uint32_t entityIndex, double dt)
 {
@@ -660,7 +684,7 @@ void GameServer::TickEntityProjectile(Tilemap &map, uint32_t entityIndex, double
     //AspectPhysics &physics = map.physics[entityIndex];
     //playerEntity.ApplyForce({ 0, 5 });
 
-    map.EntityTick(entity.id, dt);
+    map.EntityTick(entity.id, dt, now);
 
     if (now - entity.spawnedAt > 1.0) {
         DespawnEntity(entity.id);
@@ -736,6 +760,8 @@ void GameServer::Tick(void)
 void GameServer::SerializeSnapshot(Tilemap &map, size_t entityIndex,
     Msg_S_EntitySnapshot &entitySnapshot, uint32_t lastProcessedInputCmd)
 {
+    assert(entityIndex);
+
     Entity          &entity    = map.entities[entityIndex];
     AspectCollision &collision = map.collision[entityIndex];
     AspectPhysics   &physics   = map.physics[entityIndex];
@@ -777,12 +803,14 @@ void GameServer::SendClientSnapshots(void)
         ServerPlayer &serverPlayer = players[clientIdx];
         Entity *entity = FindEntity(serverPlayer.entityId);
         if (!entity) {
+            assert(0);
             printf("[game_server] could not find client id %d's entity id %u. cannot send snapshots\n", clientIdx, serverPlayer.entityId);
             continue;
         }
 
         Tilemap *map = FindEntityMap(serverPlayer.entityId);
         if (!map) {
+            assert(0);
             printf("[game_server] could not find client id %d's entity id %u's map. cannot send snapshots\n", clientIdx, serverPlayer.entityId);
             continue;
         }
@@ -809,7 +837,7 @@ void GameServer::SendClientSnapshots(void)
                 if (yj_server->CanSendMessage(clientIdx, CHANNEL_R_ENTITY_EVENT)) {
                     Msg_S_EntitySpawn *msg = (Msg_S_EntitySpawn *)yj_server->CreateMessage(clientIdx, MSG_S_ENTITY_SPAWN);
                     if (msg) {
-                        SerializeSpawn(*map, entity.id, *msg);
+                        SerializeSpawn(*map, entityIndex, *msg);
                         yj_server->SendMessage(clientIdx, CHANNEL_R_ENTITY_EVENT, msg);
                     }
                 }
@@ -825,7 +853,7 @@ void GameServer::SendClientSnapshots(void)
                 if (yj_server->CanSendMessage(clientIdx, CHANNEL_U_ENTITY_SNAPSHOT)) {
                     Msg_S_EntitySnapshot *msg = (Msg_S_EntitySnapshot *)yj_server->CreateMessage(clientIdx, MSG_S_ENTITY_SNAPSHOT);
                     if (msg) {
-                        SerializeSnapshot(*map, entity.id, *msg, serverPlayer.lastInputSeq);
+                        SerializeSnapshot(*map, entityIndex, *msg, serverPlayer.lastInputSeq);
                         yj_server->SendMessage(clientIdx, CHANNEL_U_ENTITY_SNAPSHOT, msg);
                     }
                 }
@@ -845,6 +873,7 @@ void GameServer::SendClockSync(void)
             Msg_S_ClockSync *msg = (Msg_S_ClockSync *)yj_server->CreateMessage(clientIdx, MSG_S_CLOCK_SYNC);
             if (msg) {
                 msg->serverTime = GetTime();
+                msg->playerEntityId = serverPlayer.entityId;
                 yj_server->SendMessage(clientIdx, CHANNEL_R_CLOCK_SYNC, msg);
                 serverPlayer.needsClockSync = false;
             }

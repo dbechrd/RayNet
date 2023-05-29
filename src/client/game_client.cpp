@@ -2,24 +2,6 @@
 #include "client_world.h"
 #include "../common/audio/audio.h"
 
-uint32_t GameClient::LocalPlayerEntityId(void) {
-    if (yj_client->IsConnected()) {
-        // TODO(dlb)[cleanup]: Yikes.. the server should send us our entityId when we connect
-        return yj_client->GetClientIndex() + 1;
-    }
-    return 0;
-}
-
-Entity *GameClient::LocalPlayer(void) {
-    if (yj_client->IsConnected()) {
-        Entity *localPlayer = world->GetEntity(LocalPlayerEntityId());
-        if (localPlayer && localPlayer->type == Entity_Player) {
-            return localPlayer;
-        }
-    }
-    return 0;
-}
-
 Err GameClient::TryConnect(void)
 {
     if (!yj_client->IsDisconnected()) {
@@ -142,31 +124,21 @@ void GameClient::ProcessMessages(void)
                     yj_client->GetNetworkInfo(netInfo);
                     const double approxServerNow = msg->serverTime + netInfo.RTT / 2000;
                     clientTimeDeltaVsServer = now - approxServerNow;
+                    world->localPlayerEntityId = msg->playerEntityId;
                     break;
                 }
                 case MSG_S_ENTITY_DESPAWN:
                 {
                     Msg_S_EntityDespawn *msg = (Msg_S_EntityDespawn *)yjMsg;
-                    Entity *entity = world->GetEntity(msg->entityId);
-                    if (entity) {
-                        AspectDialog &dialog = world->map.dialog[msg->entityId];
-                        world->DestroyDialog(dialog.latestDialog);
-                        // TODO: Remove entity from world->entityRefsById
-                        world->map.DestroyEntity(msg->entityId);
-                        world->ghosts[msg->entityId] = {};
-                    }
+                    printf("[game_client] ENTITY_DESPAWN entityId=%u\n", msg->entityId);
+                    world->DespawnEntity(msg->entityId);
                     break;
                 }
                 case MSG_S_ENTITY_SAY:
                 {
                     Msg_S_EntitySay *msg = (Msg_S_EntitySay *)yjMsg;
                     if (msg->messageLength > 0 && msg->messageLength <= SV_MAX_ENTITY_SAY_MSG_LEN) {
-                        world->CreateDialog(
-                            msg->entityId,
-                            msg->messageLength,
-                            msg->message,
-                            now
-                        );
+                        world->CreateDialog(msg->entityId, msg->messageLength, msg->message, now);
                     } else {
                         printf("Wtf dis server smokin'? Sent entity say message of length %u but max is %u\n",
                             msg->messageLength,
@@ -177,36 +149,60 @@ void GameClient::ProcessMessages(void)
                 case MSG_S_ENTITY_SNAPSHOT:
                 {
                     Msg_S_EntitySnapshot *msg = (Msg_S_EntitySnapshot *)yjMsg;
-                    Ghost &ghost = world->ghosts[msg->entityId];
-
-                    GhostSnapshot ghostSnapshot{ *msg };
-                    ghost.push(ghostSnapshot);
+                    Tilemap *map = world->FindEntityMap(msg->entityId);
+                    if (map) {
+                        size_t entityIndex = map->FindEntityIndex(msg->entityId);
+                        if (entityIndex < SV_MAX_ENTITIES) {
+                            AspectGhost &ghost = map->ghosts[entityIndex];
+                            GhostSnapshot ghostSnapshot{ *msg };
+                            ghost.push(ghostSnapshot);
+                        }
+                    }
                     break;
                 }
                 case MSG_S_ENTITY_SPAWN:
                 {
                     Msg_S_EntitySpawn *msg = (Msg_S_EntitySpawn *)yjMsg;
-                    uint32_t entityId = msg->entityId;
-                    Entity *entity = world->GetEntityDeadOrAlive(entityId);
-                    if (entity) {
-                        // WARN(dlb): Other things could refer to a previous version of this entityId.
-                        // TODO(dlb): Generations?
-                        *entity = {};
-                        world->ApplySpawnEvent(*msg);
-                        if (entity->type == Entity_Projectile) {
-                            rnSoundCatalog.Play(STR_SND_SOFT_TICK);
+                    Entity *entity = world->FindEntity(msg->entityId);
+                    printf("[game_client] Entity spawn id %u in map id %u\n", msg->entityId, msg->mapId);
+                    if (!entity) {
+                        Tilemap *map = world->FindOrLoadMap(msg->mapId);
+                        assert(map && "why no map? we get chunks before entities, right!?");
+                        if (map) {
+                            if (map->CreateEntity(msg->entityId, msg->type)) {
+                                if (map->SpawnEntity(msg->entityId, now)) {
+                                    world->ApplySpawnEvent(*msg);
+
+                                    // HACK: Remove this insanely janky nonsense
+                                    // and have some sort of OnSpawnTrigger thingy
+                                    entity = world->FindEntity(msg->entityId);
+                                    if (entity && entity->type == Entity_Projectile) {
+                                        rnSoundCatalog.Play(STR_SND_SOFT_TICK);
+                                    }
+                                }
+                            }
+                        } else {
+                            // TODO: Load the map? It should already be loaded
+                            // since we received chunks before entities, right?
                         }
+                    //} else {
+                    //    assert(!"why two spawn events for same entityId??");
                     }
                     break;
                 }
                 case MSG_S_TILE_CHUNK:
                 {
                     Msg_S_TileChunk *msg = (Msg_S_TileChunk *)yjMsg;
-                    if (msg->mapId != world->map.id) {
+
+                    Tilemap *map = world->FindOrLoadMap(msg->mapId);
+                    if (map) {
+                        map->CL_DeserializeChunk(*msg);
+                    } else {
                         // TODO: Load the right map by ID somehow
-                        //world->map.Load(tileChunk.mapName, 0);
+                        //if (msg->mapId != world->map.id) {
+                        //    //world->map.Load(tileChunk.mapName, 0);
+                        //}
                     }
-                    world->map.CL_DeserializeChunk(*msg);
                     break;
                 }
             }

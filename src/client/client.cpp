@@ -143,21 +143,25 @@ void update_camera(Camera2D &camera, Vector2 target)
 
 void draw_game(GameClient &client)
 {
-    Tilemap &map = client.world->map;
+    Tilemap *map = client.world->LocalPlayerMap();
+    if (!map) {
+        return;
+    }
+
     Camera2D &camera = client.world->camera2d;
     Vector2 cursorWorldPos = GetScreenToWorld2D(GetMousePosition(), camera);
 
     //--------------------
     // Draw the map
     BeginMode2D(camera);
-    map.Draw(camera);
+    map->Draw(camera);
 
     //--------------------
     // Draw the entities
     cursorWorldPos = GetScreenToWorld2D(GetMousePosition(), camera);
-    for (uint32_t entityId = 0; entityId < SV_MAX_ENTITIES; entityId++) {
-        Entity *entity = client.world->GetEntity(entityId);
-        if (!entity) {
+    for (uint32_t entityIndex = 0; entityIndex < SV_MAX_ENTITIES; entityIndex++) {
+        Entity &entity = map->entities[entityIndex];
+        if (!entity.id || !entity.type || entity.despawnedAt) {
             continue;
         }
 
@@ -167,30 +171,32 @@ void draw_game(GameClient &client)
         // use for drawing shadows? Or some other way to simulate the entity moving without
         // modifying the actual entity.
         if (CL_DBG_SNAPSHOT_SHADOWS) {
-            const uint32_t ghostEntityId = 0; // HACK: Use entity 0 as the ghost placeholder for now
-            Ghost &ghost = client.world->ghosts[entityId];
-            Entity &ghostEntity = *client.world->GetEntityDeadOrAlive(ghostEntityId);
-            AspectPhysics &ghostPhysics = map.physics[ghostEntityId];
+            // HACK: Use entity 0 as the ghost placeholder for now
+            const uint32_t ghostEntityIndex = 0;
+
+            AspectGhost &ghost = map->ghosts[entityIndex];
+            Entity &ghostEntity = map->entities[ghostEntityIndex];
+            AspectPhysics &ghostPhysics = map->physics[ghostEntityIndex];
 
             for (int i = 0; i < ghost.size(); i++) {
                 if (!ghost[i].serverTime) {
                     continue;
                 }
-                client.world->ApplyStateInterpolated(ghostEntityId, ghost[i], ghost[i], 0);
+                client.world->ApplyStateInterpolated(ghostEntity.id, ghost[i], ghost[i], 0);
 
                 const float scalePer = 1.0f / (CL_SNAPSHOT_COUNT + 1);
-                Rectangle ghostRect = map.EntityRect(ghostEntityId);
+                Rectangle ghostRect = map->EntityRect(ghostEntity.id);
                 ghostRect = RectShrink(ghostRect, scalePer);
                 DrawRectangleRec(ghostRect, Fade(RED, 0.2f));
             }
 
             // NOTE(dlb): These aren't actually snapshot shadows, they're client-side prediction shadows
-            if (entityId == client.LocalPlayerEntityId()) {
+            if (entity.id == client.world->localPlayerEntityId) {
 #if CL_CLIENT_SIDE_PREDICT
                 uint32_t lastProcessedInputCmd = 0;
                 const GhostSnapshot &latestSnapshot = ghost.newest();
                 if (latestSnapshot.serverTime) {
-                    client.world->ApplyStateInterpolated(ghostEntityId, latestSnapshot, latestSnapshot, 0);
+                    client.world->ApplyStateInterpolated(ghostEntity.id, latestSnapshot, latestSnapshot, 0);
                     lastProcessedInputCmd = latestSnapshot.lastProcessedInputCmd;
                 }
 
@@ -199,9 +205,9 @@ void draw_game(GameClient &client)
                     InputCmd &inputCmd = client.controller.cmdQueue[cmdIndex];
                     if (inputCmd.seq > lastProcessedInputCmd) {
                         ghostPhysics.ApplyForce(inputCmd.GenerateMoveForce(ghostPhysics.speed));
-                        map.EntityTick(ghostEntityId, SV_TICK_DT);
-                        map.ResolveEntityTerrainCollisions(ghostEntityId);
-                        DrawRectangleRec(map.EntityRect(ghostEntityId), Fade(GREEN, 0.2f));
+                        map->EntityTick(ghostEntity.id, SV_TICK_DT, client.now);
+                        map->ResolveEntityTerrainCollisions(ghostEntity.id);
+                        DrawRectangleRec(map->EntityRect(ghostEntity.id), Fade(GREEN, 0.2f));
                     }
                 }
 #endif
@@ -213,7 +219,7 @@ void draw_game(GameClient &client)
                 if (cmdAccumDt > 0) {
                     ghostInstance.ApplyForce(client.controller.cmdAccum.GenerateMoveForce(ghostInstance.speed));
                     ghostInstance.Tick(cmdAccumDt);
-                    map.ResolveEntityTerrainCollisions(ghostInstance);
+                    map->ResolveEntityTerrainCollisions(ghostInstance);
                     DrawRectangleRec(ghostInstance.GetRect(), Fade(BLUE, 0.2f));
                     printf("%.3f\n", cmdAccumDt);
                 }
@@ -225,7 +231,7 @@ void draw_game(GameClient &client)
         }
 #endif
 
-        map.DrawEntity(entityId, client.now);
+        map->DrawEntity(entity.id, client.now);
     }
 
     //--------------------
@@ -235,10 +241,13 @@ void draw_game(GameClient &client)
     //--------------------
     // Draw entity info
     if (client.hoveredEntityId) {
-        Entity *entity = client.world->GetEntity(client.hoveredEntityId);
-        assert(entity); // huh?
+        Entity *entity = client.world->FindEntity(client.hoveredEntityId);
         if (entity) {
-            map.DrawEntityHoverInfo(client.hoveredEntityId);
+            map->DrawEntityHoverInfo(client.hoveredEntityId);
+        } else {
+            // We were probably hovering an entity while it was despawning?
+            assert(!"huh? how can we hover an entity that doesn't exist");
+            client.hoveredEntityId = 0;
         }
     }
 
@@ -299,7 +308,7 @@ void draw_f3_menu(GameClient &client)
     DRAW_TEXT("window", "%d, %d", GetScreenWidth(), GetScreenHeight());
     DRAW_TEXT("render", "%d, %d", GetRenderWidth(), GetRenderHeight());
     DRAW_TEXT("cursorScn", "%d, %d", GetMouseX(), GetMouseY());
-    if (client.LocalPlayer()) {
+    if (client.yj_client->IsConnected() && client.world) {
         Camera2D &camera = client.world->camera2d;
         Vector2 cursorWorldPos = GetScreenToWorld2D(GetMousePosition(), camera);
         DRAW_TEXT("cursorWld", "%.f, %.f", cursorWorldPos.x, cursorWorldPos.y);
@@ -408,8 +417,7 @@ int main(int argc, char *argv[])
 
     //--------------------
     // Client
-    GameClient *client = new GameClient;
-    client->now = GetTime();
+    GameClient *client = new GameClient(GetTime());
     client->Start();
 
     static float texMenuBgScale = 0;
@@ -495,34 +503,40 @@ int main(int argc, char *argv[])
 
         //--------------------
         // Accmulate input every frame
-        Entity *localPlayer = client->LocalPlayer();
-        if (localPlayer) {
-            // TODO: Update facing direction elsewhere, then just get localPlayer.facing here?
-            Camera2D &camera = client->world->camera2d;
-            Vector2 cursorWorldPos = GetScreenToWorld2D(GetMousePosition(), camera);
-            cursorWorldPos = GetScreenToWorld2D(GetMousePosition(), camera);
-            Vector2 facing = Vector2Subtract(cursorWorldPos, localPlayer->position);
-            facing = Vector2Normalize(facing);
-            client->controller.cmdAccum.facing = facing;
+        if (client->yj_client->IsConnected()) {
+            Entity *localPlayer = client->world->LocalPlayer();
+            if (localPlayer) {
+                // TODO: Update facing direction elsewhere, then just get localPlayer.facing here?
+                Camera2D &camera = client->world->camera2d;
+                Vector2 cursorWorldPos = GetScreenToWorld2D(GetMousePosition(), camera);
+                cursorWorldPos = GetScreenToWorld2D(GetMousePosition(), camera);
+                Vector2 facing = Vector2Subtract(cursorWorldPos, localPlayer->position);
+                facing = Vector2Normalize(facing);
+                client->controller.cmdAccum.facing = facing;
 
-            client->controller.cmdAccum.north |= io.KeyDown(KEY_W);
-            client->controller.cmdAccum.west |= io.KeyDown(KEY_A);
-            client->controller.cmdAccum.south |= io.KeyDown(KEY_S);
-            client->controller.cmdAccum.east |= io.KeyDown(KEY_D);
+                client->controller.cmdAccum.north |= io.KeyDown(KEY_W);
+                client->controller.cmdAccum.west |= io.KeyDown(KEY_A);
+                client->controller.cmdAccum.south |= io.KeyDown(KEY_S);
+                client->controller.cmdAccum.east |= io.KeyDown(KEY_D);
 
-            // TODO: Actually check hand
-            bool holdingWeapon = true;
-            if (holdingWeapon) {
-                client->controller.cmdAccum.fire |= io.MouseButtonDown(MOUSE_LEFT_BUTTON);
-            }
+                // TODO: Actually check hand
+                bool holdingWeapon = true;
+                if (holdingWeapon) {
+                    //client->controller.cmdAccum.fire |= io.MouseButtonDown(MOUSE_LEFT_BUTTON);
+                    client->controller.cmdAccum.fire |= io.MouseButtonPressed(MOUSE_LEFT_BUTTON);
+                }
 
-            // TODO: Actually check hand
-            bool holdingShovel = true;
-            if (holdingShovel) {
-                if (io.MouseButtonPressed(MOUSE_BUTTON_LEFT)) {
-                    Tilemap::Coord coord{};
-                    if (client->world->map.WorldToTileIndex(cursorWorldPos.x, cursorWorldPos.y, coord)) {
-                        client->SendTileInteract(coord.x, coord.y);
+                // TODO: Actually check hand
+                bool holdingShovel = true;
+                if (holdingShovel) {
+                    if (io.MouseButtonPressed(MOUSE_BUTTON_LEFT)) {
+                        Tilemap::Coord coord{};
+                        Tilemap *map = client->world->LocalPlayerMap();
+                        if (map) {
+                            if (map && map->WorldToTileIndex(cursorWorldPos.x, cursorWorldPos.y, coord)) {
+                                client->SendTileInteract(coord.x, coord.y);
+                            }
+                        }
                     }
                 }
             }
@@ -540,15 +554,18 @@ int main(int argc, char *argv[])
             client->lastNetTick = client->now;
             client->netTickAccum -= SV_TICK_DT;
         }
-        localPlayer = client->LocalPlayer();
+
 
         //--------------------
         // Update
-        if (localPlayer) {
-            // Update world
-            client->world->Update(*client);
-            // Update camera
-            update_camera(client->world->camera2d, client->LocalPlayer()->position);
+        if (client->yj_client->IsConnected()) {
+            Entity *localPlayer = client->world->LocalPlayer();
+            if (localPlayer) {
+                // Update world
+                client->world->Update(*client);
+                // Update camera
+                update_camera(client->world->camera2d, localPlayer->position);
+            }
         }
 
         //--------------------
@@ -559,7 +576,7 @@ int main(int argc, char *argv[])
             if (client->yj_client->IsDisconnected()) {
                 draw_menu_main(*client, quit);
                 reset_menu_connecting();
-            } else if (client->yj_client->IsConnecting() || !localPlayer) {
+            } else if (client->yj_client->IsConnecting() || !client->world || !client->world->localPlayerEntityId) {
                 draw_menu_connecting(*client);
             } else if (client->yj_client->IsConnected()) {
                 draw_game(*client);

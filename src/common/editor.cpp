@@ -232,6 +232,10 @@ void Editor::DrawEntityOverlays(Tilemap &map, Camera2D &camera, double now)
 {
     io.PushScope(IO::IO_EditorEntityOverlay);
 
+    if (state.showEntityIds) {
+        map.DrawEntityIds(camera);
+    }
+
     if (active) {
         switch (mode) {
             case EditMode_Tiles: {
@@ -346,7 +350,7 @@ UIState Editor::DrawUI_ActionBar(Vector2 position, Tilemap &map, double now)
         openFileThread.detach();
     }
     if (openRequest.size()) {
-        Err err = map.Load(openRequest, now);
+        Err err = map.Load(openRequest);
         if (err) {
             std::thread errorThread([err]{
                 const char *msg = TextFormat("Failed to load file %s. %s\n", openRequest, ErrStr(err));
@@ -399,7 +403,7 @@ UIState Editor::DrawUI_ActionBar(Vector2 position, Tilemap &map, double now)
 
     UIState reloadButton = uiActionBar.Button("Reload");
     if (reloadButton.released) {
-        Err err = map.Load(map.filename, now);
+        Err err = map.Load(map.filename);
         if (err) {
             std::string filename = map.filename;
             std::thread errorThread([filename, err]{
@@ -425,6 +429,10 @@ UIState Editor::DrawUI_ActionBar(Vector2 position, Tilemap &map, double now)
     UIState showTileIdsButton = uiActionBar.Button("Tile IDs", state.showTileIds, GRAY, LIGHTGRAY);
     if (showTileIdsButton.released) {
         state.showTileIds = !state.showTileIds;
+    }
+    UIState showEntityIdsButton = uiActionBar.Button("Entity IDs", state.showEntityIds, GRAY, LIGHTGRAY);
+    if (showEntityIdsButton.released) {
+        state.showEntityIds = !state.showEntityIds;
     }
 
     uiActionBar.Newline();
