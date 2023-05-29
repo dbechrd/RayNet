@@ -1,4 +1,5 @@
 #include "entity.h"
-#include "net/net.h"
-#include "tilemap.h"
 
+//CapturedEntity Entity::Capture(void) {
+//    return {};
+//}

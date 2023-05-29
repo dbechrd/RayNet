@@ -23,10 +23,15 @@ struct ClientWorld {
     Tilemap *FindEntityMap(uint32_t entityId);
     Entity *FindEntity(uint32_t entityId, bool deadOrAlive = false);
 
+    bool CopyEntityData(uint32_t entityId, EntityData &data);
+
     void ApplySpawnEvent(const Msg_S_EntitySpawn &entitySpawn);
     void DespawnEntity(uint32_t entityId);
 
-    void ApplyStateInterpolated(uint32_t entityId, const GhostSnapshot &a, const GhostSnapshot &b, float alpha);
+    void ApplyStateInterpolated(EntityInterpolateTuple &data,
+        const GhostSnapshot &a, const GhostSnapshot &b, float alpha);
+    void ApplyStateInterpolated(uint32_t entityId,
+        const GhostSnapshot &a, const GhostSnapshot &b, float alpha);
     Err CreateDialog(uint32_t entityId, uint32_t messageLength, const char *message, double now);
     void Update(GameClient &gameClient);
     void Draw(void);

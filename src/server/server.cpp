@@ -257,6 +257,12 @@ Err Play(GameServer &server)
             // [Editor] Menus, action bar, etc.
             editor.DrawUI({}, map0, server.now);
 
+            static int lastSentTestId = 0;
+            if (editor.state.entities.testId > lastSentTestId) {
+                server.BroadcastEntityDespawnTest(editor.state.entities.testId);
+                lastSentTestId = editor.state.entities.testId;
+            }
+
             // [Debug] FPS, clock, etc.
             if (server.showF3Menu) {
                 draw_f3_menu(server, camera);

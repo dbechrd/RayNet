@@ -646,6 +646,18 @@ void Tilemap::DestroyEntity(uint32_t entityId)
     }
 }
 
+Rectangle Tilemap::EntityRect(EntitySpriteTuple &data)
+{
+    const data::GfxFrame &frame = data::GetSpriteFrame(data.sprite);
+    const Rectangle rect{
+        data.entity.position.x - (float)(frame.w / 2),
+        data.entity.position.y - (float)frame.h,
+        (float)frame.w,
+        (float)frame.h
+    };
+    return rect;
+}
+
 Rectangle Tilemap::EntityRect(uint32_t entityId)
 {
     assert(entityId);
@@ -654,14 +666,8 @@ Rectangle Tilemap::EntityRect(uint32_t entityId)
     if (entityIndex < SV_MAX_ENTITIES) {
         Entity &entity = entities[entityIndex];
         data::Sprite &sprite = this->sprite[entityIndex];
-        const data::GfxFrame &frame = data::GetSpriteFrame(sprite);
-        const Rectangle rect{
-            entity.position.x - (float)(frame.w / 2),
-            entity.position.y - (float)frame.h,
-            (float)frame.w,
-            (float)frame.h
-        };
-        return rect;
+        EntitySpriteTuple data{ entity, sprite };
+        return EntityRect(data);
     }
     return {};
 }
@@ -676,6 +682,28 @@ Vector2 Tilemap::EntityTopCenter(uint32_t entityId)
     };
     return topCenter;
 }
+void Tilemap::EntityTick(EntityTickTuple &data, double dt, double now)
+{
+    data.physics.velocity.x += data.physics.forceAccum.x * dt;
+    data.physics.velocity.y += data.physics.forceAccum.y * dt;
+    data.physics.forceAccum = {};
+
+#if 1
+    data.physics.velocity.x *= (1.0f - data.physics.drag * dt);
+    data.physics.velocity.y *= (1.0f - data.physics.drag * dt);
+#else
+    data.physics.velocity.x *= 1.0f - powf(data.physics.drag, dt);
+    data.physics.velocity.y *= 1.0f - powf(data.physics.drag, dt);
+#endif
+
+    data.entity.position.x += data.physics.velocity.x * dt;
+    data.entity.position.y += data.physics.velocity.y * dt;
+
+    const double duration = CL_DIALOG_DURATION_MIN + CL_DIALOG_DURATION_PER_CHAR * data.dialog.messageLength;
+    if (now - data.dialog.spawnedAt > duration) {
+        data.dialog = {};
+    }
+}
 void Tilemap::EntityTick(uint32_t entityId, double dt, double now)
 {
     assert(entityId);
@@ -684,53 +712,23 @@ void Tilemap::EntityTick(uint32_t entityId, double dt, double now)
     if (entityIndex == SV_MAX_ENTITIES) return;
 
     Entity &entity = entities[entityIndex];
-    AspectPhysics &physics = this->physics[entityIndex];
-
-    physics.velocity.x += physics.forceAccum.x * dt;
-    physics.velocity.y += physics.forceAccum.y * dt;
-    physics.forceAccum = {};
-
-#if 1
-    physics.velocity.x *= (1.0f - physics.drag * dt);
-    physics.velocity.y *= (1.0f - physics.drag * dt);
-#else
-    physics.velocity.x *= 1.0f - powf(physics.drag, dt);
-    physics.velocity.y *= 1.0f - powf(physics.drag, dt);
-#endif
-
-    entity.position.x += physics.velocity.x * dt;
-    entity.position.y += physics.velocity.y * dt;
-
     AspectDialog &dialog = this->dialog[entityIndex];
-    const double duration = CL_DIALOG_DURATION_MIN + CL_DIALOG_DURATION_PER_CHAR * dialog.messageLength;
-    if (now - dialog.spawnedAt > duration) {
-        dialog = {};
-    }
-}
-void Tilemap::ResolveEntityTerrainCollisions(uint32_t entityId)
-{
-    assert(entityId);
-
-    size_t entityIndex = FindEntityIndex(entityId);
-    if (entityIndex == SV_MAX_ENTITIES) return;
-
-    Entity &entity = entities[entityIndex];
-    assert(entity.type);
-
-    AspectCollision &collision = this->collision[entityIndex];
-    if (!collision.radius) return;
-
     AspectPhysics &physics = this->physics[entityIndex];
 
-    collision.colliding = false;
+    EntityTickTuple data{ entity, dialog, physics };
+    EntityTick(data, dt, now);
+}
+void Tilemap::ResolveEntityTerrainCollisions(EntityCollisionTuple &data)
+{
+    data.collision.colliding = false;
 
     Vector2 topLeft{
-        entity.position.x - collision.radius,
-        entity.position.y - collision.radius
+        data.entity.position.x - data.collision.radius,
+        data.entity.position.y - data.collision.radius
     };
     Vector2 bottomRight{
-        entity.position.x + collision.radius,
-        entity.position.y + collision.radius
+        data.entity.position.x + data.collision.radius,
+        data.entity.position.y + data.collision.radius
     };
 
     int yMin = CLAMP(floorf(topLeft.y / TILE_W), 0, height);
@@ -751,17 +749,42 @@ void Tilemap::ResolveEntityTerrainCollisions(uint32_t entityId)
                     tileRect.width = TILE_W;
                     tileRect.height = TILE_W;
                     Manifold manifold{};
-                    if (dlb_CheckCollisionCircleRec(entity.position, collision.radius, tileRect, &manifold)) {
-                        collision.colliding = true;
-                        if (Vector2DotProduct(physics.velocity, manifold.normal) < 0) {
-                            entity.position.x += manifold.normal.x * manifold.depth;
-                            entity.position.y += manifold.normal.y * manifold.depth;
+                    if (dlb_CheckCollisionCircleRec(data.entity.position, data.collision.radius, tileRect, &manifold)) {
+                        data.collision.colliding = true;
+                        if (Vector2DotProduct(data.physics.velocity, manifold.normal) < 0) {
+                            data.entity.position.x += manifold.normal.x * manifold.depth;
+                            data.entity.position.y += manifold.normal.y * manifold.depth;
                         }
                     }
                 }
             }
         }
     }
+}
+void Tilemap::ResolveEntityTerrainCollisions(uint32_t entityId)
+{
+    assert(entityId);
+    size_t entityIndex = FindEntityIndex(entityId);
+    if (entityIndex == SV_MAX_ENTITIES) {
+        return;
+    }
+
+    Entity &entity = entities[entityIndex];
+    assert(entity.id == entityId);
+    assert(entity.type);
+    if (!entity.id || !entity.type || entity.despawnedAt) {
+        return;
+    }
+
+    AspectCollision &collision = this->collision[entityIndex];
+    if (!collision.radius) {
+        return;
+    }
+
+    AspectPhysics &physics = this->physics[entityIndex];
+
+    EntityCollisionTuple data{ entity, collision, physics };
+    ResolveEntityTerrainCollisions(data);
 }
 void Tilemap::ResolveEntityWarpCollisions(uint32_t entityId, double now)
 {

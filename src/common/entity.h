@@ -124,3 +124,80 @@ struct Projectile : public Entity {
     AspectPhysics   physics;
 };
 #endif
+
+struct EntityCollisionTuple {
+    Entity          &entity;
+    AspectCollision &collision;
+    AspectPhysics   &physics;
+
+    EntityCollisionTuple(Entity &entity, AspectCollision &collision, AspectPhysics &physics)
+        : entity(entity), collision(collision), physics(physics) {}
+};
+
+struct EntityInterpolateTuple {
+    Entity        &entity;
+    AspectPhysics &physics;
+    AspectLife    &life;
+
+    EntityInterpolateTuple(Entity &entity, AspectPhysics &physics, AspectLife &life)
+        : entity(entity), physics(physics), life(life) {}
+};
+
+struct EntitySpriteTuple {
+    Entity       &entity;
+    data::Sprite &sprite;
+
+    EntitySpriteTuple(Entity &entity, data::Sprite &sprite)
+        : entity(entity), sprite(sprite) {}
+};
+
+struct EntityTickTuple {
+    Entity        &entity;
+    AspectDialog  &dialog;
+    AspectPhysics &physics;
+
+    EntityTickTuple(Entity &entity, AspectDialog &dialog, AspectPhysics &physics)
+        : entity(entity), dialog(dialog), physics(physics) {}
+};
+
+struct EntityData {
+    Entity          entity   {};
+    AspectCollision collision{};
+    AspectDialog    dialog   {};
+    AspectGhost     ghosts   {};
+    AspectLife      life     {};
+    AspectPathfind  pathfind {};
+    AspectPhysics   physics  {};
+    data::Sprite    sprite   {};
+};
+//
+//struct EntityDataRef {
+//    Entity          &entity;
+//    AspectCollision &collision;
+//    AspectDialog    &dialog;
+//    AspectGhost     &ghosts;
+//    AspectLife      &life;
+//    AspectPathfind  &pathfind;
+//    AspectPhysics   &physics;
+//    data::Sprite    &sprite;
+//
+//    EntityDataRef(
+//        Entity          &entity,
+//        AspectCollision &collision,
+//        AspectDialog    &dialog,
+//        AspectGhost     &ghosts,
+//        AspectLife      &life,
+//        AspectPathfind  &pathfind,
+//        AspectPhysics   &physics,
+//        data::Sprite    &sprite
+//    ) :
+//        entity    (entity),
+//        collision (collision),
+//        dialog    (dialog),
+//        ghosts    (ghosts),
+//        life      (life),
+//        pathfind  (pathfind),
+//        physics   (physics),
+//        sprite    (sprite)
+//    {}
+//};

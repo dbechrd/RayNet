@@ -103,6 +103,36 @@ Entity *ClientWorld::FindEntity(uint32_t entityId, bool deadOrAlive)
     return {};
 }
 
+bool ClientWorld::CopyEntityData(uint32_t entityId, EntityData &data)
+{
+    if (entityId >= SV_MAX_ENTITIES) {
+        printf("[client_world] Failed to spawn entity. Entity id %u out of range.\n", entityId);
+        return false;
+    }
+
+    Tilemap *map = FindEntityMap(entityId);
+    if (!map) {
+        printf("[client_world] Failed to spawn entity. Could not find entity id %u's map.\n", entityId);
+        return false;
+    }
+
+    size_t entityIndex = map->FindEntityIndex(entityId);
+    if (entityIndex == SV_MAX_ENTITIES) {
+        printf("[client_world] Failed to spawn entity. Entity id %u not found in map id %u.\n", entityId, map->id);
+        return false;
+    }
+
+    data.entity    = map->entities[entityIndex];
+    data.collision = map->collision[entityIndex];
+    data.dialog    = map->dialog[entityIndex];
+    data.ghosts    = map->ghosts[entityIndex];
+    data.life      = map->life[entityIndex];
+    data.pathfind  = map->pathfind[entityIndex];
+    data.physics   = map->physics[entityIndex];
+    data.sprite    = map->sprite[entityIndex];
+    return true;
+}
+
 void ClientWorld::ApplySpawnEvent(const Msg_S_EntitySpawn &entitySpawn)
 {
     const uint32_t entityId = entitySpawn.entityId;
@@ -111,11 +141,12 @@ void ClientWorld::ApplySpawnEvent(const Msg_S_EntitySpawn &entitySpawn)
         return;
     }
 
-    Tilemap *map = FindOrLoadMap(entitySpawn.mapId);
+    Tilemap *map = FindEntityMap(entitySpawn.entityId);
     if (!map) {
-        printf("[client_world] Failed to spawn entity. Map id %u not loaded.\n", entitySpawn.mapId);
+        printf("[client_world] Failed to spawn entity. Could not find entity id %u's map.\n", entitySpawn.entityId);
         return;
     }
+    assert(map->id == entitySpawn.mapId && "wait.. how? we literally just created it a second ago");
 
     size_t entityIndex = map->FindEntityIndex(entityId);
     if (entityIndex == SV_MAX_ENTITIES) {
@@ -153,8 +184,6 @@ void ClientWorld::ApplySpawnEvent(const Msg_S_EntitySpawn &entitySpawn)
             break;
         };
     }
-
-    entityMapId[entityId] = map->id;
 }
 
 void ClientWorld::DespawnEntity(uint32_t entityId)
@@ -168,22 +197,37 @@ void ClientWorld::DespawnEntity(uint32_t entityId)
     entityMapId.erase(entityId);
 }
 
-void ClientWorld::ApplyStateInterpolated(uint32_t entityId, const GhostSnapshot &a, const GhostSnapshot &b, float alpha)
+void ClientWorld::ApplyStateInterpolated(EntityInterpolateTuple &data,
+    const GhostSnapshot &a, const GhostSnapshot &b, float alpha)
+{
+    data.entity.position.x = LERP(a.position.x, b.position.x, alpha);
+    data.entity.position.y = LERP(a.position.y, b.position.y, alpha);
+
+    data.physics.velocity.x = LERP(a.velocity.x, b.velocity.x, alpha);
+    data.physics.velocity.y = LERP(a.velocity.y, b.velocity.y, alpha);
+
+    // TODO(dlb): Should we lerp max health?
+    data.life.maxHealth = a.maxHealth;
+    data.life.health = LERP(a.health, b.health, alpha);
+}
+
+void ClientWorld::ApplyStateInterpolated(uint32_t entityId,
+    const GhostSnapshot &a, const GhostSnapshot &b, float alpha)
 {
     if (entityId >= SV_MAX_ENTITIES) {
-        printf("[client_world] Failed to spawn entity. Entity id %u out of range.\n", entityId);
+        printf("[client_world] Failed to interpolate entity. Entity id %u out of range.\n", entityId);
         return;
     }
 
     Tilemap *map = FindEntityMap(entityId);
     if (!map) {
-        printf("[client_world] Failed to spawn entity. Could not find entity id %u's map.\n", entityId);
+        printf("[client_world] Failed to interpolate entity. Could not find entity id %u's map.\n", entityId);
         return;
     }
 
     size_t entityIndex = map->FindEntityIndex(entityId);
     if (entityIndex == SV_MAX_ENTITIES) {
-        printf("[client_world] Failed to spawn entity. Entity id %u not found in map id %u.\n", entityId, map->id);
+        printf("[client_world] Failed to interpolate entity. Entity id %u not found in map id %u.\n", entityId, map->id);
         return;
     }
 
@@ -191,15 +235,8 @@ void ClientWorld::ApplyStateInterpolated(uint32_t entityId, const GhostSnapshot 
     AspectPhysics &physics = map->physics[entityIndex];
     AspectLife    &life    = map->life[entityIndex];
 
-    entity.position.x = LERP(a.position.x, b.position.x, alpha);
-    entity.position.y = LERP(a.position.y, b.position.y, alpha);
-
-    physics.velocity.x = LERP(a.velocity.x, b.velocity.x, alpha);
-    physics.velocity.y = LERP(a.velocity.y, b.velocity.y, alpha);
-
-    // TODO(dlb): Should we lerp max health?
-    life.maxHealth = a.maxHealth;
-    life.health = LERP(a.health, b.health, alpha);
+    EntityInterpolateTuple data{entity, physics, life};
+    ApplyStateInterpolated(data, a, b, alpha);
 }
 
 Err ClientWorld::CreateDialog(uint32_t entityId, uint32_t messageLength, const char *message, double now)

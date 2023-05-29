@@ -763,6 +763,10 @@ void Editor::DrawUI_EntityActions(UI &uiActionBar, Tilemap &map, double now)
             }
         }
     }
+
+    if (uiActionBar.Button(TextFormat("Despawn Test %d", state.entities.testId)).pressed) {
+        state.entities.testId++;
+    };
 }
 void Editor::DrawUI_PathActions(UI &uiActionBar, Tilemap &map, double now)
 {

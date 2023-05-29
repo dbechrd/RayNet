@@ -119,7 +119,7 @@ Err GameServer::Start(void)
         printf("yj: error: failed to initialize Yojimbo!\n");
         return RN_NET_INIT_FAILED;
     }
-    yojimbo_log_level(YOJIMBO_LOG_LEVEL_INFO);
+    yojimbo_log_level(SV_YJ_LOG_LEVEL);
     yojimbo_set_printf_function(yj_printf);
 
 #if 0
@@ -139,12 +139,7 @@ Err GameServer::Start(void)
     memset(privateKey, 0, yojimbo::KeyBytes);
 
     yojimbo::ClientServerConfig config{};
-    config.numChannels = CHANNEL_COUNT;
-    config.channel[CHANNEL_R_CLOCK_SYNC].type = yojimbo::CHANNEL_TYPE_RELIABLE_ORDERED;
-    config.channel[CHANNEL_U_INPUT_COMMANDS].type = yojimbo::CHANNEL_TYPE_UNRELIABLE_UNORDERED;
-    config.channel[CHANNEL_R_ENTITY_EVENT].type = yojimbo::CHANNEL_TYPE_RELIABLE_ORDERED;
-    config.channel[CHANNEL_U_ENTITY_SNAPSHOT].type = yojimbo::CHANNEL_TYPE_UNRELIABLE_UNORDERED;
-    config.bandwidthSmoothingFactor = CL_BANDWIDTH_SMOOTHING_FACTOR;
+    InitClientServerConfig(config);
 
     // Loopback interface
     //yojimbo::Address address("127.0.0.1", SV_PORT);
@@ -250,6 +245,7 @@ void GameServer::DespawnEntity(uint32_t entityId)
     Tilemap *map = FindEntityMap(entityId);
     if (map) {
         if (map->DespawnEntity(entityId, now)) {
+            printf("[game_server] DespawnEntity id %u\n", entityId);
             BroadcastEntityDespawn(*map, entityId);
         } else {
             assert(0);
@@ -363,6 +359,7 @@ void GameServer::SendEntityDespawn(int clientIdx, Tilemap &map, uint32_t entityI
         Msg_S_EntityDespawn *msg = (Msg_S_EntityDespawn *)yj_server->CreateMessage(clientIdx, MSG_S_ENTITY_DESPAWN);
         if (msg) {
             msg->entityId = entityId;
+            printf("[game_server][client %d] ENTITY_DESPAWN id %u\n", clientIdx, msg->entityId);
             yj_server->SendMessage(clientIdx, CHANNEL_R_ENTITY_EVENT, msg);
         }
     }
@@ -375,6 +372,29 @@ void GameServer::BroadcastEntityDespawn(Tilemap &map, uint32_t entityId)
         }
 
         SendEntityDespawn(clientIdx, map, entityId);
+    }
+}
+
+
+void GameServer::SendEntityDespawnTest(int clientIdx, uint32_t testId)
+{
+    if (yj_server->CanSendMessage(clientIdx, CHANNEL_R_ENTITY_EVENT)) {
+        Msg_S_EntityDespawn *msg = (Msg_S_EntityDespawn *)yj_server->CreateMessage(clientIdx, MSG_S_ENTITY_DESPAWN_TEST);
+        if (msg) {
+            msg->entityId = testId;
+            printf("[game_server][client %d] ENTITY_DESPAWN_TEST testId=%u\n", clientIdx, msg->entityId);
+            yj_server->SendMessage(clientIdx, CHANNEL_R_ENTITY_EVENT, msg);
+        }
+    }
+}
+void GameServer::BroadcastEntityDespawnTest(uint32_t testId)
+{
+    for (int clientIdx = 0; clientIdx < SV_MAX_PLAYERS; clientIdx++) {
+        if (!yj_server->IsClientConnected(clientIdx)) {
+            continue;
+        }
+
+        SendEntityDespawnTest(clientIdx, testId);
     }
 }
 
@@ -692,16 +712,8 @@ void GameServer::TickEntityProjectile(Tilemap &map, uint32_t entityIndex, double
 }
 void GameServer::Tick(void)
 {
-    typedef void (GameServer::*EntityTicker)(Tilemap &map, uint32_t entityId, double dt);
-    static EntityTicker entity_ticker[Entity_Count] = {
-        0,
-        &GameServer::TickEntityPlayer,
-        &GameServer::TickEntityBot,
-        &GameServer::TickEntityProjectile,
-    };
-
     // HACK: Only spawn NPCs in map 0, whatever map that may be (hopefully it's Level_001)
-    TickSpawnBots(*maps[0]);
+    //TickSpawnBots(*maps[0]);
 
     for (Tilemap *mapPtr : maps) {
         Tilemap &map = *mapPtr;
@@ -715,9 +727,11 @@ void GameServer::Tick(void)
                 continue;
             }
 
-            //AspectPhysics &physics = map.physics[entityIndex];
-            //physics.forceAccum = {};
-            (this->*entity_ticker[entity.type])(map, entityIndex, SV_TICK_DT);
+            switch (entity.type) {
+                case Entity_Player:     TickEntityPlayer    (map, entityIndex, SV_TICK_DT); break;
+                case Entity_NPC:        TickEntityBot       (map, entityIndex, SV_TICK_DT); break;
+                case Entity_Projectile: TickEntityProjectile(map, entityIndex, SV_TICK_DT); break;
+            }
             map.ResolveEntityTerrainCollisions(entityIndex);
             map.ResolveEntityWarpCollisions(entityIndex, now);
 
@@ -841,14 +855,14 @@ void GameServer::SendClientSnapshots(void)
                         yj_server->SendMessage(clientIdx, CHANNEL_R_ENTITY_EVENT, msg);
                     }
                 }
-            } else if (entity.despawnedAt == now) {
+           /* } else if (entity.despawnedAt == now) {
                 if (yj_server->CanSendMessage(clientIdx, CHANNEL_R_ENTITY_EVENT)) {
                     Msg_S_EntityDespawn *msg = (Msg_S_EntityDespawn *)yj_server->CreateMessage(clientIdx, MSG_S_ENTITY_DESPAWN);
                     if (msg) {
                         msg->entityId = entity.id;
                         yj_server->SendMessage(clientIdx, CHANNEL_R_ENTITY_EVENT, msg);
                     }
-                }
+                }*/
             } else if (!entity.despawnedAt) {
                 if (yj_server->CanSendMessage(clientIdx, CHANNEL_U_ENTITY_SNAPSHOT)) {
                     Msg_S_EntitySnapshot *msg = (Msg_S_EntitySnapshot *)yj_server->CreateMessage(clientIdx, MSG_S_ENTITY_SNAPSHOT);

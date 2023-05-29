@@ -171,21 +171,27 @@ void draw_game(GameClient &client)
         // use for drawing shadows? Or some other way to simulate the entity moving without
         // modifying the actual entity.
         if (CL_DBG_SNAPSHOT_SHADOWS) {
-            // HACK: Use entity 0 as the ghost placeholder for now
-            const uint32_t ghostEntityIndex = 0;
-
             AspectGhost &ghost = map->ghosts[entityIndex];
-            Entity &ghostEntity = map->entities[ghostEntityIndex];
-            AspectPhysics &ghostPhysics = map->physics[ghostEntityIndex];
+
+            EntityData ghostData{};
+            client.world->CopyEntityData(entity.id, ghostData);
+            // Prevents accidentally overwriting real entities if someone we pass a tuple
+            // to decides to look up the entity by id instead of using the tuple's data.
+            ghostData.entity.id = 0;
+
+            EntityInterpolateTuple ghostInterpData{ ghostData.entity, ghostData.physics, ghostData.life };
+            EntitySpriteTuple ghostSpriteData{ ghostData.entity, ghostData.sprite };
+            EntityTickTuple ghostTickData{ ghostData.entity, ghostData.dialog, ghostData.physics };
+            EntityCollisionTuple ghostCollisionData{ ghostData.entity, ghostData.collision, ghostData.physics };
 
             for (int i = 0; i < ghost.size(); i++) {
                 if (!ghost[i].serverTime) {
                     continue;
                 }
-                client.world->ApplyStateInterpolated(ghostEntity.id, ghost[i], ghost[i], 0);
+                client.world->ApplyStateInterpolated(ghostInterpData, ghost[i], ghost[i], 0);
 
                 const float scalePer = 1.0f / (CL_SNAPSHOT_COUNT + 1);
-                Rectangle ghostRect = map->EntityRect(ghostEntity.id);
+                Rectangle ghostRect = map->EntityRect(ghostSpriteData);
                 ghostRect = RectShrink(ghostRect, scalePer);
                 DrawRectangleRec(ghostRect, Fade(RED, 0.2f));
             }
@@ -196,7 +202,7 @@ void draw_game(GameClient &client)
                 uint32_t lastProcessedInputCmd = 0;
                 const GhostSnapshot &latestSnapshot = ghost.newest();
                 if (latestSnapshot.serverTime) {
-                    client.world->ApplyStateInterpolated(ghostEntity.id, latestSnapshot, latestSnapshot, 0);
+                    client.world->ApplyStateInterpolated(ghostInterpData, latestSnapshot, latestSnapshot, 0);
                     lastProcessedInputCmd = latestSnapshot.lastProcessedInputCmd;
                 }
 
@@ -204,10 +210,10 @@ void draw_game(GameClient &client)
                 for (size_t cmdIndex = 0; cmdIndex < client.controller.cmdQueue.size(); cmdIndex++) {
                     InputCmd &inputCmd = client.controller.cmdQueue[cmdIndex];
                     if (inputCmd.seq > lastProcessedInputCmd) {
-                        ghostPhysics.ApplyForce(inputCmd.GenerateMoveForce(ghostPhysics.speed));
-                        map->EntityTick(ghostEntity.id, SV_TICK_DT, client.now);
-                        map->ResolveEntityTerrainCollisions(ghostEntity.id);
-                        DrawRectangleRec(map->EntityRect(ghostEntity.id), Fade(GREEN, 0.2f));
+                        ghostData.physics.ApplyForce(inputCmd.GenerateMoveForce(ghostData.physics.speed));
+                        map->EntityTick(ghostTickData, SV_TICK_DT, client.now);
+                        map->ResolveEntityTerrainCollisions(ghostCollisionData);
+                        DrawRectangleRec(map->EntityRect(ghostSpriteData), Fade(GREEN, 0.2f));
                     }
                 }
 #endif
@@ -225,9 +231,6 @@ void draw_game(GameClient &client)
                 }
 #endif
             }
-
-            ghostEntity = {};
-            ghostPhysics = {};
         }
 #endif
 

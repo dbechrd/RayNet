@@ -65,40 +65,38 @@ struct Tilemap {
     // v5: added warps
     const uint32_t VERSION = 5;
 
-    uint32_t id{};
-    std::string filename{};
-    StringId textureId{};  // generated upon load, used to look up in rnTextureCatalog
-
-    uint32_t width{};  // width of map in tiles
-    uint32_t height{};  // height of map in tiles
+    uint32_t    id        {};
+    std::string filename  {};
+    StringId    textureId {};  // generated upon load, used to look up in rnTextureCatalog
+    uint32_t    width     {};  // width of map in tiles
+    uint32_t    height    {};  // height of map in tiles
 
     // TODO(dlb): Move these to a global pool, each has its own textureId
-    std::vector<TileDef> tileDefs{};
-    std::vector<uint8_t> tiles{};
-    std::vector<AiPathNode> pathNodes{}; // 94 19 56 22 57
-    std::vector<uint32_t> pathNodeIndices{};  // 0 1 2 | 3 4 5
-    std::vector<AiPath> paths{};  // offset, length | 0, 3 | 3, 3
-    std::vector<Warp> warps{};
+    std::vector<TileDef>    tileDefs        {};
+    std::vector<uint8_t>    tiles           {};
+    std::vector<AiPathNode> pathNodes       {}; // 94 19 56 22 57
+    std::vector<uint32_t>   pathNodeIndices {};  // 0 1 2 | 3 4 5
+    std::vector<AiPath>     paths           {};  // offset, length | 0, 3 | 3, 3
+    std::vector<Warp>       warps           {};
 
     // TODO: Actually have more than 1 chunk..
     double chunkLastUpdatedAt{};  // used by server to know when chunks are dirty on clients
-
-    std::unordered_map<uint32_t, size_t> entityIndexById{};
 
     // [0]: reserved for safe null
     // [1, SV_MAX_PLAYERS]: reserved for player entities
     // [SV_MAX_PLAYERS + 1, SV_MAX_ENTITIES - 1]: dynamic entities (uses freelist)
     uint32_t entity_freelist{};
+    std::unordered_map<uint32_t, size_t> entityIndexById{};
 
     // TODO: Rename these so they don't collide with local variables all the time
-    Entity          entities  [SV_MAX_ENTITIES]{};
-    AspectCollision collision [SV_MAX_ENTITIES]{};
-    AspectDialog    dialog    [SV_MAX_ENTITIES]{};
-    AspectGhost     ghosts    [SV_MAX_ENTITIES]{};
-    AspectLife      life      [SV_MAX_ENTITIES]{};
-    AspectPathfind  pathfind  [SV_MAX_ENTITIES]{};
-    AspectPhysics   physics   [SV_MAX_ENTITIES]{};
-    data::Sprite    sprite    [SV_MAX_ENTITIES]{};
+    std::vector<Entity>          entities  {SV_MAX_ENTITIES};
+    std::vector<AspectCollision> collision {SV_MAX_ENTITIES};
+    std::vector<AspectDialog>    dialog    {SV_MAX_ENTITIES};
+    std::vector<AspectGhost>     ghosts    {SV_MAX_ENTITIES};
+    std::vector<AspectLife>      life      {SV_MAX_ENTITIES};
+    std::vector<AspectPathfind>  pathfind  {SV_MAX_ENTITIES};
+    std::vector<AspectPhysics>   physics   {SV_MAX_ENTITIES};
+    std::vector<data::Sprite>    sprite    {SV_MAX_ENTITIES};
 
     void SV_SerializeChunk(Msg_S_TileChunk &tileChunk, uint32_t x, uint32_t y);
     void CL_DeserializeChunk(Msg_S_TileChunk &tileChunk);
@@ -135,9 +133,12 @@ struct Tilemap {
     bool DespawnEntity(uint32_t entityId, double now);
     void DestroyEntity(uint32_t entityId);
 
+    Rectangle EntityRect(EntitySpriteTuple &data);
     Rectangle EntityRect(uint32_t entityId);
     Vector2 EntityTopCenter(uint32_t entityId);
+    void EntityTick(EntityTickTuple &data, double dt, double now);
     void EntityTick(uint32_t entityId, double dt, double now);
+    void ResolveEntityTerrainCollisions(EntityCollisionTuple &data);
     void ResolveEntityTerrainCollisions(uint32_t entityId);
     void ResolveEntityWarpCollisions(uint32_t entityId, double now);
 

@@ -282,7 +282,6 @@ Rectangle RectGrow(const Rectangle &rect, float pixels)
 #include "collision.cpp"
 #include "data.cpp"
 #include "editor.cpp"
-#include "entity.cpp"
 #include "file_utils.cpp"
 #include "histogram.cpp"
 #include "net/net.cpp"

@@ -98,6 +98,8 @@ struct GameServer {
     void SpawnEntity(uint32_t entityId);
     void DespawnEntity(uint32_t entityId);
 
+    void BroadcastEntityDespawnTest(uint32_t testId);
+
     void Update(void);
 
     void Stop(void);
@@ -111,6 +113,8 @@ private:
 
     void SendEntityDespawn(int clientIdx, Tilemap &map, uint32_t entityId);
     void BroadcastEntityDespawn(Tilemap &map, uint32_t entityId);
+
+    void SendEntityDespawnTest(int clientIdx, uint32_t testId);
 
     void SendEntitySay(int clientIdx, Tilemap &map, uint32_t entityId, uint32_t messageLength, const char *message);
     void BroadcastEntitySay(Tilemap &map, uint32_t entityId, uint32_t messageLength, const char *message);

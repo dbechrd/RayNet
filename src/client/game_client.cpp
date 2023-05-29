@@ -39,16 +39,11 @@ void GameClient::Start(void)
         printf("yj: error: failed to initialize Yojimbo!\n");
         return;
     }
-    yojimbo_log_level(YOJIMBO_LOG_LEVEL_INFO);
+    yojimbo_log_level(CL_YJ_LOG_LEVEL);
     yojimbo_set_printf_function(yj_printf);
 
     yojimbo::ClientServerConfig config{};
-    config.numChannels = CHANNEL_COUNT;
-    config.channel[CHANNEL_R_CLOCK_SYNC].type = yojimbo::CHANNEL_TYPE_RELIABLE_ORDERED;
-    config.channel[CHANNEL_U_INPUT_COMMANDS].type = yojimbo::CHANNEL_TYPE_UNRELIABLE_UNORDERED;
-    config.channel[CHANNEL_R_ENTITY_EVENT].type = yojimbo::CHANNEL_TYPE_RELIABLE_ORDERED;
-    config.channel[CHANNEL_U_ENTITY_SNAPSHOT].type = yojimbo::CHANNEL_TYPE_UNRELIABLE_UNORDERED;
-    config.bandwidthSmoothingFactor = CL_BANDWIDTH_SMOOTHING_FACTOR;
+    InitClientServerConfig(config);
 
     yj_client = new yojimbo::Client(
         yojimbo::GetDefaultAllocator(),
@@ -116,6 +111,7 @@ void GameClient::ProcessMessages(void)
     for (int channelIdx = 0; channelIdx < CHANNEL_COUNT; channelIdx++) {
         yojimbo::Message *yjMsg = yj_client->ReceiveMessage(channelIdx);
         while (yjMsg) {
+            //printf("[game_client] RECV msgId=%d msgType=%s\n", yjMsg->GetId(), MsgTypeStr((MsgType)yjMsg->GetType()));
             switch (yjMsg->GetType()) {
                 case MSG_S_CLOCK_SYNC:
                 {
@@ -132,6 +128,12 @@ void GameClient::ProcessMessages(void)
                     Msg_S_EntityDespawn *msg = (Msg_S_EntityDespawn *)yjMsg;
                     printf("[game_client] ENTITY_DESPAWN entityId=%u\n", msg->entityId);
                     world->DespawnEntity(msg->entityId);
+                    break;
+                }
+                case MSG_S_ENTITY_DESPAWN_TEST:
+                {
+                    Msg_S_EntityDespawn *msg = (Msg_S_EntityDespawn *)yjMsg;
+                    printf("[game_client] ENTITY_DESPAWN_TEST entityId=%u\n", msg->entityId);
                     break;
                 }
                 case MSG_S_ENTITY_SAY:
@@ -170,6 +172,8 @@ void GameClient::ProcessMessages(void)
                         assert(map && "why no map? we get chunks before entities, right!?");
                         if (map) {
                             if (map->CreateEntity(msg->entityId, msg->type)) {
+                                world->entityMapId[msg->entityId] = map->id;
+
                                 if (map->SpawnEntity(msg->entityId, now)) {
                                     world->ApplySpawnEvent(*msg);
 

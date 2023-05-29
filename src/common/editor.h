@@ -26,6 +26,10 @@ struct EditModeWang {
     WangMap wangMap;
 };
 
+struct EditModeEntities {
+    int testId = 0;
+};
+
 struct EditModePathNodes {
     struct {
         bool dragging;
@@ -43,10 +47,15 @@ struct EditModeState {
     bool showEntityIds{};
     EditModeTiles tiles;
     EditModeWang wang;
+    EditModeEntities entities;
     EditModePathNodes pathNodes;
 };
 
 struct Editor {
+    bool active{};
+    EditMode mode{};
+    EditModeState state{};
+
     Err Init(void);
     void HandleInput(Camera2D &camera);
     void DrawGroundOverlays(Tilemap &map, Camera2D &camera, double now);
@@ -54,10 +63,6 @@ struct Editor {
     UIState DrawUI(Vector2 position, Tilemap &map, double now);
 
 private:
-    bool active{};
-    EditMode mode{};
-    EditModeState state{};
-
     // Ground overlays (above tiles, below entities)
     void DrawGroundOverlay_Tiles(Tilemap &map, Camera2D &camera, double now);
     void DrawGroundOverlay_Wang(Tilemap &map, Camera2D &camera, double now);
