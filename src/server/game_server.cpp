@@ -590,7 +590,7 @@ void GameServer::UpdateServerPlayers(void)
 }
 void GameServer::TickSpawnBots(Tilemap &map)
 {
-    static uint32_t eid_bots[10];
+    static uint32_t eid_bots[1];
     for (int i = 0; i < ARRAY_SIZE(eid_bots); i++) {
         uint32_t entityId = eid_bots[i];
 
@@ -708,6 +708,35 @@ void GameServer::TickEntityProjectile(Tilemap &map, uint32_t entityIndex, double
 
     if (now - entity.spawnedAt > 1.0) {
         DespawnEntity(entity.id);
+        return;
+    }
+
+    Entity &projectile = map.entities[entityIndex];
+    if (projectile.type == Entity_Projectile && !projectile.despawnedAt) {
+        for (int targetIndex = 0; targetIndex < SV_MAX_ENTITIES && !projectile.despawnedAt; targetIndex++) {
+            Entity &target = map.entities[targetIndex];
+            if (target.type == Entity_NPC && !target.despawnedAt) {
+                AspectLife &life = map.life[targetIndex];
+                if (life.Dead()) {
+                    continue;
+                }
+
+                Rectangle projectileHitbox = map.EntityRect(projectile.id);
+                Rectangle targetHitbox = map.EntityRect(target.id);
+                if (CheckCollisionRecs(projectileHitbox, targetHitbox)) {
+                    life.TakeDamage(GetRandomValue(3, 8));
+                    if (life.Alive()) {
+                        const char *msg = "Ouch!";
+                        BroadcastEntitySay(map, target.id, strlen(msg), msg);
+                    } else {
+                        DespawnEntity(target.id);
+                    }
+                    DespawnEntity(projectile.id);
+                    lastCollisionA = projectileHitbox;
+                    lastCollisionB = targetHitbox;
+                }
+            }
+        }
     }
 }
 void GameServer::Tick(void)
@@ -737,34 +766,6 @@ void GameServer::Tick(void)
 
             data::Sprite &sprite = map.sprite[entityIndex];
             data::UpdateSprite(sprite, SV_TICK_DT);
-        }
-
-        for (int projectileId = 0; projectileId < SV_MAX_ENTITIES; projectileId++) {
-            Entity &projectile = map.entities[projectileId];
-            if (projectile.type == Entity_Projectile && !projectile.despawnedAt) {
-                for (int targetIndex = 0; targetIndex < SV_MAX_ENTITIES && !projectile.despawnedAt; targetIndex++) {
-                    Entity &target = map.entities[targetIndex];
-                    if (target.type == Entity_NPC && !target.despawnedAt) {
-                        AspectLife &life = map.life[targetIndex];
-                        if (life.Dead()) continue;
-
-                        Rectangle projectileHitbox = map.EntityRect(projectileId);
-                        Rectangle targetHitbox = map.EntityRect(targetIndex);
-                        if (CheckCollisionRecs(projectileHitbox, targetHitbox)) {
-                            life.TakeDamage(GetRandomValue(3, 8));
-                            if (life.Alive()) {
-                                const char *msg = "Ouch!";
-                                BroadcastEntitySay(map, target.id, strlen(msg), msg);
-                            } else {
-                                DespawnEntity(target.id);
-                            }
-                            DespawnEntity(projectile.id);
-                            lastCollisionA = projectileHitbox;
-                            lastCollisionB = targetHitbox;
-                        }
-                    }
-                }
-            }
         }
     }
 
