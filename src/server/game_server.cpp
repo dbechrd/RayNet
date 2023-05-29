@@ -713,7 +713,7 @@ void GameServer::TickEntityProjectile(Tilemap &map, uint32_t entityIndex, double
 void GameServer::Tick(void)
 {
     // HACK: Only spawn NPCs in map 0, whatever map that may be (hopefully it's Level_001)
-    //TickSpawnBots(*maps[0]);
+    TickSpawnBots(*maps[0]);
 
     for (Tilemap *mapPtr : maps) {
         Tilemap &map = *mapPtr;
@@ -732,8 +732,8 @@ void GameServer::Tick(void)
                 case Entity_NPC:        TickEntityBot       (map, entityIndex, SV_TICK_DT); break;
                 case Entity_Projectile: TickEntityProjectile(map, entityIndex, SV_TICK_DT); break;
             }
-            map.ResolveEntityTerrainCollisions(entityIndex);
-            map.ResolveEntityWarpCollisions(entityIndex, now);
+            map.ResolveEntityTerrainCollisions(entity.id);
+            map.ResolveEntityWarpCollisions(entity.id, now);
 
             data::Sprite &sprite = map.sprite[entityIndex];
             data::UpdateSprite(sprite, SV_TICK_DT);

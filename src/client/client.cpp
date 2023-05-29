@@ -193,7 +193,8 @@ void draw_game(GameClient &client)
                 const float scalePer = 1.0f / (CL_SNAPSHOT_COUNT + 1);
                 Rectangle ghostRect = map->EntityRect(ghostSpriteData);
                 ghostRect = RectShrink(ghostRect, scalePer);
-                DrawRectangleRec(ghostRect, Fade(RED, 0.2f));
+                DrawRectangleRec(ghostRect, Fade(RED, 0.1f));
+                DrawRectangleLinesEx(ghostRect, 1, Fade(RED, 0.8f));
             }
 
             // NOTE(dlb): These aren't actually snapshot shadows, they're client-side prediction shadows
@@ -213,7 +214,9 @@ void draw_game(GameClient &client)
                         ghostData.physics.ApplyForce(inputCmd.GenerateMoveForce(ghostData.physics.speed));
                         map->EntityTick(ghostTickData, SV_TICK_DT, client.now);
                         map->ResolveEntityTerrainCollisions(ghostCollisionData);
-                        DrawRectangleRec(map->EntityRect(ghostSpriteData), Fade(GREEN, 0.2f));
+                        Rectangle ghostRect = map->EntityRect(ghostSpriteData);
+                        DrawRectangleRec(ghostRect, Fade(GREEN, 0.1f));
+                        DrawRectangleLinesEx(ghostRect, 1, Fade(GREEN, 0.8f));
                     }
                 }
 #endif
