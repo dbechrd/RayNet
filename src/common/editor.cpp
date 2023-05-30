@@ -47,6 +47,8 @@ void Editor::HandleInput(Camera2D &camera)
         }
 
         io.CaptureKeyboard();
+    } else {
+        UI::UnfocusActiveEditor();
     }
 
     io.PopScope();
@@ -793,12 +795,45 @@ void Editor::DrawUI_WarpActions(UI &uiActionBar, Tilemap &map, double now)
     uiActionBar.Newline();
 
     for (Warp &warp : map.warps) {
-        static STB_TexteditState colliderXState{};
-        uiActionBar.TextboxFloat(colliderXState, warp.collider.x);
+        uiActionBar.Text("collider");
         uiActionBar.Newline();
 
-        static STB_TexteditState colliderYState{};
-        uiActionBar.TextboxFloat(colliderYState, warp.collider.y);
+        uiActionBar.Text("x:");
+        static STB_TexteditState txtColliderX{};
+        uiActionBar.TextboxFloat(txtColliderX, warp.collider.x);
+        uiActionBar.Newline();
+
+        uiActionBar.Text("y:");
+        static STB_TexteditState txtColliderY{};
+        uiActionBar.TextboxFloat(txtColliderY, warp.collider.y);
+        uiActionBar.Newline();
+
+        uiActionBar.Text("w:");
+        static STB_TexteditState txtColliderW{};
+        uiActionBar.TextboxFloat(txtColliderW, warp.collider.width);
+        uiActionBar.Newline();
+
+        uiActionBar.Text("h:");
+        static STB_TexteditState txtColliderH{};
+        uiActionBar.TextboxFloat(txtColliderH, warp.collider.height);
+        uiActionBar.Newline();
+
+        uiActionBar.Text("destMap");
+        uiActionBar.Newline();
+        static STB_TexteditState txtDestMap{};
+        uiActionBar.Textbox(txtDestMap, warp.destMap);
+        uiActionBar.Newline();
+
+        uiActionBar.Text("templateMap");
+        uiActionBar.Newline();
+        static STB_TexteditState txtTemplateMap{};
+        uiActionBar.Textbox(txtTemplateMap, warp.templateMap);
+        uiActionBar.Newline();
+
+        uiActionBar.Text("templateTileset");
+        uiActionBar.Newline();
+        static STB_TexteditState txtTemplateTileset{};
+        uiActionBar.Textbox(txtTemplateTileset, warp.templateTileset);
         uiActionBar.Newline();
     }
 }
