@@ -26,9 +26,7 @@ struct InputCmd {
             moveForce.x += 1.0f;
         }
         if (moveForce.x && moveForce.y) {
-            float invLength = 1.0f / sqrtf(moveForce.x * moveForce.x + moveForce.y * moveForce.y);
-            moveForce.x *= invLength;
-            moveForce.y *= invLength;
+            moveForce = Vector2Normalize(moveForce);
         }
 
         moveForce.x *= speed;

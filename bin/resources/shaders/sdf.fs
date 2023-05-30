@@ -1,4 +1,5 @@
-#version 330
+#version 330 core
+precision mediump float;
 
 // Input vertex attributes (from vertex shader)
 in vec2 fragTexCoord;
@@ -6,24 +7,23 @@ in vec4 fragColor;
 
 // Input uniform values
 uniform sampler2D texture0;
-uniform vec4 colDiffuse;
+//uniform vec4 colDiffuse;
 
 // Output fragment color
 out vec4 finalColor;
 
-// NOTE: Add here your custom variables
-
 void main()
 {
     // Texel color fetching from texture sampler
-    // NOTE: Calculate alpha using signed distance field (SDF)
-    float distanceFromOutline = texture(texture0, fragTexCoord).a - 0.5;
-    float distanceChangePerFragment = length(vec2(dFdx(distanceFromOutline), dFdy(distanceFromOutline)));
-    float alpha = smoothstep(-distanceChangePerFragment, distanceChangePerFragment, distanceFromOutline);
+    float sample = texture(texture0, fragTexCoord).a;
 
-    vec3 color = fragColor.rgb;
-    //color.rgb *= (distanceFromOutline + 0.2) * 1.5;
+    // Calculate alpha using signed distance field (SDF)
+    float distanceFromOutline = sample - 0.5;
+    float distanceChangePerFragment = length(vec2(dFdx(distanceFromOutline), dFdy(distanceFromOutline)));
+    float smoothing = 0.5;
+    float alpha = smoothstep(-distanceChangePerFragment*smoothing, distanceChangePerFragment*smoothing, distanceFromOutline);
 
     // Calculate final fragment color
-    finalColor = vec4(color, fragColor.a*alpha);
+    finalColor.rgb = fragColor.rgb;
+    finalColor.a = fragColor.a * alpha;
 }

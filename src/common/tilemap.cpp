@@ -249,7 +249,7 @@ Err Tilemap::Load(std::string path)
                 fread(&warp.destPos.x, sizeof(warp.destPos.x), 1, file);
                 fread(&warp.destPos.y, sizeof(warp.destPos.y), 1, file);
 
-                uint32_t destMapLen = warp.destMap.size();
+                uint32_t destMapLen = 0;
                 fread(&destMapLen, 1, sizeof(destMapLen), file);
                 if (destMapLen > PATH_LEN_MAX) {
                     err = RN_OUT_OF_BOUNDS; break;
@@ -785,78 +785,6 @@ void Tilemap::ResolveEntityTerrainCollisions(uint32_t entityId)
 
     EntityCollisionTuple data{ entity, collision, physics };
     ResolveEntityTerrainCollisions(data);
-}
-void Tilemap::ResolveEntityWarpCollisions(uint32_t entityId, double now)
-{
-    assert(entityId);
-
-    size_t entityIndex = FindEntityIndex(entityId);
-    if (entityIndex == SV_MAX_ENTITIES) return;
-
-    Entity &entity = entities[entityIndex];
-    if (entity.type != Entity_Player) {
-        return;
-    }
-
-    AspectCollision &collision = this->collision[entityIndex];
-    if (!collision.radius) {
-        return;
-    }
-
-    for (Warp warp : warps) {
-        if (dlb_CheckCollisionCircleRec(entity.position, collision.radius, warp.collider, 0)) {
-            if (warp.destMap.size()) {
-                // TODO: This needs to ask GameServer to load the new map and
-                // we also need to move our entity to the new map
-
-                //Err err = Load(warp.destMap);
-                //if (err) {
-                //    assert(!"UH-OH");
-                //    exit(EXIT_FAILURE);
-                //}
-            } else {
-                // TODO: This needs to ask GameServer to load the new map and
-                // we also need to move our entity to the new map
-
-                //Err err = Load(warp.templateMap);
-                //if (err) {
-                //    assert(!"UH-OH");
-                //    exit(EXIT_FAILURE);
-                //}
-
-#if 0
-                // TODO: Make a copy of the template map if you wanna edit it
-                err = Save(warp.destMap);
-                if (err) {
-                    assert(!"UH-OH");
-                    exit(EXIT_FAILURE);
-                }
-#endif
-
-#if 0
-                // TODO: The GameServer should be making a new map using the
-                // template. Not this function. Return something useful to the
-                // game server (e.g. mapId or mapTemplateId).
-                WangTileset wangTileset{};
-                err = wangTileset.Load(*this, warp.templateTileset);
-                if (err) {
-                    assert(!"UH-OH");
-                    exit(EXIT_FAILURE);
-                }
-
-                WangMap wangMap{};
-                err = wangTileset.GenerateMap(width, height, *this, wangMap);
-                if (err) {
-                    assert(!"UH-OH");
-                    exit(EXIT_FAILURE);
-                }
-
-                SetFromWangMap(wangMap, now);
-#endif
-            }
-            break;
-        }
-    }
 }
 
 void Tilemap::DrawTile(Tile tile, Vector2 position)

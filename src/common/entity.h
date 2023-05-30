@@ -4,23 +4,6 @@
 
 struct Msg_S_EntitySnapshot;
 
-struct AspectCollision {
-    float radius    {};  // collision
-    bool  colliding {};  // not sync'd, local flag for debugging colliders
-};
-
-struct AspectDialog {
-    double   spawnedAt     {};  // time when dialog was spawned
-    uint32_t messageLength {};  // how much they're saying
-    char *   message       {};  // what they're saying
-
-    ~AspectDialog(void) {
-        if (message) {
-            free(message);
-        }
-    }
-};
-
 struct GhostSnapshot {
     double   serverTime {};
 
@@ -41,8 +24,43 @@ struct GhostSnapshot {
     GhostSnapshot(void) {}
     GhostSnapshot(Msg_S_EntitySnapshot &msg);
 };
-
 typedef RingBuffer<GhostSnapshot, CL_SNAPSHOT_COUNT> AspectGhost;
+
+enum EntityType {
+    Entity_None,
+    Entity_Player,
+    Entity_NPC,
+    Entity_Projectile,
+    Entity_Count,
+};
+
+struct Entity {
+    uint32_t id;
+    EntityType type;
+    double spawnedAt;
+    double despawnedAt;
+    Vector2 position;
+
+    // TODO: Separate this out into its own array?
+    uint32_t freelist_next;
+};
+
+struct AspectCollision {
+    float radius    {};  // collision
+    bool  colliding {};  // not sync'd, local flag for debugging colliders
+};
+
+struct AspectDialog {
+    double   spawnedAt     {};  // time when dialog was spawned
+    uint32_t messageLength {};  // how much they're saying
+    char *   message       {};  // what they're saying
+
+    ~AspectDialog(void) {
+        if (message) {
+            free(message);
+        }
+    }
+};
 
 struct AspectLife {
     int maxHealth;
@@ -82,25 +100,6 @@ struct AspectPhysics {
         forceAccum.x += force.x;
         forceAccum.y += force.y;
     }
-};
-
-enum EntityType {
-    Entity_None,
-    Entity_Player,
-    Entity_NPC,
-    Entity_Projectile,
-    Entity_Count,
-};
-
-struct Entity {
-    uint32_t id;
-    EntityType type;
-    double spawnedAt;
-    double despawnedAt;
-    Vector2 position;
-
-    // TODO: Separate this out into its own array?
-    uint32_t freelist_next;
 };
 
 #if 0

@@ -88,6 +88,7 @@ struct UI {
     UIState Button(const char *text);
     UIState Button(const char *text, Color bgColor);
     UIState Button(const char *text, bool pressed, Color bgColor, Color bgColorPressed);
+    UIState Textbox(STB_TexteditState &state, std::string &text);
 
     inline Vector2 CursorScreen(void) {
         return Vector2Add(position, cursor);

@@ -1,12 +1,13 @@
 #include "../common/collision.h"
 #include "../common/editor.h"
 #include "../common/histogram.h"
+#include "../common/io.h"
 #include "../common/ui/ui.h"
 #include "game_server.h"
 
 void RN_TraceLogCallback(int logLevel, const char *text, va_list args)
 {
-    return;
+    //return;
 
     const char *outofbounds = "Requested image pixel";
     if (!strncmp(text, "Requested image pixel", strlen(outofbounds))) {
@@ -348,11 +349,8 @@ int main(int argc, char *argv[])
 
         //--------------------
         // Load necessary maps
-        err = server->LoadMap(LEVEL_001);
-        if (err) break;
-
-        err = server->LoadMap(LEVEL_002);
-        if (err) break;
+        if (!server->FindOrLoadMap(LEVEL_001)) break;
+        //if (!server->FindOrLoadMap(LEVEL_002)) break;
 
         //--------------------
         // Start the server

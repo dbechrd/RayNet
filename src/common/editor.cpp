@@ -785,4 +785,9 @@ void Editor::DrawUI_WarpActions(UI &uiActionBar, Tilemap &map, double now)
     if (uiActionBar.Button("Delete all warps", MAROON).pressed) {
         map.warps.clear();
     }
+    uiActionBar.Newline();
+
+    static std::string text{ "Text" };
+    static STB_TexteditState state{};
+    uiActionBar.Textbox(state, text);
 }

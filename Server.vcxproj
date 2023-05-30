@@ -69,7 +69,7 @@
       <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard_C>stdc11</LanguageStandard_C>
-      <LanguageStandard>stdcpp17</LanguageStandard>
+      <LanguageStandard>stdcpp20</LanguageStandard>
       <AdditionalIncludeDirectories>include</AdditionalIncludeDirectories>
       <StringPooling>true</StringPooling>
       <DebugInformationFormat>OldStyle</DebugInformationFormat>
@@ -90,7 +90,7 @@
       <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard_C>stdc11</LanguageStandard_C>
-      <LanguageStandard>stdcpp17</LanguageStandard>
+      <LanguageStandard>stdcpp20</LanguageStandard>
       <AdditionalIncludeDirectories>include</AdditionalIncludeDirectories>
       <StringPooling>true</StringPooling>
       <ExceptionHandling>false</ExceptionHandling>

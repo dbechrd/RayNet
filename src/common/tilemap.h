@@ -140,7 +140,6 @@ struct Tilemap {
     void EntityTick(uint32_t entityId, double dt, double now);
     void ResolveEntityTerrainCollisions(EntityCollisionTuple &data);
     void ResolveEntityTerrainCollisions(uint32_t entityId);
-    void ResolveEntityWarpCollisions(uint32_t entityId, double now);
 
     void DrawTile(Tile tile, Vector2 position);
     void Draw(Camera2D &camera);

@@ -89,28 +89,39 @@ uint32_t GameServer::GetPlayerEntityId(uint32_t clientIdx)
     return clientIdx + 1;
 }
 
-Err GameServer::LoadMap(std::string filename)
+Tilemap *GameServer::FindOrLoadMap(std::string filename)
 {
-    Err err = RN_SUCCESS;
-    Tilemap *map = new Tilemap();
-    do {
-        if (!map) {
-            err = RN_BAD_ALLOC;
-            break;
-        }
+    const auto &mapEntry = mapsByName.find(filename);
+    if (mapEntry != mapsByName.end()) {
+        size_t mapIndex = mapEntry->second;
+        return maps[mapIndex];
+    } else {
+        Err err = RN_SUCCESS;
+        Tilemap *map = new Tilemap();
+        do {
+            if (!map) {
+                printf("Failed to load map %s with code %d\n", filename.c_str(), err);
+                err = RN_BAD_ALLOC;
+                break;
+            }
 
-        err = map->Load(filename);
+            err = map->Load(filename);
+            if (err) break;
+
+            map->id = nextMapId++;
+            map->chunkLastUpdatedAt = now;
+            mapsById[map->id] = maps.size();
+            mapsByName[map->filename] = maps.size();
+            maps.push_back(map);
+            return map;
+        } while (0);
+
         if (err) {
+            assert(!"failed to load map, what to do here?");
             printf("Failed to load map %s with code %d\n", filename.c_str(), err);
-            break;
         }
-
-        map->id = nextMapId++;
-        map->chunkLastUpdatedAt = now;
-        mapsById[map->id] = maps.size();
-        maps.push_back(map);
-    } while (0);
-    return err;
+        return 0;
+    }
 }
 Err GameServer::Start(void)
 {
@@ -739,6 +750,78 @@ void GameServer::TickEntityProjectile(Tilemap &map, uint32_t entityIndex, double
         }
     }
 }
+void GameServer::TickResolveEntityWarpCollisions(Tilemap &map, uint32_t entityId, double now)
+{
+    assert(entityId);
+
+    size_t entityIndex = map.FindEntityIndex(entityId);
+    if (entityIndex == SV_MAX_ENTITIES) return;
+
+    Entity &entity = map.entities[entityIndex];
+    if (entity.type != Entity_Player) {
+        return;
+    }
+
+    AspectCollision &collision = map.collision[entityIndex];
+    if (!collision.radius) {
+        return;
+    }
+
+    for (Warp &warp : map.warps) {
+        if (dlb_CheckCollisionCircleRec(entity.position, collision.radius, warp.collider, 0)) {
+            if (warp.destMap.size()) {
+                // TODO: This needs to ask GameServer to load the new map and
+                // we also need to move our entity to the new map
+                Tilemap *map = FindOrLoadMap(warp.destMap);
+                if (map) {
+                    // TODO: Move entity to other map?
+                } else {
+                    assert(!"UH-OH");
+                }
+            } else {
+                // TODO: This needs to ask GameServer to load the new map and
+                // we also need to move our entity to the new map
+
+                //Err err = Load(warp.templateMap);
+                //if (err) {
+                //    assert(!"UH-OH");
+                //    exit(EXIT_FAILURE);
+                //}
+
+#if 0
+                // TODO: Make a copy of the template map if you wanna edit it
+                err = Save(warp.destMap);
+                if (err) {
+                    assert(!"UH-OH");
+                    exit(EXIT_FAILURE);
+                }
+#endif
+
+#if 0
+                // TODO: The GameServer should be making a new map using the
+                // template. Not this function. Return something useful to the
+                // game server (e.g. mapId or mapTemplateId).
+                WangTileset wangTileset{};
+                err = wangTileset.Load(*this, warp.templateTileset);
+                if (err) {
+                    assert(!"UH-OH");
+                    exit(EXIT_FAILURE);
+                }
+
+                WangMap wangMap{};
+                err = wangTileset.GenerateMap(width, height, *this, wangMap);
+                if (err) {
+                    assert(!"UH-OH");
+                    exit(EXIT_FAILURE);
+                }
+
+                SetFromWangMap(wangMap, now);
+#endif
+            }
+            break;
+        }
+    }
+}
 void GameServer::Tick(void)
 {
     // HACK: Only spawn NPCs in map 0, whatever map that may be (hopefully it's Level_001)
@@ -762,7 +845,7 @@ void GameServer::Tick(void)
                 case Entity_Projectile: TickEntityProjectile(map, entityIndex, SV_TICK_DT); break;
             }
             map.ResolveEntityTerrainCollisions(entity.id);
-            map.ResolveEntityWarpCollisions(entity.id, now);
+            TickResolveEntityWarpCollisions(map, entity.id, now);
 
             data::Sprite &sprite = map.sprite[entityIndex];
             data::UpdateSprite(sprite, SV_TICK_DT);

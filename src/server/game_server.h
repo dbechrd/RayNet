@@ -76,8 +76,9 @@ struct GameServer {
     uint32_t nextMapId = 1;
     uint32_t nextEntityId = 1;
     std::vector<Tilemap *> maps{};
-    std::unordered_map<uint32_t, size_t> mapsById{};     // maps by their map id
-    std::unordered_map<uint32_t, size_t> entityMapId{};  // maps by entity id (i.e. which map an entity is currently in)
+    std::unordered_map<uint32_t, size_t> mapsById{};      // loaded maps by their map id
+    std::unordered_map<std::string, size_t> mapsByName{}; // loaded maps by their filename
+    std::unordered_map<uint32_t, size_t> entityMapId{};   // map by entity id (i.e. which map an entity is currently in)
 
     GameServer(double now) : now(now), frameStart(now) {};
     ~GameServer(void);
@@ -87,7 +88,7 @@ struct GameServer {
 
     uint32_t GetPlayerEntityId(uint32_t clientIdx);
 
-    Err LoadMap(std::string filename);
+    Tilemap *FindOrLoadMap(std::string filename);
     Err Start(void);
 
     Tilemap *FindMap(uint32_t mapId);
@@ -133,6 +134,7 @@ private:
     void TickPlayer(Tilemap &map, uint32_t entityId, double dt);
     void TickBot(Tilemap &map, uint32_t entityId, double dt);
     void TickProjectile(Tilemap &map, uint32_t entityId, double dt);
+    void TickResolveEntityWarpCollisions(Tilemap &map, uint32_t entityId, double now);
     void Tick(void);
     void SerializeSnapshot(Tilemap &map, size_t entityId, Msg_S_EntitySnapshot &entitySnapshot, uint32_t lastProcessedInputCmd);  // TODO: Remove lastProcessedInputCmd from args list, shouldn't need it
     void SendClientSnapshots(void);

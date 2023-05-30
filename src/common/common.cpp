@@ -19,8 +19,6 @@ Texture texLily;
 Music musAmbientOutdoors;
 Music musCave;
 
-IO io;
-
 const char *ErrStr(Err err)
 {
     switch (err) {
@@ -61,10 +59,10 @@ Err InitCommon(void)
     // Load SDF required shader (we use default vertex shader)
     shdSdfText = LoadShader(0, "resources/shaders/sdf.fs");
 
-    fntHackBold20 = LoadFontEx("resources/Hack-Bold.ttf", 18, 0, 0);
+    fntHackBold20 = dlb_LoadFontEx("resources/KarminaBold.otf", 24, 0, 0, FONT_DEFAULT);
     if (!fntHackBold20.baseSize) err = RN_RAYLIB_ERROR;
 
-    fntHackBold32 = dlb_LoadFontEx("resources/Hack-Bold.ttf", 42, 0, 0, FONT_SDF);
+    fntHackBold32 = dlb_LoadFontEx("resources/KarminaBold.otf", 42, 0, 0, FONT_DEFAULT);
     if (!fntHackBold32.baseSize) err = RN_RAYLIB_ERROR;
     SetTextureFilter(fntHackBold32.texture, TEXTURE_FILTER_BILINEAR);    // Required for SDF font
 
@@ -201,7 +199,7 @@ void RandTests(void)
 
 void DrawTextShadowEx(Font font, const char *text, Vector2 pos, Color color)
 {
-    BeginShaderMode(shdSdfText);
+    //BeginShaderMode(shdSdfText);
 #if 1
     Vector2 shadowPos = Vector2Add(pos, { 1, 1 });
     if (font.baseSize > 32) {
@@ -217,7 +215,7 @@ void DrawTextShadowEx(Font font, const char *text, Vector2 pos, Color color)
 #else
     DrawTextEx(font, text, pos, font.baseSize, 1, color);
 #endif
-    EndShaderMode();
+    //EndShaderMode();
 }
 
 Rectangle GetScreenRectWorld(Camera2D &camera)
@@ -284,6 +282,7 @@ Rectangle RectGrow(const Rectangle &rect, float pixels)
 #include "editor.cpp"
 #include "file_utils.cpp"
 #include "histogram.cpp"
+#include "io.cpp"
 #include "net/net.cpp"
 #include "spritesheet.cpp"
 #include "strings.cpp"

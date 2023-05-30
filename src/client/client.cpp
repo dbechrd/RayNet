@@ -1,6 +1,7 @@
 #include "../common/collision.h"
 #include "../common/data.h"
 #include "../common/histogram.h"
+#include "../common/io.h"
 #include "../common/spritesheet.h"
 #include "../common/ui/ui.h"
 #include "client_world.h"
