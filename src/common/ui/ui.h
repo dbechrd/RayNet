@@ -75,6 +75,8 @@ struct UIState {
 };
 
 struct UI {
+    static bool UnfocusActiveEditor(void);
+
     UI(Vector2 position, UIStyle style);
     void PushStyle(UIStyle style);
     const UIStyle &GetStyle(void);
@@ -89,6 +91,7 @@ struct UI {
     UIState Button(const char *text, Color bgColor);
     UIState Button(const char *text, bool pressed, Color bgColor, Color bgColorPressed);
     UIState Textbox(STB_TexteditState &state, std::string &text);
+    void TextboxFloat(STB_TexteditState &stbState, float &value);
 
     inline Vector2 CursorScreen(void) {
         return Vector2Add(position, cursor);
@@ -103,6 +106,8 @@ private:
     Vector2 cursor{};   // where to draw next element
     Vector2 lineSize{}; // total size of current row of UI elements
     std::stack<UIStyle> styleStack{};
+    static STB_TexteditState *prevActiveEditor;
+    static STB_TexteditState *activeEditor;
 
     void UpdateAudio(const UIState &uiState);
     void UpdateCursor(const UIStyle &style, Rectangle &ctrlRect);

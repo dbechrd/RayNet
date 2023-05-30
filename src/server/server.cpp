@@ -230,7 +230,6 @@ Err Play(GameServer &server)
         BeginDrawing();
             ClearBackground(BLUE_DESAT);
             BeginMode2D(camera);
-
                 // [World] Tilemap
                 map0.Draw(camera);
 
@@ -268,12 +267,12 @@ Err Play(GameServer &server)
             if (server.showF3Menu) {
                 draw_f3_menu(server, camera);
             }
-        EndDrawing();
+        EndDrawing();  // note has to be last thing in loop
 
         yojimbo_sleep(0.001);
 
-        // Nobody else handled it, so user probably wants to quit
         if (WindowShouldClose() || io.KeyPressed(KEY_ESCAPE)) {
+            // Nobody else handled it, so user probably wants to quit
             quit = true;
         }
 
@@ -294,12 +293,12 @@ int main(int argc, char *argv[])
     do {
         //SetTraceLogLevel(LOG_WARNING);
         SetTraceLogCallback(RN_TraceLogCallback);
-        SetExitKey(0);
 
         InitWindow(1920, 1017, "RayNet Server");
         //SetWindowState(FLAG_VSYNC_HINT);  // KEEP THIS ENABLED it makes the room cooler
         SetWindowState(FLAG_WINDOW_RESIZABLE);
         SetWindowState(FLAG_WINDOW_MAXIMIZED);
+        SetExitKey(0);  // must be called after InitWindow()
 
         InitAudioDevice();
 

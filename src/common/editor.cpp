@@ -33,14 +33,19 @@ void Editor::HandleInput(Camera2D &camera)
     if (io.KeyPressed(KEY_GRAVE)) {
         active = !active;
     }
-    if (io.KeyPressed(KEY_ESCAPE)) {
-        active = false;
-    }
-    if (io.KeyDown(KEY_LEFT_CONTROL) && io.KeyPressed(KEY_ZERO)) {
-        camera.zoom = 1.0f;
-    }
 
     if (active) {
+        if (io.KeyPressed(KEY_ESCAPE)) {
+            if (UI::UnfocusActiveEditor()) {
+                // that was all escape should do this frame
+            } else {
+                active = false;
+            }
+        }
+        if (io.KeyDown(KEY_LEFT_CONTROL) && io.KeyPressed(KEY_ZERO)) {
+            camera.zoom = 1.0f;
+        }
+
         io.CaptureKeyboard();
     }
 
@@ -787,7 +792,13 @@ void Editor::DrawUI_WarpActions(UI &uiActionBar, Tilemap &map, double now)
     }
     uiActionBar.Newline();
 
-    static std::string text{ "Text" };
-    static STB_TexteditState state{};
-    uiActionBar.Textbox(state, text);
+    for (Warp &warp : map.warps) {
+        static STB_TexteditState colliderXState{};
+        uiActionBar.TextboxFloat(colliderXState, warp.collider.x);
+        uiActionBar.Newline();
+
+        static STB_TexteditState colliderYState{};
+        uiActionBar.TextboxFloat(colliderYState, warp.collider.y);
+        uiActionBar.Newline();
+    }
 }

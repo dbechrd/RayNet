@@ -272,6 +272,8 @@ int main(int argc, char *argv[])
     SetWindowState(FLAG_WINDOW_MAXIMIZED);
     //SetWindowState(FLAG_FULLSCREEN_MODE);
 
+    SetExitKey(0);  // must be called after InitWindow()
+
     InitAudioDevice();
 
     // NOTE(dlb): yojimbo uses rand() for network simulator and random_int()/random_float()
@@ -315,9 +317,7 @@ int main(int argc, char *argv[])
 
     static float texMenuBgScale = 0;
 
-    SetExitKey(0);
     bool quit = false;
-
     while (!quit) {
         client->now = GetTime();
         client->frameDt = MIN(client->now - client->frameStart, SV_TICK_DT);  // arbitrary limit for now
