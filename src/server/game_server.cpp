@@ -42,34 +42,37 @@ void GameServer::OnClientJoin(int clientIdx)
     }
 
     Tilemap &map = *maps[0];
-    uint32_t entityId = CreateEntity(map, Entity_Player);
+    uint32_t entityId = SpawnEntity(map, Entity_Player);
+    if (entityId) {
+        ServerPlayer &serverPlayer = players[clientIdx];
+        serverPlayer.needsClockSync = true;
+        serverPlayer.joinedAt = now;
+        serverPlayer.entityId = entityId;
 
-    ServerPlayer &serverPlayer = players[clientIdx];
-    serverPlayer.needsClockSync = true;
-    serverPlayer.joinedAt = now;
-    serverPlayer.entityId = entityId;
+        size_t entityIndex = map.FindEntityIndex(entityId);
 
-    size_t entityIndex = map.FindEntityIndex(entityId);
+        Entity &entity = map.entities[entityIndex];
+        AspectCollision &collision = map.collision[entityIndex];
+        AspectLife &life = map.life[entityIndex];
+        AspectPhysics &physics = map.physics[entityIndex];
+        data::Sprite &sprite = map.sprite[entityIndex];
 
-    Entity &entity = map.entities[entityIndex];
-    AspectCollision &collision = map.collision[entityIndex];
-    AspectLife &life = map.life[entityIndex];
-    AspectPhysics &physics = map.physics[entityIndex];
-    data::Sprite &sprite = map.sprite[entityIndex];
+        entity.type = Entity_Player;
+        entity.position = { 680, 1390 };
+        collision.radius = 10;
+        life.maxHealth = 100;
+        life.health = life.maxHealth;
+        physics.speed = 2000;
+        physics.drag = 8.0f;
+        sprite.anims[0] = data::GFX_ANIM_CHR_MAGE_N;
 
-    entity.type = Entity_Player;
-    entity.position = { 680, 1390 };
-    collision.radius = 10;
-    life.maxHealth = 100;
-    life.health = life.maxHealth;
-    physics.speed = 2000;
-    physics.drag = 8.0f;
-    sprite.anims[0] = data::GFX_ANIM_CHR_MAGE_N;
+        TileChunkRecord mainMap{};
+        serverPlayer.chunkList.push(mainMap);
 
-    SpawnEntity(entityId);
-
-    TileChunkRecord mainMap{};
-    serverPlayer.chunkList.push(mainMap);
+        BroadcastEntitySpawn(map, entityId);
+    } else {
+        assert(!"world full? hmm.. need to disconnect client somehow");
+    }
 }
 void GameServer::OnClientLeave(int clientIdx)
 {
@@ -223,40 +226,24 @@ Entity *GameServer::FindEntity(uint32_t entityId)
     return {};
 }
 
-uint32_t GameServer::CreateEntity(Tilemap &map, EntityType type)
+uint32_t GameServer::SpawnEntity(Tilemap &map, EntityType type)
 {
     uint32_t entityId = nextEntityId++;
-    if (map.CreateEntity(entityId, type)) {
+    if (map.SpawnEntity(entityId, type, now)) {
         entityMapId[entityId] = map.id;
         return entityId;
     } else {
-        // TODO: EntityTypeStr
         assert(0);
-        printf("[game_server] Failed to spawn entity type %u in map id %u\n", type, map.id);
+        printf("[game_server] Failed to spawn entity id %u in map id %u\n", entityId, map.id);
     }
     return 0;
-}
-void GameServer::SpawnEntity(uint32_t entityId)
-{
-    Tilemap *map = FindEntityMap(entityId);
-    if (map) {
-        if (map->SpawnEntity(entityId, now)) {
-            BroadcastEntitySpawn(*map, entityId);
-        } else {
-            assert(0);
-            printf("[game_server] Failed to spawn entity id %u in map id %u\n", entityId, map->id);
-        }
-    } else {
-        assert(0);
-        printf("[game_server] Failed to spawn entity id %u, could not find map\n", entityId);
-    }
 }
 void GameServer::DespawnEntity(uint32_t entityId)
 {
     Tilemap *map = FindEntityMap(entityId);
     if (map) {
         if (map->DespawnEntity(entityId, now)) {
-            printf("[game_server] DespawnEntity id %u\n", entityId);
+            entityMapId.erase(entityId);
             BroadcastEntityDespawn(*map, entityId);
         } else {
             assert(0);
@@ -275,7 +262,6 @@ void GameServer::DestroyDespawnedEntities(void)
             Entity &entity = map.entities[entityIndex];
             if (entity.type && entity.despawnedAt) {
                 map.DestroyEntity(entity.id);
-                entityMapId.erase(entity.id);
             }
         }
     }
@@ -370,7 +356,6 @@ void GameServer::SendEntityDespawn(int clientIdx, Tilemap &map, uint32_t entityI
         Msg_S_EntityDespawn *msg = (Msg_S_EntityDespawn *)yj_server->CreateMessage(clientIdx, MSG_S_ENTITY_DESPAWN);
         if (msg) {
             msg->entityId = entityId;
-            printf("[game_server][client %d] ENTITY_DESPAWN id %u\n", clientIdx, msg->entityId);
             yj_server->SendMessage(clientIdx, CHANNEL_R_ENTITY_EVENT, msg);
         }
     }
@@ -409,7 +394,7 @@ void GameServer::BroadcastEntityDespawnTest(uint32_t testId)
     }
 }
 
-void GameServer::SendEntitySay(int clientIdx, Tilemap &map, uint32_t entityId, uint32_t messageLength, const char *message)
+void GameServer::SendEntitySay(int clientIdx, Tilemap &map, uint32_t entityId, std::string message)
 {
     size_t entityIndex = map.FindEntityIndex(entityId);
     if (entityIndex == SV_MAX_ENTITIES) {
@@ -429,21 +414,19 @@ void GameServer::SendEntitySay(int clientIdx, Tilemap &map, uint32_t entityId, u
         Msg_S_EntitySay *msg = (Msg_S_EntitySay *)yj_server->CreateMessage(clientIdx, MSG_S_ENTITY_SAY);
         if (msg) {
             msg->entityId = entityId;
-            msg->messageLength = messageLength;
-            strncpy(msg->message, message, MAX(SV_MAX_ENTITY_SAY_MSG_LEN, messageLength));
-
+            msg->message = message.substr(0, SV_MAX_ENTITY_SAY_MSG_LEN);
             yj_server->SendMessage(clientIdx, CHANNEL_R_ENTITY_EVENT, msg);
         }
     }
 }
-void GameServer::BroadcastEntitySay(Tilemap &map, uint32_t entityId, uint32_t messageLength, const char *message)
+void GameServer::BroadcastEntitySay(Tilemap &map, uint32_t entityId, std::string message)
 {
     for (int clientIdx = 0; clientIdx < SV_MAX_PLAYERS; clientIdx++) {
         if (!yj_server->IsClientConnected(clientIdx)) {
             continue;
         }
 
-        SendEntitySay(clientIdx, map, entityId, messageLength, message);
+        SendEntitySay(clientIdx, map, entityId, message);
     }
 }
 
@@ -523,7 +506,7 @@ void GameServer::ProcessMessages(void)
 
 uint32_t GameServer::SpawnProjectile(Tilemap &map, Vector2 position, Vector2 direction)
 {
-    uint32_t bulletId = CreateEntity(map, Entity_Projectile);
+    uint32_t bulletId = SpawnEntity(map, Entity_Projectile);
     if (bulletId) {
         size_t bulletIndex = map.FindEntityIndex(bulletId);
         Entity &bulletEntity = map.entities[bulletIndex];
@@ -546,6 +529,8 @@ uint32_t GameServer::SpawnProjectile(Tilemap &map, Vector2 position, Vector2 dir
 
         // [Sprite] animation
         bulletSprite.anims[0] = data::GFX_ANIM_PRJ_BULLET;
+
+        BroadcastEntitySpawn(map, bulletId);
         return bulletId;
     }
     return 0;
@@ -584,8 +569,6 @@ void GameServer::UpdateServerPlayers(void)
                             // Recoil
                             Vector2 recoilForce = Vector2Negate(bulletPhysics.velocity);
                             playerPhysics.ApplyForce(recoilForce);
-
-                            SpawnEntity(bulletId);
                         }
                     }
                 } else {
@@ -614,7 +597,7 @@ void GameServer::TickSpawnBots(Tilemap &map)
         }
 
         if (!entityId && ((int)tick % 100 == i * 10)) {
-            entityId = CreateEntity(map, Entity_NPC);
+            entityId = SpawnEntity(map, Entity_NPC);
             if (entityId) {
                 size_t entityIndex = map.FindEntityIndex(entityId);
                 Entity &entity = map.entities[entityIndex];
@@ -644,7 +627,7 @@ void GameServer::TickSpawnBots(Tilemap &map)
 
                 sprite.anims[0] = data::GFX_ANIM_NPC_LILY_N;
 
-                SpawnEntity(entityId);
+                BroadcastEntitySpawn(map, entityId);
                 eid_bots[i] = entityId;
             }
         }
@@ -737,8 +720,7 @@ void GameServer::TickEntityProjectile(Tilemap &map, uint32_t entityIndex, double
                 if (CheckCollisionRecs(projectileHitbox, targetHitbox)) {
                     life.TakeDamage(GetRandomValue(3, 8));
                     if (life.Alive()) {
-                        const char *msg = "Ouch!";
-                        BroadcastEntitySay(map, target.id, strlen(msg), msg);
+                        BroadcastEntitySay(map, target.id, "Ouch!");
                     } else {
                         DespawnEntity(target.id);
                     }
@@ -770,8 +752,7 @@ void GameServer::TickResolveEntityWarpCollisions(Tilemap &map, uint32_t entityId
     for (Warp &warp : map.warps) {
         if (dlb_CheckCollisionCircleRec(entity.position, collision.radius, warp.collider, 0)) {
             if (warp.destMap.size()) {
-                // TODO: This needs to ask GameServer to load the new map and
-                // we also need to move our entity to the new map
+                // TODO: We need to move our entity to the new map
                 Tilemap *map = FindOrLoadMap(warp.destMap);
                 if (map) {
                     // TODO: Move entity to other map?

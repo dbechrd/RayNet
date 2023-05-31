@@ -43,7 +43,7 @@ struct ClientWorld {
         const GhostSnapshot &a, const GhostSnapshot &b, float alpha);
     void ApplyStateInterpolated(uint32_t entityId,
         const GhostSnapshot &a, const GhostSnapshot &b, float alpha);
-    Err CreateDialog(uint32_t entityId, uint32_t messageLength, const char *message, double now);
+    Err CreateDialog(uint32_t entityId, std::string message, double now);
     void Update(GameClient &gameClient);
     void Draw(Controller &controller, double now);
 

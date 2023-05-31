@@ -551,23 +551,6 @@ AiPathNode *Tilemap::GetPathNode(uint32_t pathId, uint32_t pathNodeIndex) {
     return 0;
 }
 
-bool Tilemap::CreateEntity(uint32_t entityId, EntityType entityType)
-{
-    assert(entityId);
-
-    if (entity_freelist) {
-        size_t entityIndex = entity_freelist;
-        Entity &e = entities[entityIndex];
-        entity_freelist = e.freelist_next;
-
-        e.freelist_next = 0;
-        e.id = entityId;
-        e.type = entityType;
-        entityIndexById[entityId] = entityIndex;
-        return true;
-    }
-    return false;
-}
 size_t Tilemap::FindEntityIndex(uint32_t entityId)
 {
     assert(entityId);
@@ -593,13 +576,26 @@ Entity *Tilemap::FindEntity(uint32_t entityId)
     }
     return 0;
 }
-bool Tilemap::SpawnEntity(uint32_t entityId, double now)
+bool Tilemap::SpawnEntity(uint32_t entityId, EntityType entityType, double now)
 {
     assert(entityId);
 
     Entity *entity = FindEntity(entityId);
     if (entity) {
-        entity->spawnedAt = now;
+        assert(!"already exists? why would this happen? should i despawn it?");
+        return true;
+    }
+
+    if (entity_freelist) {
+        size_t entityIndex = entity_freelist;
+        Entity &e = entities[entityIndex];
+        entity_freelist = e.freelist_next;
+
+        e.freelist_next = 0;
+        e.id = entityId;
+        e.type = entityType;
+        e.spawnedAt = now;
+        entityIndexById[entityId] = entityIndex;
         return true;
     }
     return false;
@@ -699,7 +695,7 @@ void Tilemap::EntityTick(EntityTickTuple &data, double dt, double now)
     data.entity.position.x += data.physics.velocity.x * dt;
     data.entity.position.y += data.physics.velocity.y * dt;
 
-    const double duration = CL_DIALOG_DURATION_MIN + CL_DIALOG_DURATION_PER_CHAR * data.dialog.messageLength;
+    const double duration = CL_DIALOG_DURATION_MIN + CL_DIALOG_DURATION_PER_CHAR * data.dialog.message.size();
     if (now - data.dialog.spawnedAt > duration) {
         data.dialog = {};
     }

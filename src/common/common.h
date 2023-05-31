@@ -75,7 +75,7 @@
 #define SV_TILE_CHUNK_WIDTH         64
 
 //#define CL_PORT                 30000
-#define CL_BANDWIDTH_SMOOTHING_FACTOR   0.95f
+#define CL_BANDWIDTH_SMOOTHING_FACTOR   0.5f
 #define CL_SAMPLE_INPUT_DT              SV_TICK_DT //(1.0/120.0)
 #define CL_SEND_INPUT_COUNT             32
 #define CL_SEND_INPUT_DT                SV_TICK_DT //(1.0/120.0)

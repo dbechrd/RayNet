@@ -51,15 +51,8 @@ struct AspectCollision {
 };
 
 struct AspectDialog {
-    double   spawnedAt     {};  // time when dialog was spawned
-    uint32_t messageLength {};  // how much they're saying
-    char *   message       {};  // what they're saying
-
-    ~AspectDialog(void) {
-        if (message) {
-            free(message);
-        }
-    }
+    double      spawnedAt {};  // time when dialog was spawned
+    std::string message   {};  // what they're saying
 };
 
 struct AspectLife {

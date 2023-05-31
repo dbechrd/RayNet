@@ -126,7 +126,6 @@ void GameClient::ProcessMessages(void)
                 case MSG_S_ENTITY_DESPAWN:
                 {
                     Msg_S_EntityDespawn *msg = (Msg_S_EntityDespawn *)yjMsg;
-                    printf("[game_client] ENTITY_DESPAWN entityId=%u\n", msg->entityId);
                     world->DespawnEntity(msg->entityId);
                     break;
                 }
@@ -139,13 +138,7 @@ void GameClient::ProcessMessages(void)
                 case MSG_S_ENTITY_SAY:
                 {
                     Msg_S_EntitySay *msg = (Msg_S_EntitySay *)yjMsg;
-                    if (msg->messageLength > 0 && msg->messageLength <= SV_MAX_ENTITY_SAY_MSG_LEN) {
-                        world->CreateDialog(msg->entityId, msg->messageLength, msg->message, now);
-                    } else {
-                        printf("Wtf dis server smokin'? Sent entity say message of length %u but max is %u\n",
-                            msg->messageLength,
-                            SV_MAX_ENTITY_SAY_MSG_LEN);
-                    }
+                    world->CreateDialog(msg->entityId, msg->message, now);
                     break;
                 }
                 case MSG_S_ENTITY_SNAPSHOT:
@@ -166,23 +159,19 @@ void GameClient::ProcessMessages(void)
                 {
                     Msg_S_EntitySpawn *msg = (Msg_S_EntitySpawn *)yjMsg;
                     Entity *entity = world->FindEntity(msg->entityId);
-                    printf("[game_client] Entity spawn id %u in map id %u\n", msg->entityId, msg->mapId);
                     if (!entity) {
                         Tilemap *map = world->FindOrLoadMap(msg->mapId);
                         assert(map && "why no map? we get chunks before entities, right!?");
                         if (map) {
-                            if (map->CreateEntity(msg->entityId, msg->type)) {
+                            if (map->SpawnEntity(msg->entityId, msg->type, now)) {
                                 world->entityMapId[msg->entityId] = map->id;
 
-                                if (map->SpawnEntity(msg->entityId, now)) {
-                                    world->ApplySpawnEvent(*msg);
+                                world->ApplySpawnEvent(*msg);
 
-                                    // HACK: Remove this insanely janky nonsense
-                                    // and have some sort of OnSpawnTrigger thingy
-                                    entity = world->FindEntity(msg->entityId);
-                                    if (entity && entity->type == Entity_Projectile) {
-                                        rnSoundCatalog.Play(STR_SND_SOFT_TICK);
-                                    }
+                                // HACK: Remove this insanely janky nonsense
+                                // and have some sort of OnSpawnTrigger thingy
+                                if (msg->type == Entity_Projectile) {
+                                    rnSoundCatalog.Play(STR_SND_SOFT_TICK);
                                 }
                             }
                         } else {

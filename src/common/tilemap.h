@@ -126,10 +126,9 @@ struct Tilemap {
     uint32_t GetNextPathNodeIndex(uint32_t pathId, uint32_t pathNodeIndex);
     AiPathNode *GetPathNode(uint32_t pathId, uint32_t pathNodeIndex);
 
-    bool CreateEntity(uint32_t entityId, EntityType entityType);
     size_t FindEntityIndex(uint32_t entityId);
     Entity *FindEntity(uint32_t entityId);
-    bool SpawnEntity(uint32_t entityId, double now);
+    bool SpawnEntity(uint32_t entityId, EntityType entityType, double now);
     bool DespawnEntity(uint32_t entityId, double now);
     void DestroyEntity(uint32_t entityId);
 

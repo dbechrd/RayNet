@@ -95,8 +95,7 @@ struct GameServer {
     Tilemap *FindEntityMap(uint32_t entityId);
     Entity *FindEntity(uint32_t entityId);
 
-    uint32_t CreateEntity(Tilemap &map, EntityType type);
-    void SpawnEntity(uint32_t entityId);
+    uint32_t SpawnEntity(Tilemap &map, EntityType type);
     void DespawnEntity(uint32_t entityId);
 
     void BroadcastEntityDespawnTest(uint32_t testId);
@@ -117,8 +116,8 @@ private:
 
     void SendEntityDespawnTest(int clientIdx, uint32_t testId);
 
-    void SendEntitySay(int clientIdx, Tilemap &map, uint32_t entityId, uint32_t messageLength, const char *message);
-    void BroadcastEntitySay(Tilemap &map, uint32_t entityId, uint32_t messageLength, const char *message);
+    void SendEntitySay(int clientIdx, Tilemap &map, uint32_t entityId, std::string message);
+    void BroadcastEntitySay(Tilemap &map, uint32_t entityId, std::string message);
 
     void SendTileChunk(int clientIdx, Tilemap &map, uint32_t x, uint32_t y);
     void BroadcastTileChunk(Tilemap &map, uint32_t x, uint32_t y);

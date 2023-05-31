@@ -239,7 +239,7 @@ void ClientWorld::ApplyStateInterpolated(uint32_t entityId,
     ApplyStateInterpolated(data, a, b, alpha);
 }
 
-Err ClientWorld::CreateDialog(uint32_t entityId, uint32_t messageLength, const char *message, double now)
+Err ClientWorld::CreateDialog(uint32_t entityId, std::string message, double now)
 {
     Tilemap *map = FindEntityMap(entityId);;
     if (!map) {
@@ -257,13 +257,7 @@ Err ClientWorld::CreateDialog(uint32_t entityId, uint32_t messageLength, const c
 
     AspectDialog &dialog = map->dialog[entityIndex];
     dialog.spawnedAt = now;
-    dialog.messageLength = messageLength;
-    dialog.message = (char *)calloc((size_t)messageLength + 1, sizeof(*dialog.message));
-    if (!dialog.message) {
-        return RN_BAD_ALLOC;
-    }
-    strncpy(dialog.message, message, messageLength);
-
+    dialog.message = message;
     return RN_SUCCESS;
 }
 
@@ -296,6 +290,10 @@ void ClientWorld::UpdateEntities(GameClient &client)
             if (latestSnapshot.serverTime) {
                 ApplyStateInterpolated(entity.id, ghost.newest(), ghost.newest(), 0);
                 lastProcessedInputCmd = latestSnapshot.lastProcessedInputCmd;
+            }
+
+            if (IsKeyDown(KEY_P)) {
+                printf("");
             }
 
 #if CL_CLIENT_SIDE_PREDICT
@@ -457,7 +455,7 @@ void ClientWorld::DrawDialog(AspectDialog &dialog, Vector2 topCenter)
 {
     const float marginBottom = 4.0f;
     Vector2 bgPad{ 8, 2 };
-    Vector2 msgSize = MeasureTextEx(fntHackBold20, dialog.message, fntHackBold20.baseSize, 1.0f);
+    Vector2 msgSize = MeasureTextEx(fntHackBold20, dialog.message.c_str(), fntHackBold20.baseSize, 1.0f);
     Vector2 msgPos{
         topCenter.x - msgSize.x / 2,
         topCenter.y - msgSize.y - bgPad.y * 2 - marginBottom
@@ -470,7 +468,7 @@ void ClientWorld::DrawDialog(AspectDialog &dialog, Vector2 topCenter)
     };
     DrawRectangleRounded(msgBgRect, 0.2f, 6, Fade(BLACK, 0.5));
     //DrawRectangleRoundedLines(msgBgRect, 0.2f, 6, 1.0f, RAYWHITE);
-    DrawTextEx(fntHackBold20, dialog.message, msgPos, fntHackBold20.baseSize, 1.0f, RAYWHITE);
+    DrawTextEx(fntHackBold20, dialog.message.c_str(), msgPos, fntHackBold20.baseSize, 1.0f, RAYWHITE);
     //DrawTextShadowEx(fntHackBold20, dialog.message, msgPos, FONT_SIZE, RAYWHITE);
 }
 
