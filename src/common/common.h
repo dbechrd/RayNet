@@ -70,7 +70,7 @@
 #define SV_PORT                     4040 //40000
 #define SV_TICK_DT                  (1.0/30.0)
 #define SV_MAX_PLAYERS              8
-#define SV_MAX_ENTITIES             256
+#define SV_MAX_ENTITIES             256  // todo rename this back later
 #define SV_MAX_ENTITY_SAY_MSG_LEN   1024
 #define SV_TILE_CHUNK_WIDTH         64
 

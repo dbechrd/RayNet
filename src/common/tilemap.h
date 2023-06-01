@@ -1,7 +1,6 @@
 #pragma once
 #include "common.h"
 #include "data.h"
-#include "entity.h"
 #include "net/net.h"
 #include "texture_catalog.h"
 
@@ -82,22 +81,6 @@ struct Tilemap {
     // TODO: Actually have more than 1 chunk..
     double chunkLastUpdatedAt{};  // used by server to know when chunks are dirty on clients
 
-    // [0]: reserved for safe null
-    // [1, SV_MAX_PLAYERS]: reserved for player entities
-    // [SV_MAX_PLAYERS + 1, SV_MAX_ENTITIES - 1]: dynamic entities (uses freelist)
-    uint32_t entity_freelist{};
-    std::unordered_map<uint32_t, size_t> entityIndexById{};
-
-    // TODO: Rename these so they don't collide with local variables all the time
-    std::vector<Entity>          entities  {SV_MAX_ENTITIES};
-    std::vector<AspectCollision> collision {SV_MAX_ENTITIES};
-    std::vector<AspectDialog>    dialog    {SV_MAX_ENTITIES};
-    std::vector<AspectGhost>     ghosts    {SV_MAX_ENTITIES};
-    std::vector<AspectLife>      life      {SV_MAX_ENTITIES};
-    std::vector<AspectPathfind>  pathfind  {SV_MAX_ENTITIES};
-    std::vector<AspectPhysics>   physics   {SV_MAX_ENTITIES};
-    std::vector<data::Sprite>    sprite    {SV_MAX_ENTITIES};
-
     void SV_SerializeChunk(Msg_S_TileChunk &tileChunk, uint32_t x, uint32_t y);
     void CL_DeserializeChunk(Msg_S_TileChunk &tileChunk);
 
@@ -126,17 +109,6 @@ struct Tilemap {
     uint32_t GetNextPathNodeIndex(uint32_t pathId, uint32_t pathNodeIndex);
     AiPathNode *GetPathNode(uint32_t pathId, uint32_t pathNodeIndex);
 
-    size_t FindEntityIndex(uint32_t entityId);
-    Entity *FindEntity(uint32_t entityId);
-    bool SpawnEntity(uint32_t entityId, EntityType entityType, double now);
-    bool DespawnEntity(uint32_t entityId, double now);
-    void DestroyEntity(uint32_t entityId);
-
-    Rectangle EntityRect(EntitySpriteTuple &data);
-    Rectangle EntityRect(uint32_t entityId);
-    Vector2 EntityTopCenter(uint32_t entityId);
-    void EntityTick(EntityTickTuple &data, double dt, double now);
-    void EntityTick(uint32_t entityId, double dt, double now);
     void ResolveEntityTerrainCollisions(EntityCollisionTuple &data);
     void ResolveEntityTerrainCollisions(uint32_t entityId);
 
@@ -144,9 +116,6 @@ struct Tilemap {
     void Draw(Camera2D &camera);
     void DrawColliders(Camera2D &camera);
     void DrawTileIds(Camera2D &camera);
-    void DrawEntityIds(Camera2D &camera);
-    void DrawEntityHoverInfo(uint32_t entityId);
-    void DrawEntity(uint32_t entityId);
 
 private:
     bool NeedsFill(uint32_t x, uint32_t y, int tileDefFill);

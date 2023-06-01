@@ -34,8 +34,8 @@ struct GameClient {
         return serverNow;
     }
 
-    Err TryConnect(void);
     void Start(void);
+    Err TryConnect(void);
     void SendInput(const Controller &controller);
     void SendEntityInteract(uint32_t entityId);
     void SendTileInteract(uint32_t x, uint32_t y);

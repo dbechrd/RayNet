@@ -2,6 +2,33 @@
 #include "client_world.h"
 #include "../common/audio/audio.h"
 
+void GameClient::Start(void)
+{
+    if (!InitializeYojimbo()) {
+        printf("yj: error: failed to initialize Yojimbo!\n");
+        return;
+    }
+    yojimbo_log_level(CL_YJ_LOG_LEVEL);
+    yojimbo_set_printf_function(yj_printf);
+
+    yojimbo::ClientServerConfig config{};
+    InitClientServerConfig(config);
+
+    yj_client = new yojimbo::Client(
+        yojimbo::GetDefaultAllocator(),
+        yojimbo::Address("0.0.0.0"),
+        config,
+        adapter,
+        now
+    );
+
+#if 0
+    char addressString[256];
+    yj_client->GetAddress().ToString(addressString, sizeof(addressString));
+    printf("yj: client address is %s\n", addressString);
+#endif
+}
+
 Err GameClient::TryConnect(void)
 {
     if (!yj_client->IsDisconnected()) {
@@ -30,34 +57,8 @@ Err GameClient::TryConnect(void)
     world = new ClientWorld;
     world->camera2d.zoom = 2.0f;
     //world->map.Load(LEVEL_001, now);
+    entityDb = new EntityDB;
     return RN_SUCCESS;
-}
-
-void GameClient::Start(void)
-{
-    if (!InitializeYojimbo()) {
-        printf("yj: error: failed to initialize Yojimbo!\n");
-        return;
-    }
-    yojimbo_log_level(CL_YJ_LOG_LEVEL);
-    yojimbo_set_printf_function(yj_printf);
-
-    yojimbo::ClientServerConfig config{};
-    InitClientServerConfig(config);
-
-    yj_client = new yojimbo::Client(
-        yojimbo::GetDefaultAllocator(),
-        yojimbo::Address("0.0.0.0"),
-        config,
-        adapter,
-        now
-    );
-
-#if 0
-    char addressString[256];
-    yj_client->GetAddress().ToString(addressString, sizeof(addressString));
-    printf("yj: client address is %s\n", addressString);
-#endif
 }
 
 void GameClient::SendInput(const Controller &controller)
@@ -126,7 +127,7 @@ void GameClient::ProcessMessages(void)
                 case MSG_S_ENTITY_DESPAWN:
                 {
                     Msg_S_EntityDespawn *msg = (Msg_S_EntityDespawn *)yjMsg;
-                    world->DespawnEntity(msg->entityId);
+                    entityDb->DestroyEntity(msg->entityId);
                     break;
                 }
                 case MSG_S_ENTITY_DESPAWN_TEST:
@@ -144,28 +145,24 @@ void GameClient::ProcessMessages(void)
                 case MSG_S_ENTITY_SNAPSHOT:
                 {
                     Msg_S_EntitySnapshot *msg = (Msg_S_EntitySnapshot *)yjMsg;
-                    Tilemap *map = world->FindEntityMap(msg->entityId);
-                    if (map) {
-                        size_t entityIndex = map->FindEntityIndex(msg->entityId);
-                        if (entityIndex < SV_MAX_ENTITIES) {
-                            AspectGhost &ghost = map->ghosts[entityIndex];
-                            GhostSnapshot ghostSnapshot{ *msg };
-                            ghost.push(ghostSnapshot);
-                        }
+                    size_t entityIndex = entityDb->FindEntityIndex(msg->entityId);
+                    if (entityIndex) {
+                        AspectGhost &ghost = entityDb->ghosts[entityIndex];
+                        GhostSnapshot ghostSnapshot{ *msg };
+                        ghost.push(ghostSnapshot);
                     }
                     break;
                 }
                 case MSG_S_ENTITY_SPAWN:
                 {
                     Msg_S_EntitySpawn *msg = (Msg_S_EntitySpawn *)yjMsg;
-                    Entity *entity = world->FindEntity(msg->entityId);
+                    printf("[ENTITY_SPAWN] id=%u mapId=%u\n", msg->entityId, msg->mapId);
+                    Entity *entity = entityDb->FindEntity(msg->entityId);
                     if (!entity) {
                         Tilemap *map = world->FindOrLoadMap(msg->mapId);
                         assert(map && "why no map? we get chunks before entities, right!?");
                         if (map) {
-                            if (map->SpawnEntity(msg->entityId, msg->type, now)) {
-                                world->entityMapId[msg->entityId] = map->id;
-
+                            if (entityDb->SpawnEntity(msg->entityId, msg->type, now)) {
                                 world->ApplySpawnEvent(*msg);
 
                                 // HACK: Remove this insanely janky nonsense
@@ -175,11 +172,10 @@ void GameClient::ProcessMessages(void)
                                 }
                             }
                         } else {
-                            // TODO: Load the map? It should already be loaded
-                            // since we received chunks before entities, right?
+                            printf("[game_client] Failed to load map id %u to spawn entity id %u\n", msg->mapId, msg->entityId);
                         }
-                    //} else {
-                    //    assert(!"why two spawn events for same entityId??");
+                    } else {
+                        assert(!"why two spawn events for same entityId??");
                     }
                     break;
                 }
@@ -248,4 +244,6 @@ void GameClient::Stop(void)
     controller = {};
     delete world;
     world = {};
+    delete entityDb;
+    entityDb = {};
 }

@@ -1,4 +1,5 @@
 #pragma once
+#include "../common/entity_db.h"
 #include "../common/input_command.h"
 #include "../common/tilemap.h"
 
@@ -73,12 +74,11 @@ struct GameServer {
 
     bool showF3Menu = false;
 
-    uint32_t nextMapId = 1;
     uint32_t nextEntityId = 1;
+    uint32_t nextMapId = 1;
     std::vector<Tilemap *> maps{};
     std::unordered_map<uint32_t, size_t> mapsById{};      // loaded maps by their map id
     std::unordered_map<std::string, size_t> mapsByName{}; // loaded maps by their filename
-    std::unordered_map<uint32_t, size_t> entityMapId{};   // map by entity id (i.e. which map an entity is currently in)
 
     GameServer(double now) : now(now), frameStart(now) {};
     ~GameServer(void);
@@ -92,10 +92,8 @@ struct GameServer {
     Err Start(void);
 
     Tilemap *FindMap(uint32_t mapId);
-    Tilemap *FindEntityMap(uint32_t entityId);
-    Entity *FindEntity(uint32_t entityId);
 
-    uint32_t SpawnEntity(Tilemap &map, EntityType type);
+    uint32_t SpawnEntity(EntityType type);
     void DespawnEntity(uint32_t entityId);
 
     void BroadcastEntityDespawnTest(uint32_t testId);
@@ -107,35 +105,35 @@ struct GameServer {
 private:
     void DestroyDespawnedEntities(void);
 
-    void SerializeSpawn(Tilemap &map, size_t entityIndex, Msg_S_EntitySpawn &entitySpawn);
-    void SendEntitySpawn(int clientIdx, Tilemap &map, uint32_t entityId);
-    void BroadcastEntitySpawn(Tilemap &map, uint32_t entityId);
+    void SerializeSpawn(uint32_t entityId, Msg_S_EntitySpawn &entitySpawn);
+    void SendEntitySpawn(int clientIdx, uint32_t entityId);
+    void BroadcastEntitySpawn(uint32_t entityId);
 
-    void SendEntityDespawn(int clientIdx, Tilemap &map, uint32_t entityId);
-    void BroadcastEntityDespawn(Tilemap &map, uint32_t entityId);
+    void SendEntityDespawn(int clientIdx, uint32_t entityId);
+    void BroadcastEntityDespawn(uint32_t entityId);
 
     void SendEntityDespawnTest(int clientIdx, uint32_t testId);
 
-    void SendEntitySay(int clientIdx, Tilemap &map, uint32_t entityId, std::string message);
-    void BroadcastEntitySay(Tilemap &map, uint32_t entityId, std::string message);
+    void SendEntitySay(int clientIdx, uint32_t entityId, std::string message);
+    void BroadcastEntitySay(uint32_t entityId, std::string message);
 
     void SendTileChunk(int clientIdx, Tilemap &map, uint32_t x, uint32_t y);
     void BroadcastTileChunk(Tilemap &map, uint32_t x, uint32_t y);
 
     // All part of Update()
     void ProcessMessages(void);
-    uint32_t SpawnProjectile(Tilemap &map, Vector2 position, Vector2 direction);
+    uint32_t SpawnProjectile(uint32_t mapId, Vector2 position, Vector2 direction);
     void UpdateServerPlayers(void);
     void TickSpawnBots(Tilemap &map);
-    void TickEntityBot(Tilemap &map, uint32_t entityIndex, double dt);
-    void TickEntityPlayer(Tilemap &map, uint32_t entityIndex, double dt);
-    void TickEntityProjectile(Tilemap &map, uint32_t entityIndex, double dt);
+    void TickEntityBot(uint32_t entityIndex, double dt);
+    void TickEntityPlayer(uint32_t entityIndex, double dt);
+    void TickEntityProjectile(uint32_t entityIndex, double dt);
     void TickPlayer(Tilemap &map, uint32_t entityId, double dt);
     void TickBot(Tilemap &map, uint32_t entityId, double dt);
     void TickProjectile(Tilemap &map, uint32_t entityId, double dt);
     void TickResolveEntityWarpCollisions(Tilemap &map, uint32_t entityId, double now);
     void Tick(void);
-    void SerializeSnapshot(Tilemap &map, size_t entityId, Msg_S_EntitySnapshot &entitySnapshot, uint32_t lastProcessedInputCmd);  // TODO: Remove lastProcessedInputCmd from args list, shouldn't need it
+    void SerializeSnapshot(uint32_t entityId, Msg_S_EntitySnapshot &entitySnapshot);
     void SendClientSnapshots(void);
     void SendClockSync(void);
 };

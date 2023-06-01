@@ -239,10 +239,9 @@ Err Play(GameServer &server)
                 // [World] Entities
                 // NOTE(dlb): We could build an array of { entityIndex, position.y } and sort it
                 // each frame, then render the entities in that order.
-                for (int entityIndex = 0; entityIndex < SV_MAX_ENTITIES; entityIndex++) {
-                    Entity &entity = map0.entities[entityIndex];
-                    if (entity.type) {
-                        map0.DrawEntity(entity.id);
+                for (Entity &entity : entityDb->entities) {
+                    if (entity.mapId == map0.id) {
+                        entityDb->DrawEntity(entity.id);
                     }
                 }
 

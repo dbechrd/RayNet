@@ -1,14 +1,15 @@
 #pragma once
 #include "../../common.h"
+#include "../../entity.h"
 
 struct Msg_S_EntitySnapshot : public yojimbo::Message
 {
     double      serverTime {};
 
     // Entity
-    uint32_t    mapId      {};
     uint32_t    entityId   {};
     EntityType  type       {};  // doesn't change, but needed for switch statements in deserializer
+    uint32_t    mapId      {};
     Vector2     position   {};
 
     // Collision
@@ -33,9 +34,9 @@ struct Msg_S_EntitySnapshot : public yojimbo::Message
         serialize_double(stream, serverTime);
 
         // Entity
-        serialize_uint32(stream, mapId);
         serialize_uint32(stream, entityId);
         serialize_uint32(stream, (uint32_t &)type);
+        serialize_uint32(stream, mapId);
         serialize_float(stream, position.x);
         serialize_float(stream, position.y);
 

@@ -24,20 +24,16 @@ struct ClientWorld {
 
     std::vector<Tilemap *> maps{};
     std::unordered_map<uint32_t, size_t> mapsById{};     // maps by their map id
-    std::unordered_map<uint32_t, size_t> entityMapId{};  // maps by entity id (i.e. which map an entity is currently in)
 
     ~ClientWorld(void);
     Entity *LocalPlayer(void);
     Tilemap *LocalPlayerMap(void);
 
     Tilemap *FindOrLoadMap(uint32_t mapId);
-    Tilemap *FindEntityMap(uint32_t entityId);
-    Entity *FindEntity(uint32_t entityId, bool deadOrAlive = false);
 
     bool CopyEntityData(uint32_t entityId, EntityData &data);
 
     void ApplySpawnEvent(const Msg_S_EntitySpawn &entitySpawn);
-    void DespawnEntity(uint32_t entityId);
 
     void ApplyStateInterpolated(EntityInterpolateTuple &data,
         const GhostSnapshot &a, const GhostSnapshot &b, float alpha);
@@ -51,6 +47,6 @@ private:
     void UpdateEntities(GameClient &gameClient);
 
     void DrawEntitySnapshotShadows(uint32_t entityId, Controller &controller, double now);
-    void DrawDialog(AspectDialog &dialog, Vector2 topCenter);
-    void DrawDialogs(void);
+    void DrawDialog(AspectDialog &dialog, Vector2 topCenterScreen);
+    void DrawDialogs(Camera2D &camera);
 };

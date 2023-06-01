@@ -1,6 +1,7 @@
 ﻿#include "audio/audio.h"
 #include "collision.h"
 #include "editor.h"
+#include "entity_db.h"
 #include "stb_herringbone_wang_tile.h"
 #include "texture_catalog.h"
 #include "tilemap.h"
@@ -240,7 +241,11 @@ void Editor::DrawEntityOverlays(Tilemap &map, Camera2D &camera, double now)
     io.PushScope(IO::IO_EditorEntityOverlay);
 
     if (state.showEntityIds) {
-        map.DrawEntityIds(camera);
+        for (Entity &entity : entityDb->entities) {
+            if (entity.mapId == map.id) {
+                entityDb->DrawEntityIds(entity.id, camera);
+            }
+        }
     }
 
     if (active) {
@@ -268,39 +273,42 @@ void Editor::DrawEntityOverlays(Tilemap &map, Camera2D &camera, double now)
 }
 void Editor::DrawEntityOverlay_Collision(Tilemap &map, Camera2D &camera, double now)
 {
-    for (int entityId = 0; entityId < SV_MAX_ENTITIES; entityId++) {
-        Entity &entity = map.entities[entityId];
-        if (entity.type) {
-            // [Debug] Draw entity texture rect
-            //DrawRectangleRec(map.EntityRect(entityId), Fade(SKYBLUE, 0.7f));
+    for (Entity &entity : entityDb->entities) {
+        if (entity.mapId != map.id) {
+            continue;
+        }
+        assert(entity.id && entity.type);
 
-            // [Debug] Draw colliders
-            if (state.showColliders) {
-                AspectCollision &collider = map.collision[entityId];
-                if (collider.radius) {
-                    DrawCircle(
-                        entity.position.x, entity.position.y,
-                        collider.radius,
-                        collider.colliding ? Fade(RED, 0.5) : Fade(LIME, 0.5)
-                    );
-                }
-            }
+        // [Debug] Draw entity texture rect
+        //DrawRectangleRec(map.EntityRect(entityId), Fade(SKYBLUE, 0.7f));
 
-            // [Debug] Draw velocity vectors
-            //DrawLineEx(entity.position, Vector2Add(entity.position, entity.velocity), 2, PINK);
-
-#if CL_DBG_FORCE_ACCUM
-            // [Debug] Draw force vectors
-            if (Vector2LengthSqr(entity.forceAccum)) {
-                DrawLineEx(
-                    { entity.position.x, entity.position.y },
-                    { entity.position.x + entity.forceAccum.x, entity.position.y + entity.forceAccum.y },
-                    2,
-                    YELLOW
+        // [Debug] Draw colliders
+        if (state.showColliders) {
+            size_t entityIndex = entityDb->FindEntityIndex(entity.id);
+            AspectCollision &collider = entityDb->collision[entityIndex];
+            if (collider.radius) {
+                DrawCircle(
+                    entity.position.x, entity.position.y,
+                    collider.radius,
+                    collider.colliding ? Fade(RED, 0.5) : Fade(LIME, 0.5)
                 );
             }
-#endif
         }
+
+        // [Debug] Draw velocity vectors
+        //DrawLineEx(entity.position, Vector2Add(entity.position, entity.velocity), 2, PINK);
+
+#if CL_DBG_FORCE_ACCUM
+        // [Debug] Draw force vectors
+        if (Vector2LengthSqr(entity.forceAccum)) {
+            DrawLineEx(
+                { entity.position.x, entity.position.y },
+                { entity.position.x + entity.forceAccum.x, entity.position.y + entity.forceAccum.y },
+                2,
+                YELLOW
+            );
+        }
+#endif
     }
 }
 
@@ -763,11 +771,12 @@ void Editor::DrawUI_Wang(UI &uiActionBar, Tilemap &map, double now)
 void Editor::DrawUI_EntityActions(UI &uiActionBar, Tilemap &map, double now)
 {
     if (uiActionBar.Button("Despawn all", MAROON).pressed) {
-        for (uint32_t entityId = 0; entityId < SV_MAX_ENTITIES; entityId++) {
-            const Entity &entity = map.entities[entityId];
-            if (entity.type) {
-                map.DespawnEntity(entityId, now);
+        for (const Entity &entity : entityDb->entities) {
+            if (entity.mapId != map.id) {
+                continue;
             }
+            assert(entity.id && entity.type);
+            entityDb->DespawnEntity(entity.id, now);
         }
     }
 

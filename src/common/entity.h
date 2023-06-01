@@ -8,6 +8,7 @@ struct GhostSnapshot {
     double   serverTime {};
 
     // Entity
+    uint32_t mapId      {};
     Vector2  position   {};
 
     // Physics
@@ -34,8 +35,11 @@ enum EntityType {
     Entity_Count,
 };
 
+const char *EntityTypeStr(EntityType type);
+
 struct Entity {
     uint32_t id;
+    uint32_t mapId;
     EntityType type;
     double spawnedAt;
     double despawnedAt;
@@ -145,11 +149,10 @@ struct EntitySpriteTuple {
 
 struct EntityTickTuple {
     Entity        &entity;
-    AspectDialog  &dialog;
     AspectPhysics &physics;
 
-    EntityTickTuple(Entity &entity, AspectDialog &dialog, AspectPhysics &physics)
-        : entity(entity), dialog(dialog), physics(physics) {}
+    EntityTickTuple(Entity &entity, AspectPhysics &physics)
+        : entity(entity), physics(physics) {}
 };
 
 struct EntityData {
