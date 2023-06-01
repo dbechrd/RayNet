@@ -803,6 +803,11 @@ void Editor::DrawUI_WarpActions(UI &uiActionBar, Tilemap &map, double now)
     }
     uiActionBar.Newline();
 
+    UIStyle styleFullWidth{};
+    styleFullWidth.size.x = 400;
+
+    uiActionBar.PushStyle(styleFullWidth);
+
     for (Warp &warp : map.warps) {
         uiActionBar.Text("collider");
         uiActionBar.Newline();
@@ -845,4 +850,6 @@ void Editor::DrawUI_WarpActions(UI &uiActionBar, Tilemap &map, double now)
         uiActionBar.Textbox(txtTemplateTileset, warp.templateTileset);
         uiActionBar.Newline();
     }
+
+    uiActionBar.PopStyle();
 }

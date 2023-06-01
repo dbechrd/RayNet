@@ -155,7 +155,7 @@ Rectangle RectGrow(const Rectangle &rect, float pixels);
 #define STB_TEXTEDIT_STRING StbString
 
 //    STB_TEXTEDIT_STRINGLEN(obj)        the length of the string (ideally O(1))
-#define STB_TEXTEDIT_STRINGLEN(obj) ((int)obj->data.size())
+#define STB_TEXTEDIT_STRINGLEN(obj) ((int)(obj)->data.size())
 
 //    STB_TEXTEDIT_LAYOUTROW(&r,obj,n)   returns the results of laying out a line of characters
 //                                       starting from character #n (see discussion below)

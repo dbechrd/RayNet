@@ -390,11 +390,20 @@ UIState UI::Textbox(STB_TexteditState &stbState, std::string &text)
         position.y + cursor.y + style.margin.top
     };
 
-    Vector2 textSize = MeasureTextEx(*style.font, text.c_str(), style.font->baseSize, 1.0f);
-    Align(style, ctrlPosition, textSize);
+    Vector2 contentSize = style.size;
+    if (contentSize.x <= 0 || contentSize.y <= 0) {
+        Vector2 textSize = MeasureTextEx(*style.font, text.c_str(), style.font->baseSize, 1.0f);
+        if (contentSize.x <= 0) {
+            contentSize.x = textSize.x;
+        }
+        if (contentSize.y <= 0) {
+            contentSize.y = textSize.y;
+        }
+    }
+    Align(style, ctrlPosition, contentSize);
     Vector2 ctrlSize{
-        style.pad.left + textSize.x + style.pad.right,
-        style.pad.top + textSize.y + style.pad.bottom
+        style.pad.left + contentSize.x + style.pad.right,
+        style.pad.top + contentSize.y + style.pad.bottom
     };
 
     Rectangle ctrlRect = {
@@ -406,41 +415,125 @@ UIState UI::Textbox(STB_TexteditState &stbState, std::string &text)
 
     static HoverHash prevHoverHash{};
     UIState state = CalcState(ctrlRect, prevHoverHash);
+    if (state.pressed) {
+        prevActiveEditor = activeEditor;
+        activeEditor = &stbState;
+    }
 
     // TODO(cleanup): For debugging
     static Vector2 mouseClickedAt{};
     static Vector2 mouseDraggedAt{};
 
+    Vector2 mousePosRel{
+        GetMouseX() - (ctrlPosition.x + textOffset.x),
+        GetMouseY() - (ctrlPosition.y + textOffset.y)
+    };
+
+    static double lastClickTime{};
+    static Vector2 lastClickMousePosRel{};
+    static int mouseClicks{};
+    static int dblClickWordLeft{};
+    static int dblClickWordRight{};
+    static bool newlyActivePress{};
+
     const bool wasActive = prevActiveEditor == &stbState;
     const bool isActive = activeEditor == &stbState;
     const bool newlyActive = isActive && (!stbState.initialized || !wasActive);
+    const double now = GetTime();
+    const double timeSinceLastClick = now - lastClickTime;
     if (isActive) {
         if (newlyActive) {
             stb_textedit_initialize_state(&stbState, true);
             prevActiveEditor = activeEditor;
-        } else {
-            if (state.pressed) {
-                Vector2 relMousePos{
-                    GetMouseX() - (ctrlPosition.x + textOffset.x),
-                    GetMouseY() - (ctrlPosition.y + textOffset.y)
-                };
-                stb_textedit_click(&str, &stbState, relMousePos.x, relMousePos.y);
-                mouseClickedAt = relMousePos;
-            } else if (state.down || state.released) {
-                Vector2 relMousePos{
-                    GetMouseX() - (ctrlPosition.x + textOffset.x),
-                    GetMouseY() - (ctrlPosition.y + textOffset.y)
-                };
-                stb_textedit_drag(&str, &stbState, relMousePos.x, relMousePos.y);
-                mouseDraggedAt = relMousePos;
-            }
+            newlyActivePress = true;
+        }
 
+        if (!state.down) {
+            newlyActivePress = false;
+            if (timeSinceLastClick >= 0.5) {
+                mouseClicks = 0;
+            }
+        }
+
+        if (io.MouseButtonPressed(MOUSE_BUTTON_LEFT)) {
+            Vector2 mouseDelta = Vector2Subtract(lastClickMousePosRel, mousePosRel);
+            const float maxPixelMovement = 3;
+            const float mouseDeltaLen = Vector2Length(mouseDelta);
+            if (mouseDeltaLen < maxPixelMovement) {
+                mouseClicks++;
+            } else {
+                // Mouse moved too much
+                mouseClicks = 1;
+            }
+            lastClickTime = now;
+            lastClickMousePosRel = mousePosRel;
+        }
+
+        if (mouseClicks <= 1) {
+            if (state.pressed) {
+                stb_textedit_click(&str, &stbState, mousePosRel.x, mousePosRel.y);
+                mouseClickedAt = mousePosRel;
+            } else if (state.down && !newlyActivePress) {
+                stb_textedit_drag(&str, &stbState, mousePosRel.x, mousePosRel.y);
+                mouseDraggedAt = mousePosRel;
+            }
+        } else if (mouseClicks == 2) {
+            if (io.MouseButtonPressed(MOUSE_BUTTON_LEFT)) {
+                // double click, select word under cursor
+                int wordLeft = stbState.cursor;
+                while (wordLeft && !RN_stb_is_space(RN_stb_get_char(&str, wordLeft - 1))) {
+                    wordLeft--;
+                }
+                int wordRight = stbState.cursor;
+                while (wordRight < STB_TEXTEDIT_STRINGLEN(&str) && !RN_stb_is_space(RN_stb_get_char(&str, wordRight))) {
+                    wordRight++;
+                }
+                if (wordLeft < wordRight) {
+                    stbState.select_start = wordLeft;
+                    stbState.select_end = wordRight;
+                    stbState.cursor = stbState.select_end;
+                }
+
+                // store word boundary of word selected when double click first happened
+                dblClickWordLeft = wordLeft;
+                dblClickWordRight = wordRight;
+            } else if (io.MouseButtonDown(MOUSE_BUTTON_LEFT)) {
+                // double click drag, select words in range of where mouse was first clicked to where it is now
+
+                // find word boundaries from current mouse position
+                stb_textedit_click(&str, &stbState, mousePosRel.x, mousePosRel.y);
+                int wordLeft = stbState.cursor;
+                while (wordLeft && !RN_stb_is_space(RN_stb_get_char(&str, wordLeft - 1))) {
+                    wordLeft--;
+                }
+                int wordRight = stbState.cursor;
+                while (wordRight < STB_TEXTEDIT_STRINGLEN(&str) && !RN_stb_is_space(RN_stb_get_char(&str, wordRight))) {
+                    wordRight++;
+                }
+
+                // union word boundaries of initial word with current word
+                wordLeft = MIN(wordLeft, dblClickWordLeft);
+                wordRight = MAX(wordRight, dblClickWordRight);
+
+                if (wordLeft < wordRight) {
+                    stbState.select_start = wordLeft;
+                    stbState.select_end = wordRight;
+                    stbState.cursor = wordLeft < dblClickWordLeft ? stbState.select_start : stbState.select_end;
+                }
+            }
+        } else if (mouseClicks > 2) {
+            stbState.select_start = 0;
+            stbState.select_end = STB_TEXTEDIT_STRINGLEN(&str);
+            stbState.cursor = stbState.select_start;
+        }
+
+        if (!io.KeyboardCaptured()) {
             int key = GetKeyPressed();
             while (key) {
-                if (IsKeyDown(KEY_LEFT_CONTROL) || IsKeyDown(KEY_RIGHT_CONTROL)) {
+                if (io.KeyDown(KEY_LEFT_CONTROL) || io.KeyDown(KEY_RIGHT_CONTROL)) {
                     key |= STB_TEXTEDIT_K_CTRL;
                 }
-                if (IsKeyDown(KEY_LEFT_SHIFT) || IsKeyDown(KEY_RIGHT_SHIFT)) {
+                if (io.KeyDown(KEY_LEFT_SHIFT) || io.KeyDown(KEY_RIGHT_SHIFT)) {
                     key |= STB_TEXTEDIT_K_SHIFT;
                 }
                 if (RN_stb_key_to_char(key) == -1) {
@@ -460,11 +553,11 @@ UIState UI::Textbox(STB_TexteditState &stbState, std::string &text)
                 }
                 ch = GetCharPressed();
             }
-
-            // TODO: Copy/paste?
-            //    int  stb_textedit_cut(STB_TEXTEDIT_STRING *str, STB_TexteditState *state)
-            //    int  stb_textedit_paste(STB_TEXTEDIT_STRING *str, STB_TexteditState *state, STB_TEXTEDIT_CHARTYPE *text, int len)
         }
+
+        // TODO: Copy/paste?
+        //    int  stb_textedit_cut(STB_TEXTEDIT_STRING *str, STB_TexteditState *state)
+        //    int  stb_textedit_paste(STB_TEXTEDIT_STRING *str, STB_TexteditState *state, STB_TEXTEDIT_CHARTYPE *text, int len)
     }
 
     // Background
@@ -525,6 +618,8 @@ UIState UI::Textbox(STB_TexteditState &stbState, std::string &text)
 
 #if 0
     Newline();
+    Text(TextFormat("mouseClicks %d", mouseClicks));
+    Newline();
     Text(TextFormat("clickedAt %.f %.f", mouseClickedAt.x, mouseClickedAt.y));
     Newline();
     Text(TextFormat("draggedAt %.f %.f", mouseDraggedAt.x, mouseDraggedAt.y));
@@ -540,10 +635,6 @@ UIState UI::Textbox(STB_TexteditState &stbState, std::string &text)
     // TODO: Render undo state just for fun?
 #endif
 
-    if (state.pressed) {
-        prevActiveEditor = activeEditor;
-        activeEditor = &stbState;
-    }
     return state;
 }
 

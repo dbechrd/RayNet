@@ -58,6 +58,7 @@ struct UIStyle {
     Color borderColor{ BLANK };
     UIPad pad{ 8, 2 };
     float scale{ 1 };
+    Vector2 size{ 0, 0 };
     Color bgColor{ BLUE };
     Color fgColor{ WHITE };
     Font *font{ &fntHackBold20 };

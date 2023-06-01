@@ -79,6 +79,12 @@ struct IO {
         }
         return IsKeyReleased(key);
     }
+    bool KeyUp(int key) {
+        if (KeyboardCaptured()) {
+            return false;
+        }
+        return IsKeyUp(key);
+    }
 
     bool MouseButtonPressed(int button) {
         if (MouseCaptured()) {
@@ -97,6 +103,12 @@ struct IO {
             return false;
         }
         return IsMouseButtonReleased(button);
+    }
+    bool MouseButtonUp(int button) {
+        if (MouseCaptured()) {
+            return false;
+        }
+        return IsMouseButtonUp(button);
     }
     float MouseWheelMove(void) {
         if (MouseCaptured()) {
