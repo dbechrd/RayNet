@@ -59,10 +59,14 @@ Err InitCommon(void)
     // Load SDF required shader (we use default vertex shader)
     shdSdfText = LoadShader(0, "resources/shaders/sdf.fs");
 
-    fntHackBold20 = dlb_LoadFontEx("resources/KarminaBold.otf", 24, 0, 0, FONT_DEFAULT);
+    const char *fontName = "C:/Windows/Fonts/consolab.ttf";
+    if (!FileExists(fontName)) {
+        fontName = "resources/KarminaBold.otf";
+    }
+    fntHackBold20 = dlb_LoadFontEx(fontName, 18, 0, 0, FONT_DEFAULT);
     if (!fntHackBold20.baseSize) err = RN_RAYLIB_ERROR;
 
-    fntHackBold32 = dlb_LoadFontEx("resources/KarminaBold.otf", 42, 0, 0, FONT_DEFAULT);
+    fntHackBold32 = dlb_LoadFontEx(fontName, 42, 0, 0, FONT_DEFAULT);
     if (!fntHackBold32.baseSize) err = RN_RAYLIB_ERROR;
     SetTextureFilter(fntHackBold32.texture, TEXTURE_FILTER_BILINEAR);    // Required for SDF font
 

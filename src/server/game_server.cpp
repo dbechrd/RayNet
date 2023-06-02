@@ -58,7 +58,7 @@ void GameServer::OnClientJoin(int clientIdx)
 
         entity.type = Entity_Player;
         entity.mapId = maps[0]->id;
-        entity.position = { 680, 1390 };
+        entity.position = { 1600, 500 };
         collision.radius = 10;
         life.maxHealth = 100;
         life.health = life.maxHealth;

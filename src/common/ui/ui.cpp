@@ -420,10 +420,6 @@ UIState UI::Textbox(STB_TexteditState &stbState, std::string &text)
         activeEditor = &stbState;
     }
 
-    // TODO(cleanup): For debugging
-    static Vector2 mouseClickedAt{};
-    static Vector2 mouseDraggedAt{};
-
     Vector2 mousePosRel{
         GetMouseX() - (ctrlPosition.x + textOffset.x),
         GetMouseY() - (ctrlPosition.y + textOffset.y)
@@ -450,7 +446,7 @@ UIState UI::Textbox(STB_TexteditState &stbState, std::string &text)
 
         if (!state.down) {
             newlyActivePress = false;
-            if (timeSinceLastClick >= 0.5) {
+            if (timeSinceLastClick >= 0.3) {
                 mouseClicks = 0;
             }
         }
@@ -472,10 +468,8 @@ UIState UI::Textbox(STB_TexteditState &stbState, std::string &text)
         if (mouseClicks <= 1) {
             if (state.pressed) {
                 stb_textedit_click(&str, &stbState, mousePosRel.x, mousePosRel.y);
-                mouseClickedAt = mousePosRel;
             } else if (state.down && !newlyActivePress) {
                 stb_textedit_drag(&str, &stbState, mousePosRel.x, mousePosRel.y);
-                mouseDraggedAt = mousePosRel;
             }
         } else if (mouseClicks == 2) {
             if (io.MouseButtonPressed(MOUSE_BUTTON_LEFT)) {
@@ -544,6 +538,39 @@ UIState UI::Textbox(STB_TexteditState &stbState, std::string &text)
                     stbState.select_start = 0;
                     stbState.select_end = text.size();
                 }
+                if (key == (STB_TEXTEDIT_K_CTRL | KEY_X)) {
+                    int selectLeft = MIN(stbState.select_start, stbState.select_end);
+                    int selectRight = MAX(stbState.select_start, stbState.select_end);
+                    int selectLen = selectRight - selectLeft;
+                    if (selectLen) {
+                        std::string selectedText = str.data.substr(selectLeft, selectLen);
+                        SetClipboardText(selectedText.c_str());
+                        //str.data.erase(selectLeft, selectLen);
+                        //stbState.cursor = selectLeft;
+                        //stbState.select_start = 0;
+                        //stbState.select_end = 0;
+
+                        stb_textedit_cut(&str, &stbState);
+                    }
+                }
+                if (key == (STB_TEXTEDIT_K_CTRL | KEY_C)) {
+                    int selectLeft = MIN(stbState.select_start, stbState.select_end);
+                    int selectRight = MAX(stbState.select_start, stbState.select_end);
+                    int selectLen = selectRight - selectLeft;
+                    if (selectLen) {
+                        std::string selectedText = str.data.substr(selectLeft, selectLen);
+                        SetClipboardText(selectedText.c_str());
+                    }
+                }
+                if (key == (STB_TEXTEDIT_K_CTRL | KEY_V)) {
+                    const char *clipboard = GetClipboardText();
+                    if (clipboard) {
+                        size_t clipboardLen = strlen(clipboard);
+                        if (clipboardLen) {
+                            stb_textedit_paste(&str, &stbState, clipboard, clipboardLen);
+                        }
+                    }
+                }
                 key = GetKeyPressed();
             }
             int ch = GetCharPressed();
@@ -554,10 +581,6 @@ UIState UI::Textbox(STB_TexteditState &stbState, std::string &text)
                 ch = GetCharPressed();
             }
         }
-
-        // TODO: Copy/paste?
-        //    int  stb_textedit_cut(STB_TEXTEDIT_STRING *str, STB_TexteditState *state)
-        //    int  stb_textedit_paste(STB_TEXTEDIT_STRING *str, STB_TexteditState *state, STB_TEXTEDIT_CHARTYPE *text, int len)
     }
 
     // Background
@@ -567,10 +590,9 @@ UIState UI::Textbox(STB_TexteditState &stbState, std::string &text)
     DrawRectangleLinesEx(ctrlRect, 1, BLACK);
 
     // Text
-    //text.insert(stbState.cursor, "|");
     DrawTextShadowEx(*style.font, text.c_str(), { ctrlPosition.x + textOffset.x, ctrlPosition.y + textOffset.y }, RAYWHITE);
-    //text.erase(stbState.cursor, 1);
 
+    // Selection highlight
     if (isActive) {
         if (stbState.select_start != stbState.select_end) {
             int selectLeft = MIN(stbState.select_start, stbState.select_end);
@@ -618,20 +640,13 @@ UIState UI::Textbox(STB_TexteditState &stbState, std::string &text)
 
 #if 0
     Newline();
-    Text(TextFormat("mouseClicks %d", mouseClicks));
-    Newline();
-    Text(TextFormat("clickedAt %.f %.f", mouseClickedAt.x, mouseClickedAt.y));
-    Newline();
-    Text(TextFormat("draggedAt %.f %.f", mouseDraggedAt.x, mouseDraggedAt.y));
+    Text(TextFormat("mouseClicks  %d", mouseClicks));
     Newline();
     Text(TextFormat("cursor       %d", stbState.cursor));
     Newline();
     Text(TextFormat("select_start %d", stbState.select_start));
     Newline();
     Text(TextFormat("select_end   %d", stbState.select_end));
-    Newline();
-    Text(TextFormat("insert       %d", stbState.insert_mode));
-    Newline();
     // TODO: Render undo state just for fun?
 #endif
 
