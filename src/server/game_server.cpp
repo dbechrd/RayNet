@@ -529,7 +529,7 @@ void GameServer::UpdateServerPlayers(void)
         }
     }
 }
-void GameServer::TickSpawnBots(Tilemap &map)
+void GameServer::TickSpawnTownNPCs(uint32_t mapId)
 {
     static uint32_t eid_bots[1];
     for (int i = 0; i < ARRAY_SIZE(eid_bots); i++) {
@@ -555,20 +555,67 @@ void GameServer::TickSpawnBots(Tilemap &map)
                 data::Sprite &sprite = entityDb->sprite[entityIndex];
 
                 entity.type = Entity_NPC;
-                entity.mapId = map.id;
+                entity.mapId = mapId;
+                entity.position = { 0, 0 };
 
                 collision.radius = 10;
 
                 life.maxHealth = 100;
                 life.health = life.maxHealth;
 
-                pathfind.pathId = 0;
-                AiPathNode *aiPathNode = map.GetPathNode(pathfind.pathId, 0);
-                if (aiPathNode) {
-                    entity.position = aiPathNode->pos;
-                } else {
-                    entity.position = { 0, 0 }; // TODO world spawn or something?
+                Tilemap *map = FindMap(mapId);
+                if (map) {
+                    pathfind.pathId = 0;
+                    AiPathNode *aiPathNode = map->GetPathNode(pathfind.pathId, 0);
+                    if (aiPathNode) {
+                        entity.position = aiPathNode->pos;
+                    }
                 }
+
+                physics.speed = GetRandomValue(300, 600);
+                physics.drag = 8.0f;
+
+                sprite.anims[0] = data::GFX_ANIM_NPC_LILY_N;
+
+                BroadcastEntitySpawn(entityId);
+                eid_bots[i] = entityId;
+            }
+        }
+    }
+}
+void GameServer::TickSpawnCaveNPCs(uint32_t mapId)
+{
+    static uint32_t eid_bots[1];
+    for (int i = 0; i < ARRAY_SIZE(eid_bots); i++) {
+        uint32_t entityId = eid_bots[i];
+
+        // Make sure entity still exists
+        if (entityId) {
+            Entity *entity = entityDb->FindEntity(entityId);
+            if (!entity) {
+                entityId = 0;
+            }
+        }
+
+        if (!entityId && ((int)tick % 100 == i * 10)) {
+            entityId = SpawnEntity(Entity_NPC);
+            if (entityId) {
+                size_t entityIndex = entityDb->FindEntityIndex(entityId);
+                Entity &entity = entityDb->entities[entityIndex];
+                AspectCollision &collision = entityDb->collision[entityIndex];
+                AspectLife &life = entityDb->life[entityIndex];
+                AspectPathfind &pathfind = entityDb->pathfind[entityIndex];
+                AspectPhysics &physics = entityDb->physics[entityIndex];
+                data::Sprite &sprite = entityDb->sprite[entityIndex];
+
+                entity.type = Entity_NPC;
+                entity.mapId = mapId;
+                entity.position = { 1600, 500 };
+
+                collision.radius = 10;
+
+                life.maxHealth = 100;
+                life.health = life.maxHealth;
 
                 physics.speed = GetRandomValue(300, 600);
                 physics.drag = 8.0f;
@@ -665,7 +712,7 @@ void GameServer::TickEntityProjectile(uint32_t entityId, double dt)
 
     if (!entity.despawnedAt) {
         for (Entity &target : entityDb->entities) {
-            if (target.type == Entity_NPC && !target.despawnedAt) {
+            if (target.type == Entity_NPC && !target.despawnedAt && target.mapId == entity.mapId) {
                 assert(target.id);
                 size_t targetIndex = entityDb->FindEntityIndex(target.id);
                 AspectLife &life = entityDb->life[targetIndex];
@@ -714,6 +761,7 @@ void GameServer::TickResolveEntityWarpCollisions(Tilemap &map, uint32_t entityId
                 Tilemap *map = FindOrLoadMap(warp.destMap);
                 if (map) {
                     // TODO: Move entity to other map?
+                    entity.mapId = map->id;
                 } else {
                     assert(!"UH-OH");
                 }
@@ -763,8 +811,9 @@ void GameServer::TickResolveEntityWarpCollisions(Tilemap &map, uint32_t entityId
 }
 void GameServer::Tick(void)
 {
-    // HACK: Only spawn NPCs in map 0, whatever map that may be (hopefully it's Level_001)
-    TickSpawnBots(*maps[0]);
+    // HACK: Only spawn NPCs in map 1, whatever map that may be (hopefully it's Level_001)
+    TickSpawnTownNPCs(1);
+    TickSpawnCaveNPCs(2);
 
     // Tick entites
     for (Entity &entity : entityDb->entities) {

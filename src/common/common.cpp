@@ -283,7 +283,6 @@ Rectangle RectGrow(const Rectangle &rect, float pixels)
 #include "audio/audio.cpp"
 #include "collision.cpp"
 #include "data.cpp"
-#include "editor.cpp"
 #include "entity.cpp"
 #include "file_utils.cpp"
 #include "entity_db.cpp"

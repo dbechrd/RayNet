@@ -124,7 +124,8 @@ private:
     void ProcessMessages(void);
     uint32_t SpawnProjectile(uint32_t mapId, Vector2 position, Vector2 direction);
     void UpdateServerPlayers(void);
-    void TickSpawnBots(Tilemap &map);
+    void TickSpawnTownNPCs(uint32_t mapId);
+    void TickSpawnCaveNPCs(uint32_t mapId);
     void TickEntityBot(uint32_t entityIndex, double dt);
     void TickEntityPlayer(uint32_t entityIndex, double dt);
     void TickEntityProjectile(uint32_t entityIndex, double dt);

@@ -56,13 +56,13 @@ struct Tilemap {
         uint32_t x, y;
     };
 
-    const uint32_t MAGIC = 0xDBBB9192;
+    static const uint32_t MAGIC = 0xDBBB9192;
     // v1: the OG
     // v2: added texturePath
     // v3: added AI paths/nodes
     // v4: tileDefCount and tileDef.x/y are now implicit based on texture size
     // v5: added warps
-    const uint32_t VERSION = 5;
+    static const uint32_t VERSION = 5;
 
     uint32_t    id        {};
     std::string filename  {};

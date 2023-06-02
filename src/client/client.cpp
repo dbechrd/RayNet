@@ -8,8 +8,6 @@
 #include "game_client.h"
 #include "todo.h"
 
-static bool CL_DBG_SNAPSHOT_SHADOWS = false;
-
 void draw_menu_main(GameClient &client, bool &quit)
 {
     Vector2 uiPosition{ floorf(GetRenderWidth() / 2.0f), floorf(GetRenderHeight() / 2.0f) };
@@ -381,7 +379,9 @@ int main(int argc, char *argv[])
             client->Stop();
         }
         if (io.KeyPressed(KEY_Z)) {
-            CL_DBG_SNAPSHOT_SHADOWS = !CL_DBG_SNAPSHOT_SHADOWS;
+            if (client->world) {
+                client->world->showSnapshotShadows = !client->world->showSnapshotShadows;
+            }
         }
         if (io.KeyPressed(KEY_T)) {
             client->showTodoList = !client->showTodoList;
@@ -425,10 +425,9 @@ int main(int argc, char *argv[])
                     if (io.MouseButtonPressed(MOUSE_BUTTON_LEFT)) {
                         Tilemap::Coord coord{};
                         Tilemap *map = client->world->LocalPlayerMap();
-                        if (map) {
-                            if (map && map->WorldToTileIndex(cursorWorldPos.x, cursorWorldPos.y, coord)) {
-                                client->SendTileInteract(coord.x, coord.y);
-                            }
+                        if (map && map->WorldToTileIndex(cursorWorldPos.x, cursorWorldPos.y, coord)) {
+                            // TOOD: Send mapId too then validate server-side
+                            client->SendTileInteract(coord.x, coord.y);
                         }
                     }
                 }

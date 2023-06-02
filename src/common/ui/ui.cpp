@@ -545,11 +545,6 @@ UIState UI::Textbox(STB_TexteditState &stbState, std::string &text)
                     if (selectLen) {
                         std::string selectedText = str.data.substr(selectLeft, selectLen);
                         SetClipboardText(selectedText.c_str());
-                        //str.data.erase(selectLeft, selectLen);
-                        //stbState.cursor = selectLeft;
-                        //stbState.select_start = 0;
-                        //stbState.select_end = 0;
-
                         stb_textedit_cut(&str, &stbState);
                     }
                 }

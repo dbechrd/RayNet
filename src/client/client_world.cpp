@@ -1,6 +1,9 @@
 #include "client_world.h"
 #include "game_client.h"
+#include "../common/collision.h"
 #include "../common/entity.h"
+#include "../common/entity_db.h"
+#include "../common/io.h"
 #include "../common/net/messages/msg_s_entity_spawn.h"
 #include "../common/net/messages/msg_s_entity_snapshot.h"
 
@@ -60,7 +63,7 @@ Tilemap *ClientWorld::FindOrLoadMap(uint32_t mapId)
         std::string mapName = "unknownMapId";
         switch (mapId) {
             case 1: mapName = LEVEL_001; break;
-            case 2: mapName = LEVEL_002; break;
+            case 2: mapName = LEVEL_CAVE; break;
         }
         // TODO: Load map and add to maps/mapdsById
 
@@ -149,6 +152,7 @@ void ClientWorld::ApplyStateInterpolated(EntityInterpolateTuple &data,
     if (b.mapId != a.mapId) {
         alpha = 1.0f;
     }
+    data.entity.mapId = b.mapId;
     data.entity.position.x = LERP(a.position.x, b.position.x, alpha);
     data.entity.position.y = LERP(a.position.y, b.position.y, alpha);
 
@@ -194,6 +198,7 @@ Err ClientWorld::CreateDialog(uint32_t entityId, std::string message, double now
 void ClientWorld::UpdateEntities(GameClient &client)
 {
     hoveredEntityId = 0;
+    Tilemap *localPlayerMap = LocalPlayerMap();
 
     for (Entity &entity : entityDb->entities) {
         if (entity.type == Entity_None) {
@@ -278,14 +283,16 @@ void ClientWorld::UpdateEntities(GameClient &client)
 
             ApplyStateInterpolated(entity.id, *snapshotA, *snapshotB, alpha);
 
-            const Vector2 cursorWorldPos = GetScreenToWorld2D(GetMousePosition(), camera2d);
-            bool hover = dlb_CheckCollisionPointRec(cursorWorldPos, entityDb->EntityRect(entity.id));
-            if (hover) {
-                bool down = io.MouseButtonPressed(MOUSE_BUTTON_LEFT);
-                if (down) {
-                    client.SendEntityInteract(entity.id);
+            if (localPlayerMap && entity.mapId == localPlayerMap->id) {
+                const Vector2 cursorWorldPos = GetScreenToWorld2D(GetMousePosition(), camera2d);
+                bool hover = dlb_CheckCollisionPointRec(cursorWorldPos, entityDb->EntityRect(entity.id));
+                if (hover) {
+                    bool down = io.MouseButtonPressed(MOUSE_BUTTON_LEFT);
+                    if (down) {
+                        client.SendEntityInteract(entity.id);
+                    }
+                    hoveredEntityId = entity.id;
                 }
-                hoveredEntityId = entity.id;
             }
         }
 
@@ -307,7 +314,7 @@ void ClientWorld::DrawEntitySnapshotShadows(uint32_t entityId, Controller &contr
     // want to modify the actual entity... so perhaps we need a "temp" entity that we can
     // use for drawing shadows? Or some other way to simulate the entity moving without
     // modifying the actual entity.
-    if (CL_DBG_SNAPSHOT_SHADOWS) {
+    if (showSnapshotShadows) {
         size_t entityIndex = entityDb->FindEntityIndex(entityId);
         if (!entityIndex) return;
 
@@ -440,7 +447,7 @@ void ClientWorld::Draw(Controller &controller, double now)
     // Draw the entities
     cursorWorldPos = GetScreenToWorld2D(GetMousePosition(), camera2d);
     for (Entity &entity : entityDb->entities) {
-        if (!entity.type || entity.despawnedAt) {
+        if (!entity.type || entity.despawnedAt || entity.mapId != map->id) {
             continue;
         }
         assert(entity.id);

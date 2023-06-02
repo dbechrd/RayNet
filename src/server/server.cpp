@@ -1,8 +1,8 @@
 #include "../common/collision.h"
-#include "../common/editor.h"
 #include "../common/histogram.h"
 #include "../common/io.h"
 #include "../common/ui/ui.h"
+#include "editor.h"
 #include "game_server.h"
 
 void RN_TraceLogCallback(int logLevel, const char *text, va_list args)
@@ -165,9 +165,7 @@ Err Play(GameServer &server)
     Camera2D camera{};
     camera.zoom = 1;
 
-    Tilemap &map0 = *server.maps[0];
-
-    Editor editor{};
+    Editor editor{ server.maps[0] };
     editor.Init();
 
     bool quit = false;
@@ -231,22 +229,22 @@ Err Play(GameServer &server)
             ClearBackground(BLUE_DESAT);
             BeginMode2D(camera);
                 // [World] Tilemap
-                map0.Draw(camera);
+                editor.map->Draw(camera);
 
                 // [Editor] Overlays
-                editor.DrawGroundOverlays(map0, camera, server.now);
+                editor.DrawGroundOverlays(camera, server.now);
 
                 // [World] Entities
                 // NOTE(dlb): We could build an array of { entityIndex, position.y } and sort it
                 // each frame, then render the entities in that order.
                 for (Entity &entity : entityDb->entities) {
-                    if (entity.mapId == map0.id) {
+                    if (entity.mapId == editor.map->id) {
                         entityDb->DrawEntity(entity.id);
                     }
                 }
 
                 // [Editor] Overlays
-                editor.DrawEntityOverlays(map0, camera, server.now);
+                editor.DrawEntityOverlays(camera, server.now);
 
                 // [Debug] Last collision
                 DrawRectangleLinesEx(lastCollisionA, 1, RED);
@@ -254,7 +252,7 @@ Err Play(GameServer &server)
             EndMode2D();
 
             // [Editor] Menus, action bar, etc.
-            editor.DrawUI({}, map0, server.now);
+            editor.DrawUI({}, server, server.now);
 
             static int lastSentTestId = 0;
             if (editor.state.entities.testId > lastSentTestId) {
@@ -386,3 +384,4 @@ int main(int argc, char *argv[])
 
 #include "../common/common.cpp"
 #include "game_server.cpp"
+#include "editor.cpp"

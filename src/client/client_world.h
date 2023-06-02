@@ -18,6 +18,7 @@ struct Controller {
 
 struct ClientWorld {
     Camera2D camera2d{};
+    bool showSnapshotShadows{};
 
     uint32_t localPlayerEntityId{};
     uint32_t hoveredEntityId{};
