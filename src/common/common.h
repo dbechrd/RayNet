@@ -116,10 +116,14 @@ const char *ErrStr(Err err);
 // Dumb stuff that should get a resource manager or wutevs
 
 extern Shader shdSdfText;
+extern Shader shdPixelFixer;
+extern int    shdPixelFixerScreenSizeUniformLoc;
+
 extern Font fntHackBold20;
 extern Font fntHackBold32;
 
 extern Texture texLily;
+extern Texture texNPatch;
 
 extern Music musAmbientOutdoors;
 extern Music musCave;

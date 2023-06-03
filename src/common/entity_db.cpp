@@ -170,10 +170,10 @@ void EntityDB::EntityTick(uint32_t entityId, double dt, double now)
     if (!entityIndex) return;
 
     Entity &entity = entities[entityIndex];
-    AspectDialog &dialog = this->dialog[entityIndex];
+    AspectLife &life = this->life[entityIndex];
     AspectPhysics &physics = this->physics[entityIndex];
 
-    EntityTickTuple data{ entity, physics };
+    EntityTickTuple data{ entity, life, physics };
     EntityTick(data, dt, now);
 }
 
@@ -222,9 +222,21 @@ void EntityDB::DrawEntityHoverInfo(uint32_t entityId)
     };
 
     DrawRectangleRec(hpBarBg, Fade(BLACK, 0.5));
-    float pctHealth = CLAMP((float)life.health / life.maxHealth, 0, 1);
-    hpBar.width = CLAMP(ceilf(hpBarSize.x * pctHealth), 0, hpBarSize.x);
-    DrawRectangleRec(hpBar, ColorBrightness(MAROON, -0.4));
+
+    if (fabsf(life.health - life.healthSmooth) < 1.0f) {
+        float pctHealth = CLAMP((float)life.healthSmooth / life.maxHealth, 0, 1);
+        hpBar.width = CLAMP(ceilf(hpBarSize.x * pctHealth), 0, hpBarSize.x);
+        DrawRectangleRec(hpBar, ColorBrightness(MAROON, -0.4));
+    } else {
+        float pctHealth = CLAMP((float)life.health / life.maxHealth, 0, 1);
+        float pctHealthSmooth = CLAMP((float)life.healthSmooth / life.maxHealth, 0, 1);
+        float pctWhite = MAX(pctHealth, pctHealthSmooth);
+        float pctRed = MIN(pctHealth, pctHealthSmooth);
+        hpBar.width = CLAMP(ceilf(hpBarSize.x * pctWhite), 0, hpBarSize.x);
+        DrawRectangleRec(hpBar, ColorBrightness(WHITE, -0.3));
+        hpBar.width = CLAMP(ceilf(hpBarSize.x * pctRed), 0, hpBarSize.x);
+        DrawRectangleRec(hpBar, ColorBrightness(MAROON, -0.4));
+    }
 
     Vector2 labelSize = MeasureTextEx(fntHackBold20, "Lily", fntHackBold20.baseSize, 1);
     Vector2 labelPos{

@@ -62,6 +62,7 @@ struct AspectDialog {
 struct AspectLife {
     int maxHealth;
     int health;
+    float healthSmooth;  // client-only to smoothly interpolate health changes
 
     void TakeDamage(int damage) {
         if (damage >= health) {
@@ -149,10 +150,11 @@ struct EntitySpriteTuple {
 
 struct EntityTickTuple {
     Entity        &entity;
+    AspectLife    &life;
     AspectPhysics &physics;
 
-    EntityTickTuple(Entity &entity, AspectPhysics &physics)
-        : entity(entity), physics(physics) {}
+    EntityTickTuple(Entity &entity, AspectLife &life, AspectPhysics &physics)
+        : entity(entity), life(life), physics(physics) {}
 };
 
 struct EntityData {

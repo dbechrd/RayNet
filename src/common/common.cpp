@@ -11,10 +11,14 @@
 //#include "stb_herringbone_wang_tile.c"
 
 Shader shdSdfText;
+Shader shdPixelFixer;
+int    shdPixelFixerScreenSizeUniformLoc;
+
 Font fntHackBold20;
 Font fntHackBold32;
 
 Texture texLily;
+Texture texNPatch;
 
 Music musAmbientOutdoors;
 Music musCave;
@@ -59,6 +63,9 @@ Err InitCommon(void)
     // Load SDF required shader (we use default vertex shader)
     shdSdfText = LoadShader(0, "resources/shaders/sdf.fs");
 
+    shdPixelFixer                     = LoadShader("resources/shaders/pixelfixer.vs", "resources/shaders/pixelfixer.fs");
+    shdPixelFixerScreenSizeUniformLoc = GetShaderLocation(shdPixelFixer, "screenSize");
+
     const char *fontName = "C:/Windows/Fonts/consolab.ttf";
     if (!FileExists(fontName)) {
         fontName = "resources/KarminaBold.otf";
@@ -72,6 +79,9 @@ Err InitCommon(void)
 
     texLily = LoadTexture("resources/lily.png");
     if (!texLily.width) err = RN_RAYLIB_ERROR;
+
+    texNPatch = LoadTexture("resources/npatch.png");
+    if (!texNPatch.width) err = RN_RAYLIB_ERROR;
 
     musAmbientOutdoors = LoadMusicStream("resources/copyright/345470__philip_goddard__branscombe-landslip-birds-and-sea-echoes-ese-from-cave-track.ogg");
     musCave = LoadMusicStream("resources/copyright/69391__zixem__cave_amb.wav");

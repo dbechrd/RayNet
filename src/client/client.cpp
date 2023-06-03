@@ -142,7 +142,10 @@ void update_camera(Camera2D &camera, Vector2 target)
 
 void draw_game(GameClient &client)
 {
-    client.world->Draw(client.controller, client.now);
+    Vector2 screenSize{ (float)GetRenderWidth(), (float)GetRenderHeight() };
+    SetShaderValue(shdPixelFixer, shdPixelFixerScreenSizeUniformLoc, &screenSize, SHADER_UNIFORM_VEC2);
+
+    client.world->Draw(client.controller, client.now, client.frameDt);
 
     //--------------------
     // Draw in-game menu
@@ -203,6 +206,10 @@ void draw_f3_menu(GameClient &client)
         Camera2D &camera = client.world->camera2d;
         Vector2 cursorWorldPos = GetScreenToWorld2D(GetMousePosition(), camera);
         DRAW_TEXT("cursorWld", "%.f, %.f", cursorWorldPos.x, cursorWorldPos.y);
+        Entity *localPlayer = client.world->LocalPlayer();
+        if (localPlayer) {
+            DRAW_TEXT("player", "%.2f, %.2f", localPlayer->position.x, localPlayer->position.y);
+        }
     }
 
     const char *clientStateStr = "unknown";

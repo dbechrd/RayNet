@@ -147,7 +147,7 @@ void ClientWorld::ApplySpawnEvent(const Msg_S_EntitySpawn &entitySpawn)
 }
 
 void ClientWorld::ApplyStateInterpolated(EntityInterpolateTuple &data,
-    const GhostSnapshot &a, const GhostSnapshot &b, float alpha)
+    const GhostSnapshot &a, const GhostSnapshot &b, float alpha, float dt)
 {
     if (b.mapId != a.mapId) {
         alpha = 1.0f;
@@ -159,13 +159,14 @@ void ClientWorld::ApplyStateInterpolated(EntityInterpolateTuple &data,
     data.physics.velocity.x = LERP(a.velocity.x, b.velocity.x, alpha);
     data.physics.velocity.y = LERP(a.velocity.y, b.velocity.y, alpha);
 
-    // TODO(dlb): Should we lerp max health?
-    data.life.maxHealth = a.maxHealth;
-    data.life.health = LERP(a.health, b.health, alpha);
+    data.life.maxHealth = b.maxHealth;
+    data.life.health = b.health;
+    data.life.healthSmooth = LERP(data.life.healthSmooth, data.life.health, 1.0f - powf(1.0f - 0.999f, dt));
+    //data.life.healthSmooth += ((data.life.healthSmooth < data.life.health) ? 1 : -1) * dt * 20;
 }
 
 void ClientWorld::ApplyStateInterpolated(uint32_t entityId,
-    const GhostSnapshot &a, const GhostSnapshot &b, float alpha)
+    const GhostSnapshot &a, const GhostSnapshot &b, float alpha, float dt)
 {
     size_t entityIndex = entityDb->FindEntityIndex(entityId);
     if (!entityIndex) {
@@ -178,7 +179,7 @@ void ClientWorld::ApplyStateInterpolated(uint32_t entityId,
     AspectLife    &life    = entityDb->life[entityIndex];
 
     EntityInterpolateTuple data{entity, physics, life};
-    ApplyStateInterpolated(data, a, b, alpha);
+    ApplyStateInterpolated(data, a, b, alpha, dt);
 }
 
 Err ClientWorld::CreateDialog(uint32_t entityId, std::string message, double now)
@@ -217,7 +218,7 @@ void ClientWorld::UpdateEntities(GameClient &client)
             // Apply latest snapshot
             const GhostSnapshot &latestSnapshot = ghost.newest();
             if (latestSnapshot.serverTime) {
-                ApplyStateInterpolated(entity.id, ghost.newest(), ghost.newest(), 0);
+                ApplyStateInterpolated(entity.id, ghost.newest(), ghost.newest(), 0, client.frameDt);
                 lastProcessedInputCmd = latestSnapshot.lastProcessedInputCmd;
             }
 
@@ -281,7 +282,7 @@ void ClientWorld::UpdateEntities(GameClient &client)
                     (snapshotB->serverTime - snapshotA->serverTime);
             }
 
-            ApplyStateInterpolated(entity.id, *snapshotA, *snapshotB, alpha);
+            ApplyStateInterpolated(entity.id, *snapshotA, *snapshotB, alpha, client.frameDt);
 
             if (localPlayerMap && entity.mapId == localPlayerMap->id) {
                 const Vector2 cursorWorldPos = GetScreenToWorld2D(GetMousePosition(), camera2d);
@@ -308,7 +309,7 @@ void ClientWorld::Update(GameClient &gameClient)
     UpdateEntities(gameClient);
 }
 
-void ClientWorld::DrawEntitySnapshotShadows(uint32_t entityId, Controller &controller, double now)
+void ClientWorld::DrawEntitySnapshotShadows(uint32_t entityId, Controller &controller, double now, double dt)
 {
     // TODO: Everything that says "ghostInstance" needs to be an entity_id, but we don't
     // want to modify the actual entity... so perhaps we need a "temp" entity that we can
@@ -329,14 +330,14 @@ void ClientWorld::DrawEntitySnapshotShadows(uint32_t entityId, Controller &contr
 
         EntityInterpolateTuple ghostInterpData{ ghostData.entity, ghostData.physics, ghostData.life };
         EntitySpriteTuple ghostSpriteData{ ghostData.entity, ghostData.sprite };
-        EntityTickTuple ghostTickData{ ghostData.entity, ghostData.physics };
+        EntityTickTuple ghostTickData{ ghostData.entity, ghostData.life, ghostData.physics };
         EntityCollisionTuple ghostCollisionData{ ghostData.entity, ghostData.collision, ghostData.physics };
 
         for (int i = 0; i < ghost.size(); i++) {
             if (!ghost[i].serverTime) {
                 continue;
             }
-            ApplyStateInterpolated(ghostInterpData, ghost[i], ghost[i], 0);
+            ApplyStateInterpolated(ghostInterpData, ghost[i], ghost[i], 0, dt);
 
             const float scalePer = 1.0f / (CL_SNAPSHOT_COUNT + 1);
             Rectangle ghostRect = entityDb->EntityRect(ghostSpriteData);
@@ -353,7 +354,7 @@ void ClientWorld::DrawEntitySnapshotShadows(uint32_t entityId, Controller &contr
                 uint32_t lastProcessedInputCmd = 0;
                 const GhostSnapshot &latestSnapshot = ghost.newest();
                 if (latestSnapshot.serverTime) {
-                    ApplyStateInterpolated(ghostInterpData, latestSnapshot, latestSnapshot, 0);
+                    ApplyStateInterpolated(ghostInterpData, latestSnapshot, latestSnapshot, 0, dt);
                     lastProcessedInputCmd = latestSnapshot.lastProcessedInputCmd;
                 }
 
@@ -392,19 +393,35 @@ void ClientWorld::DrawEntitySnapshotShadows(uint32_t entityId, Controller &contr
 void ClientWorld::DrawDialog(AspectDialog &dialog, Vector2 topCenterScreen)
 {
     const float marginBottom = 4.0f;
-    Vector2 bgPad{ 8, 2 };
+    Vector2 bgPad{ 12, 8 };
     Vector2 msgSize = MeasureTextEx(fntHackBold20, dialog.message.c_str(), fntHackBold20.baseSize, 1.0f);
     Vector2 msgPos{
         topCenterScreen.x - msgSize.x / 2,
         topCenterScreen.y - msgSize.y - bgPad.y * 2 - marginBottom
     };
+    //msgPos.x = floorf(msgPos.x);
+    //msgPos.y = floorf(msgPos.y);
+
     Rectangle msgBgRect{
         msgPos.x - bgPad.x,
         msgPos.y - bgPad.y,
         msgSize.x + bgPad.x * 2,
         msgSize.y + bgPad.y * 2
     };
-    DrawRectangleRounded(msgBgRect, 0.2f, 6, Fade(BLACK, 0.5));
+    //msgBgRect.x = floorf(msgBgRect.x);
+    //msgBgRect.y = floorf(msgBgRect.y);
+    //msgBgRect.width = floorf(msgBgRect.width);
+    //msgBgRect.height = floorf(msgBgRect.height);
+
+    NPatchInfo nPatch{};
+    nPatch.source = { 0, 0, (float)texNPatch.width, (float)texNPatch.height };
+    nPatch.left = 16;
+    nPatch.top = 16;
+    nPatch.right = 16;
+    nPatch.bottom = 16;
+    nPatch.layout = NPATCH_NINE_PATCH;
+    DrawTextureNPatch(texNPatch, nPatch, msgBgRect, {}, 0, WHITE);
+    //DrawRectangleRounded(msgBgRect, 0.2f, 6, Fade(BLACK, 0.5));
     //DrawRectangleRoundedLines(msgBgRect, 0.2f, 6, 1.0f, RAYWHITE);
     DrawTextEx(fntHackBold20, dialog.message.c_str(), msgPos, fntHackBold20.baseSize, 1.0f, RAYWHITE);
     //DrawTextShadowEx(fntHackBold20, dialog.message, msgPos, FONT_SIZE, RAYWHITE);
@@ -429,7 +446,7 @@ void ClientWorld::DrawDialogs(Camera2D &camera)
     }
 }
 
-void ClientWorld::Draw(Controller &controller, double now)
+void ClientWorld::Draw(Controller &controller, double now, double dt)
 {
     Tilemap *map = LocalPlayerMap();
     if (!map) {
@@ -441,7 +458,10 @@ void ClientWorld::Draw(Controller &controller, double now)
     //--------------------
     // Draw the map
     BeginMode2D(camera2d);
+
+    BeginShaderMode(shdPixelFixer);
     map->Draw(camera2d);
+    EndShaderMode();
 
     //--------------------
     // Draw the entities
@@ -451,7 +471,7 @@ void ClientWorld::Draw(Controller &controller, double now)
             continue;
         }
         assert(entity.id);
-        DrawEntitySnapshotShadows(entity.id, controller, now);
+        DrawEntitySnapshotShadows(entity.id, controller, now, dt);
         entityDb->DrawEntity(entity.id);
     }
     EndMode2D();

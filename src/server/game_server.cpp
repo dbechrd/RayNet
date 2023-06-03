@@ -62,7 +62,7 @@ void GameServer::OnClientJoin(int clientIdx)
         collision.radius = 10;
         life.maxHealth = 100;
         life.health = life.maxHealth;
-        physics.speed = 2000;
+        physics.speed = 1000;
         physics.drag = 8.0f;
         sprite.anims[0] = data::GFX_ANIM_CHR_MAGE_N;
 
@@ -725,7 +725,7 @@ void GameServer::TickEntityProjectile(uint32_t entityId, double dt)
                 if (CheckCollisionRecs(projectileHitbox, targetHitbox)) {
                     life.TakeDamage(GetRandomValue(3, 8));
                     if (life.Alive()) {
-                        BroadcastEntitySay(target.id, "Ouch!");
+                        BroadcastEntitySay(target.id, TextFormat("Ouch! You hit me with\nprojectile #%u!", entity.id));
                     } else {
                         DespawnEntity(target.id);
                     }
