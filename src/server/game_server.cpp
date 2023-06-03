@@ -64,7 +64,8 @@ void GameServer::OnClientJoin(int clientIdx)
         life.health = life.maxHealth;
         physics.speed = 2000;
         physics.drag = 8.0f;
-        sprite.anims[0] = data::GFX_ANIM_CHR_MAGE_N;
+        sprite.anims[data::DIR_E] = data::GFX_ANIM_CHR_MAGE_E;
+        sprite.anims[data::DIR_W] = data::GFX_ANIM_CHR_MAGE_W;
 
         TileChunkRecord mainMap{};
         serverPlayer.chunkList.push(mainMap);
@@ -479,9 +480,7 @@ uint32_t GameServer::SpawnProjectile(uint32_t mapId, Vector2 position, Vector2 d
         // [Physics] random speed
         bulletPhysics.velocity = bulletVelocity;
         bulletPhysics.drag = 0.02f;
-
-        // [Sprite] animation
-        bulletSprite.anims[0] = data::GFX_ANIM_PRJ_BULLET;
+        bulletSprite.anims[data::DIR_N] = data::GFX_ANIM_PRJ_BULLET;
 
         BroadcastEntitySpawn(bulletId);
         return bulletId;
@@ -576,7 +575,8 @@ void GameServer::TickSpawnTownNPCs(uint32_t mapId)
                 physics.speed = GetRandomValue(300, 600);
                 physics.drag = 8.0f;
 
-                sprite.anims[0] = data::GFX_ANIM_NPC_LILY_N;
+                sprite.anims[data::DIR_E] = data::GFX_ANIM_NPC_LILY_E;
+                sprite.anims[data::DIR_W] = data::GFX_ANIM_NPC_LILY_W;
 
                 BroadcastEntitySpawn(entityId);
                 eid_bots[i] = entityId;
@@ -621,7 +621,8 @@ void GameServer::TickSpawnCaveNPCs(uint32_t mapId)
                 physics.speed = GetRandomValue(300, 600);
                 physics.drag = 8.0f;
 
-                sprite.anims[0] = data::GFX_ANIM_NPC_LILY_N;
+                sprite.anims[data::DIR_E] = data::GFX_ANIM_NPC_LILY_E;
+                sprite.anims[data::DIR_W] = data::GFX_ANIM_NPC_LILY_W;
 
                 BroadcastEntitySpawn(entityId);
                 eid_bots[i] = entityId;
@@ -868,7 +869,8 @@ void GameServer::Tick(void)
         }
 
         data::Sprite &sprite = entityDb->sprite[entityIndex];
-        data::UpdateSprite(sprite, SV_TICK_DT);
+        AspectPhysics &physics = entityDb->physics[entityIndex];
+        data::UpdateSprite(sprite, entity.type, physics.velocity, SV_TICK_DT);
     }
 
     tick++;

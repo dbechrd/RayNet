@@ -161,6 +161,8 @@ void EntityDB::EntityTick(EntityTickTuple &data, double dt, double now)
 
     data.entity.position.x += data.physics.velocity.x * dt;
     data.entity.position.y += data.physics.velocity.y * dt;
+
+    data::UpdateSprite(data.sprite, data.entity.type, data.physics.velocity, SV_TICK_DT);
 }
 void EntityDB::EntityTick(uint32_t entityId, double dt, double now)
 {
@@ -172,8 +174,9 @@ void EntityDB::EntityTick(uint32_t entityId, double dt, double now)
     Entity &entity = entities[entityIndex];
     AspectLife &life = this->life[entityIndex];
     AspectPhysics &physics = this->physics[entityIndex];
+    data::Sprite &sprite = this->sprite[entityIndex];
 
-    EntityTickTuple data{ entity, life, physics };
+    EntityTickTuple data{ entity, life, physics, sprite };
     EntityTick(data, dt, now);
 }
 

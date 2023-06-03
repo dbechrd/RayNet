@@ -10,7 +10,7 @@ void StringCatalog::Init(void)
     entries[STR_SHT_BULLET]   = "resources/bullet.txt";
     entries[STR_SHT_CAMPFIRE] = "resources/campfire.txt";
     entries[STR_SHT_LILY]     = "resources/lily.txt";
-    entries[STR_SHT_PLAYER]   = "resources/player.txt";
+    entries[STR_SHT_MAGE]   = "resources/player.txt";
 
     entries[STR_SND_HARD_TICK] = "resources/soft_tick.wav";
     entries[STR_SND_SOFT_TICK] = "resources/soft_tick.wav";

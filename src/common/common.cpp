@@ -58,7 +58,7 @@ Err InitCommon(void)
     rnSpritesheetCatalog.Load(STR_SHT_BULLET);
     rnSpritesheetCatalog.Load(STR_SHT_CAMPFIRE);
     rnSpritesheetCatalog.Load(STR_SHT_LILY);
-    rnSpritesheetCatalog.Load(STR_SHT_PLAYER);
+    rnSpritesheetCatalog.Load(STR_SHT_MAGE);
 
     // Load SDF required shader (we use default vertex shader)
     shdSdfText = LoadShader(0, "resources/shaders/sdf.fs");

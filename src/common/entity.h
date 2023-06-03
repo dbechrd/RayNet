@@ -137,9 +137,10 @@ struct EntityInterpolateTuple {
     Entity        &entity;
     AspectPhysics &physics;
     AspectLife    &life;
+    data::Sprite  &sprite;
 
-    EntityInterpolateTuple(Entity &entity, AspectPhysics &physics, AspectLife &life)
-        : entity(entity), physics(physics), life(life) {}
+    EntityInterpolateTuple(Entity &entity, AspectPhysics &physics, AspectLife &life, data::Sprite &sprite)
+        : entity(entity), physics(physics), life(life), sprite(sprite) {}
 };
 
 struct EntitySpriteTuple {
@@ -154,9 +155,10 @@ struct EntityTickTuple {
     Entity        &entity;
     AspectLife    &life;
     AspectPhysics &physics;
+    data::Sprite  &sprite;
 
-    EntityTickTuple(Entity &entity, AspectLife &life, AspectPhysics &physics)
-        : entity(entity), life(life), physics(physics) {}
+    EntityTickTuple(Entity &entity, AspectLife &life, AspectPhysics &physics, data::Sprite &sprite)
+        : entity(entity), life(life), physics(physics), sprite(sprite) {}
 };
 
 struct EntityData {

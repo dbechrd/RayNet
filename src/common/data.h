@@ -1,6 +1,8 @@
 #pragma once
 #include "common.h"
 
+enum EntityType;
+
 ////////////////////////////////////////////////////////////////////////////
 // TileFrame: textureId, x, y, w, h
 // TileGraphic: uint8_t id, const char *name, animLen[8], frames[8], delays[8] (up to 8 anims, for each direction)
@@ -48,8 +50,10 @@ namespace data {
 
     enum GfxFrameId : uint16_t {
         GFX_FRAME_NONE,
-        GFX_FRAME_CHR_MAGE_N_0,
-        GFX_FRAME_NPC_LILY_N_0,
+        GFX_FRAME_CHR_MAGE_E_0,
+        GFX_FRAME_CHR_MAGE_W_0,
+        GFX_FRAME_NPC_LILY_E_0,
+        GFX_FRAME_NPC_LILY_W_0,
         GFX_FRAME_OBJ_CAMPFIRE_0,
         GFX_FRAME_OBJ_CAMPFIRE_1,
         GFX_FRAME_OBJ_CAMPFIRE_2,
@@ -79,8 +83,10 @@ namespace data {
 
     enum GfxAnimId : uint16_t {
         GFX_ANIM_NONE,
-        GFX_ANIM_CHR_MAGE_N,
-        GFX_ANIM_NPC_LILY_N,
+        GFX_ANIM_CHR_MAGE_E,
+        GFX_ANIM_CHR_MAGE_W,
+        GFX_ANIM_NPC_LILY_E,
+        GFX_ANIM_NPC_LILY_W,
         GFX_ANIM_OBJ_CAMPFIRE,
         GFX_ANIM_PRJ_BULLET,
         //GFX_ANIM_FLAG,
@@ -152,7 +158,7 @@ namespace data {
     void Free(void);
 
     const GfxFrame &GetSpriteFrame(const Sprite &sprite);
-    void UpdateSprite(Sprite &sprite, double dt);
+    void UpdateSprite(Sprite &sprite, EntityType entityType, Vector2 velocity, double dt);
     void ResetSprite(Sprite &sprite);
     void DrawSprite(const Sprite &sprite, Vector2 pos);
 }

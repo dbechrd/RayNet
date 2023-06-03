@@ -156,7 +156,7 @@ void GameClient::ProcessMessages(void)
                 case MSG_S_ENTITY_SPAWN:
                 {
                     Msg_S_EntitySpawn *msg = (Msg_S_EntitySpawn *)yjMsg;
-                    printf("[ENTITY_SPAWN] id=%u mapId=%u\n", msg->entityId, msg->mapId);
+                    //printf("[ENTITY_SPAWN] id=%u mapId=%u\n", msg->entityId, msg->mapId);
                     Entity *entity = entityDb->FindEntity(msg->entityId);
                     if (!entity) {
                         Tilemap *map = world->FindOrLoadMap(msg->mapId);

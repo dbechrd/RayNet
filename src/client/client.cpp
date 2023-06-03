@@ -71,7 +71,7 @@ void draw_menu_connecting(GameClient &client)
         campfire.anims[0] = data::GFX_ANIM_OBJ_CAMPFIRE;
     }
 
-    data::UpdateSprite(campfire, client.frameDt);
+    data::UpdateSprite(campfire, Entity_None, {}, client.frameDt);
     if (!connectingDotIdxLastUpdatedAt) {
         connectingDotIdxLastUpdatedAt = client.now;
     } else if (client.now > connectingDotIdxLastUpdatedAt + 0.5) {
@@ -433,8 +433,8 @@ int main(int argc, char *argv[])
                 // TODO: Actually check hand
                 bool holdingWeapon = true;
                 if (holdingWeapon) {
-                    //client->controller.cmdAccum.fire |= io.MouseButtonDown(MOUSE_LEFT_BUTTON);
-                    client->controller.cmdAccum.fire |= io.MouseButtonPressed(MOUSE_LEFT_BUTTON);
+                    client->controller.cmdAccum.fire |= io.MouseButtonDown(MOUSE_LEFT_BUTTON);
+                    //client->controller.cmdAccum.fire |= io.MouseButtonPressed(MOUSE_LEFT_BUTTON);
                 }
 
                 // TODO: Actually check hand

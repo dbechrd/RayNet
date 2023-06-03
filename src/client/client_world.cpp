@@ -141,16 +141,18 @@ void ClientWorld::ApplySpawnEvent(const Msg_S_EntitySpawn &entitySpawn)
 
     // TODO: Look it up from somewhere based on entity type?
     switch (entity.type) {
-        case Entity_NPC: {
-            sprite.anims[0] = data::GFX_ANIM_NPC_LILY_N;
+        case Entity_Player: {
+            sprite.anims[data::DIR_E] = data::GFX_ANIM_CHR_MAGE_E;
+            sprite.anims[data::DIR_W] = data::GFX_ANIM_CHR_MAGE_W;
             break;
         }
-        case Entity_Player: {
-            sprite.anims[0] = data::GFX_ANIM_CHR_MAGE_N;
+        case Entity_NPC: {
+            sprite.anims[data::DIR_E] = data::GFX_ANIM_NPC_LILY_E;
+            sprite.anims[data::DIR_W] = data::GFX_ANIM_NPC_LILY_W;
             break;
         }
         case Entity_Projectile: {
-            sprite.anims[0] = data::GFX_ANIM_PRJ_BULLET;
+            sprite.anims[data::DIR_N] = data::GFX_ANIM_PRJ_BULLET;
             break;
         };
     }
@@ -173,6 +175,8 @@ void ClientWorld::ApplyStateInterpolated(EntityInterpolateTuple &data,
     data.life.health = b.health;
     data.life.healthSmooth = LERP(data.life.healthSmooth, data.life.health, 1.0f - powf(1.0f - 0.999f, dt));
     //data.life.healthSmooth += ((data.life.healthSmooth < data.life.health) ? 1 : -1) * dt * 20;
+
+    data::UpdateSprite(data.sprite, data.entity.type, data.physics.velocity, SV_TICK_DT);
 }
 
 void ClientWorld::ApplyStateInterpolated(uint32_t entityId,
@@ -187,8 +191,9 @@ void ClientWorld::ApplyStateInterpolated(uint32_t entityId,
     Entity        &entity  = entityDb->entities[entityIndex];
     AspectPhysics &physics = entityDb->physics[entityIndex];
     AspectLife    &life    = entityDb->life[entityIndex];
+    data::Sprite  &sprite  = entityDb->sprite[entityIndex];
 
-    EntityInterpolateTuple data{entity, physics, life};
+    EntityInterpolateTuple data{ entity, physics, life, sprite };
     ApplyStateInterpolated(data, a, b, alpha, dt);
 }
 
@@ -338,9 +343,9 @@ void ClientWorld::DrawEntitySnapshotShadows(uint32_t entityId, Controller &contr
         // to decides to look up the entity by id instead of using the tuple's data.
         ghostData.entity.id = 0;
 
-        EntityInterpolateTuple ghostInterpData{ ghostData.entity, ghostData.physics, ghostData.life };
+        EntityInterpolateTuple ghostInterpData{ ghostData.entity, ghostData.physics, ghostData.life, ghostData.sprite };
         EntitySpriteTuple ghostSpriteData{ ghostData.entity, ghostData.sprite };
-        EntityTickTuple ghostTickData{ ghostData.entity, ghostData.life, ghostData.physics };
+        EntityTickTuple ghostTickData{ ghostData.entity, ghostData.life, ghostData.physics, ghostData.sprite };
         EntityCollisionTuple ghostCollisionData{ ghostData.entity, ghostData.collision, ghostData.physics };
 
         for (int i = 0; i < ghost.size(); i++) {

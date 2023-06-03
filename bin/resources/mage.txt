@@ -1,18 +1,18 @@
 spritesheet {
     version         1
-    texture_path    "resources/lily.png"
+    texture_path    "resources/mage.png"
     frame_width     32
     frame_height    64
     animations [
         animation {
-            name            "lily_r"
+            name            "mage_r"
             frame_start     0
             frame_count     1
             frame_duration  0.1
             loop            true
         }
         animation {
-            name            "lily_l"
+            name            "mage_l"
             frame_start     1
             frame_count     1
             frame_duration  0.1

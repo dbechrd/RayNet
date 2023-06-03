@@ -4,7 +4,7 @@ namespace data {
     GfxFile gfxFiles[] = {
         { GFX_FILE_NONE },
         // id                     texture path
-        { GFX_FILE_CHR_MAGE,      "resources/player.png" },
+        { GFX_FILE_CHR_MAGE,      "resources/mage.png" },
         { GFX_FILE_NPC_LILY,      "resources/lily.png" },
         { GFX_FILE_OBJ_CAMPFIRE,  "resources/campfire.png" },
         { GFX_FILE_PRJ_BULLET,    "resources/bullet.png" },
@@ -23,8 +23,10 @@ namespace data {
     GfxFrame gfxFrames[] = {
         { GFX_FRAME_NONE },
         // id                       image file                x   y    w    h
-        { GFX_FRAME_CHR_MAGE_N_0,   GFX_FILE_CHR_MAGE,        0,  0,  32,  64 },
-        { GFX_FRAME_NPC_LILY_N_0,   GFX_FILE_NPC_LILY,        0,  0,  32,  64 },
+        { GFX_FRAME_CHR_MAGE_E_0,   GFX_FILE_CHR_MAGE,        0,  0,  32,  64 },
+        { GFX_FRAME_CHR_MAGE_W_0,   GFX_FILE_CHR_MAGE,       32,  0,  32,  64 },
+        { GFX_FRAME_NPC_LILY_E_0,   GFX_FILE_NPC_LILY,        0,  0,  32,  64 },
+        { GFX_FRAME_NPC_LILY_W_0,   GFX_FILE_NPC_LILY,       32,  0,  32,  64 },
         { GFX_FRAME_OBJ_CAMPFIRE_0, GFX_FILE_OBJ_CAMPFIRE,    0,  0, 256, 256 },
         { GFX_FRAME_OBJ_CAMPFIRE_1, GFX_FILE_OBJ_CAMPFIRE,  256,  0, 256, 256 },
         { GFX_FRAME_OBJ_CAMPFIRE_2, GFX_FILE_OBJ_CAMPFIRE,  512,  0, 256, 256 },
@@ -43,8 +45,10 @@ namespace data {
     GfxAnim gfxAnims[] = {
         { GFX_ANIM_NONE },
         // id                      sound effect       frmRate  frmCount  frmDelay    frames
-        { GFX_ANIM_CHR_MAGE_N,     SFX_FILE_NONE,          60,        1,        0, { GFX_FRAME_CHR_MAGE_N_0 }},
-        { GFX_ANIM_NPC_LILY_N,     SFX_FILE_NONE,          60,        1,        0, { GFX_FRAME_NPC_LILY_N_0 }},
+        { GFX_ANIM_CHR_MAGE_E,     SFX_FILE_NONE,          60,        1,        0, { GFX_FRAME_CHR_MAGE_E_0 }},
+        { GFX_ANIM_CHR_MAGE_W,     SFX_FILE_NONE,          60,        1,        0, { GFX_FRAME_CHR_MAGE_W_0 }},
+        { GFX_ANIM_NPC_LILY_E,     SFX_FILE_NONE,          60,        1,        0, { GFX_FRAME_NPC_LILY_E_0 }},
+        { GFX_ANIM_NPC_LILY_W,     SFX_FILE_NONE,          60,        1,        0, { GFX_FRAME_NPC_LILY_W_0 }},
         { GFX_ANIM_OBJ_CAMPFIRE,   SFX_FILE_CAMPFIRE,      60,        8,        4, { GFX_FRAME_OBJ_CAMPFIRE_0, GFX_FRAME_OBJ_CAMPFIRE_1, GFX_FRAME_OBJ_CAMPFIRE_2, GFX_FRAME_OBJ_CAMPFIRE_3, GFX_FRAME_OBJ_CAMPFIRE_4, GFX_FRAME_OBJ_CAMPFIRE_5, GFX_FRAME_OBJ_CAMPFIRE_6, GFX_FRAME_OBJ_CAMPFIRE_7 }},
         { GFX_ANIM_PRJ_BULLET,     SFX_FILE_NONE,          60,        1,        0, { GFX_FRAME_PRJ_BULLET_0 }},
         { GFX_ANIM_TIL_GRASS,      SFX_FILE_NONE,          60,        1,        0, { GFX_FRAME_TIL_GRASS }},
@@ -116,9 +120,21 @@ namespace data {
         return frame;
     }
 
-    void UpdateSprite(Sprite &sprite, double dt)
+    void UpdateSprite(Sprite &sprite, EntityType entityType, Vector2 velocity, double dt)
     {
         sprite.animAccum += dt;
+
+        // TODO: Make this more general and stop taking in entityType.
+        switch (entityType) {
+            case Entity_Player: case Entity_NPC: {
+                if (velocity.x > 0) {
+                    sprite.dir = data::DIR_E;
+                } else {
+                    sprite.dir = data::DIR_W;
+                }
+                break;
+            }
+        }
 
         const GfxAnimId animId = sprite.anims[sprite.dir];
         const GfxAnim &anim = gfxAnims[animId];
