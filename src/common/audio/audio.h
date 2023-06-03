@@ -22,3 +22,5 @@ private:
 };
 
 extern SoundCatalog rnSoundCatalog;
+
+extern Music *rnBackgroundMusic;

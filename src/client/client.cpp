@@ -1,3 +1,4 @@
+#include "../common/audio/audio.h"
 #include "../common/collision.h"
 #include "../common/data.h"
 #include "../common/histogram.h"
@@ -295,8 +296,7 @@ int main(int argc, char *argv[])
         printf("Failed to load common resources\n");
     }
 
-    Music music = musAmbientOutdoors;
-    PlayMusicStream(music);
+    rnBackgroundMusic = &musAmbientOutdoors;
 
     Image icon = LoadImage("resources/client.png");
     SetWindowIcon(icon);
@@ -348,7 +348,12 @@ int main(int argc, char *argv[])
         client->fpsHistogram.Push(client->frameDt, doNetTick ? GREEN : RAYWHITE);
 
         // TODO: rnAudioSystem.Update();
-        UpdateMusicStream(music);
+        if (rnBackgroundMusic) {
+            if (!IsMusicStreamPlaying(*rnBackgroundMusic)) {
+                PlayMusicStream(*rnBackgroundMusic);
+            }
+            UpdateMusicStream(*rnBackgroundMusic);
+        }
 
         //--------------------
         // Input

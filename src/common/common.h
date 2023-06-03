@@ -126,7 +126,7 @@ extern Texture texLily;
 extern Texture texNPatch;
 
 extern Music musAmbientOutdoors;
-extern Music musCave;
+extern Music musAmbientCave;
 
 Err InitCommon(void);
 void FreeCommon(void);

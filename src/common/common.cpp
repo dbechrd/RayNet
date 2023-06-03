@@ -21,7 +21,7 @@ Texture texLily;
 Texture texNPatch;
 
 Music musAmbientOutdoors;
-Music musCave;
+Music musAmbientCave;
 
 const char *ErrStr(Err err)
 {
@@ -84,7 +84,7 @@ Err InitCommon(void)
     if (!texNPatch.width) err = RN_RAYLIB_ERROR;
 
     musAmbientOutdoors = LoadMusicStream("resources/copyright/345470__philip_goddard__branscombe-landslip-birds-and-sea-echoes-ese-from-cave-track.ogg");
-    musCave = LoadMusicStream("resources/copyright/69391__zixem__cave_amb.wav");
+    musAmbientCave = LoadMusicStream("resources/copyright/69391__zixem__cave_amb.wav");
 
     return err;
 }
@@ -96,7 +96,7 @@ void FreeCommon(void)
     UnloadFont(fntHackBold32);
     UnloadTexture(texLily);
     UnloadMusicStream(musAmbientOutdoors);
-    UnloadMusicStream(musCave);
+    UnloadMusicStream(musAmbientCave);
     rnSpritesheetCatalog.Free();
     rnTextureCatalog.Free();
     rnSoundCatalog.Free();

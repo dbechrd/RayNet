@@ -55,10 +55,11 @@ Tilemap *ClientWorld::LocalPlayerMap(void)
 Tilemap *ClientWorld::FindOrLoadMap(uint32_t mapId)
 {
     assert(mapId);
+    Tilemap *map = 0;
 
     const auto &mapEntry = mapsById.find(mapId);
     if (mapEntry != mapsById.end()) {
-        return maps[mapEntry->second];
+        map = maps[mapEntry->second];
     } else {
         std::string mapName = "unknownMapId";
         switch (mapId) {
@@ -67,23 +68,32 @@ Tilemap *ClientWorld::FindOrLoadMap(uint32_t mapId)
         }
         // TODO: Load map and add to maps/mapdsById
 
-        Tilemap *map = new Tilemap();
+        map = new Tilemap();
         if (map) {
             Err err = map->Load(mapName);
             if (!err) {
                 map->id = mapId;
                 mapsById[map->id] = maps.size();
                 maps.push_back(map);
-                return map;
             } else {
                 printf("Failed to load map id %u with code %d\n", mapId, err);
                 delete map;
+                map = 0;
             }
         } else {
             printf("Failed to allocate space to load map id %u\n", mapId);
         }
     }
-    return 0;
+
+    if (map) {
+        switch (map->id) {
+            case 1: rnBackgroundMusic = &musAmbientOutdoors; break;
+            case 2: rnBackgroundMusic = &musAmbientCave; break;
+            default: rnBackgroundMusic = 0;
+        }
+    }
+
+    return map;
 }
 
 bool ClientWorld::CopyEntityData(uint32_t entityId, EntityData &data)
