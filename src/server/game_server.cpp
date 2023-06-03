@@ -759,6 +759,9 @@ void GameServer::WarpEntity(Tilemap &map, uint32_t entityId, Warp &warp)
             // TODO: Move entity to other map?
             entity.mapId = map->id;
             entity.position = warp.destPos;
+            AspectPhysics &physics = entityDb->physics[entityIndex];
+            physics.forceAccum = {};
+            physics.velocity = {};
         } else {
             assert(!"UH-OH");
         }

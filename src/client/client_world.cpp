@@ -399,8 +399,8 @@ void ClientWorld::DrawDialog(AspectDialog &dialog, Vector2 topCenterScreen)
         topCenterScreen.x - msgSize.x / 2,
         topCenterScreen.y - msgSize.y - bgPad.y * 2 - marginBottom
     };
-    //msgPos.x = floorf(msgPos.x);
-    //msgPos.y = floorf(msgPos.y);
+    msgPos.x = floorf(msgPos.x);
+    msgPos.y = floorf(msgPos.y);
 
     Rectangle msgBgRect{
         msgPos.x - bgPad.x,
@@ -430,8 +430,13 @@ void ClientWorld::DrawDialog(AspectDialog &dialog, Vector2 topCenterScreen)
 // TODO: Entity should just draw it's own damn dialog
 void ClientWorld::DrawDialogs(Camera2D &camera)
 {
+    Tilemap *map = LocalPlayerMap();
+    if (!map) {
+        return;
+    }
+
     for (Entity &entity : entityDb->entities) {
-        if (!entity.type) {
+        if (!entity.type || entity.despawnedAt || entity.mapId != map->id) {
             continue;
         }
         assert(entity.id);
