@@ -112,7 +112,10 @@ void reset_menu_connecting(void)
 
 void update_camera(Camera2D &camera, Vector2 target)
 {
-    camera.offset = { (float)GetRenderWidth()/2, (float)GetRenderHeight()/2 };
+    camera.offset = {
+        floorf((float)GetRenderWidth()/2.0f),
+        floorf((float)GetRenderHeight()/2.0f)
+    };
 
     if (!io.KeyDown(KEY_SPACE)) {
 #if CL_CAMERA_LERP
@@ -122,8 +125,8 @@ void update_camera(Camera2D &camera, Vector2 target)
         camera.target.x = LERP(camera.target.x, target->position.x, alpha);
         camera.target.y = LERP(camera.target.y, target->position.y, alpha);
 #else
-        camera.target.x = target.x;
-        camera.target.y = target.y;
+        camera.target.x = roundf(target.x);
+        camera.target.y = roundf(target.y);
 #endif
     }
 
@@ -142,7 +145,10 @@ void update_camera(Camera2D &camera, Vector2 target)
 
 void draw_game(GameClient &client)
 {
-    Vector2 screenSize{ (float)GetRenderWidth(), (float)GetRenderHeight() };
+    Vector2 screenSize{
+        floorf((float)GetRenderWidth()),
+        floorf((float)GetRenderHeight())
+    };
     SetShaderValue(shdPixelFixer, shdPixelFixerScreenSizeUniformLoc, &screenSize, SHADER_UNIFORM_VEC2);
 
     client.world->Draw(client.controller, client.now, client.frameDt);

@@ -459,9 +459,9 @@ void ClientWorld::Draw(Controller &controller, double now, double dt)
     // Draw the map
     BeginMode2D(camera2d);
 
-    BeginShaderMode(shdPixelFixer);
+    //BeginShaderMode(shdPixelFixer);
     map->Draw(camera2d);
-    EndShaderMode();
+    //EndShaderMode();
 
     //--------------------
     // Draw the entities

@@ -62,7 +62,7 @@ void GameServer::OnClientJoin(int clientIdx)
         collision.radius = 10;
         life.maxHealth = 100;
         life.health = life.maxHealth;
-        physics.speed = 1000;
+        physics.speed = 2000;
         physics.drag = 8.0f;
         sprite.anims[0] = data::GFX_ANIM_CHR_MAGE_N;
 

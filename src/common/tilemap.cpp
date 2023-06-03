@@ -618,6 +618,14 @@ void Tilemap::DrawTile(Tile tile, Vector2 position)
 {
     const Texture tex = rnTextureCatalog.GetTexture(textureId);
     const Rectangle texRect = TileDefRect(tile);
+    if (
+        fabsf(position.x - floorf(position.x)) > 0.1 ||
+        fabsf(position.y - floorf(position.y)) > 0.1)
+    {
+        printf("");
+    }
+    position.x = roundf(position.x);
+    position.y = roundf(position.y);
     DrawTextureRec(tex, texRect, position, WHITE);
 }
 void Tilemap::Draw(Camera2D &camera)
