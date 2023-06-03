@@ -82,6 +82,7 @@ struct AspectLife {
 };
 
 struct AspectPathfind {
+    bool active;  // if false, don't pathfind
     int pathId;
     int pathNodeLastArrivedAt;
     int pathNodeTarget;

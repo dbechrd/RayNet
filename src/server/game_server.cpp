@@ -58,7 +58,7 @@ void GameServer::OnClientJoin(int clientIdx)
 
         entity.type = Entity_Player;
         entity.mapId = maps[0]->id;
-        entity.position = { 1600, 500 };
+        entity.position = { 1650, 435 };
         collision.radius = 10;
         life.maxHealth = 100;
         life.health = life.maxHealth;
@@ -565,6 +565,7 @@ void GameServer::TickSpawnTownNPCs(uint32_t mapId)
 
                 Tilemap *map = FindMap(mapId);
                 if (map) {
+                    pathfind.active = true;
                     pathfind.pathId = 0;
                     AiPathNode *aiPathNode = map->GetPathNode(pathfind.pathId, 0);
                     if (aiPathNode) {
@@ -610,7 +611,7 @@ void GameServer::TickSpawnCaveNPCs(uint32_t mapId)
 
                 entity.type = Entity_NPC;
                 entity.mapId = mapId;
-                entity.position = { 1600, 500 };
+                entity.position = { 1620, 450 };
 
                 collision.radius = 10;
 
@@ -640,48 +641,52 @@ void GameServer::TickEntityBot(uint32_t entityId, double dt)
 
     // TODO: tick_pathfind?
     AspectPathfind &pathfind = entityDb->pathfind[entityIndex];
-    AiPathNode *aiPathNode = map->GetPathNode(pathfind.pathId, pathfind.pathNodeTarget);
-    if (aiPathNode) {
-        Vector2 target = aiPathNode->pos;
-        Vector2 toTarget = Vector2Subtract(target, entity.position);
-        if (Vector2LengthSqr(toTarget) < 10 * 10) {
-            if (pathfind.pathNodeLastArrivedAt != pathfind.pathNodeTarget) {
-                // Arrived at a new node
-                pathfind.pathNodeLastArrivedAt = pathfind.pathNodeTarget;
-                pathfind.pathNodeArrivedAt = now;
+    if (pathfind.active) {
+        AiPathNode *aiPathNode = map->GetPathNode(pathfind.pathId, pathfind.pathNodeTarget);
+        if (aiPathNode) {
+            Vector2 target = aiPathNode->pos;
+            Vector2 toTarget = Vector2Subtract(target, entity.position);
+            if (Vector2LengthSqr(toTarget) < 10 * 10) {
+                if (pathfind.pathNodeLastArrivedAt != pathfind.pathNodeTarget) {
+                    // Arrived at a new node
+                    pathfind.pathNodeLastArrivedAt = pathfind.pathNodeTarget;
+                    pathfind.pathNodeArrivedAt = now;
+                }
+                if (now - pathfind.pathNodeArrivedAt > aiPathNode->waitFor) {
+                    // Been at node long enough, move on
+                    pathfind.pathNodeTarget = map->GetNextPathNodeIndex(pathfind.pathId, pathfind.pathNodeTarget);
+                }
+            } else {
+                pathfind.pathNodeLastArrivedAt = 0;
+                pathfind.pathNodeArrivedAt = 0;
+
+                AspectPhysics &physics = entityDb->physics[entityIndex];
+                Vector2 moveForce = toTarget;
+                moveForce = Vector2Normalize(moveForce);
+                moveForce = Vector2Scale(moveForce, physics.speed);
+                physics.ApplyForce(moveForce);
             }
-            if (now - pathfind.pathNodeArrivedAt > aiPathNode->waitFor) {
-                // Been at node long enough, move on
-                pathfind.pathNodeTarget = map->GetNextPathNodeIndex(pathfind.pathId, pathfind.pathNodeTarget);
+
+    #if 0
+            InputCmd aiCmd{};
+            if (eBot.position.x < target.x) {
+                aiCmd.east = true;
+            } else if (eBot.position.x > target.x) {
+                aiCmd.west = true;
             }
-        } else {
-            pathfind.pathNodeLastArrivedAt = 0;
-            pathfind.pathNodeArrivedAt = 0;
+            if (eBot.position.y < target.y) {
+                aiCmd.south = true;
+            } else if (eBot.position.y > target.y) {
+                aiCmd.north = true;
+            }
 
-            AspectPhysics &physics = entityDb->physics[entityIndex];
-            Vector2 moveForce = toTarget;
-            moveForce = Vector2Normalize(moveForce);
-            moveForce = Vector2Scale(moveForce, physics.speed);
-            physics.ApplyForce(moveForce);
+            Vector2 moveForce = aiCmd.GenerateMoveForce(eBot.speed);
+    #else
+
+    #endif
         }
-
-#if 0
-        InputCmd aiCmd{};
-        if (eBot.position.x < target.x) {
-            aiCmd.east = true;
-        } else if (eBot.position.x > target.x) {
-            aiCmd.west = true;
-        }
-        if (eBot.position.y < target.y) {
-            aiCmd.south = true;
-        } else if (eBot.position.y > target.y) {
-            aiCmd.north = true;
-        }
-
-        Vector2 moveForce = aiCmd.GenerateMoveForce(eBot.speed);
-#else
-
-#endif
+    } else {
+        printf("");
     }
 
     entityDb->EntityTick(entityId, dt, now);
