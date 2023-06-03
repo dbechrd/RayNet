@@ -742,6 +742,67 @@ void GameServer::TickEntityProjectile(uint32_t entityId, double dt)
         }
     }
 }
+void GameServer::WarpEntity(Tilemap &map, uint32_t entityId, Warp &warp)
+{
+    assert(entityId);
+
+    size_t entityIndex = entityDb->FindEntityIndex(entityId);
+    if (!entityIndex) return;
+
+    Entity &entity = entityDb->entities[entityIndex];
+    AspectCollision &collision = entityDb->collision[entityIndex];
+
+    if (warp.destMap.size()) {
+        // TODO: We need to move our entity to the new map
+        Tilemap *map = FindOrLoadMap(warp.destMap);
+        if (map) {
+            // TODO: Move entity to other map?
+            entity.mapId = map->id;
+            entity.position = warp.destPos;
+        } else {
+            assert(!"UH-OH");
+        }
+    } else {
+        // TODO: This needs to ask GameServer to load the new map and
+        // we also need to move our entity to the new map
+
+        //Err err = Load(warp.templateMap);
+        //if (err) {
+        //    assert(!"UH-OH");
+        //    exit(EXIT_FAILURE);
+        //}
+
+#if 0
+        // TODO: Make a copy of the template map if you wanna edit it
+        err = Save(warp.destMap);
+        if (err) {
+            assert(!"UH-OH");
+            exit(EXIT_FAILURE);
+        }
+#endif
+
+#if 0
+        // TODO: The GameServer should be making a new map using the
+        // template. Not this function. Return something useful to the
+        // game server (e.g. mapId or mapTemplateId).
+        WangTileset wangTileset{};
+        err = wangTileset.Load(*this, warp.templateTileset);
+        if (err) {
+            assert(!"UH-OH");
+            exit(EXIT_FAILURE);
+        }
+
+        WangMap wangMap{};
+        err = wangTileset.GenerateMap(width, height, *this, wangMap);
+        if (err) {
+            assert(!"UH-OH");
+            exit(EXIT_FAILURE);
+        }
+
+        SetFromWangMap(wangMap, now);
+#endif
+    }
+}
 void GameServer::TickResolveEntityWarpCollisions(Tilemap &map, uint32_t entityId, double now)
 {
     assert(entityId);
@@ -759,60 +820,19 @@ void GameServer::TickResolveEntityWarpCollisions(Tilemap &map, uint32_t entityId
         return;
     }
 
+    bool onWarp = false;
     for (Warp &warp : map.warps) {
-        if (dlb_CheckCollisionCircleRec(entity.position, collision.radius, warp.collider, 0)) {
-            if (warp.destMap.size()) {
-                // TODO: We need to move our entity to the new map
-                Tilemap *map = FindOrLoadMap(warp.destMap);
-                if (map) {
-                    // TODO: Move entity to other map?
-                    entity.mapId = map->id;
-                } else {
-                    assert(!"UH-OH");
-                }
-            } else {
-                // TODO: This needs to ask GameServer to load the new map and
-                // we also need to move our entity to the new map
-
-                //Err err = Load(warp.templateMap);
-                //if (err) {
-                //    assert(!"UH-OH");
-                //    exit(EXIT_FAILURE);
-                //}
-
-#if 0
-                // TODO: Make a copy of the template map if you wanna edit it
-                err = Save(warp.destMap);
-                if (err) {
-                    assert(!"UH-OH");
-                    exit(EXIT_FAILURE);
-                }
-#endif
-
-#if 0
-                // TODO: The GameServer should be making a new map using the
-                // template. Not this function. Return something useful to the
-                // game server (e.g. mapId or mapTemplateId).
-                WangTileset wangTileset{};
-                err = wangTileset.Load(*this, warp.templateTileset);
-                if (err) {
-                    assert(!"UH-OH");
-                    exit(EXIT_FAILURE);
-                }
-
-                WangMap wangMap{};
-                err = wangTileset.GenerateMap(width, height, *this, wangMap);
-                if (err) {
-                    assert(!"UH-OH");
-                    exit(EXIT_FAILURE);
-                }
-
-                SetFromWangMap(wangMap, now);
-#endif
+        onWarp = dlb_CheckCollisionCircleRec(entity.position, collision.radius, warp.collider, 0);
+        if (onWarp) {
+            // De-bounce warps. Only allow warping after entity has moved off any warps
+            // they may have just used to get here.
+            if (!collision.onWarp) {
+                WarpEntity(map, entityId, warp);
             }
             break;
         }
     }
+    collision.onWarp = onWarp;
 }
 void GameServer::Tick(void)
 {

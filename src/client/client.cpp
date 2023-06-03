@@ -15,7 +15,7 @@ void draw_menu_main(GameClient &client, bool &quit)
     UIStyle uiStyleMenu {};
     uiStyleMenu.margin = {};
     uiStyleMenu.pad = { 16, 4 };
-    uiStyleMenu.bgColor = BLANK;
+    uiStyleMenu.bgColor[UI_CtrlTypeButton] = BLANK;
     uiStyleMenu.fgColor = RAYWHITE;
     uiStyleMenu.font = &fntHackBold32;
     uiStyleMenu.alignH = TextAlign_Center;
@@ -85,7 +85,7 @@ void draw_menu_connecting(GameClient &client)
     UIStyle uiStyleMenu {};
     uiStyleMenu.margin = {};
     uiStyleMenu.pad = { 16, 4 };
-    uiStyleMenu.bgColor = BLANK;
+    uiStyleMenu.bgColor[UI_CtrlTypeButton] = BLANK;
     uiStyleMenu.fgColor = RAYWHITE;
     uiStyleMenu.font = &fntHackBold32;
     uiStyleMenu.alignH = TextAlign_Center;

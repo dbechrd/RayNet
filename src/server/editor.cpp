@@ -369,10 +369,10 @@ UIState Editor::DrawUI_ActionBar(Vector2 position, GameServer &server, double no
         openFileThread.detach();
     }
     if (openRequest.size()) {
-        Err err = map->Load(openRequest);
-        if (err) {
-            std::thread errorThread([err]{
-                const char *msg = TextFormat("Failed to load file %s. %s\n", openRequest, ErrStr(err));
+        Tilemap *openedMap = server.FindOrLoadMap(openRequest);
+        if (!openedMap) {
+            std::thread errorThread([]{
+                const char *msg = TextFormat("Failed to load file %s.\n", openRequest);
                 tinyfd_messageBox("Error", msg, "ok", "error", 1);
             });
             errorThread.detach();
@@ -816,13 +816,20 @@ void Editor::DrawUI_PathActions(UI &uiActionBar, double now)
 }
 void Editor::DrawUI_WarpActions(UI &uiActionBar, double now)
 {
-    if (uiActionBar.Button("Delete all warps", MAROON).pressed) {
-        map->warps.clear();
-    }
-    uiActionBar.Newline();
+    //if (uiActionBar.Button("Delete all warps", MAROON).pressed) {
+    //    map->warps.clear();
+    //}
+    //uiActionBar.Newline();
 
     UIStyle styleFullWidth{};
     styleFullWidth.size.x = 400;
+    UIStyle width80{};
+    width80.size.x = 80;
+
+    if (uiActionBar.Button("Add", DARKGREEN).pressed) {
+        map->warps.push_back({});
+    }
+    uiActionBar.Newline();
 
     uiActionBar.PushStyle(styleFullWidth);
 
@@ -830,25 +837,35 @@ void Editor::DrawUI_WarpActions(UI &uiActionBar, double now)
         uiActionBar.Text("collider");
         uiActionBar.Newline();
 
-        uiActionBar.Text("x:");
+        uiActionBar.PushStyle(width80);
+
+        uiActionBar.Text("x");
+        uiActionBar.Text("y");
+        uiActionBar.Text("width");
+        uiActionBar.Text("height");
+        uiActionBar.Newline();
+
         static STB_TexteditState txtColliderX{};
         uiActionBar.TextboxFloat(txtColliderX, warp.collider.x);
-        uiActionBar.Newline();
-
-        uiActionBar.Text("y:");
         static STB_TexteditState txtColliderY{};
         uiActionBar.TextboxFloat(txtColliderY, warp.collider.y);
-        uiActionBar.Newline();
-
-        uiActionBar.Text("w:");
         static STB_TexteditState txtColliderW{};
         uiActionBar.TextboxFloat(txtColliderW, warp.collider.width);
-        uiActionBar.Newline();
-
-        uiActionBar.Text("h:");
         static STB_TexteditState txtColliderH{};
         uiActionBar.TextboxFloat(txtColliderH, warp.collider.height);
         uiActionBar.Newline();
+
+        uiActionBar.Text("destX");
+        uiActionBar.Text("destY");
+        uiActionBar.Newline();
+
+        static STB_TexteditState txtDestX{};
+        uiActionBar.TextboxFloat(txtDestX, warp.destPos.x);
+        static STB_TexteditState txtDestY{};
+        uiActionBar.TextboxFloat(txtDestY, warp.destPos.y);
+        uiActionBar.Newline();
+
+        uiActionBar.PopStyle();
 
         uiActionBar.Text("destMap");
         uiActionBar.Newline();

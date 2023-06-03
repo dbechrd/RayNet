@@ -1,6 +1,12 @@
 #pragma once
 #include "../common.h"
 
+enum UI_CtrlType {
+    UI_CtrlTypeDefault,
+    UI_CtrlTypeButton,
+    UI_CtrlTypeCount,
+};
+
 struct UIPad {
     float top    {};
     float right  {};
@@ -59,7 +65,7 @@ struct UIStyle {
     UIPad pad{ 8, 2 };
     float scale{ 1 };
     Vector2 size{ 0, 0 };
-    Color bgColor{ BLUE };
+    Color bgColor[UI_CtrlTypeCount]{ BLANK, BLUE };
     Color fgColor{ WHITE };
     Font *font{ &fntHackBold20 };
     bool buttonPressed{};

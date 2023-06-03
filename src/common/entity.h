@@ -52,6 +52,7 @@ struct Entity {
 struct AspectCollision {
     float radius    {};  // collision
     bool  colliding {};  // not sync'd, local flag for debugging colliders
+    bool  onWarp    {};  // currently colliding with a warp (used to prevent ping-ponging)
 };
 
 struct AspectDialog {

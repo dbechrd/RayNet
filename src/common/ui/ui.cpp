@@ -136,11 +136,20 @@ UIState UI::Text(const char *text)
         position.y + cursor.y + style.margin.top
     };
 
-    Vector2 textSize = MeasureTextEx(*style.font, text, style.font->baseSize, 1.0f);
-    Align(style, ctrlPosition, textSize);
+    Vector2 contentSize = style.size;
+    if (contentSize.x <= 0 || contentSize.y <= 0) {
+        Vector2 textSize = MeasureTextEx(*style.font, text, style.font->baseSize, 1.0f);
+        if (contentSize.x <= 0) {
+            contentSize.x = textSize.x;
+        }
+        if (contentSize.y <= 0) {
+            contentSize.y = textSize.y;
+        }
+    }
+    Align(style, ctrlPosition, contentSize);
     Vector2 ctrlSize{
-        style.pad.left + textSize.x + style.pad.right,
-        style.pad.top + textSize.y + style.pad.bottom
+        style.pad.left + contentSize.x + style.pad.right,
+        style.pad.top + contentSize.y + style.pad.bottom
     };
 
     Rectangle ctrlRect = {
@@ -150,11 +159,23 @@ UIState UI::Text(const char *text)
         ctrlSize.y
     };
 
+    Vector2 contentPos = {
+        ctrlPosition.x + style.pad.left,
+        ctrlPosition.y + style.pad.top
+    };
+
     static HoverHash prevHoverHash{};
     UIState state = CalcState(ctrlRect, prevHoverHash);
 
+    if (style.bgColor[UI_CtrlTypeDefault].a) {
+        DrawRectangleRec(ctrlRect, style.bgColor[UI_CtrlTypeDefault]);
+    }
+    if (style.borderColor.a) {
+        DrawRectangleLinesEx(ctrlRect, 1, style.borderColor);
+    }
+
     // Draw text
-    DrawTextShadowEx(*style.font, text, { ctrlPosition.x, ctrlPosition.y }, style.fgColor);
+    DrawTextShadowEx(*style.font, text, contentPos, style.fgColor);
 
     state.contentTopLeft = { ctrlRect.x, ctrlRect.y };
     UpdateCursor(style, ctrlRect);
@@ -253,20 +274,20 @@ UIState UI::Button(const char *text)
     static HoverHash prevHoverHash{};
     UIState state = CalcState(ctrlRect, prevHoverHash);
 
-    Color bgColorFx = style.bgColor;
+    Color bgColorFx = style.bgColor[UI_CtrlTypeButton];
     Color fgColorFx = style.fgColor;
     if (state.hover) {
-        bgColorFx = ColorBrightness(style.bgColor, 0.3f);
+        bgColorFx = ColorBrightness(style.bgColor[UI_CtrlTypeButton], 0.3f);
         // HACK(dlb): We should just make fgColor[state] for hover, down etc.
         // Perhaps with special values that mean "brighten" and "darken".
         if (!bgColorFx.a) fgColorFx = YELLOW;
         if (state.down) {
-            bgColorFx = ColorBrightness(style.bgColor, -0.3f);
+            bgColorFx = ColorBrightness(style.bgColor[UI_CtrlTypeButton], -0.3f);
         }
     }
 
     // Draw drop shadow
-    if (style.bgColor.a) {
+    if (style.bgColor[UI_CtrlTypeButton].a) {
         DrawRectangleRounded(ctrlRect, cornerRoundness, cornerSegments, BLACK);
     }
 
@@ -299,7 +320,7 @@ UIState UI::Button(const char *text)
 UIState UI::Button(const char *text, Color bgColor)
 {
     UIStyle style = GetStyle();
-    style.bgColor = bgColor;
+    style.bgColor[UI_CtrlTypeButton] = bgColor;
     PushStyle(style);
     UIState state = Button(text);
     PopStyle();
@@ -309,7 +330,7 @@ UIState UI::Button(const char *text, Color bgColor)
 UIState UI::Button(const char *text, bool pressed, Color bgColor, Color bgColorPressed)
 {
     UIStyle style = GetStyle();
-    style.bgColor = pressed ? bgColorPressed : bgColor;
+    style.bgColor[UI_CtrlTypeButton] = pressed ? bgColorPressed : bgColor;
     style.buttonPressed = pressed;
     PushStyle(style);
     UIState state = Button(text);
@@ -341,7 +362,7 @@ void RN_stb_layout_row(StbTexteditRow *row, StbString *str, int startIndex)
 }
 
 int RN_stb_get_char_width(StbString *str, int startIndex, int offset) {
-    std::string oneChar = str->data.substr(startIndex + offset, 1);
+    std::string oneChar = str->data.substr((size_t)startIndex + offset, 1);
     Vector2 charSize = MeasureTextEx(*str->font, oneChar.c_str(), str->font->baseSize, 1);
     // NOTE(dlb): Wtf? Raylib probably doing int truncation bullshit.
     return charSize.x + 1;
@@ -598,7 +619,7 @@ UIState UI::Textbox(STB_TexteditState &stbState, std::string &text)
                 Vector2 textBeforeSelectionSize = MeasureTextEx(*style.font, textBeforeSelection.c_str(), style.font->baseSize, 1);
                 selectOffsetX = textBeforeSelectionSize.x + 1;
             }
-            std::string selectedText = text.substr(selectLeft, selectRight - selectLeft);
+            std::string selectedText = text.substr(selectLeft, (size_t)selectRight - selectLeft);
             Vector2 selectedTextSize = MeasureTextEx(*style.font, selectedText.c_str(), style.font->baseSize, 1);
             float selectWidth = selectedTextSize.x;
             Rectangle selectionRect{
@@ -650,13 +671,18 @@ UIState UI::Textbox(STB_TexteditState &stbState, std::string &text)
 
 void UI::TextboxFloat(STB_TexteditState &stbState, float &value)
 {
-    const char *valueCstr = TextFormat("%.3f", value);
+#if 0
+    const char *valueCstr = TextFormat("%.2f", value);
 
     if (&stbState != activeEditor) {
+        UIStyle clickableText = GetStyle();
+        clickableText.bgColor = GRAY;
+        PushStyle(clickableText);
         if (Text(valueCstr).pressed) {
             prevActiveEditor = activeEditor;
             activeEditor = &stbState;
         }
+        PopStyle();
     } else {
         std::string valueStr{valueCstr};
         UIState state = Textbox(stbState, valueStr);
@@ -668,4 +694,15 @@ void UI::TextboxFloat(STB_TexteditState &stbState, float &value)
         value = newValue;
         //return state;
     }
+#else
+    const char *valueCstr = TextFormat("%.2f", value);
+    std::string valueStr{valueCstr};
+    UIState state = Textbox(stbState, valueStr);
+    char *end = 0;
+    float newValue = strtof(valueStr.c_str(), &end);
+    if (*end != '\0') {
+        // todo: check errors before saving float value
+    }
+    value = newValue;
+#endif
 }
