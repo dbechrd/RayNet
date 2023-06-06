@@ -690,11 +690,11 @@ void GameServer::TickEntityBot(uint32_t entityId, double dt)
         printf("");
     }
 
-    entityDb->EntityTick(entityId, dt, now);
+    entityDb->EntityTick(entityId, dt);
 }
 void GameServer::TickEntityPlayer(uint32_t entityId, double dt)
 {
-    entityDb->EntityTick(entityId, dt, now);
+    entityDb->EntityTick(entityId, dt);
 }
 void GameServer::TickEntityProjectile(uint32_t entityId, double dt)
 {
@@ -705,7 +705,7 @@ void GameServer::TickEntityProjectile(uint32_t entityId, double dt)
     //AspectPhysics &physics = map.physics[entityIndex];
     //playerEntity.ApplyForce({ 0, 5 });
 
-    entityDb->EntityTick(entityId, dt, now);
+    entityDb->EntityTick(entityId, dt);
 
     Entity &entity = entityDb->entities[entityIndex];
     if (entity.despawnedAt) {

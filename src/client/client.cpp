@@ -111,7 +111,7 @@ void reset_menu_connecting(void)
     connectingDotIdxLastUpdatedAt = 0;
 }
 
-void update_camera(Camera2D &camera, Vector2 target)
+void update_camera(Camera2D &camera, Vector2 target, float frameDt)
 {
     camera.offset = {
         floorf((float)GetRenderWidth()/2.0f),
@@ -123,11 +123,12 @@ void update_camera(Camera2D &camera, Vector2 target)
         // https://www.gamedeveloper.com/programming/improved-lerp-smoothing-
         const float halfLife = 8.0f;
         float alpha = 1.0f - exp2f(-halfLife * frameDt);
-        camera.target.x = LERP(camera.target.x, target->position.x, alpha);
-        camera.target.y = LERP(camera.target.y, target->position.y, alpha);
+        camera.target.x = LERP(camera.target.x, target.x, alpha);
+        camera.target.y = LERP(camera.target.y, target.y, alpha);
+
 #else
-        camera.target.x = roundf(target.x);
-        camera.target.y = roundf(target.y);
+        camera.target.x = floorf(target.x);
+        camera.target.y = floorf(target.y);
 #endif
     }
 
@@ -474,7 +475,7 @@ int main(int argc, char *argv[])
                 // Update world
                 client->world->Update(*client);
                 // Update camera
-                update_camera(client->world->camera2d, localPlayer->position);
+                update_camera(client->world->camera2d, localPlayer->position, client->frameDt);
             }
         }
 

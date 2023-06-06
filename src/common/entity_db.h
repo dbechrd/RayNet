@@ -26,8 +26,8 @@ struct EntityDB {
     Rectangle EntityRect(EntitySpriteTuple &data);
     Rectangle EntityRect(uint32_t entityId);
     Vector2 EntityTopCenter(uint32_t entityId);
-    void EntityTick(EntityTickTuple &data, double dt, double now);
-    void EntityTick(uint32_t entityId, double dt, double now);
+    void EntityTick(EntityTickTuple &data, double dt);
+    void EntityTick(uint32_t entityId, double dt);
 
     void DrawEntityIds(uint32_t mapId, Camera2D &camera);
     void DrawEntityHoverInfo(uint32_t entityId);

@@ -145,26 +145,35 @@ Vector2 EntityDB::EntityTopCenter(uint32_t entityId)
     };
     return topCenter;
 }
-void EntityDB::EntityTick(EntityTickTuple &data, double dt, double now)
+void EntityDB::EntityTick(EntityTickTuple &data, double dt)
 {
     data.physics.velocity.x += data.physics.forceAccum.x * dt;
     data.physics.velocity.y += data.physics.forceAccum.y * dt;
     data.physics.forceAccum = {};
 
 #if 1
-    data.physics.velocity.x *= (1.0f - data.physics.drag * dt);
-    data.physics.velocity.y *= (1.0f - data.physics.drag * dt);
+    const float drag = (1.0f - data.physics.drag * dt);
+    data.physics.velocity.x *= drag;
+    data.physics.velocity.y *= drag;
+#elif 0
+    const float drag = (1.0f - data.physics.drag * SV_TICK_DT);
+    if (dt == SV_TICK_DT) {
+        data.physics.velocity.x *= drag;
+        data.physics.velocity.y *= drag;
+    } else {
+        //const float alpha = dt / SV_TICK_DT;
+        //data.physics.velocity.x *= drag * alpha;
+        //data.physics.velocity.y *= drag * alpha;
+    }
 #else
-    data.physics.velocity.x *= 1.0f - powf(data.physics.drag, dt);
-    data.physics.velocity.y *= 1.0f - powf(data.physics.drag, dt);
+    data.physics.velocity.x *= 1.0f - exp2f(-10.0f * data.physics.drag * dt);
+    data.physics.velocity.y *= 1.0f - exp2f(-10.0f * data.physics.drag * dt);
 #endif
 
     data.entity.position.x += data.physics.velocity.x * dt;
     data.entity.position.y += data.physics.velocity.y * dt;
-
-    data::UpdateSprite(data.sprite, data.entity.type, data.physics.velocity, SV_TICK_DT);
 }
-void EntityDB::EntityTick(uint32_t entityId, double dt, double now)
+void EntityDB::EntityTick(uint32_t entityId, double dt)
 {
     assert(entityId);
 
@@ -177,7 +186,7 @@ void EntityDB::EntityTick(uint32_t entityId, double dt, double now)
     data::Sprite &sprite = this->sprite[entityIndex];
 
     EntityTickTuple data{ entity, life, physics, sprite };
-    EntityTick(data, dt, now);
+    EntityTick(data, dt);
 }
 
 void EntityDB::DrawEntityIds(uint32_t entityId, Camera2D &camera)

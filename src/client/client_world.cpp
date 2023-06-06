@@ -46,7 +46,7 @@ Entity *ClientWorld::LocalPlayer(void) {
 Tilemap *ClientWorld::LocalPlayerMap(void)
 {
     Entity *localPlayer = LocalPlayer();
-    if (localPlayer) {
+    if (localPlayer && localPlayer->mapId) {
         return FindOrLoadMap(localPlayer->mapId);
     }
     return 0;
@@ -175,8 +175,6 @@ void ClientWorld::ApplyStateInterpolated(EntityInterpolateTuple &data,
     data.life.health = b.health;
     data.life.healthSmooth = LERP(data.life.healthSmooth, data.life.health, 1.0f - powf(1.0f - 0.999f, dt));
     //data.life.healthSmooth += ((data.life.healthSmooth < data.life.health) ? 1 : -1) * dt * 20;
-
-    data::UpdateSprite(data.sprite, data.entity.type, data.physics.velocity, SV_TICK_DT);
 }
 
 void ClientWorld::ApplyStateInterpolated(uint32_t entityId,
@@ -224,6 +222,7 @@ void ClientWorld::UpdateEntities(GameClient &client)
         size_t entityIndex = entityDb->FindEntityIndex(entity.id);
         AspectPhysics &physics = entityDb->physics[entityIndex];
         AspectGhost &ghost = entityDb->ghosts[entityIndex];
+        data::Sprite &sprite = entityDb->sprite[entityIndex];
         AspectDialog &dialog = entityDb->dialog[entityIndex];
 
         // Local player
@@ -238,8 +237,6 @@ void ClientWorld::UpdateEntities(GameClient &client)
             }
 
 #if CL_CLIENT_SIDE_PREDICT
-            // TODO: This probably should just be FindMap and shouldn't force
-            // every map to load and start ticking? I'm not sure..
             Tilemap *map = FindOrLoadMap(entity.mapId);
             if (map) {
                 // Apply unacked input
@@ -247,7 +244,7 @@ void ClientWorld::UpdateEntities(GameClient &client)
                     InputCmd &inputCmd = client.controller.cmdQueue[cmdIndex];
                     if (inputCmd.seq > lastProcessedInputCmd) {
                         physics.ApplyForce(inputCmd.GenerateMoveForce(physics.speed));
-                        entityDb->EntityTick(entity.id, SV_TICK_DT, client.now);
+                        entityDb->EntityTick(entity.id, SV_TICK_DT);
                         map->ResolveEntityTerrainCollisions(entity.id);
                     }
                 }
@@ -255,7 +252,7 @@ void ClientWorld::UpdateEntities(GameClient &client)
                 const double cmdAccumDt = client.now - client.controller.lastInputSampleAt;
                 if (cmdAccumDt > 0) {
                     physics.ApplyForce(client.controller.cmdAccum.GenerateMoveForce(physics.speed));
-                    entityDb->EntityTick(entity.id, cmdAccumDt, client.now);
+                    entityDb->EntityTick(entity.id, cmdAccumDt);
                     map->ResolveEntityTerrainCollisions(entity.id);
                 }
             }
@@ -311,6 +308,8 @@ void ClientWorld::UpdateEntities(GameClient &client)
                 }
             }
         }
+
+        data::UpdateSprite(sprite, entity.type, physics.velocity, client.frameDt);
 
         const double duration = CL_DIALOG_DURATION_MIN + CL_DIALOG_DURATION_PER_CHAR * dialog.message.size();
         if (dialog.spawnedAt && client.now - dialog.spawnedAt > duration) {
@@ -373,12 +372,11 @@ void ClientWorld::DrawEntitySnapshotShadows(uint32_t entityId, Controller &contr
                     lastProcessedInputCmd = latestSnapshot.lastProcessedInputCmd;
                 }
 
-                //const double cmdAccumDt = client.now - client.controller.lastInputSampleAt;
                 for (size_t cmdIndex = 0; cmdIndex < controller.cmdQueue.size(); cmdIndex++) {
                     InputCmd &inputCmd = controller.cmdQueue[cmdIndex];
                     if (inputCmd.seq > lastProcessedInputCmd) {
                         ghostData.physics.ApplyForce(inputCmd.GenerateMoveForce(ghostData.physics.speed));
-                        entityDb->EntityTick(ghostTickData, SV_TICK_DT, now);
+                        entityDb->EntityTick(ghostTickData, SV_TICK_DT);
                         map->ResolveEntityTerrainCollisions(ghostCollisionData);
                         Rectangle ghostRect = entityDb->EntityRect(ghostSpriteData);
                         DrawRectangleRec(ghostRect, Fade(GREEN, 0.1f));
@@ -386,19 +384,20 @@ void ClientWorld::DrawEntitySnapshotShadows(uint32_t entityId, Controller &contr
                     }
                 }
             }
-#endif
 
-#if 0
+#if 1
             // We don't really need to draw a blue rect at currently entity position unless
             // the entity is invisible.
-            const double cmdAccumDt = client.now - client.controller.lastInputSampleAt;
+            const double cmdAccumDt = now - controller.lastInputSampleAt;
             if (cmdAccumDt > 0) {
-                ghostInstance.ApplyForce(client.controller.cmdAccum.GenerateMoveForce(ghostInstance.speed));
-                ghostInstance.Tick(cmdAccumDt);
-                map->ResolveEntityTerrainCollisions(ghostInstance);
-                DrawRectangleRec(ghostInstance.GetRect(), Fade(BLUE, 0.2f));
-                printf("%.3f\n", cmdAccumDt);
+                ghostData.physics.ApplyForce(controller.cmdAccum.GenerateMoveForce(ghostData.physics.speed));
+                entityDb->EntityTick(ghostTickData, cmdAccumDt);
+                map->ResolveEntityTerrainCollisions(ghostCollisionData);
+                //printf("%.3f\n", cmdAccumDt);
             }
+            Rectangle ghostRect = entityDb->EntityRect(ghostSpriteData);
+            DrawRectangleLinesEx(ghostRect, 1, Fade(BLUE, 0.8f));
+#endif
 #endif
         }
     }
@@ -491,7 +490,7 @@ void ClientWorld::Draw(Controller &controller, double now, double dt)
             continue;
         }
         assert(entity.id);
-        DrawEntitySnapshotShadows(entity.id, controller, now, dt);
+        //DrawEntitySnapshotShadows(entity.id, controller, now, dt);
         entityDb->DrawEntity(entity.id);
     }
     EndMode2D();

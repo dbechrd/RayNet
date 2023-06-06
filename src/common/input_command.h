@@ -9,6 +9,7 @@ struct InputCmd {
     bool east;
     bool fire;
     Vector2 facing;
+    double sampledAt;  // client time for debug
 
     Vector2 GenerateMoveForce(float speed) const
     {
