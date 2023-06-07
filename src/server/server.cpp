@@ -84,8 +84,8 @@ void draw_f3_menu(GameServer &server, Camera2D &camera)
         8.0f
     };
 
-    server.histogram.Draw(hudCursor);
-    hudCursor.y += server.histogram.histoHeight + 8;
+    Vector2 histoCursor = hudCursor;
+    hudCursor.y += histogram.histoHeight + 8;
 
     char buf[128];
 #define DRAW_TEXT_MEASURE(measureRect, label, fmt, ...) { \
@@ -155,6 +155,8 @@ void draw_f3_menu(GameServer &server, Camera2D &camera)
         }
     }
 
+    histogram.Draw(histoCursor);
+
     io.PopScope();
 }
 
@@ -172,6 +174,7 @@ Err Play(GameServer &server)
     while (!quit) {
         io.PushScope(IO::IO_Game);
 
+        server.frame++;
         server.now = GetTime();
         server.frameDt = MIN(server.now - server.frameStart, SV_TICK_DT * 3);  // arbitrary limit for now
         server.frameDtSmooth = LERP(server.frameDtSmooth, server.frameDt, 0.1);
@@ -180,7 +183,6 @@ Err Play(GameServer &server)
         server.tickAccum += server.frameDt;
 
         bool doNetTick = server.tickAccum >= SV_TICK_DT;
-        server.histogram.Push(server.frameDtSmooth, doNetTick ? GREEN : RAYWHITE);
 
         // Global Input (ignores io stack; only for function keys)
         if (IsKeyPressed(KEY_F3)) {
@@ -208,7 +210,7 @@ Err Play(GameServer &server)
             }
         }
         if (io.KeyPressed(KEY_H)) {
-            server.histogram.paused = !server.histogram.paused;
+            histogram.paused = !histogram.paused;
         }
         if (io.KeyPressed(KEY_M)) {
             //server.map =
@@ -217,6 +219,9 @@ Err Play(GameServer &server)
         editor.HandleInput(camera);
 
         UpdateCamera(camera);
+
+        Histogram::Entry histoEntry = { server.frame, server.now, server.frameDt, doNetTick };
+        histogram.Push(histoEntry);
 
         while (server.tickAccum >= SV_TICK_DT) {
             //printf("[%.2f][%.2f] ServerUpdate %d\n", server.tickAccum, now, (int)server.tick);

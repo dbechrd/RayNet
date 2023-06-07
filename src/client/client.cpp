@@ -180,8 +180,8 @@ void draw_f3_menu(GameClient &client)
     //Vector2 hudCursor{ GetRenderWidth() - 360.0f - 8.0f, 8.0f };
     Vector2 hudCursor{ 8.0f, 48.0f };
     // TODO: ui.histogram(histogram);
-    client.fpsHistogram.Draw(hudCursor);
-    hudCursor.y += client.fpsHistogram.histoHeight + 8;
+    Vector2 histoCursor = hudCursor;
+    hudCursor.y += histogram.histoHeight + 8;
 
     char buf[128];
 #define DRAW_TEXT_MEASURE(measureRect, label, fmt, ...) { \
@@ -268,6 +268,8 @@ void draw_f3_menu(GameClient &client)
         client.todoList.Draw(hudCursor);
     }
 
+    histogram.Draw(histoCursor);
+
     io.PopScope();
 }
 
@@ -331,6 +333,7 @@ int main(int argc, char *argv[])
 
     bool quit = false;
     while (!quit) {
+        client->frame++;
         client->now = GetTime();
         client->frameDt = MIN(client->now - client->frameStart, SV_TICK_DT);  // arbitrary limit for now
 
@@ -346,7 +349,6 @@ int main(int argc, char *argv[])
         client->controller.sampleInputAccum += client->frameDt;
         client->netTickAccum += client->frameDt;
         bool doNetTick = client->netTickAccum >= SV_TICK_DT;
-        client->fpsHistogram.Push(client->frameDt, doNetTick ? GREEN : RAYWHITE);
 
         // TODO: rnAudioSystem.Update();
         if (rnBackgroundMusic) {
@@ -410,7 +412,7 @@ int main(int argc, char *argv[])
         }
         if (io.KeyPressed(KEY_H)) {
             // TODO: fpsHistogram.update() which checks input and calls TogglePause?
-            client->fpsHistogram.paused = !client->fpsHistogram.paused;
+            histogram.paused = !histogram.paused;
         }
 
         //--------------------
@@ -469,6 +471,9 @@ int main(int argc, char *argv[])
 
         //--------------------
         // Update
+        Histogram::Entry histoEntry = { client->frame, client->now, client->frameDt, doNetTick };
+        histogram.Push(histoEntry);
+
         if (client->yj_client->IsConnected()) {
             Entity *localPlayer = client->world->LocalPlayer();
             if (localPlayer) {

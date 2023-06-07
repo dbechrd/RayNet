@@ -290,6 +290,15 @@ Rectangle RectGrow(const Rectangle &rect, float pixels)
     return grown;
 }
 
+Rectangle RectConstrainToScreen(const Rectangle &rect)
+{
+    Vector2 screenSize{ (float)GetRenderWidth(), (float)GetRenderHeight() };
+    Rectangle newRect = rect;
+    newRect.x = CLAMP(rect.x, 0, screenSize.x - rect.width);
+    newRect.y = CLAMP(rect.y, 0, screenSize.y - rect.height);
+    return newRect;
+}
+
 #include "audio/audio.cpp"
 #include "collision.cpp"
 #include "data.cpp"

@@ -18,7 +18,7 @@ struct RingBuffer {
     }
 
     T &newest() {
-        return data[(nextIdx - 1) % S];
+        return data[nextIdx ? (nextIdx - 1) : S - 1];
     }
 
     void push(T &value) {

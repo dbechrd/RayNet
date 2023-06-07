@@ -141,6 +141,7 @@ void DrawTextShadowEx(Font font, const char *text, Vector2 pos, Color color);
 Rectangle GetScreenRectWorld(Camera2D &camera);
 Rectangle RectShrink(const Rectangle &rect, float pixels);
 Rectangle RectGrow(const Rectangle &rect, float pixels);
+Rectangle RectConstrainToScreen(const Rectangle &rect);
 
 
 //     STB_TEXTEDIT_CHARTYPE             the character type

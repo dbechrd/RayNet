@@ -257,8 +257,8 @@ void EntityDB::DrawEntityHoverInfo(uint32_t entityId)
     };
     DrawTextShadowEx(fntHackBold20, "Lily", labelPos, WHITE);
 }
-void EntityDB::DrawEntity(uint32_t entityId) {
-
+void EntityDB::DrawEntity(uint32_t entityId)
+{
     size_t entityIndex = FindEntityIndex(entityId);
     if (entityIndex) {
         Entity &entity = entities[entityIndex];

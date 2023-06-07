@@ -12,8 +12,8 @@ struct GameClient {
     double netTickAccum{};             // when this fills up, a net tick is due
     double lastNetTick{};              // for fixed-step networking updates
     double now{};                      // current time for this frame
+    uint64_t frame{};
 
-    Histogram fpsHistogram{};
     double frameStart{};
     double frameDt = 0;
     double frameDtSmooth = 60;

@@ -62,12 +62,12 @@ struct GameServer {
     yojimbo::Server *yj_server{};
     ServerPlayer players[SV_MAX_PLAYERS]{};  // note: playerIdx = entityId - 1
 
+    uint64_t frame{};
     uint64_t tick{};
+    double now{};
     double tickAccum{};
     double lastTickedAt{};
-    double now{};
 
-    Histogram histogram{};
     double frameStart{};
     double frameDt = 0;
     double frameDtSmooth = 60;

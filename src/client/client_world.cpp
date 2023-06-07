@@ -263,6 +263,15 @@ void ClientWorld::UpdateEntities(GameClient &client)
             if (oldestInput > lastProcessedInputCmd + 1) {
                 printf(" localPlayer: %d inputs dropped\n", oldestInput - lastProcessedInputCmd - 1);
             }
+
+            if (!histogram.paused) {
+                Histogram::Entry &histoEntry = histogram.buffer.newest();
+                histoEntry.lastInputSampledAt = client.controller.lastInputSampleAt;
+                histoEntry.lastProcessedInputCmd = lastProcessedInputCmd;
+                histoEntry.playerX = entity.position.x;
+                histoEntry.playerY = entity.position.y;
+                histoEntry.playerXDelta = histoEntry.playerX - histogram.buffer[histogram.buffer.size() - 2].playerX;
+            }
         } else {
             // TODO(dlb): Find snapshots nearest to (GetTime() - clientTimeDeltaVsServer)
             const double renderAt = client.ServerNow() - SV_TICK_DT;
