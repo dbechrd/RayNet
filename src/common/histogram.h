@@ -7,6 +7,8 @@ struct Histogram {
         // Client and server
         uint64_t frame{};
         double now{};
+
+#if 0
         double frameDt{};
         bool netTicked{};
 
@@ -14,27 +16,36 @@ struct Histogram {
         double lastInputSampledAt{};
         uint32_t lastProcessedInputCmd{};
         float playerX{};
-        float playerY{};
         float playerXDelta{};
+#endif
 
         // TODO: Make multiple histograms using this general structure:
-        //std::string metadata{};
-        //float value{};
-        //Color color{};
+        float value{};
+        float value2{}; // useful for dt from previous
+        Color color{};
+        std::string metadata{};
 
         Entry(void) = default;
-        Entry(uint64_t frame, double now, double frameDt, bool netTicked)
-            : frame(frame), now(now), frameDt(frameDt), netTicked(netTicked) {}
+        Entry(uint64_t frame, double now)
+            : frame(frame), now(now) {}
     };
 
-    bool paused = false;
-    float barPadding = 1.0f;
-    float barWidth = 7.0f;
-    float histoHeight = 40.0f;
+    static const float barPadding;
+    static const float barWidth;
+    static const float histoHeight;
+    static bool paused;
+
+    static Histogram *hoveredHisto;
+    static int hoveredIdx;
+
     RingBuffer<Entry, 60> buffer;
 
     void Push(Entry &entry);
+    static void ResetHover(void);
     void Draw(Vector2 position);
+    static void DrawHover(void);
 };
 
-extern Histogram histogram;
+extern Histogram histoFps;
+extern Histogram histoInput;
+extern Histogram histoDx;

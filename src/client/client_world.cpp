@@ -264,13 +264,21 @@ void ClientWorld::UpdateEntities(GameClient &client)
                 printf(" localPlayer: %d inputs dropped\n", oldestInput - lastProcessedInputCmd - 1);
             }
 
-            if (!histogram.paused) {
-                Histogram::Entry &histoEntry = histogram.buffer.newest();
-                histoEntry.lastInputSampledAt = client.controller.lastInputSampleAt;
-                histoEntry.lastProcessedInputCmd = lastProcessedInputCmd;
-                histoEntry.playerX = entity.position.x;
-                histoEntry.playerY = entity.position.y;
-                histoEntry.playerXDelta = histoEntry.playerX - histogram.buffer[histogram.buffer.size() - 2].playerX;
+            if (!Histogram::paused) {
+                Histogram::Entry &entryDx = histoDx.buffer.newest();
+                entryDx.value2 = entity.position.x;
+                entryDx.value = entity.position.x - histoDx.buffer[histoDx.buffer.size() - 2].value2;
+                entryDx.metadata = TextFormat("playerX: %.2f", entity.position.x);
+
+                if (IsKeyPressed(KEY_P)) {
+                    printf("");
+                }
+
+                bool newInput = client.controller.lastInputSampleAt == client.now;
+                Histogram::Entry &entryInput = histoInput.buffer.newest();
+                entryInput.value = lastProcessedInputCmd;
+                entryInput.color = (lastProcessedInputCmd % 2) ? BEIGE : BROWN;
+                entryInput.metadata = TextFormat("lastProcInputSeq: %u", lastProcessedInputCmd);
             }
         } else {
             // TODO(dlb): Find snapshots nearest to (GetTime() - clientTimeDeltaVsServer)

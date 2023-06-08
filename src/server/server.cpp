@@ -85,7 +85,7 @@ void draw_f3_menu(GameServer &server, Camera2D &camera)
     };
 
     Vector2 histoCursor = hudCursor;
-    hudCursor.y += histogram.histoHeight + 8;
+    hudCursor.y += (Histogram::histoHeight + 8) * 1;
 
     char buf[128];
 #define DRAW_TEXT_MEASURE(measureRect, label, fmt, ...) { \
@@ -155,7 +155,14 @@ void draw_f3_menu(GameServer &server, Camera2D &camera)
         }
     }
 
-    histogram.Draw(histoCursor);
+    Histogram::ResetHover();
+    histoFps.Draw(histoCursor);
+    histoCursor.y += Histogram::histoHeight + 8;
+    //histoInput.Draw(histoCursor);
+    //histoCursor.y += Histogram::histoHeight + 8;
+    //histoDx.Draw(histoCursor);
+    //histoCursor.y += Histogram::histoHeight + 8;
+    Histogram::DrawHover();
 
     io.PopScope();
 }
@@ -210,7 +217,7 @@ Err Play(GameServer &server)
             }
         }
         if (io.KeyPressed(KEY_H)) {
-            histogram.paused = !histogram.paused;
+            Histogram::paused = !Histogram::paused;
         }
         if (io.KeyPressed(KEY_M)) {
             //server.map =
@@ -220,8 +227,10 @@ Err Play(GameServer &server)
 
         UpdateCamera(camera);
 
-        Histogram::Entry histoEntry = { server.frame, server.now, server.frameDt, doNetTick };
-        histogram.Push(histoEntry);
+        Histogram::Entry histoEntry{ server.frame, server.now };
+        histoEntry.value = server.frameDt;
+        histoEntry.color = doNetTick ? GREEN : RAYWHITE;
+        histoFps.Push(histoEntry);
 
         while (server.tickAccum >= SV_TICK_DT) {
             //printf("[%.2f][%.2f] ServerUpdate %d\n", server.tickAccum, now, (int)server.tick);

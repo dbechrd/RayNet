@@ -181,7 +181,7 @@ void draw_f3_menu(GameClient &client)
     Vector2 hudCursor{ 8.0f, 48.0f };
     // TODO: ui.histogram(histogram);
     Vector2 histoCursor = hudCursor;
-    hudCursor.y += histogram.histoHeight + 8;
+    hudCursor.y += (Histogram::histoHeight + 8) * 3;
 
     char buf[128];
 #define DRAW_TEXT_MEASURE(measureRect, label, fmt, ...) { \
@@ -268,7 +268,14 @@ void draw_f3_menu(GameClient &client)
         client.todoList.Draw(hudCursor);
     }
 
-    histogram.Draw(histoCursor);
+    Histogram::ResetHover();
+    histoFps.Draw(histoCursor);
+    histoCursor.y += Histogram::histoHeight + 8;
+    histoInput.Draw(histoCursor);
+    histoCursor.y += Histogram::histoHeight + 8;
+    histoDx.Draw(histoCursor);
+    histoCursor.y += Histogram::histoHeight + 8;
+    Histogram::DrawHover();
 
     io.PopScope();
 }
@@ -412,7 +419,7 @@ int main(int argc, char *argv[])
         }
         if (io.KeyPressed(KEY_H)) {
             // TODO: fpsHistogram.update() which checks input and calls TogglePause?
-            histogram.paused = !histogram.paused;
+            Histogram::paused = !Histogram::paused;
         }
 
         //--------------------
@@ -471,8 +478,12 @@ int main(int argc, char *argv[])
 
         //--------------------
         // Update
-        Histogram::Entry histoEntry = { client->frame, client->now, client->frameDt, doNetTick };
-        histogram.Push(histoEntry);
+        Histogram::Entry histoEntry{ client->frame, client->now };
+        histoInput.Push(histoEntry);
+        histoDx.Push(histoEntry);
+        histoEntry.value = client->frameDt;
+        histoEntry.color = doNetTick ? GREEN : RAYWHITE;
+        histoFps.Push(histoEntry);
 
         if (client->yj_client->IsConnected()) {
             Entity *localPlayer = client->world->LocalPlayer();
