@@ -18,7 +18,7 @@ void draw_menu_main(GameClient &client, bool &quit)
     uiStyleMenu.pad = { 16, 4 };
     uiStyleMenu.bgColor[UI_CtrlTypeButton] = BLANK;
     uiStyleMenu.fgColor = RAYWHITE;
-    uiStyleMenu.font = &fntHackBold32;
+    uiStyleMenu.font = &fntBig;
     uiStyleMenu.alignH = TextAlign_Center;
     UI uiMenu{ uiPosition, uiStyleMenu };
 
@@ -51,7 +51,7 @@ void draw_menu_main(GameClient &client, bool &quit)
     }
 
     // Draw font atlas for SDF font
-    //DrawTexture(fntHackBold32.texture, GetRenderWidth() - fntHackBold32.texture.width, 0, WHITE);
+    //DrawTexture(fntBig.texture, GetRenderWidth() - fntBig.texture.width, 0, WHITE);
 }
 
 static data::Sprite campfire{};
@@ -88,7 +88,7 @@ void draw_menu_connecting(GameClient &client)
     uiStyleMenu.pad = { 16, 4 };
     uiStyleMenu.bgColor[UI_CtrlTypeButton] = BLANK;
     uiStyleMenu.fgColor = RAYWHITE;
-    uiStyleMenu.font = &fntHackBold32;
+    uiStyleMenu.font = &fntBig;
     uiStyleMenu.alignH = TextAlign_Center;
     UI uiMenu{ uiPosition, uiStyleMenu };
 
@@ -186,12 +186,12 @@ void draw_f3_menu(GameClient &client)
     char buf[128];
 #define DRAW_TEXT_MEASURE(measureRect, label, fmt, ...) { \
                 snprintf(buf, sizeof(buf), "%-11s : " fmt, label, __VA_ARGS__); \
-                DrawTextShadowEx(fntHackBold20, buf, hudCursor, RAYWHITE); \
+                DrawTextShadowEx(fntSmall, buf, hudCursor, RAYWHITE); \
                 if (measureRect) { \
-                    Vector2 measure = MeasureTextEx(fntHackBold20, buf, (float)fntHackBold20.baseSize, 1.0); \
+                    Vector2 measure = MeasureTextEx(fntSmall, buf, (float)fntSmall.baseSize, 1.0); \
                     *measureRect = { hudCursor.x, hudCursor.y, measure.x, measure.y }; \
                 } \
-                hudCursor.y += fntHackBold20.baseSize; \
+                hudCursor.y += fntSmall.baseSize; \
             }
 
 #define DRAW_TEXT(label, fmt, ...) \
@@ -268,14 +268,16 @@ void draw_f3_menu(GameClient &client)
         client.todoList.Draw(hudCursor);
     }
 
-    Histogram::ResetHover();
     histoFps.Draw(histoCursor);
     histoCursor.y += Histogram::histoHeight + 8;
     histoInput.Draw(histoCursor);
     histoCursor.y += Histogram::histoHeight + 8;
     histoDx.Draw(histoCursor);
     histoCursor.y += Histogram::histoHeight + 8;
-    Histogram::DrawHover();
+
+    histoFps.DrawHover();
+    histoInput.DrawHover();
+    histoDx.DrawHover();
 
     io.PopScope();
 }
@@ -289,7 +291,7 @@ int main(int argc, char *argv[])
 
     InitWindow(800, 600, "RayNet Client");
     //InitWindow(1920, 1017, "RayNet Client");
-    //SetWindowState(FLAG_VSYNC_HINT);  // Gahhhhhh Windows fucking sucks at this
+    SetWindowState(FLAG_VSYNC_HINT);  // Gahhhhhh Windows fucking sucks at this
     SetWindowState(FLAG_WINDOW_RESIZABLE);
     SetWindowState(FLAG_WINDOW_MAXIMIZED);
     //SetWindowState(FLAG_FULLSCREEN_MODE);
@@ -481,7 +483,7 @@ int main(int argc, char *argv[])
         Histogram::Entry histoEntry{ client->frame, client->now };
         histoInput.Push(histoEntry);
         histoDx.Push(histoEntry);
-        histoEntry.value = client->frameDt;
+        histoEntry.value = client->frameDt * 1000.0f;
         histoEntry.color = doNetTick ? GREEN : RAYWHITE;
         histoFps.Push(histoEntry);
 

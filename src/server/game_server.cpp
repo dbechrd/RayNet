@@ -62,8 +62,8 @@ void GameServer::OnClientJoin(int clientIdx)
         collision.radius = 10;
         life.maxHealth = 100;
         life.health = life.maxHealth;
-        physics.speed = 2000;
-        physics.drag = 8.0f;
+        physics.speed = 1000;
+        physics.drag = 1.0f;
         sprite.anims[data::DIR_E] = data::GFX_ANIM_CHR_MAGE_E;
         sprite.anims[data::DIR_W] = data::GFX_ANIM_CHR_MAGE_W;
 
@@ -573,7 +573,7 @@ void GameServer::TickSpawnTownNPCs(uint32_t mapId)
                 }
 
                 physics.speed = GetRandomValue(300, 600);
-                physics.drag = 8.0f;
+                physics.drag = 1.0f;
 
                 sprite.anims[data::DIR_E] = data::GFX_ANIM_NPC_LILY_E;
                 sprite.anims[data::DIR_W] = data::GFX_ANIM_NPC_LILY_W;

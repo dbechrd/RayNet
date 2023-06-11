@@ -21,7 +21,6 @@ struct Histogram {
 
         // TODO: Make multiple histograms using this general structure:
         float value{};
-        float value2{}; // useful for dt from previous
         Color color{};
         std::string metadata{};
 
@@ -35,15 +34,14 @@ struct Histogram {
     static const float histoHeight;
     static bool paused;
 
-    static Histogram *hoveredHisto;
-    static int hoveredIdx;
+    Histogram *hoveredHisto{};
+    int hoveredIdx = -1;
 
-    RingBuffer<Entry, 60> buffer;
+    RingBuffer<Entry, 238> buffer;
 
     void Push(Entry &entry);
-    static void ResetHover(void);
     void Draw(Vector2 position);
-    static void DrawHover(void);
+    void DrawHover(void);
 };
 
 extern Histogram histoFps;

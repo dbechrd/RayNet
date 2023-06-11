@@ -3,11 +3,8 @@
 
 const float Histogram::barPadding = 1.0f;
 const float Histogram::barWidth = 7.0f;
-const float Histogram::histoHeight = 40.0f;
+const float Histogram::histoHeight = 20.0f;
 bool Histogram::paused = false;
-
-Histogram *Histogram::hoveredHisto;
-int Histogram::hoveredIdx;
 
 Histogram histoFps;
 Histogram histoInput;
@@ -18,12 +15,6 @@ void Histogram::Push(Entry &entry)
     if (!paused) {
         buffer.push(entry);
     }
-}
-
-void Histogram::ResetHover(void)
-{
-    hoveredHisto = 0;
-    hoveredIdx = -1;
 }
 
 void Histogram::Draw(Vector2 position)
@@ -38,6 +29,8 @@ void Histogram::Draw(Vector2 position)
     Vector2 uiCursor{ position };
 
     const Vector2 mousePos = GetMousePosition();
+
+    bool hovered = false;
 
     for (int i = 0; i < buffer.size(); i++) {
         float bottom = uiCursor.y + histoHeight;
@@ -58,12 +51,23 @@ void Histogram::Draw(Vector2 position)
         hover.x -= barPadding;
         hover.width += barPadding;
         if (dlb_CheckCollisionPointRec(mousePos, hover)) {
-            DrawRectangleLinesEx(hover, 1, ORANGE);
+            // the next item owns the right border for collision purposes, but
+            // we want to draw hover rect there cus it looks nicer.
+            hover.width += barPadding;
+            DrawRectangleLinesEx(hover, 2, PINK);
+            if (!hovered && hoveredHisto != this || hoveredIdx != i) {
+                rnSoundCatalog.Play(STR_SND_SOFT_TICK);
+            }
             hoveredHisto = this;
             hoveredIdx = i;
+            hovered = true;
         }
-
         uiCursor.x += barWidth + barPadding;
+    }
+
+    if (!hovered) {
+        hoveredHisto = 0;
+        hoveredIdx = -1;
     }
 }
 
@@ -76,16 +80,17 @@ void Histogram::DrawHover(void)
         const float tipPad = 8;
         Vector2 tipPos = Vector2Add(mousePos, { 12 + tipPad, 12 + tipPad });
         const char *tipStr = TextFormat(
+            "%.3f%s"
+            "%s\n"
+            "----------------\n"
             "frame %u\n"
-            "now   %.3f\n"
-            "value %.3f%s"
-            "%s",
-            entry.frame,
-            entry.now,
+            "now   %.3f",
             entry.value, entry.metadata.size() ? "\n" : "",
-            entry.metadata.c_str()
+            entry.metadata.c_str(),
+            entry.frame,
+            entry.now
         );
-        Vector2 tipSize = MeasureTextEx(fntHackBold20, tipStr, fntHackBold20.baseSize, 1);
+        Vector2 tipSize = MeasureTextEx(fntTiny, tipStr, fntTiny.baseSize, 1);
         Rectangle tipRect{ tipPos.x, tipPos.y, tipSize.x, tipSize.y };
         tipRect = RectGrow(tipRect, tipPad);
         tipRect = RectConstrainToScreen(tipRect);
@@ -96,13 +101,6 @@ void Histogram::DrawHover(void)
 
         DrawRectangleRec(tipRect, Fade(BLACK, 0.8));
         DrawRectangleLinesEx(tipRect, 1, BLACK);
-        DrawTextEx(
-            fntHackBold20,
-            tipStr,
-            tipPos,
-            fntHackBold20.baseSize,
-            1,
-            WHITE
-        );
+        DrawTextEx(fntTiny, tipStr, tipPos, fntTiny.baseSize, 1, WHITE);
     }
 }

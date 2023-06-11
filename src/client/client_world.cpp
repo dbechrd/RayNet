@@ -227,58 +227,77 @@ void ClientWorld::UpdateEntities(GameClient &client)
 
         // Local player
         if (entity.id == localPlayerEntityId) {
-            uint32_t lastProcessedInputCmd = 0;
+            uint32_t latestSnapInputSeq = 0;
 
             // Apply latest snapshot
             const GhostSnapshot &latestSnapshot = ghost.newest();
             if (latestSnapshot.serverTime) {
                 ApplyStateInterpolated(entity.id, ghost.newest(), ghost.newest(), 0, client.frameDt);
-                lastProcessedInputCmd = latestSnapshot.lastProcessedInputCmd;
+                latestSnapInputSeq = latestSnapshot.lastProcessedInputCmd;
             }
 
 #if CL_CLIENT_SIDE_PREDICT
+            double cmdAccumDt{};
+            Vector2 cmdAccumForce{};
             Tilemap *map = FindOrLoadMap(entity.mapId);
             if (map) {
                 // Apply unacked input
                 for (size_t cmdIndex = 0; cmdIndex < client.controller.cmdQueue.size(); cmdIndex++) {
                     InputCmd &inputCmd = client.controller.cmdQueue[cmdIndex];
-                    if (inputCmd.seq > lastProcessedInputCmd) {
+                    if (inputCmd.seq > latestSnapInputSeq) {
                         physics.ApplyForce(inputCmd.GenerateMoveForce(physics.speed));
                         entityDb->EntityTick(entity.id, SV_TICK_DT);
                         map->ResolveEntityTerrainCollisions(entity.id);
                     }
                 }
 
-                const double cmdAccumDt = client.now - client.controller.lastInputSampleAt;
+                cmdAccumDt = client.now - client.controller.lastInputSampleAt;
                 if (cmdAccumDt > 0) {
-                    physics.ApplyForce(client.controller.cmdAccum.GenerateMoveForce(physics.speed));
-                    entityDb->EntityTick(entity.id, cmdAccumDt);
+                    Vector2 posBefore = entity.position;
+                    cmdAccumForce = client.controller.cmdAccum.GenerateMoveForce(physics.speed);
+                    physics.ApplyForce(cmdAccumForce);
+                    entityDb->EntityTick(entity.id, SV_TICK_DT);
                     map->ResolveEntityTerrainCollisions(entity.id);
+                    entity.position.x = LERP(posBefore.x, entity.position.x, cmdAccumDt / SV_TICK_DT);
+                    entity.position.y = LERP(posBefore.y, entity.position.y, cmdAccumDt / SV_TICK_DT);
                 }
             }
 #endif
 
             // Check for ignored input packets
             uint32_t oldestInput = client.controller.cmdQueue.oldest().seq;
-            if (oldestInput > lastProcessedInputCmd + 1) {
-                printf(" localPlayer: %d inputs dropped\n", oldestInput - lastProcessedInputCmd - 1);
+            if (oldestInput > latestSnapInputSeq + 1) {
+                printf(" localPlayer: %d inputs dropped\n", oldestInput - latestSnapInputSeq - 1);
             }
 
             if (!Histogram::paused) {
-                Histogram::Entry &entryDx = histoDx.buffer.newest();
-                entryDx.value2 = entity.position.x;
-                entryDx.value = entity.position.x - histoDx.buffer[histoDx.buffer.size() - 2].value2;
-                entryDx.metadata = TextFormat("playerX: %.2f", entity.position.x);
-
-                if (IsKeyPressed(KEY_P)) {
-                    printf("");
+                static Color colors[] = { BEIGE, BROWN };
+                static int colorIdx = 0;
+                if (latestSnapInputSeq != histoInput.buffer[histoInput.buffer.size() - 2].value) {
+                    colorIdx = ((size_t)colorIdx + 1) % ARRAY_SIZE(colors);
                 }
-
-                bool newInput = client.controller.lastInputSampleAt == client.now;
                 Histogram::Entry &entryInput = histoInput.buffer.newest();
-                entryInput.value = lastProcessedInputCmd;
-                entryInput.color = (lastProcessedInputCmd % 2) ? BEIGE : BROWN;
-                entryInput.metadata = TextFormat("lastProcInputSeq: %u", lastProcessedInputCmd);
+                entryInput.value = latestSnapInputSeq;
+                entryInput.color = colors[colorIdx];
+                entryInput.metadata = TextFormat("latestSnapInputSeq: %u", latestSnapInputSeq);
+
+                static float prevX = 0;
+                Histogram::Entry &entryDx = histoDx.buffer.newest();
+                entryDx.value = entity.position.x - prevX;
+                prevX = entity.position.x;
+                entryDx.metadata = TextFormat(
+                    "plr_x     %.3f\n"
+                    "plr_vx    %.3f\n"
+                    "plr_move  %.3f, %.3f\n"
+                    "svr_now   %.3f\n"
+                    "cmd_accum %.3f",
+                    entity.position.x,
+                    physics.velocity.x,
+                    cmdAccumDt > 0 ? cmdAccumForce.x : 0,
+                    cmdAccumDt > 0 ? cmdAccumForce.y : 0,
+                    client.ServerNow(),
+                    cmdAccumDt
+                );
             }
         } else {
             // TODO(dlb): Find snapshots nearest to (GetTime() - clientTimeDeltaVsServer)
@@ -405,14 +424,19 @@ void ClientWorld::DrawEntitySnapshotShadows(uint32_t entityId, Controller &contr
 #if 1
             // We don't really need to draw a blue rect at currently entity position unless
             // the entity is invisible.
-            const double cmdAccumDt = now - controller.lastInputSampleAt;
+             const double cmdAccumDt = now - controller.lastInputSampleAt;
             if (cmdAccumDt > 0) {
-                ghostData.physics.ApplyForce(controller.cmdAccum.GenerateMoveForce(ghostData.physics.speed));
-                entityDb->EntityTick(ghostTickData, cmdAccumDt);
+                Vector2 posBefore = ghostData.entity.position;
+                Vector2 cmdAccumForce = controller.cmdAccum.GenerateMoveForce(ghostData.physics.speed);
+                ghostData.physics.ApplyForce(cmdAccumForce);
+                entityDb->EntityTick(ghostTickData, SV_TICK_DT);
                 map->ResolveEntityTerrainCollisions(ghostCollisionData);
-                //printf("%.3f\n", cmdAccumDt);
+                ghostData.entity.position.y = LERP(posBefore.y, ghostData.entity.position.y, cmdAccumDt / SV_TICK_DT);
+                ghostData.entity.position.x = LERP(posBefore.x, ghostData.entity.position.x, cmdAccumDt / SV_TICK_DT);
             }
             Rectangle ghostRect = entityDb->EntityRect(ghostSpriteData);
+            ghostRect.x = floorf(ghostRect.x);
+            ghostRect.y = floorf(ghostRect.y);
             DrawRectangleLinesEx(ghostRect, 1, Fade(BLUE, 0.8f));
 #endif
 #endif
@@ -425,7 +449,7 @@ void ClientWorld::DrawDialog(AspectDialog &dialog, Vector2 topCenterScreen)
 {
     const float marginBottom = 4.0f;
     Vector2 bgPad{ 12, 8 };
-    Vector2 msgSize = MeasureTextEx(fntHackBold20, dialog.message.c_str(), fntHackBold20.baseSize, 1.0f);
+    Vector2 msgSize = MeasureTextEx(fntSmall, dialog.message.c_str(), fntSmall.baseSize, 1.0f);
     Vector2 msgPos{
         topCenterScreen.x - msgSize.x / 2,
         topCenterScreen.y - msgSize.y - bgPad.y * 2 - marginBottom
@@ -454,8 +478,8 @@ void ClientWorld::DrawDialog(AspectDialog &dialog, Vector2 topCenterScreen)
     DrawTextureNPatch(texNPatch, nPatch, msgBgRect, {}, 0, WHITE);
     //DrawRectangleRounded(msgBgRect, 0.2f, 6, Fade(BLACK, 0.5));
     //DrawRectangleRoundedLines(msgBgRect, 0.2f, 6, 1.0f, RAYWHITE);
-    DrawTextEx(fntHackBold20, dialog.message.c_str(), msgPos, fntHackBold20.baseSize, 1.0f, RAYWHITE);
-    //DrawTextShadowEx(fntHackBold20, dialog.message, msgPos, FONT_SIZE, RAYWHITE);
+    DrawTextEx(fntSmall, dialog.message.c_str(), msgPos, fntSmall.baseSize, 1.0f, RAYWHITE);
+    //DrawTextShadowEx(fntSmall, dialog.message, msgPos, FONT_SIZE, RAYWHITE);
 }
 
 // TODO: Entity should just draw it's own damn dialog
@@ -507,7 +531,7 @@ void ClientWorld::Draw(Controller &controller, double now, double dt)
             continue;
         }
         assert(entity.id);
-        //DrawEntitySnapshotShadows(entity.id, controller, now, dt);
+        DrawEntitySnapshotShadows(entity.id, controller, now, dt);
         entityDb->DrawEntity(entity.id);
     }
     EndMode2D();

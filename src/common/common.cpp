@@ -14,8 +14,9 @@ Shader shdSdfText;
 Shader shdPixelFixer;
 int    shdPixelFixerScreenSizeUniformLoc;
 
-Font fntHackBold20;
-Font fntHackBold32;
+Font fntTiny;
+Font fntSmall;
+Font fntBig;
 
 Texture texLily;
 Texture texNPatch;
@@ -70,12 +71,16 @@ Err InitCommon(void)
     if (!FileExists(fontName)) {
         fontName = "resources/KarminaBold.otf";
     }
-    fntHackBold20 = dlb_LoadFontEx(fontName, 18, 0, 0, FONT_DEFAULT);
-    if (!fntHackBold20.baseSize) err = RN_RAYLIB_ERROR;
 
-    fntHackBold32 = dlb_LoadFontEx(fontName, 42, 0, 0, FONT_DEFAULT);
-    if (!fntHackBold32.baseSize) err = RN_RAYLIB_ERROR;
-    SetTextureFilter(fntHackBold32.texture, TEXTURE_FILTER_BILINEAR);    // Required for SDF font
+    fntTiny = dlb_LoadFontEx(fontName, 14, 0, 0, FONT_DEFAULT);
+    if (!fntTiny.baseSize) err = RN_RAYLIB_ERROR;
+
+    fntSmall = dlb_LoadFontEx(fontName, 18, 0, 0, FONT_DEFAULT);
+    if (!fntSmall.baseSize) err = RN_RAYLIB_ERROR;
+
+    fntBig = dlb_LoadFontEx(fontName, 42, 0, 0, FONT_DEFAULT);
+    if (!fntBig.baseSize) err = RN_RAYLIB_ERROR;
+    //SetTextureFilter(fntBig.texture, TEXTURE_FILTER_BILINEAR);    // Required for SDF font
 
     texLily = LoadTexture("resources/lily.png");
     if (!texLily.width) err = RN_RAYLIB_ERROR;
@@ -92,8 +97,8 @@ Err InitCommon(void)
 void FreeCommon(void)
 {
     UnloadShader(shdSdfText);
-    UnloadFont(fntHackBold20);
-    UnloadFont(fntHackBold32);
+    UnloadFont(fntSmall);
+    UnloadFont(fntBig);
     UnloadTexture(texLily);
     UnloadMusicStream(musAmbientOutdoors);
     UnloadMusicStream(musAmbientCave);

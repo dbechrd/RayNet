@@ -147,31 +147,51 @@ Vector2 EntityDB::EntityTopCenter(uint32_t entityId)
 }
 void EntityDB::EntityTick(EntityTickTuple &data, double dt)
 {
-    data.physics.velocity.x += data.physics.forceAccum.x * dt;
-    data.physics.velocity.y += data.physics.forceAccum.y * dt;
+    Vector2 &pos = data.entity.position;
+    Vector2 &vel = data.physics.velocity;
+
+    vel.x += data.physics.forceAccum.x * dt;
+    vel.y += data.physics.forceAccum.y * dt;
     data.physics.forceAccum = {};
 
-#if 1
-    const float drag = (1.0f - data.physics.drag * dt);
-    data.physics.velocity.x *= drag;
-    data.physics.velocity.y *= drag;
+#if 0
+    const float &drag = data.physics.drag * dt;
+
+    //vel.x = CLAMP(vel.x, -200, 200);
+    if (vel.x > 0) {
+        vel.x = MAX(0, vel.x - drag);
+    } else if (vel.x < 0) {
+        vel.x = MIN(vel.x + drag, 0);
+    }
+
+    //vel.y = CLAMP(vel.y, -200, 200);
+    if (vel.y > 0) {
+        vel.y = MAX(0, vel.y - drag);
+    } else if (vel.y < 0) {
+        vel.y = MIN(vel.y + drag, 0);
+    }
+#elif 0
+    const float drag = (1.0f - data.physics.drag) * dt;
+    vel = Vector2Scale(vel, drag);
 #elif 0
     const float drag = (1.0f - data.physics.drag * SV_TICK_DT);
     if (dt == SV_TICK_DT) {
-        data.physics.velocity.x *= drag;
-        data.physics.velocity.y *= drag;
+        vel = Vector2Scale(vel, drag);
     } else {
-        //const float alpha = dt / SV_TICK_DT;
-        //data.physics.velocity.x *= drag * alpha;
-        //data.physics.velocity.y *= drag * alpha;
+        const float alpha = dt / SV_TICK_DT;
+        vel = Vector2Scale(vel, drag * alpha);
     }
 #else
-    data.physics.velocity.x *= 1.0f - exp2f(-10.0f * data.physics.drag * dt);
-    data.physics.velocity.y *= 1.0f - exp2f(-10.0f * data.physics.drag * dt);
+    // https://www.reddit.com/r/Unity3D/comments/5qla41/comment/dd0jp6o/?utm_source=reddit&utm_medium=web2x&context=3
+    // Lerping: current = Mathf.Lerp(current, target, 1.0f - Mathf.Exp(-Sharpness * Time.deltaTime));
+    // Damping: current *= Mathf.Exp(-Sharpness * Time.deltaTime);
+
+    vel.x *= exp2f(-10.0f * (data.physics.drag) * dt);
+    vel.y *= exp2f(-10.0f * (data.physics.drag) * dt);
 #endif
 
-    data.entity.position.x += data.physics.velocity.x * dt;
-    data.entity.position.y += data.physics.velocity.y * dt;
+    pos.x += vel.x * dt;
+    pos.y += vel.y * dt;
 }
 void EntityDB::EntityTick(uint32_t entityId, double dt)
 {
@@ -201,8 +221,8 @@ void EntityDB::DrawEntityIds(uint32_t entityId, Camera2D &camera)
         return;
     }
 
-    DrawTextEx(fntHackBold20, TextFormat("%u", entity.id), entity.position,
-        fntHackBold20.baseSize, 1, WHITE);
+    DrawTextEx(fntSmall, TextFormat("%u", entity.id), entity.position,
+        fntSmall.baseSize, 1, WHITE);
 }
 void EntityDB::DrawEntityHoverInfo(uint32_t entityId)
 {
@@ -250,12 +270,12 @@ void EntityDB::DrawEntityHoverInfo(uint32_t entityId)
         DrawRectangleRec(hpBar, ColorBrightness(MAROON, -0.4));
     }
 
-    Vector2 labelSize = MeasureTextEx(fntHackBold20, "Lily", fntHackBold20.baseSize, 1);
+    Vector2 labelSize = MeasureTextEx(fntSmall, "Lily", fntSmall.baseSize, 1);
     Vector2 labelPos{
         floorf(hpBarBg.x + hpBarBg.width / 2 - labelSize.x / 2),
         floorf(hpBarBg.y + hpBarBg.height / 2 - labelSize.y / 2)
     };
-    DrawTextShadowEx(fntHackBold20, "Lily", labelPos, WHITE);
+    DrawTextShadowEx(fntSmall, "Lily", labelPos, WHITE);
 }
 void EntityDB::DrawEntity(uint32_t entityId)
 {

@@ -685,7 +685,7 @@ void Tilemap::DrawTileIds(Camera2D &camera)
         for (int x = xMin; x < xMax; x++) {
             Tile tile = At(x, y);
             Vector2 tilePos = { (float)x * TILE_W + pad, (float)y * TILE_W + pad };
-            DrawTextEx(fntHackBold20, TextFormat("%d", tile), tilePos, fntHackBold20.baseSize * (0.5f / camera.zoom), 1 / camera.zoom, WHITE);
+            DrawTextEx(fntSmall, TextFormat("%d", tile), tilePos, fntSmall.baseSize * (0.5f / camera.zoom), 1 / camera.zoom, WHITE);
         }
     }
 }

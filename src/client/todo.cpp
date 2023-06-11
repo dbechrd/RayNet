@@ -147,8 +147,8 @@ void TodoList::Draw(Vector2 position)
 
     ui.Newline();
 
-    //DrawTextShadowEx(fntHackBold20, TextFormat("dragIdx: %d", textDraggingIndex), Vector2Add(uiPosition, uiCursor), fntHackBold20.baseSize, WHITE);
-    //uiCursor.y += fntHackBold20.baseSize + 4;
+    //DrawTextShadowEx(fntSmall, TextFormat("dragIdx: %d", textDraggingIndex), Vector2Add(uiPosition, uiCursor), fntSmall.baseSize, WHITE);
+    //uiCursor.y += fntSmall.baseSize + 4;
 
     const Vector2 margin { 8, 6 };
     for (int i = 0; i < itemCount; i++) {
@@ -186,28 +186,28 @@ void TodoList::Draw(Vector2 position)
 #if 0
         // Ugly up and down buttons, we have drag now wooo
         if (i > 0) {
-            UIState moveUpButton = UIButton(fntHackBold20, BLUE, "^", uiPosition, uiCursor);
+            UIState moveUpButton = UIButton(fntSmall, BLUE, "^", uiPosition, uiCursor);
             if (moveUpButton.released) {
                 TrySwapItems(i, i - 1);
             }
         } else {
-            UIState moveUpButtonFake = UIButton(fntHackBold20, DARKGRAY, " ", uiPosition, uiCursor);
+            UIState moveUpButtonFake = UIButton(fntSmall, DARKGRAY, " ", uiPosition, uiCursor);
         }
         uiCursor.x += margin.x;
 
         if (i < itemCount - 1) {
-            UIState moveDownButton = UIButton(fntHackBold20, BLUE, "v", uiPosition, uiCursor);
+            UIState moveDownButton = UIButton(fntSmall, BLUE, "v", uiPosition, uiCursor);
             if (moveDownButton.released) {
                 TrySwapItems(i, i + 1);
             }
         } else {
-            UIState moveUpButtonFake = UIButton(fntHackBold20, DARKGRAY, " ", uiPosition, uiCursor);
+            UIState moveUpButtonFake = UIButton(fntSmall, DARKGRAY, " ", uiPosition, uiCursor);
         }
         uiCursor.x += margin.x;
 #endif
 
         Vector2 textPos = Vector2Add(ui.CursorScreen(), uiStyle.margin.TopLeft());
-        DrawTextShadowEx(fntHackBold20, items[i].text, textPos, WHITE);
+        DrawTextShadowEx(fntSmall, items[i].text, textPos, WHITE);
         ui.Newline();
     }
 }

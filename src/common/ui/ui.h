@@ -67,7 +67,7 @@ struct UIStyle {
     Vector2 size{ 0, 0 };
     Color bgColor[UI_CtrlTypeCount]{ BLANK, BLUE };
     Color fgColor{ WHITE };
-    Font *font{ &fntHackBold20 };
+    Font *font{ &fntSmall };
     bool buttonPressed{};
     UIStyle_TextAlignH alignH{ TextAlign_Left };
 };

@@ -94,12 +94,12 @@ void draw_f3_menu(GameServer &server, Camera2D &camera)
             } else { \
                 snprintf(buf, sizeof(buf), fmt, __VA_ARGS__); \
             } \
-            DrawTextShadowEx(fntHackBold20, buf, hudCursor, RAYWHITE); \
+            DrawTextShadowEx(fntSmall, buf, hudCursor, RAYWHITE); \
             if (measureRect) { \
-                Vector2 measure = MeasureTextEx(fntHackBold20, buf, (float)fntHackBold20.baseSize, 1.0); \
+                Vector2 measure = MeasureTextEx(fntSmall, buf, (float)fntSmall.baseSize, 1.0); \
                 *measureRect = { hudCursor.x,hudCursor.y, measure.x, measure.y }; \
             } \
-            hudCursor.y += fntHackBold20.baseSize; \
+            hudCursor.y += fntSmall.baseSize; \
         }
 
 #define DRAW_TEXT(label, fmt, ...) \
@@ -155,14 +155,16 @@ void draw_f3_menu(GameServer &server, Camera2D &camera)
         }
     }
 
-    Histogram::ResetHover();
     histoFps.Draw(histoCursor);
     histoCursor.y += Histogram::histoHeight + 8;
     //histoInput.Draw(histoCursor);
     //histoCursor.y += Histogram::histoHeight + 8;
     //histoDx.Draw(histoCursor);
     //histoCursor.y += Histogram::histoHeight + 8;
-    Histogram::DrawHover();
+
+    histoFps.DrawHover();
+    //histoInput.DrawHover();
+    //histoDx.DrawHover();
 
     io.PopScope();
 }
@@ -228,7 +230,7 @@ Err Play(GameServer &server)
         UpdateCamera(camera);
 
         Histogram::Entry histoEntry{ server.frame, server.now };
-        histoEntry.value = server.frameDt;
+        histoEntry.value = server.frameDt * 1000.0f;
         histoEntry.color = doNetTick ? GREEN : RAYWHITE;
         histoFps.Push(histoEntry);
 

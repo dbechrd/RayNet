@@ -175,8 +175,8 @@ namespace data {
         const GfxFrame &frame = GetSpriteFrame(sprite);
         const GfxFile &file = gfxFiles[frame.gfx];
         const Rectangle frameRect{ (float)frame.x, (float)frame.y, (float)frame.w, (float)frame.h };
-        //pos.x = floor(pos.x);
-        //pos.y = floor(pos.y);
+        pos.x = floor(pos.x);
+        pos.y = floor(pos.y);
         DrawTextureRec(file.texture, frameRect, pos, WHITE);
     }
 }
