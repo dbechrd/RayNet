@@ -231,7 +231,7 @@ Err Play(GameServer &server)
 
         Histogram::Entry histoEntry{ server.frame, server.now };
         histoEntry.value = server.frameDt * 1000.0f;
-        histoEntry.color = doNetTick ? GREEN : RAYWHITE;
+        histoEntry.color = doNetTick ? DARKPURPLE : RAYWHITE;
         histoFps.Push(histoEntry);
 
         while (server.tickAccum >= SV_TICK_DT) {

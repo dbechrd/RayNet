@@ -111,11 +111,11 @@ void reset_menu_connecting(void)
     connectingDotIdxLastUpdatedAt = 0;
 }
 
-void update_camera(Camera2D &camera, Vector2 target, float frameDt)
+void update_camera(Camera2D &camera, Tilemap *map, Vector2 target, float frameDt)
 {
     camera.offset = {
-        floorf((float)GetRenderWidth()/2.0f),
-        floorf((float)GetRenderHeight()/2.0f)
+        floorf(GetRenderWidth()/2.0f),
+        floorf(GetRenderHeight()/2.0f)
     };
 
     if (!io.KeyDown(KEY_SPACE)) {
@@ -132,16 +132,32 @@ void update_camera(Camera2D &camera, Vector2 target, float frameDt)
 #endif
     }
 
+    if (map) {
+        Vector2 mapSize = { (float)map->width * TILE_W, map->height * (float)TILE_W };
+        camera.target.x = CLAMP(camera.target.x, camera.offset.x / camera.zoom, mapSize.x - camera.offset.x / camera.zoom);
+        camera.target.y = CLAMP(camera.target.y, camera.offset.y / camera.zoom, mapSize.y - camera.offset.y / camera.zoom);
+    }
+
     // Zoom based on mouse wheel
-    float wheel = GetMouseWheelMove();
+    static float zoomTarget = camera.zoom;
+    float wheel = io.MouseWheelMove();
     if (wheel != 0) {
         // Get the world point that is under the mouse
         Vector2 mouseWorldPos = GetScreenToWorld2D(GetMousePosition(), camera );
 
         // Zoom increment
-        const float zoomIncrement = 0.125f;
-        camera.zoom += (wheel * zoomIncrement * camera.zoom);
-        if (camera.zoom < zoomIncrement) camera.zoom = zoomIncrement;
+        const float zoomIncrement = 0.1f;
+        zoomTarget += (wheel * zoomIncrement * zoomTarget);
+        zoomTarget = MAX(zoomIncrement, zoomTarget);
+    }
+    if (fabsf(camera.zoom - zoomTarget) > 0.001f) {
+        const float halfLife = 8.0f;
+        float alpha = 1.0f - exp2f(-halfLife * frameDt);
+        camera.zoom = LERP(camera.zoom, zoomTarget, alpha);
+    }
+
+    if (io.MouseButtonPressed(MOUSE_BUTTON_MIDDLE)) {
+        zoomTarget = 2;
     }
 }
 
@@ -484,7 +500,7 @@ int main(int argc, char *argv[])
         histoInput.Push(histoEntry);
         histoDx.Push(histoEntry);
         histoEntry.value = client->frameDt * 1000.0f;
-        histoEntry.color = doNetTick ? GREEN : RAYWHITE;
+        histoEntry.color = doNetTick ? DARKPURPLE : RAYWHITE;
         histoFps.Push(histoEntry);
 
         if (client->yj_client->IsConnected()) {
@@ -493,7 +509,8 @@ int main(int argc, char *argv[])
                 // Update world
                 client->world->Update(*client);
                 // Update camera
-                update_camera(client->world->camera2d, localPlayer->position, client->frameDt);
+                update_camera(client->world->camera2d, client->world->LocalPlayerMap(),
+                    localPlayer->position, client->frameDt);
             }
         }
 
