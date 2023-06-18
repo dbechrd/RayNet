@@ -1,5 +1,4 @@
 #include "ui.h"
-#include "../audio/audio.h"
 #include "../collision.h"
 #include "../common.h"
 
@@ -97,9 +96,9 @@ UIState CalcState(Rectangle &ctrlRect, HoverHash &prevHoverHash)
 void UI::UpdateAudio(const UIState &uiState)
 {
     if (uiState.released) {
-        rnSoundCatalog.Play(STR_SND_HARD_TICK);
+        data::PlaySound(data::SFX_FILE_SOFT_TICK);
     } else if (uiState.entered) {
-        rnSoundCatalog.Play(STR_SND_SOFT_TICK, false);
+        data::PlaySound(data::SFX_FILE_SOFT_TICK, false);
     }
 }
 

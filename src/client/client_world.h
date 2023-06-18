@@ -26,6 +26,8 @@ struct ClientWorld {
     std::vector<Tilemap *> maps{};
     std::unordered_map<uint32_t, size_t> mapsById{};     // maps by their map id
 
+    data::MusFileId musBackgroundMusic{};
+
     ~ClientWorld(void);
     Entity *LocalPlayer(void);
     Tilemap *LocalPlayerMap(void);

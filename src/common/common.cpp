@@ -1,7 +1,5 @@
 #include "common.h"
-#include "audio/audio.h"
 #include "data.h"
-#include "spritesheet.h"
 #include "texture_catalog.h"
 
 #define RAYMATH_IMPLEMENTATION
@@ -17,12 +15,6 @@ int    shdPixelFixerScreenSizeUniformLoc;
 Font fntTiny;
 Font fntSmall;
 Font fntBig;
-
-Texture texLily;
-Texture texNPatch;
-
-Music musAmbientOutdoors;
-Music musAmbientCave;
 
 const char *ErrStr(Err err)
 {
@@ -48,18 +40,8 @@ Err InitCommon(void)
 {
     Err err = RN_SUCCESS;
     data::Init();
-
     rnStringCatalog.Init();
-
-    rnSoundCatalog.Init();
-
     rnTextureCatalog.Init();
-
-    rnSpritesheetCatalog.Init();
-    rnSpritesheetCatalog.Load(STR_SHT_BULLET);
-    rnSpritesheetCatalog.Load(STR_SHT_CAMPFIRE);
-    rnSpritesheetCatalog.Load(STR_SHT_LILY);
-    rnSpritesheetCatalog.Load(STR_SHT_MAGE);
 
     // Load SDF required shader (we use default vertex shader)
     shdSdfText = LoadShader(0, "resources/shaders/sdf.fs");
@@ -67,10 +49,14 @@ Err InitCommon(void)
     shdPixelFixer                     = LoadShader("resources/shaders/pixelfixer.vs", "resources/shaders/pixelfixer.fs");
     shdPixelFixerScreenSizeUniformLoc = GetShaderLocation(shdPixelFixer, "screenSize");
 
+#if 0
     const char *fontName = "C:/Windows/Fonts/consolab.ttf";
     if (!FileExists(fontName)) {
         fontName = "resources/KarminaBold.otf";
     }
+#else
+    const char *fontName = "resources/KarminaBold.otf";
+#endif
 
     fntTiny = dlb_LoadFontEx(fontName, 14, 0, 0, FONT_DEFAULT);
     if (!fntTiny.baseSize) err = RN_RAYLIB_ERROR;
@@ -82,15 +68,6 @@ Err InitCommon(void)
     if (!fntBig.baseSize) err = RN_RAYLIB_ERROR;
     //SetTextureFilter(fntBig.texture, TEXTURE_FILTER_BILINEAR);    // Required for SDF font
 
-    texLily = LoadTexture("resources/lily.png");
-    if (!texLily.width) err = RN_RAYLIB_ERROR;
-
-    texNPatch = LoadTexture("resources/npatch.png");
-    if (!texNPatch.width) err = RN_RAYLIB_ERROR;
-
-    musAmbientOutdoors = LoadMusicStream("resources/copyright/345470__philip_goddard__branscombe-landslip-birds-and-sea-echoes-ese-from-cave-track.ogg");
-    musAmbientCave = LoadMusicStream("resources/copyright/69391__zixem__cave_amb.wav");
-
     return err;
 }
 
@@ -99,13 +76,8 @@ void FreeCommon(void)
     UnloadShader(shdSdfText);
     UnloadFont(fntSmall);
     UnloadFont(fntBig);
-    UnloadTexture(texLily);
-    UnloadMusicStream(musAmbientOutdoors);
-    UnloadMusicStream(musAmbientCave);
-    rnSpritesheetCatalog.Free();
     rnTextureCatalog.Free();
-    rnSoundCatalog.Free();
-    data::Init();
+    data::Free();
 }
 
 // Load font from memory buffer, fileType refers to extension: i.e. ".ttf"
@@ -304,7 +276,6 @@ Rectangle RectConstrainToScreen(const Rectangle &rect)
     return newRect;
 }
 
-#include "audio/audio.cpp"
 #include "collision.cpp"
 #include "data.cpp"
 #include "entity.cpp"
@@ -313,7 +284,6 @@ Rectangle RectConstrainToScreen(const Rectangle &rect)
 #include "histogram.cpp"
 #include "io.cpp"
 #include "net/net.cpp"
-#include "spritesheet.cpp"
 #include "strings.cpp"
 #include "texture_catalog.cpp"
 #include "tilemap.cpp"

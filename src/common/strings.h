@@ -6,16 +6,6 @@ typedef size_t StringId;
 enum {
     STR_NULL,
 
-    // Resource IDs (internal, not for users)
-    STR_SHT_BULLET,
-    STR_SHT_CAMPFIRE,
-    STR_SHT_LILY,
-    STR_SHT_MAGE,
-
-    STR_SND_HARD_TICK,
-    STR_SND_MIC_TEST,
-    STR_SND_SOFT_TICK,
-
     // UI Text
     STR_UI_MENU_OPTIONS,
     STR_UI_MENU_PLAY,

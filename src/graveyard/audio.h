@@ -1,5 +1,6 @@
 #pragma once
 #include "../common.h"
+#include "../data.h"
 #include "../strings.h"
 
 struct SoundCatalog {
@@ -23,4 +24,4 @@ private:
 
 extern SoundCatalog rnSoundCatalog;
 
-extern Music *rnBackgroundMusic;
+extern data::MusFileId rnBackgroundMusic;

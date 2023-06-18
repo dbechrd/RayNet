@@ -1,6 +1,5 @@
 #include "game_client.h"
 #include "client_world.h"
-#include "../common/audio/audio.h"
 
 void GameClient::Start(void)
 {
@@ -56,6 +55,7 @@ Err GameClient::TryConnect(void)
     yj_client->InsecureConnect(privateKey, clientId, serverAddress);
     world = new ClientWorld;
     world->camera2d.zoom = 2.0f;
+    world->musBackgroundMusic = data::MUS_FILE_AMBIENT_OUTDOORS;
     //world->map.Load(LEVEL_001, now);
     entityDb = new EntityDB;
     return RN_SUCCESS;
@@ -168,7 +168,7 @@ void GameClient::ProcessMessages(void)
                                 // HACK: Remove this insanely janky nonsense
                                 // and have some sort of OnSpawnTrigger thingy
                                 if (msg->type == Entity_Projectile) {
-                                    rnSoundCatalog.Play(STR_SND_SOFT_TICK);
+                                    data::PlaySound(data::SFX_FILE_SOFT_TICK);
                                 }
                             }
                         } else {

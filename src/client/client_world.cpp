@@ -87,9 +87,9 @@ Tilemap *ClientWorld::FindOrLoadMap(uint32_t mapId)
 
     if (map) {
         switch (map->id) {
-            case 1: rnBackgroundMusic = &musAmbientOutdoors; break;
-            case 2: rnBackgroundMusic = &musAmbientCave; break;
-            default: rnBackgroundMusic = 0;
+            case 1: musBackgroundMusic = data::MUS_FILE_AMBIENT_OUTDOORS; break;
+            case 2: musBackgroundMusic = data::MUS_FILE_AMBIENT_CAVE; break;
+            default: musBackgroundMusic = data::MUS_FILE_NONE; break;
         }
     }
 
@@ -469,13 +469,14 @@ void ClientWorld::DrawDialog(AspectDialog &dialog, Vector2 topCenterScreen)
     //msgBgRect.height = floorf(msgBgRect.height);
 
     NPatchInfo nPatch{};
-    nPatch.source = { 0, 0, (float)texNPatch.width, (float)texNPatch.height };
+    Texture &nPatchTex = data::gfxFiles[data::GFX_FILE_DLG_NPATCH].texture;
+    nPatch.source = { 0, 0, (float)nPatchTex.width, (float)nPatchTex.height };
     nPatch.left = 16;
     nPatch.top = 16;
     nPatch.right = 16;
     nPatch.bottom = 16;
     nPatch.layout = NPATCH_NINE_PATCH;
-    DrawTextureNPatch(texNPatch, nPatch, msgBgRect, {}, 0, WHITE);
+    DrawTextureNPatch(nPatchTex, nPatch, msgBgRect, {}, 0, WHITE);
     //DrawRectangleRounded(msgBgRect, 0.2f, 6, Fade(BLACK, 0.5));
     //DrawRectangleRoundedLines(msgBgRect, 0.2f, 6, 1.0f, RAYWHITE);
     DrawTextEx(fntSmall, dialog.message.c_str(), msgPos, fntSmall.baseSize, 1.0f, RAYWHITE);

@@ -119,14 +119,9 @@ extern Shader shdSdfText;
 extern Shader shdPixelFixer;
 extern int    shdPixelFixerScreenSizeUniformLoc;
 
+extern Font fntTiny;
 extern Font fntSmall;
 extern Font fntBig;
-
-extern Texture texLily;
-extern Texture texNPatch;
-
-extern Music musAmbientOutdoors;
-extern Music musAmbientCave;
 
 Err InitCommon(void);
 void FreeCommon(void);

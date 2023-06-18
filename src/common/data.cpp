@@ -4,6 +4,7 @@ namespace data {
     GfxFile gfxFiles[] = {
         { GFX_FILE_NONE },
         // id                     texture path
+        { GFX_FILE_DLG_NPATCH,    "resources/npatch.png" },
         { GFX_FILE_CHR_MAGE,      "resources/mage.png" },
         { GFX_FILE_NPC_LILY,      "resources/lily.png" },
         { GFX_FILE_OBJ_CAMPFIRE,  "resources/campfire.png" },
@@ -12,12 +13,20 @@ namespace data {
         //{ GFX_FILE_TILES32, "resources/tiles32.png" },
     };
 
+    MusFile musFiles[] = {
+        { MUS_FILE_NONE },
+        // id                        music file path
+        { MUS_FILE_AMBIENT_OUTDOORS, "resources/copyright/345470__philip_goddard__branscombe-landslip-birds-and-sea-echoes-ese-from-cave-track.ogg" },
+        { MUS_FILE_AMBIENT_CAVE,     "resources/copyright/69391__zixem__cave_amb.wav" },
+    };
+
     SfxFile sfxFiles[] = {
         { SFX_FILE_NONE },
-        // id                      sound file path
-        { SFX_FILE_CAMPFIRE,       "resources/campfire.wav" },
-        { SFX_FILE_FOOTSTEP_GRASS, "resources/footstep_grass.wav" },
-        { SFX_FILE_FOOTSTEP_STONE, "resources/footstep_stone.wav" },
+        // id                      sound file path                 pitch variance
+        { SFX_FILE_SOFT_TICK,      "resources/soft_tick.wav"     , 0.03f },
+        { SFX_FILE_CAMPFIRE,       "resources/campfire.wav"      , 0.00f },
+        { SFX_FILE_FOOTSTEP_GRASS, "resources/footstep_grass.wav", 0.00f },
+        { SFX_FILE_FOOTSTEP_STONE, "resources/footstep_stone.wav", 0.00f },
     };
 
     GfxFrame gfxFrames[] = {
@@ -77,9 +86,15 @@ namespace data {
     void Init(void)
     {
         for (GfxFile &gfxFile : gfxFiles) {
+            if (!gfxFile.path) continue;
             gfxFile.texture = LoadTexture(gfxFile.path);
         }
+        for (MusFile &musFile : musFiles) {
+            if (!musFile.path) continue;
+            musFile.music = LoadMusicStream(musFile.path);
+        }
         for (SfxFile &sfxFile : sfxFiles) {
+            if (!sfxFile.path) continue;
             sfxFile.sound = LoadSound(sfxFile.path);
         }
 
@@ -100,14 +115,29 @@ namespace data {
             printf("[data] WARN: Failed to generate placeholder image\n");
         }
     }
-
     void Free(void)
     {
         for (GfxFile &gfxFile : gfxFiles) {
             UnloadTexture(gfxFile.texture);
         }
+        for (MusFile &musFile : musFiles) {
+            UnloadMusicStream(musFile.music);
+        }
         for (SfxFile &sfxFile : sfxFiles) {
             UnloadSound(sfxFile.sound);
+        }
+    }
+
+    void PlaySound(SfxFileId id, bool multi, float pitchVariance)
+    {
+        SfxFile &sfxFile = sfxFiles[id];
+        float variance = pitchVariance ? pitchVariance : sfxFile.pitch_variance;
+        SetSoundPitch(sfxFile.sound, 1.0f + GetRandomFloatVariance(variance));
+
+        if (multi) {
+            PlaySoundMulti(sfxFile.sound);
+        } else if (!IsSoundPlaying(sfxFile.sound)) {
+            PlaySound(sfxFile.sound);
         }
     }
 
@@ -119,7 +149,6 @@ namespace data {
         const GfxFrame &frame = gfxFrames[frameId];
         return frame;
     }
-
     void UpdateSprite(Sprite &sprite, EntityType entityType, Vector2 velocity, double dt)
     {
         sprite.animAccum += dt;
@@ -154,7 +183,6 @@ namespace data {
             }
         }
     }
-
     void ResetSprite(Sprite &sprite)
     {
         const GfxAnimId animId = sprite.anims[sprite.dir];
@@ -169,7 +197,6 @@ namespace data {
         sprite.animFrame = 0;
         sprite.animAccum = 0;
     }
-
     void DrawSprite(const Sprite &sprite, Vector2 pos)
     {
         const GfxFrame &frame = GetSpriteFrame(sprite);

@@ -56,7 +56,7 @@ void Histogram::Draw(Vector2 position)
             hover.width += barPadding;
             DrawRectangleLinesEx(hover, 2, PINK);
             if (!hovered && hoveredHisto != this || hoveredIdx != i) {
-                rnSoundCatalog.Play(STR_SND_SOFT_TICK);
+                data::PlaySound(data::SFX_FILE_SOFT_TICK);
             }
             hoveredHisto = this;
             hoveredIdx = i;

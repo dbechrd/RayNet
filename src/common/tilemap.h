@@ -2,7 +2,7 @@
 #include "common.h"
 #include "data.h"
 #include "net/net.h"
-#include "texture_catalog.h"
+#include "strings.h"
 
 #define AI_PATH_NONE UINT32_MAX
 

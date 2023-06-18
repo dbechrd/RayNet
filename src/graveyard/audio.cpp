@@ -1,15 +1,15 @@
 #include "audio.h"
 
 SoundCatalog rnSoundCatalog;
-Music *rnBackgroundMusic;
+data::MusFileId rnBackgroundMusic;
 
 void SoundCatalog::Init(void)
 {
     // TODO: Load default sound at index 0
 
-    Load(STR_SND_HARD_TICK, 0.03f);
-    Load(STR_SND_SOFT_TICK, 0.03f);
-    Load(STR_SND_MIC_TEST);
+    //Load(STR_SND_HARD_TICK, 0.03f);
+    //Load(STR_SND_SOFT_TICK, 0.03f);
+    //Load(STR_SND_MIC_TEST);
 }
 
 void SoundCatalog::Free(void)

@@ -24,6 +24,7 @@ namespace data {
 
     enum GfxFileId : uint16_t {
         GFX_FILE_NONE,
+        GFX_FILE_DLG_NPATCH,
         GFX_FILE_CHR_MAGE,
         GFX_FILE_NPC_LILY,
         GFX_FILE_OBJ_CAMPFIRE,
@@ -36,8 +37,20 @@ namespace data {
         ::Texture texture;
     };
 
+    enum MusFileId : uint16_t {
+        MUS_FILE_NONE,
+        MUS_FILE_AMBIENT_OUTDOORS,
+        MUS_FILE_AMBIENT_CAVE,
+    };
+    struct MusFile {
+        MusFileId id;
+        const char *path;
+        ::Music music;
+    };
+
     enum SfxFileId : uint16_t {
         SFX_FILE_NONE,
+        SFX_FILE_SOFT_TICK,
         SFX_FILE_CAMPFIRE,
         SFX_FILE_FOOTSTEP_GRASS,
         SFX_FILE_FOOTSTEP_STONE,
@@ -45,6 +58,7 @@ namespace data {
     struct SfxFile {
         SfxFileId id;
         const char *path;
+        float pitch_variance;
         ::Sound sound;
     };
 
@@ -148,6 +162,7 @@ namespace data {
     };
 
     extern GfxFile gfxFiles[];
+    extern MusFile musFiles[];
     extern SfxFile sfxFiles[];
     extern GfxFrame gfxFrames[];
     extern GfxAnim gfxAnims[];
@@ -156,6 +171,8 @@ namespace data {
 
     void Init(void);
     void Free(void);
+
+    void PlaySound(SfxFileId id, bool multi = true, float pitchVariance = 0.0f);
 
     const GfxFrame &GetSpriteFrame(const Sprite &sprite);
     void UpdateSprite(Sprite &sprite, EntityType entityType, Vector2 velocity, double dt);

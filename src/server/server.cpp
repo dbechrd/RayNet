@@ -73,6 +73,12 @@ void UpdateCamera(Camera2D &camera)
         camera.zoom += (wheel * zoomIncrement * camera.zoom);
         if (camera.zoom < zoomIncrement) camera.zoom = zoomIncrement;
     }
+
+    if (io.KeyPressed(KEY_KP_1)) {
+        camera.zoom = 1;
+    } else if (io.KeyPressed(KEY_KP_2)) {
+        camera.zoom = 2;
+    }
 }
 
 void draw_f3_menu(GameServer &server, Camera2D &camera)

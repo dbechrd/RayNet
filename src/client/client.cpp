@@ -1,9 +1,7 @@
-#include "../common/audio/audio.h"
 #include "../common/collision.h"
 #include "../common/data.h"
 #include "../common/histogram.h"
 #include "../common/io.h"
-#include "../common/spritesheet.h"
 #include "../common/ui/ui.h"
 #include "client_world.h"
 #include "game_client.h"
@@ -57,10 +55,10 @@ void draw_menu_main(GameClient &client, bool &quit)
 static data::Sprite campfire{};
 
 static const char *connectingStrs[] = {
-    "   Connecting   ",
-    "   Connecting.  ",
-    "   Connecting.. ",
-    "   Connecting..."
+    "Connecting",
+    ". Connecting .",
+    ".. Connecting ..",
+    "... Connecting ..."
 };
 static int connectingDotIdx = 0;
 static double connectingDotIdxLastUpdatedAt = 0;
@@ -156,7 +154,9 @@ void update_camera(Camera2D &camera, Tilemap *map, Vector2 target, float frameDt
         camera.zoom = LERP(camera.zoom, zoomTarget, alpha);
     }
 
-    if (io.MouseButtonPressed(MOUSE_BUTTON_MIDDLE)) {
+    if (io.KeyPressed(KEY_KP_1)) {
+        zoomTarget = 1;
+    } else if (io.KeyPressed(KEY_KP_2)) {
         zoomTarget = 2;
     }
 }
@@ -324,8 +324,6 @@ int main(int argc, char *argv[])
         printf("Failed to load common resources\n");
     }
 
-    rnBackgroundMusic = &musAmbientOutdoors;
-
     Image icon = LoadImage("resources/client.png");
     SetWindowIcon(icon);
     UnloadImage(icon);
@@ -375,12 +373,13 @@ int main(int argc, char *argv[])
         client->netTickAccum += client->frameDt;
         bool doNetTick = client->netTickAccum >= SV_TICK_DT;
 
-        // TODO: rnAudioSystem.Update();
-        if (rnBackgroundMusic) {
-            if (!IsMusicStreamPlaying(*rnBackgroundMusic)) {
-                PlayMusicStream(*rnBackgroundMusic);
+        // TODO: Move this somewhere in client?
+        if (client->world && client->world->musBackgroundMusic) {
+            Music &music = data::musFiles[client->world->musBackgroundMusic].music;
+            if (!IsMusicStreamPlaying(music)) {
+                PlayMusicStream(music);
             }
-            UpdateMusicStream(*rnBackgroundMusic);
+            UpdateMusicStream(music);
         }
 
         //--------------------
