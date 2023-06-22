@@ -538,13 +538,29 @@ void Editor::DrawUI_TileActions(UI &uiActionBar, double now)
     uiActionBar.Newline();
 
     uiActionBar.Text("Flag");
-    UIState editCollisionButton = uiActionBar.Button("Collision", state.tiles.editCollision, GRAY, MAROON);
-    if (editCollisionButton.released) {
-        state.tiles.editCollision = !state.tiles.editCollision;
+
+    UIState selectTileButton = uiActionBar.Button("Select", state.tiles.tileEditMode == TileEditMode_Select, GRAY, SKYBLUE);
+    if (selectTileButton.pressed) {
+        state.tiles.tileEditMode = TileEditMode_Select;
+    }
+    UIState editCollisionButton = uiActionBar.Button("Collision", state.tiles.tileEditMode == TileEditMode_Collision, GRAY, SKYBLUE);
+    if (editCollisionButton.pressed) {
+        state.tiles.tileEditMode = TileEditMode_Collision;
+    }
+    UIState editAutoTileMaskButton = uiActionBar.Button("Auto-tile Mask", state.tiles.tileEditMode == TileEditMode_AutoTileMask, GRAY, SKYBLUE);
+    if (editAutoTileMaskButton.pressed) {
+        state.tiles.tileEditMode = TileEditMode_AutoTileMask;
     }
     uiActionBar.Newline();
 
     DrawUI_Tilesheet(uiActionBar, now);
+}
+void DrawRectangleRectOffset(const Rectangle &rect, Vector2 &offset, Color color)
+{
+    Rectangle offsetRect = rect;
+    offsetRect.x += offset.x;
+    offsetRect.y += offset.y;
+    DrawRectangleRec(offsetRect, color);
 }
 void Editor::DrawUI_Tilesheet(UI &uiActionBar, double now)
 {
@@ -562,56 +578,132 @@ void Editor::DrawUI_Tilesheet(UI &uiActionBar, double now)
     UIStyle blackBorderStyle{};
     blackBorderStyle.borderColor = BLACK;
     uiActionBar.PushStyle(blackBorderStyle);
+
     UIState sheet = uiActionBar.Image(checkerboard);
-    DrawTextureEx(mapTex, sheet.contentTopLeft, 0, 1, WHITE);
+    Vector2 imgTL{ sheet.contentRect.x, sheet.contentRect.y };
+
+    DrawTextureEx(mapTex, imgTL, 0, 1, WHITE);
     uiActionBar.PopStyle();
 
-    Vector2 imgTL = sheet.contentTopLeft;
-
     // Draw collision overlay on tilesheet if we're in collision editing mode
-    if (state.tiles.editCollision) {
-        for (int i = 0; i < map->tileDefs.size(); i++) {
-            if (map->tileDefs[i].collide) {
-                Rectangle tileDefRectScreen = map->TileDefRect(i);
-                tileDefRectScreen.x += imgTL.x;
-                tileDefRectScreen.y += imgTL.y;
-                tileDefRectScreen = RectShrink(tileDefRectScreen, 2);
-                DrawRectangleLinesEx(tileDefRectScreen, 2.0f, MAROON);
+    switch (state.tiles.tileEditMode) {
+        case TileEditMode_Collision: {
+            for (int i = 0; i < map->tileDefs.size(); i++) {
+                if (map->tileDefs[i].collide) {
+                    Rectangle tileDefRectScreen = map->TileDefRect(i);
+                    tileDefRectScreen.x += imgTL.x;
+                    tileDefRectScreen.y += imgTL.y;
+                    tileDefRectScreen = RectShrink(tileDefRectScreen, 2);
+                    DrawRectangleLinesEx(tileDefRectScreen, 2.0f, MAROON);
+                }
             }
+            break;
         }
+        case TileEditMode_AutoTileMask: {
+            for (int i = 0; i < map->tileDefs.size(); i++) {
+                const int tileThird = TILE_W / 3;
+                Rectangle tileDefRectScreen = map->TileDefRect(i);
+                tileDefRectScreen.x += imgTL.x + 1;
+                tileDefRectScreen.y += imgTL.y + 1;
+                tileDefRectScreen.width = tileThird;
+                tileDefRectScreen.height = tileThird;
+
+                const Color color = Fade(MAROON, 0.7f);
+
+                Vector2 cursor{};
+                uint8_t mask = map->tileDefs[i].autoTileMask;
+                if (mask & 0b10000000) DrawRectangleRectOffset(tileDefRectScreen, cursor, color);
+                cursor.x += tileThird;
+
+                if (mask & 0b01000000) DrawRectangleRectOffset(tileDefRectScreen, cursor, color);
+                cursor.x += tileThird;
+
+                if (mask & 0b00100000) DrawRectangleRectOffset(tileDefRectScreen, cursor, color);
+                cursor.x = 0;
+                cursor.y += tileThird;
+
+                if (mask & 0b00010000) DrawRectangleRectOffset(tileDefRectScreen, cursor, color);
+                cursor.x += tileThird;
+
+                DrawRectangleRectOffset(tileDefRectScreen, cursor, color);
+                cursor.x += tileThird;
+
+                if (mask & 0b00001000) DrawRectangleRectOffset(tileDefRectScreen, cursor, color);
+                cursor.x = 0;
+                cursor.y += tileThird;
+
+                if (mask & 0b00000100) DrawRectangleRectOffset(tileDefRectScreen, cursor, color);
+                cursor.x += tileThird;
+
+                if (mask & 0b00000010) DrawRectangleRectOffset(tileDefRectScreen, cursor, color);
+                cursor.x += tileThird;
+
+                if (mask & 0b00000001) DrawRectangleRectOffset(tileDefRectScreen, cursor, color);
+            }
+            break;
+        };
     }
 
-    if (sheet.hover) {
-        Vector2 mousePos = GetMousePosition();
-        Vector2 mouseRel = Vector2Subtract(mousePos, imgTL);
+    const Vector2 mousePos = GetMousePosition();
+    if (sheet.hover && dlb_CheckCollisionPointRec(mousePos, sheet.contentRect)) {
+        const Vector2 mouseRel = Vector2Subtract(mousePos, imgTL);
 
         //DrawTextEx(fntHackBold20, TextFormat("%f, %f\n", mouseRel.x, mouseRel.y),
         //    Vector2Add(GetMousePosition(), { 10, 10 }), fntHackBold20.baseSize, 1, YELLOW);
 
         // Draw hover highlight on tilesheet if mouse hovering a tile
-        int tileX = (int)mouseRel.x / 32;
-        int tileY = (int)mouseRel.y / 32;
-        DrawRectangleLinesEx(
-            { imgTL.x + tileX * TILE_W, imgTL.y + tileY * TILE_W, TILE_W, TILE_W },
-            2,
-            Fade(WHITE, 0.7f)
-        );
+        const int tileX = (int)mouseRel.x / TILE_W;
+        const int tileY = (int)mouseRel.y / TILE_W;
+        if (state.tiles.tileEditMode != TileEditMode_AutoTileMask) {
+            DrawRectangleLinesEx(
+                { imgTL.x + tileX * TILE_W, imgTL.y + tileY * TILE_W, TILE_W, TILE_W },
+                2,
+                Fade(WHITE, 0.7f)
+            );
+        }
 
         //DrawTextEx(fntHackBold20, TextFormat("%d, %d\n", tileX, tileY),
         //    Vector2Add(GetMousePosition(), { 10, 10 }), fntHackBold20.baseSize, 1, YELLOW);
 
         // If mouse pressed, select tile, or change collision data, depending on mode
         if (sheet.pressed) {
-            int tileIdx = tileY * (mapTex.width / TILE_W) + tileX;
+            const int tileIdx = tileY * (mapTex.width / TILE_W) + tileX;
             if (tileIdx >= 0 && tileIdx < map->tileDefs.size()) {
-                switch (state.tiles.editCollision) {
-                    case false: {
+                switch (state.tiles.tileEditMode) {
+                    case TileEditMode_Select: {
                         state.tiles.cursor.tileDefId = tileIdx;
                         break;
                     }
-                    case true: {
+                    case TileEditMode_Collision: {
                         TileDef &tileDef = map->tileDefs[tileIdx];
                         tileDef.collide = !tileDef.collide;
+                        break;
+                    }
+                    case TileEditMode_AutoTileMask: {
+                        const int tileXRemainder = (int)mouseRel.x % TILE_W - 1;
+                        const int tileYRemainder = (int)mouseRel.y % TILE_W - 1;
+                        if (tileXRemainder < 0 || tileXRemainder > 29 ||
+                            tileYRemainder < 0 || tileYRemainder > 29)
+                        {
+                            break;
+                        }
+                        const int tileXSegment = tileXRemainder / (TILE_W / 3);
+                        const int tileYSegment = tileYRemainder / (TILE_W / 3);
+
+                        const int tileSegment = tileYSegment * 3 + tileXSegment;
+                        printf("x: %d, y: %d, s: %d\n", tileXSegment, tileYSegment, tileSegment);
+                        TileDef &tileDef = map->tileDefs[tileIdx];
+                        switch (tileSegment) {
+                            case 0: tileDef.autoTileMask ^= 0b10000000; break;
+                            case 1: tileDef.autoTileMask ^= 0b01000000; break;
+                            case 2: tileDef.autoTileMask ^= 0b00100000; break;
+                            case 3: tileDef.autoTileMask ^= 0b00010000; break;
+                            case 4: tileDef.autoTileMask ^= 0b00000000; break;
+                            case 5: tileDef.autoTileMask ^= 0b00001000; break;
+                            case 6: tileDef.autoTileMask ^= 0b00000100; break;
+                            case 7: tileDef.autoTileMask ^= 0b00000010; break;
+                            case 8: tileDef.autoTileMask ^= 0b00000001; break;
+                        }
                         break;
                     }
                 }

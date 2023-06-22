@@ -16,8 +16,15 @@ enum EditMode {
     EditMode_Count
 };
 
+enum TileEditMode {
+    TileEditMode_Select,
+    TileEditMode_Collision,
+    TileEditMode_AutoTileMask,
+    TileEditMode_Count
+};
+
 struct EditModeTiles {
-    bool editCollision;
+    TileEditMode tileEditMode;
 
     struct {
         Tile tileDefId;

@@ -176,7 +176,7 @@ UIState UI::Text(const char *text)
     // Draw text
     DrawTextShadowEx(*style.font, text, contentPos, style.fgColor);
 
-    state.contentTopLeft = { ctrlRect.x, ctrlRect.y };
+    state.contentRect = ctrlRect;
     UpdateCursor(style, ctrlRect);
     return state;
 }
@@ -237,7 +237,7 @@ UIState UI::Image(Texture &texture, Rectangle srcRect)
     // Draw image
     DrawTexturePro(texture, srcRect, contentRect, {}, 0, WHITE);
 
-    state.contentTopLeft = { contentRect.x, contentRect.y };
+    state.contentRect = contentRect;
     UpdateAudio(state);
     UpdateCursor(style, ctrlRect);
     return state;
@@ -310,7 +310,7 @@ UIState UI::Button(const char *text)
         fgColorFx
     );
 
-    state.contentTopLeft = { contentRect.x, contentRect.y };
+    state.contentRect = contentRect;
     UpdateAudio(state);
     UpdateCursor(style, ctrlRect);
     return state;
@@ -650,7 +650,7 @@ UIState UI::Textbox(STB_TexteditState &stbState, std::string &text)
         DrawRectangleRec(cursorRect, RAYWHITE);
     }
 
-    state.contentTopLeft = { ctrlRect.x, ctrlRect.y };
+    state.contentRect = ctrlRect;
     UpdateCursor(style, ctrlRect);
 
 #if 0

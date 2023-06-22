@@ -1,6 +1,6 @@
 #include "collision.h"
 
-bool dlb_CheckCollisionPointRec(Vector2 point, Rectangle rec)
+bool dlb_CheckCollisionPointRec(const Vector2 point, const Rectangle rec)
 {
     bool collision = false;
 
@@ -9,7 +9,7 @@ bool dlb_CheckCollisionPointRec(Vector2 point, Rectangle rec)
     return collision;
 }
 
-bool dlb_CheckCollisionCircleRec(Vector2 center, float radius, Rectangle rec, Manifold *manifold)
+bool dlb_CheckCollisionCircleRec(const Vector2 center, const float radius, const Rectangle rec, Manifold *manifold)
 {
     float xOverlap = 0;
     float yOverlap = 0;

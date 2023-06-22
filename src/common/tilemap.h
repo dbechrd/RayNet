@@ -26,6 +26,7 @@ struct TileMat {
 struct TileDef {
     uint32_t x, y;  // position in spritesheet
     bool collide;
+    uint8_t autoTileMask;
     Color color;  // color for minimap/wang tile editor (top left pixel of tile)
     TileMatId materialId;
 };
@@ -62,7 +63,8 @@ struct Tilemap {
     // v3: added AI paths/nodes
     // v4: tileDefCount and tileDef.x/y are now implicit based on texture size
     // v5: added warps
-    static const uint32_t VERSION = 5;
+    // v6: added auto-tile mask to tileDef
+    static const uint32_t VERSION = 6;
 
     uint32_t    id        {};
     std::string filename  {};

@@ -79,6 +79,7 @@ Err Tilemap::Save(std::string path)
 
         for (const TileDef &tileDef : tileDefs) {
             fwrite(&tileDef.collide, sizeof(tileDef.collide), 1, file);
+            fwrite(&tileDef.autoTileMask, sizeof(tileDef.autoTileMask), 1, file);
         }
 
         if (tiles.size() != (size_t)width * height) {
@@ -210,6 +211,10 @@ Err Tilemap::Load(std::string path)
             tileDef.x = i % tilesPerRow * TILE_W;
             tileDef.y = i / tilesPerRow * TILE_W;
             fread(&tileDef.collide, sizeof(tileDef.collide), 1, file);
+
+            if (version >= 6) {
+                fread(&tileDef.autoTileMask, sizeof(tileDef.autoTileMask), 1, file);
+            }
 
             assert(tileDef.x < texEntry.image.width);
             assert(tileDef.y < texEntry.image.height);

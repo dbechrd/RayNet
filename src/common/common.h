@@ -46,7 +46,7 @@
 #define LERP(a, b, alpha) ((a) + ((b) - (a)) * (alpha))
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
 #define MAX(a, b) ((a) > (b) ? (a) : (b))
-#define CLAMP(x, min, max) (MIN(MAX((x), (min)), (max)));
+#define CLAMP(x, min, max) (MIN(MAX((x), (min)), (max)))
 #define ARRAY_SIZE(arr) (sizeof(arr)/sizeof(arr[0]))
 
 // Custom colors

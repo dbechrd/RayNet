@@ -78,7 +78,7 @@ struct UIState {
     bool pressed;   // mouse hovering and button down (first frame)
     bool down;      // mouse hovering and button down
     bool released;  // mouse hovering and button up (first frame, i.e. was down last frame)
-    Vector2 contentTopLeft;
+    Rectangle contentRect;
 };
 
 struct UI {

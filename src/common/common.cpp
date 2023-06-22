@@ -64,7 +64,7 @@ Err InitCommon(void)
     fntSmall = dlb_LoadFontEx(fontName, 18, 0, 0, FONT_DEFAULT);
     if (!fntSmall.baseSize) err = RN_RAYLIB_ERROR;
 
-    fntBig = dlb_LoadFontEx(fontName, 42, 0, 0, FONT_DEFAULT);
+    fntBig = dlb_LoadFontEx(fontName, 46, 0, 0, FONT_DEFAULT);
     if (!fntBig.baseSize) err = RN_RAYLIB_ERROR;
     //SetTextureFilter(fntBig.texture, TEXTURE_FILTER_BILINEAR);    // Required for SDF font
 
