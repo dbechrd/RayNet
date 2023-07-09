@@ -24,11 +24,16 @@ struct TileMat {
 };
 
 struct TileDef {
-    uint32_t x, y;  // position in spritesheet
-    bool collide;
+    uint16_t tileId;
+    uint16_t sheetId;
+    uint16_t materialId;
+    uint16_t x;
+    uint16_t y;
+    uint8_t w;
+    uint8_t h;
+    uint8_t collide;
     uint8_t autoTileMask;
     Color color;  // color for minimap/wang tile editor (top left pixel of tile)
-    TileMatId materialId;
 };
 
  struct Warp {
@@ -67,7 +72,7 @@ struct Tilemap {
     static const uint32_t VERSION = 6;
 
     uint32_t    id        {};
-    std::string filename  {};
+    std::string name      {};  // technically a filename? usually?
     StringId    textureId {};  // generated upon load, used to look up in rnTextureCatalog
     uint32_t    width     {};  // width of map in tiles
     uint32_t    height    {};  // height of map in tiles
@@ -75,7 +80,7 @@ struct Tilemap {
     // TODO(dlb): Move these to a global pool, each has its own textureId
     std::vector<TileDef>    tileDefs        {};
     std::vector<uint8_t>    tiles           {};
-    std::vector<AiPathNode> pathNodes       {}; // 94 19 56 22 57
+    std::vector<AiPathNode> pathNodes       {};  // 94 19 56 22 57
     std::vector<uint32_t>   pathNodeIndices {};  // 0 1 2 | 3 4 5
     std::vector<AiPath>     paths           {};  // offset, length | 0, 3 | 3, 3
     std::vector<Warp>       warps           {};
@@ -114,7 +119,7 @@ struct Tilemap {
     void ResolveEntityTerrainCollisions(EntityCollisionTuple &data);
     void ResolveEntityTerrainCollisions(uint32_t entityId);
 
-    void DrawTile(Tile tile, Vector2 position);
+    void DrawTile(Texture2D tex, Tile tile, Vector2 position);
     void Draw(Camera2D &camera);
     void DrawColliders(Camera2D &camera);
     void DrawTileIds(Camera2D &camera);

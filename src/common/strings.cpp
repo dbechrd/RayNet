@@ -56,10 +56,16 @@ StringId StringCatalog::AddString(std::string value)
 
     const auto &entry = entriesByValue.find(value);
     if (entry == entriesByValue.end()) {
-        StringId entryIdx = entries.size();
-        entries.push_back(value);
-        entriesByValue[value] = entryIdx;
-        return entryIdx;
+        size_t entryCount = entries.size();
+        if (entryCount < UINT16_MAX) {
+            StringId entryIdx = (uint16_t)entryCount;
+            entries.push_back(value);
+            entriesByValue[value] = entryIdx;
+            return entryIdx;
+        } else {
+            TraceLog(LOG_ERROR, "ERROR: Cannot add string '%s' to string catalog. Catalog full.\n", value.c_str());
+            return STR_NULL;
+        }
     } else {
         return entry->second;
     }

@@ -48,6 +48,8 @@
 #define MAX(a, b) ((a) > (b) ? (a) : (b))
 #define CLAMP(x, min, max) (MIN(MAX((x), (min)), (max)))
 #define ARRAY_SIZE(arr) (sizeof(arr)/sizeof(arr[0]))
+#define ENUM_GEN_VALUE(e) e,
+#define ENUM_GEN_CASE_RETURN_STR(e) case e: return #e;
 
 // Custom colors
 
@@ -82,7 +84,7 @@
 #define CL_SEND_INPUT_DT                SV_TICK_DT //(1.0/120.0)
 #define CL_SNAPSHOT_COUNT               16
 #define CL_RENDER_DISTANCE              1
-#define CL_CAMERA_LERP                  0
+#define CL_CAMERA_LERP                  1
 #define CL_CLIENT_SIDE_PREDICT          1
 #define CL_DIALOG_DURATION_MIN          0.5
 #define CL_DIALOG_DURATION_PER_CHAR     0.1
@@ -138,6 +140,8 @@ Rectangle RectShrink(const Rectangle &rect, float pixels);
 Rectangle RectGrow(const Rectangle &rect, float pixels);
 Rectangle RectConstrainToScreen(const Rectangle &rect);
 
+void dlb_DrawTextureRec(Texture2D texture, Rectangle source, Vector2 position, Color tint);
+void dlb_DrawTexturePro(Texture2D texture, Rectangle source, Rectangle dest, Vector2 origin, Color tint);
 
 //     STB_TEXTEDIT_CHARTYPE             the character type
 #define STB_TEXTEDIT_CHARTYPE char

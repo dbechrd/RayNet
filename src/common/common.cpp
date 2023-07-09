@@ -4,6 +4,7 @@
 
 #define RAYMATH_IMPLEMENTATION
 #include "raylib/raymath.h"
+#include "raylib/rlgl.h"
 
 //#define STB_HERRINGBONE_WANG_TILE_IMPLEMENTATION
 //#include "stb_herringbone_wang_tile.c"
@@ -274,6 +275,60 @@ Rectangle RectConstrainToScreen(const Rectangle &rect)
     newRect.x = CLAMP(rect.x, 0, screenSize.x - rect.width);
     newRect.y = CLAMP(rect.y, 0, screenSize.y - rect.height);
     return newRect;
+}
+
+// Draw a part of a texture (defined by a rectangle)
+void dlb_DrawTextureRec(Texture2D texture, Rectangle source, Vector2 position, Color tint)
+{
+    Rectangle dest = { position.x, position.y, source.width, source.height };
+    Vector2 origin = { 0.0f, 0.0f };
+
+    dlb_DrawTexturePro(texture, source, dest, origin, tint);
+}
+
+// Draw a part of a texture (defined by a rectangle) with 'pro' parameters
+// NOTE: origin is relative to destination rectangle size
+void dlb_DrawTexturePro(Texture2D texture, Rectangle source, Rectangle dest, Vector2 origin, Color tint)
+{
+    // Check if texture is valid
+    if (texture.id > 0)
+    {
+        float x = dest.x - origin.x;
+        float y = dest.y - origin.y;
+        float width = (float)texture.width;
+        float height = (float)texture.height;
+
+        Vector2 topLeft = { x, y };
+        Vector2 topRight = { x + dest.width, y };
+        Vector2 bottomLeft = { x, y + dest.height };
+        Vector2 bottomRight = { x + dest.width, y + dest.height };
+
+        rlSetTexture(texture.id);
+        rlBegin(RL_QUADS);
+
+        rlColor4ub(tint.r, tint.g, tint.b, tint.a);
+        // Normal vector pointing towards viewer
+        rlNormal3f(0.0f, 0.0f, 1.0f);
+
+        // Top-left corner for texture and quad
+        rlTexCoord2f(source.x/width, source.y/height);
+        rlVertex2f(topLeft.x, topLeft.y);
+
+        // Bottom-left corner for texture and quad
+        rlTexCoord2f(source.x/width, (source.y + source.height)/height);
+        rlVertex2f(bottomLeft.x, bottomLeft.y);
+
+        // Bottom-right corner for texture and quad
+        rlTexCoord2f((source.x + source.width)/width, (source.y + source.height)/height);
+        rlVertex2f(bottomRight.x, bottomRight.y);
+
+        // Top-right corner for texture and quad
+        rlTexCoord2f((source.x + source.width)/width, source.y/height);
+        rlVertex2f(topRight.x, topRight.y);
+
+        rlEnd();
+        rlSetTexture(0);
+    }
 }
 
 #include "collision.cpp"

@@ -129,7 +129,7 @@ Err Tilemap::Save(std::string path)
 
     if (file) fclose(file);
     if (!err) {
-        filename = path;
+        name = path;
     }
     return RN_SUCCESS;
 }
@@ -177,6 +177,7 @@ Err Tilemap::Load(std::string path)
         if (texEntry.texture.width % TILE_W != 0 || texEntry.texture.height % TILE_W != 0) {
             err = RN_INVALID_SIZE; break;
         }
+        //SetTextureWrap(texEntry.texture, TEXTURE_WRAP_CLAMP);
 
         fread(&width, sizeof(width), 1, file);
         fread(&height, sizeof(height), 1, file);
@@ -302,8 +303,8 @@ Err Tilemap::Load(std::string path)
     if (file) fclose(file);
 
     if (!err) {
-        filename = path;
-        printf("[tilemap] Loaded %s successfully\n", filename.c_str());
+        name = path;
+        printf("[tilemap] Loaded %s successfully\n", name.c_str());
     } else {
         Unload();
     }
@@ -619,16 +620,16 @@ void Tilemap::ResolveEntityTerrainCollisions(uint32_t entityId)
     ResolveEntityTerrainCollisions(data);
 }
 
-void Tilemap::DrawTile(Tile tile, Vector2 position)
+void Tilemap::DrawTile(Texture2D tex, Tile tile, Vector2 position)
 {
-    const Texture tex = rnTextureCatalog.GetTexture(textureId);
     const Rectangle texRect = TileDefRect(tile);
     position.x = floorf(position.x);
     position.y = floorf(position.y);
-    DrawTextureRec(tex, texRect, position, WHITE);
+    dlb_DrawTextureRec(tex, texRect, position, WHITE);
 }
 void Tilemap::Draw(Camera2D &camera)
 {
+    const Texture tex = rnTextureCatalog.GetTexture(textureId);
     Rectangle screenRect = GetScreenRectWorld(camera);
     int yMin = CLAMP(floorf(screenRect.y / TILE_W), 0, height);
     int yMax = CLAMP(ceilf((screenRect.y + screenRect.height) / TILE_W), 0, height);
@@ -638,7 +639,7 @@ void Tilemap::Draw(Camera2D &camera)
     for (int y = yMin; y < yMax; y++) {
         for (int x = xMin; x < xMax; x++) {
             Tile tile = At(x, y);
-            DrawTile(tile, { (float)x * TILE_W, (float)y * TILE_W });
+            DrawTile(tex, tile, { (float)x * TILE_W, (float)y * TILE_W });
         }
     }
 }

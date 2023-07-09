@@ -73,6 +73,9 @@
     <ClInclude Include="src\server\game_server.h" />
     <ClInclude Include="src\server\resource.h" />
   </ItemGroup>
+  <ItemGroup>
+    <None Include="cpp.hint" />
+  </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>16.0</VCProjectVersion>
     <Keyword>Win32Proj</Keyword>

@@ -63,4 +63,7 @@
     <ClInclude Include="src\common\audio\audio.cpp" />
     <ClInclude Include="src\server\editor.cpp" />
   </ItemGroup>
+  <ItemGroup>
+    <None Include="cpp.hint" />
+  </ItemGroup>
 </Project>

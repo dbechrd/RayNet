@@ -1,7 +1,7 @@
 #pragma once
 #include "common.h"
 
-typedef size_t StringId;
+typedef uint16_t StringId;
 
 enum {
     STR_NULL,
@@ -27,7 +27,7 @@ private:
     //void SetString(StringId stringId, std::string value);
 
     std::vector<std::string> entries;
-    std::unordered_map<std::string, size_t> entriesByValue{};
+    std::unordered_map<std::string, StringId> entriesByValue{};
 
     // TODO(dlb): How to handle dynamic strings.. e.g. when you open a new tileset
     // image in the editor and want to change tilemap.tileset to it?

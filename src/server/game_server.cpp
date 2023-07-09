@@ -115,7 +115,7 @@ Tilemap *GameServer::FindOrLoadMap(std::string filename)
             map->id = nextMapId++;
             map->chunkLastUpdatedAt = now;
             mapsById[map->id] = maps.size();
-            mapsByName[map->filename] = maps.size();
+            mapsByName[map->name] = maps.size();
             maps.push_back(map);
             return map;
         } while (0);

@@ -534,7 +534,7 @@ int main(int argc, char *argv[])
         EndDrawing();
 
         if (!IsWindowState(FLAG_VSYNC_HINT)) {
-            yojimbo_sleep(0.001);
+            //yojimbo_sleep(0.001);
         }
 
         // Nobody else handled it, so user probably wants to disconnect or quit

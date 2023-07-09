@@ -121,7 +121,8 @@ void Editor::DrawGroundOverlay_Tiles(Camera2D &camera, double now)
             }
 
             Vector2 drawPos{ (float)coord.x * TILE_W, (float)coord.y * TILE_W };
-            map->DrawTile(cursorTile, drawPos);
+            const Texture tex = rnTextureCatalog.GetTexture(map->textureId);
+            map->DrawTile(tex, cursorTile, drawPos);
             DrawRectangleLinesEx({ drawPos.x, drawPos.y, TILE_W, TILE_W }, 2, WHITE);
         }
     }
@@ -353,7 +354,7 @@ UIState Editor::DrawUI_ActionBar(Vector2 position, GameServer &server, double no
 
     UIState openButton = uiActionBar.Button("Open");
     if (openButton.released) {
-        std::string filename = map->filename;
+        std::string filename = map->name;
         std::thread openFileThread([filename, mapFileFilter]{
             const char *openRequestBuf = tinyfd_openFileDialog(
                 "Open File",
@@ -382,9 +383,9 @@ UIState Editor::DrawUI_ActionBar(Vector2 position, GameServer &server, double no
     UIState saveButton = uiActionBar.Button("Save");
     if (saveButton.released) {
         //map->SaveKV(map->filename + ".txt");
-        Err err = map->Save(map->filename);
+        Err err = map->Save(map->name);
         if (err) {
-            std::string filename = map->filename;
+            std::string filename = map->name;
             std::thread errorThread([filename, err]{
                 const char *msg = TextFormat("Failed to save file %s. %s\n", filename.c_str(), ErrStr(err));
                 tinyfd_messageBox("Error", msg, "ok", "error", 1);
@@ -395,7 +396,7 @@ UIState Editor::DrawUI_ActionBar(Vector2 position, GameServer &server, double no
 
     UIState saveAsButton = uiActionBar.Button("Save As");
     if (saveAsButton.released) {
-        std::string filename = map->filename;
+        std::string filename = map->name;
         std::thread saveAsThread([filename, mapFileFilter]{
             const char *saveAsRequestBuf = tinyfd_saveFileDialog(
                 "Save File",
@@ -421,9 +422,9 @@ UIState Editor::DrawUI_ActionBar(Vector2 position, GameServer &server, double no
 
     UIState reloadButton = uiActionBar.Button("Reload");
     if (reloadButton.released) {
-        Err err = map->Load(map->filename);
+        Err err = map->Load(map->name);
         if (err) {
-            std::string filename = map->filename;
+            std::string filename = map->name;
             std::thread errorThread([filename, err]{
                 const char *msg = TextFormat("Failed to reload file %s. %s\n", filename.c_str(), ErrStr(err));
                 tinyfd_messageBox("Error", msg, "ok", "error", 1);
@@ -433,7 +434,7 @@ UIState Editor::DrawUI_ActionBar(Vector2 position, GameServer &server, double no
     }
     uiActionBar.Newline();
 
-    UIState mapPath = uiActionBar.Text(GetFileName(map->filename.c_str()), WHITE);
+    UIState mapPath = uiActionBar.Text(GetFileName(map->name.c_str()), WHITE);
     if (mapPath.released) {
         system("explorer maps");
     }
@@ -497,7 +498,7 @@ UIState Editor::DrawUI_ActionBar(Vector2 position, GameServer &server, double no
 void Editor::DrawUI_MapActions(UI &uiActionBar, GameServer &server, double now)
 {
     for (Tilemap *map : server.maps) {
-        if (uiActionBar.Button(TextFormat("[%d] %s", map->id, map->filename.c_str())).pressed) {
+        if (uiActionBar.Button(TextFormat("[%d] %s", map->id, map->name.c_str())).pressed) {
             this->map = map;
         }
         uiActionBar.Newline();

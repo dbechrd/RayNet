@@ -22,15 +22,18 @@ namespace data {
         DIR_NW
     };
 
+#define GFX_FILE_IDS(gen)        \
+    gen(GFX_FILE_NONE)           \
+    gen(GFX_FILE_DLG_NPATCH)     \
+    gen(GFX_FILE_CHR_MAGE)       \
+    gen(GFX_FILE_NPC_LILY)       \
+    gen(GFX_FILE_OBJ_CAMPFIRE)   \
+    gen(GFX_FILE_PRJ_BULLET)     \
+    gen(GFX_FILE_TIL_OVERWORLD)  \
+    gen(GFX_FILE_TIL_AUTO_GRASS)
+
     enum GfxFileId : uint16_t {
-        GFX_FILE_NONE,
-        GFX_FILE_DLG_NPATCH,
-        GFX_FILE_CHR_MAGE,
-        GFX_FILE_NPC_LILY,
-        GFX_FILE_OBJ_CAMPFIRE,
-        GFX_FILE_PRJ_BULLET,
-        GFX_FILE_TIL_OVERWORLD,
-        GFX_FILE_TIL_AUTO_GRASS,
+        GFX_FILE_IDS(ENUM_GEN_VALUE)
     };
     struct GfxFile {
         GfxFileId id;
@@ -38,10 +41,13 @@ namespace data {
         ::Texture texture;
     };
 
+#define MUS_FILE_IDS(gen)           \
+    gen(MUS_FILE_NONE)              \
+    gen(MUS_FILE_AMBIENT_OUTDOORS)  \
+    gen(MUS_FILE_AMBIENT_CAVE)      \
+
     enum MusFileId : uint16_t {
-        MUS_FILE_NONE,
-        MUS_FILE_AMBIENT_OUTDOORS,
-        MUS_FILE_AMBIENT_CAVE,
+        MUS_FILE_IDS(ENUM_GEN_VALUE)
     };
     struct MusFile {
         MusFileId id;
@@ -49,12 +55,15 @@ namespace data {
         ::Music music;
     };
 
+#define SFX_FILE_IDS(gen)        \
+    gen(SFX_FILE_NONE)           \
+    gen(SFX_FILE_SOFT_TICK)      \
+    gen(SFX_FILE_CAMPFIRE)       \
+    gen(SFX_FILE_FOOTSTEP_GRASS) \
+    gen(SFX_FILE_FOOTSTEP_STONE)
+
     enum SfxFileId : uint16_t {
-        SFX_FILE_NONE,
-        SFX_FILE_SOFT_TICK,
-        SFX_FILE_CAMPFIRE,
-        SFX_FILE_FOOTSTEP_GRASS,
-        SFX_FILE_FOOTSTEP_STONE,
+        SFX_FILE_IDS(ENUM_GEN_VALUE)
     };
     struct SfxFile {
         SfxFileId id;
@@ -63,79 +72,80 @@ namespace data {
         ::Sound sound;
     };
 
-    enum GfxFrameId : uint16_t {
-        GFX_FRAME_NONE,
-        GFX_FRAME_CHR_MAGE_E_0,
-        GFX_FRAME_CHR_MAGE_W_0,
-        GFX_FRAME_NPC_LILY_E_0,
-        GFX_FRAME_NPC_LILY_W_0,
-        GFX_FRAME_OBJ_CAMPFIRE_0,
-        GFX_FRAME_OBJ_CAMPFIRE_1,
-        GFX_FRAME_OBJ_CAMPFIRE_2,
-        GFX_FRAME_OBJ_CAMPFIRE_3,
-        GFX_FRAME_OBJ_CAMPFIRE_4,
-        GFX_FRAME_OBJ_CAMPFIRE_5,
-        GFX_FRAME_OBJ_CAMPFIRE_6,
-        GFX_FRAME_OBJ_CAMPFIRE_7,
-        //GFX_FRAME_OBJ_FLAG_0,
-        //GFX_FRAME_OBJ_FLAG_1,
-        //GFX_FRAME_OBJ_FLAG_2,
-        //GFX_FRAME_OBJ_FLAG_3,
-        GFX_FRAME_PRJ_BULLET_0,
-        GFX_FRAME_TIL_GRASS,
-        GFX_FRAME_TIL_STONE_PATH,
-        GFX_FRAME_TIL_WALL,
-        GFX_FRAME_TIL_WATER_0,
+#define GFX_FRAME_IDS(gen)           \
+    gen(GFX_FRAME_NONE)              \
+    gen(GFX_FRAME_CHR_MAGE_E_0)      \
+    gen(GFX_FRAME_CHR_MAGE_W_0)      \
+    gen(GFX_FRAME_NPC_LILY_E_0)      \
+    gen(GFX_FRAME_NPC_LILY_W_0)      \
+    gen(GFX_FRAME_OBJ_CAMPFIRE_0)    \
+    gen(GFX_FRAME_OBJ_CAMPFIRE_1)    \
+    gen(GFX_FRAME_OBJ_CAMPFIRE_2)    \
+    gen(GFX_FRAME_OBJ_CAMPFIRE_3)    \
+    gen(GFX_FRAME_OBJ_CAMPFIRE_4)    \
+    gen(GFX_FRAME_OBJ_CAMPFIRE_5)    \
+    gen(GFX_FRAME_OBJ_CAMPFIRE_6)    \
+    gen(GFX_FRAME_OBJ_CAMPFIRE_7)    \
+    /* gen(GFX_FRAME_OBJ_FLAG_0) */  \
+    /* gen(GFX_FRAME_OBJ_FLAG_1) */  \
+    /* gen(GFX_FRAME_OBJ_FLAG_2) */  \
+    /* gen(GFX_FRAME_OBJ_FLAG_3) */  \
+    gen(GFX_FRAME_PRJ_BULLET_0)      \
+    gen(GFX_FRAME_TIL_GRASS)         \
+    gen(GFX_FRAME_TIL_STONE_PATH)    \
+    gen(GFX_FRAME_TIL_WALL)          \
+    gen(GFX_FRAME_TIL_WATER_0)       \
+    gen(GFX_FRAME_TIL_AUTO_GRASS_00) \
+    gen(GFX_FRAME_TIL_AUTO_GRASS_01) \
+    gen(GFX_FRAME_TIL_AUTO_GRASS_02) \
+    gen(GFX_FRAME_TIL_AUTO_GRASS_03) \
+    gen(GFX_FRAME_TIL_AUTO_GRASS_04) \
+    gen(GFX_FRAME_TIL_AUTO_GRASS_05) \
+    gen(GFX_FRAME_TIL_AUTO_GRASS_06) \
+    gen(GFX_FRAME_TIL_AUTO_GRASS_07) \
+    gen(GFX_FRAME_TIL_AUTO_GRASS_08) \
+    gen(GFX_FRAME_TIL_AUTO_GRASS_09) \
+    gen(GFX_FRAME_TIL_AUTO_GRASS_10) \
+    gen(GFX_FRAME_TIL_AUTO_GRASS_11) \
+    gen(GFX_FRAME_TIL_AUTO_GRASS_12) \
+    gen(GFX_FRAME_TIL_AUTO_GRASS_13) \
+    gen(GFX_FRAME_TIL_AUTO_GRASS_14) \
+    gen(GFX_FRAME_TIL_AUTO_GRASS_15) \
+    gen(GFX_FRAME_TIL_AUTO_GRASS_16) \
+    gen(GFX_FRAME_TIL_AUTO_GRASS_17) \
+    gen(GFX_FRAME_TIL_AUTO_GRASS_18) \
+    gen(GFX_FRAME_TIL_AUTO_GRASS_19) \
+    gen(GFX_FRAME_TIL_AUTO_GRASS_20) \
+    gen(GFX_FRAME_TIL_AUTO_GRASS_21) \
+    gen(GFX_FRAME_TIL_AUTO_GRASS_22) \
+    gen(GFX_FRAME_TIL_AUTO_GRASS_23) \
+    gen(GFX_FRAME_TIL_AUTO_GRASS_24) \
+    gen(GFX_FRAME_TIL_AUTO_GRASS_25) \
+    gen(GFX_FRAME_TIL_AUTO_GRASS_26) \
+    gen(GFX_FRAME_TIL_AUTO_GRASS_27) \
+    gen(GFX_FRAME_TIL_AUTO_GRASS_28) \
+    gen(GFX_FRAME_TIL_AUTO_GRASS_29) \
+    gen(GFX_FRAME_TIL_AUTO_GRASS_30) \
+    gen(GFX_FRAME_TIL_AUTO_GRASS_31) \
+    gen(GFX_FRAME_TIL_AUTO_GRASS_32) \
+    gen(GFX_FRAME_TIL_AUTO_GRASS_33) \
+    gen(GFX_FRAME_TIL_AUTO_GRASS_34) \
+    gen(GFX_FRAME_TIL_AUTO_GRASS_35) \
+    gen(GFX_FRAME_TIL_AUTO_GRASS_36) \
+    gen(GFX_FRAME_TIL_AUTO_GRASS_37) \
+    gen(GFX_FRAME_TIL_AUTO_GRASS_38) \
+    gen(GFX_FRAME_TIL_AUTO_GRASS_39) \
+    gen(GFX_FRAME_TIL_AUTO_GRASS_40) \
+    gen(GFX_FRAME_TIL_AUTO_GRASS_41) \
+    gen(GFX_FRAME_TIL_AUTO_GRASS_42) \
+    gen(GFX_FRAME_TIL_AUTO_GRASS_43) \
+    gen(GFX_FRAME_TIL_AUTO_GRASS_44) \
+    gen(GFX_FRAME_TIL_AUTO_GRASS_45) \
+    gen(GFX_FRAME_TIL_AUTO_GRASS_46) \
+    gen(GFX_FRAME_TIL_AUTO_GRASS_47)
 
-        // TODO: Make a macro that generates these??
-        GFX_FRAME_TIL_AUTO_GRASS_00,
-        GFX_FRAME_TIL_AUTO_GRASS_01,
-        GFX_FRAME_TIL_AUTO_GRASS_02,
-        GFX_FRAME_TIL_AUTO_GRASS_03,
-        GFX_FRAME_TIL_AUTO_GRASS_04,
-        GFX_FRAME_TIL_AUTO_GRASS_05,
-        GFX_FRAME_TIL_AUTO_GRASS_06,
-        GFX_FRAME_TIL_AUTO_GRASS_07,
-        GFX_FRAME_TIL_AUTO_GRASS_08,
-        GFX_FRAME_TIL_AUTO_GRASS_09,
-        GFX_FRAME_TIL_AUTO_GRASS_10,
-        GFX_FRAME_TIL_AUTO_GRASS_11,
-        GFX_FRAME_TIL_AUTO_GRASS_12,
-        GFX_FRAME_TIL_AUTO_GRASS_13,
-        GFX_FRAME_TIL_AUTO_GRASS_14,
-        GFX_FRAME_TIL_AUTO_GRASS_15,
-        GFX_FRAME_TIL_AUTO_GRASS_16,
-        GFX_FRAME_TIL_AUTO_GRASS_17,
-        GFX_FRAME_TIL_AUTO_GRASS_18,
-        GFX_FRAME_TIL_AUTO_GRASS_19,
-        GFX_FRAME_TIL_AUTO_GRASS_20,
-        GFX_FRAME_TIL_AUTO_GRASS_21,
-        GFX_FRAME_TIL_AUTO_GRASS_22,
-        GFX_FRAME_TIL_AUTO_GRASS_23,
-        GFX_FRAME_TIL_AUTO_GRASS_24,
-        GFX_FRAME_TIL_AUTO_GRASS_25,
-        GFX_FRAME_TIL_AUTO_GRASS_26,
-        GFX_FRAME_TIL_AUTO_GRASS_27,
-        GFX_FRAME_TIL_AUTO_GRASS_28,
-        GFX_FRAME_TIL_AUTO_GRASS_29,
-        GFX_FRAME_TIL_AUTO_GRASS_30,
-        GFX_FRAME_TIL_AUTO_GRASS_31,
-        GFX_FRAME_TIL_AUTO_GRASS_32,
-        GFX_FRAME_TIL_AUTO_GRASS_33,
-        GFX_FRAME_TIL_AUTO_GRASS_34,
-        GFX_FRAME_TIL_AUTO_GRASS_35,
-        GFX_FRAME_TIL_AUTO_GRASS_36,
-        GFX_FRAME_TIL_AUTO_GRASS_37,
-        GFX_FRAME_TIL_AUTO_GRASS_38,
-        GFX_FRAME_TIL_AUTO_GRASS_39,
-        GFX_FRAME_TIL_AUTO_GRASS_40,
-        GFX_FRAME_TIL_AUTO_GRASS_41,
-        GFX_FRAME_TIL_AUTO_GRASS_42,
-        GFX_FRAME_TIL_AUTO_GRASS_43,
-        GFX_FRAME_TIL_AUTO_GRASS_44,
-        GFX_FRAME_TIL_AUTO_GRASS_45,
-        GFX_FRAME_TIL_AUTO_GRASS_46,
-        GFX_FRAME_TIL_AUTO_GRASS_47,
+    enum GfxFrameId : uint16_t {
+        GFX_FRAME_IDS(ENUM_GEN_VALUE)
     };
     struct GfxFrame {
         GfxFrameId id;
@@ -146,68 +156,70 @@ namespace data {
         uint16_t h;
     };
 
-    enum GfxAnimId : uint16_t {
-        GFX_ANIM_NONE,
-        GFX_ANIM_CHR_MAGE_E,
-        GFX_ANIM_CHR_MAGE_W,
-        GFX_ANIM_NPC_LILY_E,
-        GFX_ANIM_NPC_LILY_W,
-        GFX_ANIM_OBJ_CAMPFIRE,
-        GFX_ANIM_PRJ_BULLET,
-        //GFX_ANIM_FLAG,
-        GFX_ANIM_TIL_GRASS,
-        GFX_ANIM_TIL_STONE_PATH,
-        GFX_ANIM_TIL_WALL,
-        GFX_ANIM_TIL_WATER,
+#define GFX_ANIM_IDS(gen)            \
+    gen(GFX_ANIM_NONE)               \
+    gen(GFX_ANIM_CHR_MAGE_E)         \
+    gen(GFX_ANIM_CHR_MAGE_W)         \
+    gen(GFX_ANIM_NPC_LILY_E)         \
+    gen(GFX_ANIM_NPC_LILY_W)         \
+    gen(GFX_ANIM_OBJ_CAMPFIRE)       \
+    gen(GFX_ANIM_PRJ_BULLET)         \
+    /* gen(GFX_ANIM_FLAG) */         \
+    gen(GFX_ANIM_TIL_GRASS)          \
+    gen(GFX_ANIM_TIL_STONE_PATH)     \
+    gen(GFX_ANIM_TIL_WALL)           \
+    gen(GFX_ANIM_TIL_WATER)          \
+    gen(GFX_ANIM_TIL_AUTO_GRASS_00)  \
+    gen(GFX_ANIM_TIL_AUTO_GRASS_01)  \
+    gen(GFX_ANIM_TIL_AUTO_GRASS_02)  \
+    gen(GFX_ANIM_TIL_AUTO_GRASS_03)  \
+    gen(GFX_ANIM_TIL_AUTO_GRASS_04)  \
+    gen(GFX_ANIM_TIL_AUTO_GRASS_05)  \
+    gen(GFX_ANIM_TIL_AUTO_GRASS_06)  \
+    gen(GFX_ANIM_TIL_AUTO_GRASS_07)  \
+    gen(GFX_ANIM_TIL_AUTO_GRASS_08)  \
+    gen(GFX_ANIM_TIL_AUTO_GRASS_09)  \
+    gen(GFX_ANIM_TIL_AUTO_GRASS_10)  \
+    gen(GFX_ANIM_TIL_AUTO_GRASS_11)  \
+    gen(GFX_ANIM_TIL_AUTO_GRASS_12)  \
+    gen(GFX_ANIM_TIL_AUTO_GRASS_13)  \
+    gen(GFX_ANIM_TIL_AUTO_GRASS_14)  \
+    gen(GFX_ANIM_TIL_AUTO_GRASS_15)  \
+    gen(GFX_ANIM_TIL_AUTO_GRASS_16)  \
+    gen(GFX_ANIM_TIL_AUTO_GRASS_17)  \
+    gen(GFX_ANIM_TIL_AUTO_GRASS_18)  \
+    gen(GFX_ANIM_TIL_AUTO_GRASS_19)  \
+    gen(GFX_ANIM_TIL_AUTO_GRASS_20)  \
+    gen(GFX_ANIM_TIL_AUTO_GRASS_21)  \
+    gen(GFX_ANIM_TIL_AUTO_GRASS_22)  \
+    gen(GFX_ANIM_TIL_AUTO_GRASS_23)  \
+    gen(GFX_ANIM_TIL_AUTO_GRASS_24)  \
+    gen(GFX_ANIM_TIL_AUTO_GRASS_25)  \
+    gen(GFX_ANIM_TIL_AUTO_GRASS_26)  \
+    gen(GFX_ANIM_TIL_AUTO_GRASS_27)  \
+    gen(GFX_ANIM_TIL_AUTO_GRASS_28)  \
+    gen(GFX_ANIM_TIL_AUTO_GRASS_29)  \
+    gen(GFX_ANIM_TIL_AUTO_GRASS_30)  \
+    gen(GFX_ANIM_TIL_AUTO_GRASS_31)  \
+    gen(GFX_ANIM_TIL_AUTO_GRASS_32)  \
+    gen(GFX_ANIM_TIL_AUTO_GRASS_33)  \
+    gen(GFX_ANIM_TIL_AUTO_GRASS_34)  \
+    gen(GFX_ANIM_TIL_AUTO_GRASS_35)  \
+    gen(GFX_ANIM_TIL_AUTO_GRASS_36)  \
+    gen(GFX_ANIM_TIL_AUTO_GRASS_37)  \
+    gen(GFX_ANIM_TIL_AUTO_GRASS_38)  \
+    gen(GFX_ANIM_TIL_AUTO_GRASS_39)  \
+    gen(GFX_ANIM_TIL_AUTO_GRASS_40)  \
+    gen(GFX_ANIM_TIL_AUTO_GRASS_41)  \
+    gen(GFX_ANIM_TIL_AUTO_GRASS_42)  \
+    gen(GFX_ANIM_TIL_AUTO_GRASS_43)  \
+    gen(GFX_ANIM_TIL_AUTO_GRASS_44)  \
+    gen(GFX_ANIM_TIL_AUTO_GRASS_45)  \
+    gen(GFX_ANIM_TIL_AUTO_GRASS_46)  \
+    gen(GFX_ANIM_TIL_AUTO_GRASS_47)
 
-        GFX_ANIM_TIL_AUTO_GRASS_00,
-        GFX_ANIM_TIL_AUTO_GRASS_01,
-        GFX_ANIM_TIL_AUTO_GRASS_02,
-        GFX_ANIM_TIL_AUTO_GRASS_03,
-        GFX_ANIM_TIL_AUTO_GRASS_04,
-        GFX_ANIM_TIL_AUTO_GRASS_05,
-        GFX_ANIM_TIL_AUTO_GRASS_06,
-        GFX_ANIM_TIL_AUTO_GRASS_07,
-        GFX_ANIM_TIL_AUTO_GRASS_08,
-        GFX_ANIM_TIL_AUTO_GRASS_09,
-        GFX_ANIM_TIL_AUTO_GRASS_10,
-        GFX_ANIM_TIL_AUTO_GRASS_11,
-        GFX_ANIM_TIL_AUTO_GRASS_12,
-        GFX_ANIM_TIL_AUTO_GRASS_13,
-        GFX_ANIM_TIL_AUTO_GRASS_14,
-        GFX_ANIM_TIL_AUTO_GRASS_15,
-        GFX_ANIM_TIL_AUTO_GRASS_16,
-        GFX_ANIM_TIL_AUTO_GRASS_17,
-        GFX_ANIM_TIL_AUTO_GRASS_18,
-        GFX_ANIM_TIL_AUTO_GRASS_19,
-        GFX_ANIM_TIL_AUTO_GRASS_20,
-        GFX_ANIM_TIL_AUTO_GRASS_21,
-        GFX_ANIM_TIL_AUTO_GRASS_22,
-        GFX_ANIM_TIL_AUTO_GRASS_23,
-        GFX_ANIM_TIL_AUTO_GRASS_24,
-        GFX_ANIM_TIL_AUTO_GRASS_25,
-        GFX_ANIM_TIL_AUTO_GRASS_26,
-        GFX_ANIM_TIL_AUTO_GRASS_27,
-        GFX_ANIM_TIL_AUTO_GRASS_28,
-        GFX_ANIM_TIL_AUTO_GRASS_29,
-        GFX_ANIM_TIL_AUTO_GRASS_30,
-        GFX_ANIM_TIL_AUTO_GRASS_31,
-        GFX_ANIM_TIL_AUTO_GRASS_32,
-        GFX_ANIM_TIL_AUTO_GRASS_33,
-        GFX_ANIM_TIL_AUTO_GRASS_34,
-        GFX_ANIM_TIL_AUTO_GRASS_35,
-        GFX_ANIM_TIL_AUTO_GRASS_36,
-        GFX_ANIM_TIL_AUTO_GRASS_37,
-        GFX_ANIM_TIL_AUTO_GRASS_38,
-        GFX_ANIM_TIL_AUTO_GRASS_39,
-        GFX_ANIM_TIL_AUTO_GRASS_40,
-        GFX_ANIM_TIL_AUTO_GRASS_41,
-        GFX_ANIM_TIL_AUTO_GRASS_42,
-        GFX_ANIM_TIL_AUTO_GRASS_43,
-        GFX_ANIM_TIL_AUTO_GRASS_44,
-        GFX_ANIM_TIL_AUTO_GRASS_45,
-        GFX_ANIM_TIL_AUTO_GRASS_46,
-        GFX_ANIM_TIL_AUTO_GRASS_47,
+    enum GfxAnimId : uint16_t {
+        GFX_ANIM_IDS(ENUM_GEN_VALUE)
     };
     struct GfxAnim {
         GfxAnimId id;
@@ -225,12 +237,14 @@ namespace data {
         double animAccum; // time since last update
     };
 
+#define TILE_MAT_IDS(gen) \
+    gen(TILE_MAT_NONE)    \
+    gen(TILE_MAT_GRASS)   \
+    gen(TILE_MAT_STONE)   \
+    gen(TILE_MAT_WATER)
+
     enum TileMatId {
-        TILE_MAT_NONE,
-        TILE_MAT_GRASS,
-        TILE_MAT_STONE,
-        TILE_MAT_WALL,
-        TILE_MAT_WATER,
+        TILE_MAT_IDS(ENUM_GEN_VALUE)
     };
 
     struct TileMat {
@@ -238,61 +252,63 @@ namespace data {
         SfxFileId footstepSnd;
     };
 
-    enum TileTypeId {
-        TILE_NONE,
-        TILE_GRASS,
-        TILE_STONE_PATH,
-        TILE_WATER,
-        TILE_WALL,
+#define TILE_TYPE_IDS(gen)  \
+    gen(TILE_NONE)          \
+    gen(TILE_GRASS)         \
+    gen(TILE_STONE_PATH)    \
+    gen(TILE_WATER)         \
+    gen(TILE_WALL)          \
+    gen(TILE_AUTO_GRASS_00) \
+    gen(TILE_AUTO_GRASS_01) \
+    gen(TILE_AUTO_GRASS_02) \
+    gen(TILE_AUTO_GRASS_03) \
+    gen(TILE_AUTO_GRASS_04) \
+    gen(TILE_AUTO_GRASS_05) \
+    gen(TILE_AUTO_GRASS_06) \
+    gen(TILE_AUTO_GRASS_07) \
+    gen(TILE_AUTO_GRASS_08) \
+    gen(TILE_AUTO_GRASS_09) \
+    gen(TILE_AUTO_GRASS_10) \
+    gen(TILE_AUTO_GRASS_11) \
+    gen(TILE_AUTO_GRASS_12) \
+    gen(TILE_AUTO_GRASS_13) \
+    gen(TILE_AUTO_GRASS_14) \
+    gen(TILE_AUTO_GRASS_15) \
+    gen(TILE_AUTO_GRASS_16) \
+    gen(TILE_AUTO_GRASS_17) \
+    gen(TILE_AUTO_GRASS_18) \
+    gen(TILE_AUTO_GRASS_19) \
+    gen(TILE_AUTO_GRASS_20) \
+    gen(TILE_AUTO_GRASS_21) \
+    gen(TILE_AUTO_GRASS_22) \
+    gen(TILE_AUTO_GRASS_23) \
+    gen(TILE_AUTO_GRASS_24) \
+    gen(TILE_AUTO_GRASS_25) \
+    gen(TILE_AUTO_GRASS_26) \
+    gen(TILE_AUTO_GRASS_27) \
+    gen(TILE_AUTO_GRASS_28) \
+    gen(TILE_AUTO_GRASS_29) \
+    gen(TILE_AUTO_GRASS_30) \
+    gen(TILE_AUTO_GRASS_31) \
+    gen(TILE_AUTO_GRASS_32) \
+    gen(TILE_AUTO_GRASS_33) \
+    gen(TILE_AUTO_GRASS_34) \
+    gen(TILE_AUTO_GRASS_35) \
+    gen(TILE_AUTO_GRASS_36) \
+    gen(TILE_AUTO_GRASS_37) \
+    gen(TILE_AUTO_GRASS_38) \
+    gen(TILE_AUTO_GRASS_39) \
+    gen(TILE_AUTO_GRASS_40) \
+    gen(TILE_AUTO_GRASS_41) \
+    gen(TILE_AUTO_GRASS_42) \
+    gen(TILE_AUTO_GRASS_43) \
+    gen(TILE_AUTO_GRASS_44) \
+    gen(TILE_AUTO_GRASS_45) \
+    gen(TILE_AUTO_GRASS_46) \
+    gen(TILE_AUTO_GRASS_47)
 
-        TILE_AUTO_GRASS_00,
-        TILE_AUTO_GRASS_01,
-        TILE_AUTO_GRASS_02,
-        TILE_AUTO_GRASS_03,
-        TILE_AUTO_GRASS_04,
-        TILE_AUTO_GRASS_05,
-        TILE_AUTO_GRASS_06,
-        TILE_AUTO_GRASS_07,
-        TILE_AUTO_GRASS_08,
-        TILE_AUTO_GRASS_09,
-        TILE_AUTO_GRASS_10,
-        TILE_AUTO_GRASS_11,
-        TILE_AUTO_GRASS_12,
-        TILE_AUTO_GRASS_13,
-        TILE_AUTO_GRASS_14,
-        TILE_AUTO_GRASS_15,
-        TILE_AUTO_GRASS_16,
-        TILE_AUTO_GRASS_17,
-        TILE_AUTO_GRASS_18,
-        TILE_AUTO_GRASS_19,
-        TILE_AUTO_GRASS_20,
-        TILE_AUTO_GRASS_21,
-        TILE_AUTO_GRASS_22,
-        TILE_AUTO_GRASS_23,
-        TILE_AUTO_GRASS_24,
-        TILE_AUTO_GRASS_25,
-        TILE_AUTO_GRASS_26,
-        TILE_AUTO_GRASS_27,
-        TILE_AUTO_GRASS_28,
-        TILE_AUTO_GRASS_29,
-        TILE_AUTO_GRASS_30,
-        TILE_AUTO_GRASS_31,
-        TILE_AUTO_GRASS_32,
-        TILE_AUTO_GRASS_33,
-        TILE_AUTO_GRASS_34,
-        TILE_AUTO_GRASS_35,
-        TILE_AUTO_GRASS_36,
-        TILE_AUTO_GRASS_37,
-        TILE_AUTO_GRASS_38,
-        TILE_AUTO_GRASS_39,
-        TILE_AUTO_GRASS_40,
-        TILE_AUTO_GRASS_41,
-        TILE_AUTO_GRASS_42,
-        TILE_AUTO_GRASS_43,
-        TILE_AUTO_GRASS_44,
-        TILE_AUTO_GRASS_45,
-        TILE_AUTO_GRASS_46,
-        TILE_AUTO_GRASS_47,
+    enum TileTypeId {
+        TILE_TYPE_IDS(ENUM_GEN_VALUE)
     };
 
     typedef uint32_t TileFlags;
@@ -310,6 +326,14 @@ namespace data {
         TileFlags flags;
         //Color color;  // color for minimap/wang tile editor (top left pixel of tile)
     };
+
+    const char *GfxFileIdStr(GfxFileId id);
+    const char *MusFileIdStr(MusFileId id);
+    const char *SfxFileIdStr(SfxFileId id);
+    const char *GfxFrameIdStr(GfxFrameId id);
+    const char *GfxAnimIdStr(GfxAnimId id);
+    const char *TileMatIdStr(TileMatId id);
+    const char *TileTypeIdStr(TileTypeId id);
 
     extern GfxFile gfxFiles[];
     extern MusFile musFiles[];
