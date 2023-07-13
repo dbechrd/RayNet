@@ -237,18 +237,18 @@ namespace data {
         double animAccum; // time since last update
     };
 
-#define TILE_MAT_IDS(gen) \
-    gen(TILE_MAT_NONE)    \
-    gen(TILE_MAT_GRASS)   \
-    gen(TILE_MAT_STONE)   \
-    gen(TILE_MAT_WATER)
+#define MATERIAL_IDS(gen) \
+    gen(MATERIAL_NONE)    \
+    gen(MATERIAL_GRASS)   \
+    gen(MATERIAL_STONE)   \
+    gen(MATERIAL_WATER)
 
-    enum TileMatId {
-        TILE_MAT_IDS(ENUM_GEN_VALUE)
+    enum MaterialId : uint16_t {
+        MATERIAL_IDS(ENUM_GEN_VALUE)
     };
 
-    struct TileMat {
-        TileMatId id;
+    struct Material {
+        MaterialId id;
         SfxFileId footstepSnd;
     };
 
@@ -307,7 +307,7 @@ namespace data {
     gen(TILE_AUTO_GRASS_46) \
     gen(TILE_AUTO_GRASS_47)
 
-    enum TileTypeId {
+    enum TileTypeId : uint16_t {
         TILE_TYPE_IDS(ENUM_GEN_VALUE)
     };
 
@@ -319,12 +319,24 @@ namespace data {
     };
 
     struct TileType {
-        TileTypeId id;
-        GfxAnimId anim;
-        TileMatId material;
-        uint8_t auto_tile_mask;
-        TileFlags flags;
+        TileTypeId  id;
+        GfxAnimId   anim;
+        MaterialId  material;
+        TileFlags   flags;
+        uint8_t     autoTileMask;
         //Color color;  // color for minimap/wang tile editor (top left pixel of tile)
+    };
+
+    enum DataType : uint8_t {
+        DAT_TYP_ARRAY,
+        DAT_TYP_GFX_FILE,
+        DAT_TYP_MUS_FILE,
+        DAT_TYP_SFX_FILE,
+        DAT_TYP_GFX_FRAME,
+        DAT_TYP_GFX_ANIM,
+        DAT_TYP_MATERIAL,
+        DAT_TYP_TILE_TYPE,
+        DAT_COUNT
     };
 
     const char *GfxFileIdStr(GfxFileId id);
@@ -332,7 +344,7 @@ namespace data {
     const char *SfxFileIdStr(SfxFileId id);
     const char *GfxFrameIdStr(GfxFrameId id);
     const char *GfxAnimIdStr(GfxAnimId id);
-    const char *TileMatIdStr(TileMatId id);
+    const char *MaterialIdStr(MaterialId id);
     const char *TileTypeIdStr(TileTypeId id);
 
     extern GfxFile gfxFiles[];
@@ -340,11 +352,14 @@ namespace data {
     extern SfxFile sfxFiles[];
     extern GfxFrame gfxFrames[];
     extern GfxAnim gfxAnims[];
-    extern TileMat tileMats[];
+    extern Material materials[];
     extern TileType tileTypes[];
 
     void Init(void);
     void Free(void);
+
+    Err Save(const char *filename);
+    Err Load(const char *filename);
 
     void PlaySound(SfxFileId id, bool multi = true, float pitchVariance = 0.0f);
 

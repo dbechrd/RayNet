@@ -14,7 +14,7 @@ namespace data {
     ENUM_STR_GENERATOR(SfxFileId,  SFX_FILE_IDS);
     ENUM_STR_GENERATOR(GfxFrameId, GFX_FRAME_IDS);
     ENUM_STR_GENERATOR(GfxAnimId,  GFX_ANIM_IDS);
-    ENUM_STR_GENERATOR(TileMatId,  TILE_MAT_IDS);
+    ENUM_STR_GENERATOR(MaterialId, MATERIAL_IDS);
     ENUM_STR_GENERATOR(TileTypeId, TILE_TYPE_IDS);
 
 #undef ENUM_STR_GENERATOR
@@ -202,81 +202,81 @@ namespace data {
         { GFX_ANIM_TIL_AUTO_GRASS_47, SFX_FILE_NONE,          60,        1,        0, { GFX_FRAME_TIL_AUTO_GRASS_47 }},
     };
 
-    TileMat tileMats[] = {
-        { TILE_MAT_NONE },
+    Material materials[] = {
+        { MATERIAL_NONE },
         // id             footstep sound
-        { TILE_MAT_GRASS, SFX_FILE_FOOTSTEP_GRASS },
-        { TILE_MAT_STONE, SFX_FILE_FOOTSTEP_STONE },
-        { TILE_MAT_WATER, SFX_FILE_FOOTSTEP_GRASS },
+        { MATERIAL_GRASS, SFX_FILE_FOOTSTEP_GRASS },
+        { MATERIAL_STONE, SFX_FILE_FOOTSTEP_STONE },
+        { MATERIAL_WATER, SFX_FILE_FOOTSTEP_GRASS },
     };
 
     TileType tileTypes[] = {
         { TILE_NONE },
         //id               gfx/anim                 material        auto_mask   flags
-        { TILE_GRASS,      GFX_ANIM_TIL_GRASS,      TILE_MAT_GRASS, 0b00000000, TILE_FLAG_WALK },
-        { TILE_STONE_PATH, GFX_ANIM_TIL_STONE_PATH, TILE_MAT_STONE, 0b00000000, TILE_FLAG_WALK },
-        { TILE_WATER,      GFX_ANIM_TIL_WATER,      TILE_MAT_WATER, 0b00000000, TILE_FLAG_SWIM },
-        { TILE_WALL,       GFX_ANIM_TIL_WALL,       TILE_MAT_STONE, 0b00000000, TILE_FLAG_COLLIDE },
+        { TILE_GRASS,      GFX_ANIM_TIL_GRASS,      MATERIAL_GRASS, 0b00000000, TILE_FLAG_WALK },
+        { TILE_STONE_PATH, GFX_ANIM_TIL_STONE_PATH, MATERIAL_STONE, 0b00000000, TILE_FLAG_WALK },
+        { TILE_WATER,      GFX_ANIM_TIL_WATER,      MATERIAL_WATER, 0b00000000, TILE_FLAG_SWIM },
+        { TILE_WALL,       GFX_ANIM_TIL_WALL,       MATERIAL_STONE, 0b00000000, TILE_FLAG_COLLIDE },
 
-        { TILE_AUTO_GRASS_00, GFX_ANIM_TIL_AUTO_GRASS_00, TILE_MAT_GRASS, 0b00000010, TILE_FLAG_WALK },
-        { TILE_AUTO_GRASS_01, GFX_ANIM_TIL_AUTO_GRASS_01, TILE_MAT_GRASS, 0b01000010, TILE_FLAG_WALK },
-        { TILE_AUTO_GRASS_02, GFX_ANIM_TIL_AUTO_GRASS_02, TILE_MAT_GRASS, 0b01000000, TILE_FLAG_WALK },
-        { TILE_AUTO_GRASS_03, GFX_ANIM_TIL_AUTO_GRASS_03, TILE_MAT_GRASS, 0b00000000, TILE_FLAG_WALK },
+        { TILE_AUTO_GRASS_00, GFX_ANIM_TIL_AUTO_GRASS_00, MATERIAL_GRASS, 0b00000010, TILE_FLAG_WALK },
+        { TILE_AUTO_GRASS_01, GFX_ANIM_TIL_AUTO_GRASS_01, MATERIAL_GRASS, 0b01000010, TILE_FLAG_WALK },
+        { TILE_AUTO_GRASS_02, GFX_ANIM_TIL_AUTO_GRASS_02, MATERIAL_GRASS, 0b01000000, TILE_FLAG_WALK },
+        { TILE_AUTO_GRASS_03, GFX_ANIM_TIL_AUTO_GRASS_03, MATERIAL_GRASS, 0b00000000, TILE_FLAG_WALK },
 
-        { TILE_AUTO_GRASS_04, GFX_ANIM_TIL_AUTO_GRASS_04, TILE_MAT_GRASS, 0b00001010, TILE_FLAG_WALK },
-        { TILE_AUTO_GRASS_05, GFX_ANIM_TIL_AUTO_GRASS_05, TILE_MAT_GRASS, 0b01001010, TILE_FLAG_WALK },
-        { TILE_AUTO_GRASS_06, GFX_ANIM_TIL_AUTO_GRASS_06, TILE_MAT_GRASS, 0b01001000, TILE_FLAG_WALK },
-        { TILE_AUTO_GRASS_07, GFX_ANIM_TIL_AUTO_GRASS_07, TILE_MAT_GRASS, 0b00001000, TILE_FLAG_WALK },
+        { TILE_AUTO_GRASS_04, GFX_ANIM_TIL_AUTO_GRASS_04, MATERIAL_GRASS, 0b00001010, TILE_FLAG_WALK },
+        { TILE_AUTO_GRASS_05, GFX_ANIM_TIL_AUTO_GRASS_05, MATERIAL_GRASS, 0b01001010, TILE_FLAG_WALK },
+        { TILE_AUTO_GRASS_06, GFX_ANIM_TIL_AUTO_GRASS_06, MATERIAL_GRASS, 0b01001000, TILE_FLAG_WALK },
+        { TILE_AUTO_GRASS_07, GFX_ANIM_TIL_AUTO_GRASS_07, MATERIAL_GRASS, 0b00001000, TILE_FLAG_WALK },
 
-        { TILE_AUTO_GRASS_08, GFX_ANIM_TIL_AUTO_GRASS_08, TILE_MAT_GRASS, 0b00011010, TILE_FLAG_WALK },
-        { TILE_AUTO_GRASS_09, GFX_ANIM_TIL_AUTO_GRASS_09, TILE_MAT_GRASS, 0b01011010, TILE_FLAG_WALK },
-        { TILE_AUTO_GRASS_10, GFX_ANIM_TIL_AUTO_GRASS_10, TILE_MAT_GRASS, 0b01011000, TILE_FLAG_WALK },
-        { TILE_AUTO_GRASS_11, GFX_ANIM_TIL_AUTO_GRASS_11, TILE_MAT_GRASS, 0b00011000, TILE_FLAG_WALK },
+        { TILE_AUTO_GRASS_08, GFX_ANIM_TIL_AUTO_GRASS_08, MATERIAL_GRASS, 0b00011010, TILE_FLAG_WALK },
+        { TILE_AUTO_GRASS_09, GFX_ANIM_TIL_AUTO_GRASS_09, MATERIAL_GRASS, 0b01011010, TILE_FLAG_WALK },
+        { TILE_AUTO_GRASS_10, GFX_ANIM_TIL_AUTO_GRASS_10, MATERIAL_GRASS, 0b01011000, TILE_FLAG_WALK },
+        { TILE_AUTO_GRASS_11, GFX_ANIM_TIL_AUTO_GRASS_11, MATERIAL_GRASS, 0b00011000, TILE_FLAG_WALK },
 
-        { TILE_AUTO_GRASS_12, GFX_ANIM_TIL_AUTO_GRASS_12, TILE_MAT_GRASS, 0b00010010, TILE_FLAG_WALK },
-        { TILE_AUTO_GRASS_13, GFX_ANIM_TIL_AUTO_GRASS_13, TILE_MAT_GRASS, 0b01010010, TILE_FLAG_WALK },
-        { TILE_AUTO_GRASS_14, GFX_ANIM_TIL_AUTO_GRASS_14, TILE_MAT_GRASS, 0b01010000, TILE_FLAG_WALK },
-        { TILE_AUTO_GRASS_15, GFX_ANIM_TIL_AUTO_GRASS_15, TILE_MAT_GRASS, 0b00010000, TILE_FLAG_WALK },
+        { TILE_AUTO_GRASS_12, GFX_ANIM_TIL_AUTO_GRASS_12, MATERIAL_GRASS, 0b00010010, TILE_FLAG_WALK },
+        { TILE_AUTO_GRASS_13, GFX_ANIM_TIL_AUTO_GRASS_13, MATERIAL_GRASS, 0b01010010, TILE_FLAG_WALK },
+        { TILE_AUTO_GRASS_14, GFX_ANIM_TIL_AUTO_GRASS_14, MATERIAL_GRASS, 0b01010000, TILE_FLAG_WALK },
+        { TILE_AUTO_GRASS_15, GFX_ANIM_TIL_AUTO_GRASS_15, MATERIAL_GRASS, 0b00010000, TILE_FLAG_WALK },
 
-        { TILE_AUTO_GRASS_16, GFX_ANIM_TIL_AUTO_GRASS_16, TILE_MAT_GRASS, 0b11011010, TILE_FLAG_WALK },
-        { TILE_AUTO_GRASS_17, GFX_ANIM_TIL_AUTO_GRASS_17, TILE_MAT_GRASS, 0b01001011, TILE_FLAG_WALK },
-        { TILE_AUTO_GRASS_18, GFX_ANIM_TIL_AUTO_GRASS_18, TILE_MAT_GRASS, 0b01101010, TILE_FLAG_WALK },
-        { TILE_AUTO_GRASS_19, GFX_ANIM_TIL_AUTO_GRASS_19, TILE_MAT_GRASS, 0b01011110, TILE_FLAG_WALK },
+        { TILE_AUTO_GRASS_16, GFX_ANIM_TIL_AUTO_GRASS_16, MATERIAL_GRASS, 0b11011010, TILE_FLAG_WALK },
+        { TILE_AUTO_GRASS_17, GFX_ANIM_TIL_AUTO_GRASS_17, MATERIAL_GRASS, 0b01001011, TILE_FLAG_WALK },
+        { TILE_AUTO_GRASS_18, GFX_ANIM_TIL_AUTO_GRASS_18, MATERIAL_GRASS, 0b01101010, TILE_FLAG_WALK },
+        { TILE_AUTO_GRASS_19, GFX_ANIM_TIL_AUTO_GRASS_19, MATERIAL_GRASS, 0b01011110, TILE_FLAG_WALK },
 
-        { TILE_AUTO_GRASS_20, GFX_ANIM_TIL_AUTO_GRASS_20, TILE_MAT_GRASS, 0b00011011, TILE_FLAG_WALK },
-        { TILE_AUTO_GRASS_21, GFX_ANIM_TIL_AUTO_GRASS_21, TILE_MAT_GRASS, 0b01111111, TILE_FLAG_WALK },
-        { TILE_AUTO_GRASS_22, GFX_ANIM_TIL_AUTO_GRASS_22, TILE_MAT_GRASS, 0b11111011, TILE_FLAG_WALK },
-        { TILE_AUTO_GRASS_23, GFX_ANIM_TIL_AUTO_GRASS_23, TILE_MAT_GRASS, 0b01111000, TILE_FLAG_WALK },
+        { TILE_AUTO_GRASS_20, GFX_ANIM_TIL_AUTO_GRASS_20, MATERIAL_GRASS, 0b00011011, TILE_FLAG_WALK },
+        { TILE_AUTO_GRASS_21, GFX_ANIM_TIL_AUTO_GRASS_21, MATERIAL_GRASS, 0b01111111, TILE_FLAG_WALK },
+        { TILE_AUTO_GRASS_22, GFX_ANIM_TIL_AUTO_GRASS_22, MATERIAL_GRASS, 0b11111011, TILE_FLAG_WALK },
+        { TILE_AUTO_GRASS_23, GFX_ANIM_TIL_AUTO_GRASS_23, MATERIAL_GRASS, 0b01111000, TILE_FLAG_WALK },
 
-        { TILE_AUTO_GRASS_24, GFX_ANIM_TIL_AUTO_GRASS_24, TILE_MAT_GRASS, 0b00011110, TILE_FLAG_WALK },
-        { TILE_AUTO_GRASS_25, GFX_ANIM_TIL_AUTO_GRASS_25, TILE_MAT_GRASS, 0b11011111, TILE_FLAG_WALK },
-        { TILE_AUTO_GRASS_26, GFX_ANIM_TIL_AUTO_GRASS_26, TILE_MAT_GRASS, 0b11111110, TILE_FLAG_WALK },
-        { TILE_AUTO_GRASS_27, GFX_ANIM_TIL_AUTO_GRASS_27, TILE_MAT_GRASS, 0b11011000, TILE_FLAG_WALK },
+        { TILE_AUTO_GRASS_24, GFX_ANIM_TIL_AUTO_GRASS_24, MATERIAL_GRASS, 0b00011110, TILE_FLAG_WALK },
+        { TILE_AUTO_GRASS_25, GFX_ANIM_TIL_AUTO_GRASS_25, MATERIAL_GRASS, 0b11011111, TILE_FLAG_WALK },
+        { TILE_AUTO_GRASS_26, GFX_ANIM_TIL_AUTO_GRASS_26, MATERIAL_GRASS, 0b11111110, TILE_FLAG_WALK },
+        { TILE_AUTO_GRASS_27, GFX_ANIM_TIL_AUTO_GRASS_27, MATERIAL_GRASS, 0b11011000, TILE_FLAG_WALK },
 
-        { TILE_AUTO_GRASS_28, GFX_ANIM_TIL_AUTO_GRASS_28, TILE_MAT_GRASS, 0b01111010, TILE_FLAG_WALK },
-        { TILE_AUTO_GRASS_29, GFX_ANIM_TIL_AUTO_GRASS_29, TILE_MAT_GRASS, 0b01010110, TILE_FLAG_WALK },
-        { TILE_AUTO_GRASS_30, GFX_ANIM_TIL_AUTO_GRASS_30, TILE_MAT_GRASS, 0b11010010, TILE_FLAG_WALK },
-        { TILE_AUTO_GRASS_31, GFX_ANIM_TIL_AUTO_GRASS_31, TILE_MAT_GRASS, 0b01011011, TILE_FLAG_WALK },
+        { TILE_AUTO_GRASS_28, GFX_ANIM_TIL_AUTO_GRASS_28, MATERIAL_GRASS, 0b01111010, TILE_FLAG_WALK },
+        { TILE_AUTO_GRASS_29, GFX_ANIM_TIL_AUTO_GRASS_29, MATERIAL_GRASS, 0b01010110, TILE_FLAG_WALK },
+        { TILE_AUTO_GRASS_30, GFX_ANIM_TIL_AUTO_GRASS_30, MATERIAL_GRASS, 0b11010010, TILE_FLAG_WALK },
+        { TILE_AUTO_GRASS_31, GFX_ANIM_TIL_AUTO_GRASS_31, MATERIAL_GRASS, 0b01011011, TILE_FLAG_WALK },
 
-        { TILE_AUTO_GRASS_32, GFX_ANIM_TIL_AUTO_GRASS_32, TILE_MAT_GRASS, 0b00001011, TILE_FLAG_WALK },
-        { TILE_AUTO_GRASS_33, GFX_ANIM_TIL_AUTO_GRASS_33, TILE_MAT_GRASS, 0b01101011, TILE_FLAG_WALK },
-        { TILE_AUTO_GRASS_34, GFX_ANIM_TIL_AUTO_GRASS_34, TILE_MAT_GRASS, 0b01111011, TILE_FLAG_WALK },
-        { TILE_AUTO_GRASS_35, GFX_ANIM_TIL_AUTO_GRASS_35, TILE_MAT_GRASS, 0b01101000, TILE_FLAG_WALK },
+        { TILE_AUTO_GRASS_32, GFX_ANIM_TIL_AUTO_GRASS_32, MATERIAL_GRASS, 0b00001011, TILE_FLAG_WALK },
+        { TILE_AUTO_GRASS_33, GFX_ANIM_TIL_AUTO_GRASS_33, MATERIAL_GRASS, 0b01101011, TILE_FLAG_WALK },
+        { TILE_AUTO_GRASS_34, GFX_ANIM_TIL_AUTO_GRASS_34, MATERIAL_GRASS, 0b01111011, TILE_FLAG_WALK },
+        { TILE_AUTO_GRASS_35, GFX_ANIM_TIL_AUTO_GRASS_35, MATERIAL_GRASS, 0b01101000, TILE_FLAG_WALK },
 
-        { TILE_AUTO_GRASS_36, GFX_ANIM_TIL_AUTO_GRASS_36, TILE_MAT_GRASS, 0b01011111, TILE_FLAG_WALK },
-        { TILE_AUTO_GRASS_37, GFX_ANIM_TIL_AUTO_GRASS_37, TILE_MAT_GRASS, 0b01111110, TILE_FLAG_WALK },
-        { TILE_AUTO_GRASS_38, GFX_ANIM_TIL_AUTO_GRASS_38, TILE_MAT_GRASS, 0b11111111, TILE_FLAG_WALK },
-        { TILE_AUTO_GRASS_39, GFX_ANIM_TIL_AUTO_GRASS_39, TILE_MAT_GRASS, 0b11111000, TILE_FLAG_WALK },
+        { TILE_AUTO_GRASS_36, GFX_ANIM_TIL_AUTO_GRASS_36, MATERIAL_GRASS, 0b01011111, TILE_FLAG_WALK },
+        { TILE_AUTO_GRASS_37, GFX_ANIM_TIL_AUTO_GRASS_37, MATERIAL_GRASS, 0b01111110, TILE_FLAG_WALK },
+        { TILE_AUTO_GRASS_38, GFX_ANIM_TIL_AUTO_GRASS_38, MATERIAL_GRASS, 0b11111111, TILE_FLAG_WALK },
+        { TILE_AUTO_GRASS_39, GFX_ANIM_TIL_AUTO_GRASS_39, MATERIAL_GRASS, 0b11111000, TILE_FLAG_WALK },
 
-        { TILE_AUTO_GRASS_40, GFX_ANIM_TIL_AUTO_GRASS_40, TILE_MAT_GRASS, 0b00011111, TILE_FLAG_WALK },
-        { TILE_AUTO_GRASS_41, GFX_ANIM_TIL_AUTO_GRASS_41, TILE_MAT_GRASS, 0b00000000, TILE_FLAG_WALK },
-        { TILE_AUTO_GRASS_42, GFX_ANIM_TIL_AUTO_GRASS_42, TILE_MAT_GRASS, 0b11011011, TILE_FLAG_WALK },
-        { TILE_AUTO_GRASS_43, GFX_ANIM_TIL_AUTO_GRASS_43, TILE_MAT_GRASS, 0b11111010, TILE_FLAG_WALK },
+        { TILE_AUTO_GRASS_40, GFX_ANIM_TIL_AUTO_GRASS_40, MATERIAL_GRASS, 0b00011111, TILE_FLAG_WALK },
+        { TILE_AUTO_GRASS_41, GFX_ANIM_TIL_AUTO_GRASS_41, MATERIAL_GRASS, 0b00000000, TILE_FLAG_WALK },
+        { TILE_AUTO_GRASS_42, GFX_ANIM_TIL_AUTO_GRASS_42, MATERIAL_GRASS, 0b11011011, TILE_FLAG_WALK },
+        { TILE_AUTO_GRASS_43, GFX_ANIM_TIL_AUTO_GRASS_43, MATERIAL_GRASS, 0b11111010, TILE_FLAG_WALK },
 
-        { TILE_AUTO_GRASS_44, GFX_ANIM_TIL_AUTO_GRASS_44, TILE_MAT_GRASS, 0b00010110, TILE_FLAG_WALK },
-        { TILE_AUTO_GRASS_45, GFX_ANIM_TIL_AUTO_GRASS_45, TILE_MAT_GRASS, 0b11011110, TILE_FLAG_WALK },
-        { TILE_AUTO_GRASS_46, GFX_ANIM_TIL_AUTO_GRASS_46, TILE_MAT_GRASS, 0b11010110, TILE_FLAG_WALK },
-        { TILE_AUTO_GRASS_47, GFX_ANIM_TIL_AUTO_GRASS_47, TILE_MAT_GRASS, 0b11010000, TILE_FLAG_WALK },
+        { TILE_AUTO_GRASS_44, GFX_ANIM_TIL_AUTO_GRASS_44, MATERIAL_GRASS, 0b00010110, TILE_FLAG_WALK },
+        { TILE_AUTO_GRASS_45, GFX_ANIM_TIL_AUTO_GRASS_45, MATERIAL_GRASS, 0b11011110, TILE_FLAG_WALK },
+        { TILE_AUTO_GRASS_46, GFX_ANIM_TIL_AUTO_GRASS_46, MATERIAL_GRASS, 0b11010110, TILE_FLAG_WALK },
+        { TILE_AUTO_GRASS_47, GFX_ANIM_TIL_AUTO_GRASS_47, MATERIAL_GRASS, 0b11010000, TILE_FLAG_WALK },
     };
 
     void Init(void)
@@ -293,7 +293,7 @@ namespace data {
         ID_CHECK(SfxFile  &, sfxFile,  sfxFiles);
         ID_CHECK(GfxFrame &, gfxFrame, gfxFrames);
         ID_CHECK(GfxAnim  &, gfxAnim,  gfxAnims);
-        ID_CHECK(TileMat  &, tileMat,  tileMats);
+        ID_CHECK(Material &, material, materials);
         ID_CHECK(TileType &, tileType, tileTypes);
         #undef ID_CHECK
 
@@ -326,6 +326,8 @@ namespace data {
         } else {
             printf("[data] WARN: Failed to generate placeholder image\n");
         }
+
+        Save("dat/test.dat");
     }
     void Free(void)
     {
@@ -338,6 +340,137 @@ namespace data {
         for (SfxFile &sfxFile : sfxFiles) {
             UnloadSound(sfxFile.sound);
         }
+    }
+
+    void WriteString(FILE *f, const char *str)
+    {
+        uint16_t len = str ? (uint16_t)strlen(str) : 0;
+        fwrite(&len, sizeof(len), 1, f);
+        if (len) {
+            fwrite(str, sizeof(*str), len, f);
+        }
+        fflush(f);
+    }
+
+    Err Save(const char *filename)
+    {
+#define WRITE(v) { const auto vv = v; fwrite(&vv, sizeof(vv), 1, f); fflush(f); }
+
+        Err err = RN_SUCCESS;
+        FILE *f = fopen(filename, "wb");
+        do {
+            if (!f) {
+                err = RN_BAD_FILE_WRITE; break;
+            }
+
+            const char magic[]{ (char)0xDB, (char)0xBB, (char)0x91, (char)0x92 };
+            int version = 1;
+
+            // magic
+            WRITE(magic[0]);
+            WRITE(magic[1]);
+            WRITE(magic[2]);
+            WRITE(magic[3]);
+
+            // version
+            WRITE(version);
+
+            // https://formats.kaitai.io/doom_wad/doom_wad.svg
+            // GFXFILE
+            WRITE(DAT_TYP_ARRAY);
+            WRITE((int)ARRAY_SIZE(gfxFiles));
+            WRITE(DAT_TYP_GFX_FILE);
+            for (GfxFile &gfxFile : gfxFiles) {
+                WRITE(gfxFile.id);
+                WriteString(f, gfxFile.path);
+            }
+
+            // MUSFILE
+            WRITE(DAT_TYP_ARRAY);
+            WRITE((int)ARRAY_SIZE(musFiles));
+            WRITE(DAT_TYP_MUS_FILE);
+            for (MusFile &musFile : musFiles) {
+                WRITE(musFile.id);
+                WriteString(f, musFile.path);
+            }
+
+            // SFXFILE
+            WRITE(DAT_TYP_ARRAY);
+            WRITE((int)ARRAY_SIZE(sfxFiles));
+            WRITE(DAT_TYP_SFX_FILE);
+            for (SfxFile &sfxFile : sfxFiles) {
+                WRITE(sfxFile.id);
+                WriteString(f, sfxFile.path);
+                WRITE(sfxFile.pitch_variance);
+            }
+
+            // GFXFRAME
+            WRITE(DAT_TYP_ARRAY);
+            WRITE((int)ARRAY_SIZE(gfxFrames));
+            WRITE(DAT_TYP_GFX_FRAME);
+            for (GfxFrame &gfxFrame : gfxFrames) {
+                WRITE(gfxFrame.id);
+                WRITE(gfxFrame.gfx);
+                WRITE(gfxFrame.x);
+                WRITE(gfxFrame.y);
+                WRITE(gfxFrame.w);
+                WRITE(gfxFrame.h);
+            }
+
+            // GFXANIM
+            WRITE(DAT_TYP_ARRAY);
+            WRITE((int)ARRAY_SIZE(gfxAnims));
+            WRITE(DAT_TYP_GFX_ANIM);
+            for (GfxAnim &gfxAnim : gfxAnims) {
+                WRITE(gfxAnim.id);
+                WRITE(gfxAnim.sound);
+                WRITE(gfxAnim.frameRate);
+                WRITE(gfxAnim.frameCount);
+                WRITE(gfxAnim.frameDelay);
+                for (int i = 0; i < gfxAnim.frameCount; i++) {
+                    WRITE(gfxAnim.frames[i]);
+                }
+            }
+
+            // MATERIAL
+            WRITE(DAT_TYP_ARRAY);
+            WRITE((int)ARRAY_SIZE(materials));
+            WRITE(DAT_TYP_MATERIAL);
+            for (Material &material : materials) {
+                WRITE(material.id);
+                WRITE(material.footstepSnd);
+            }
+
+            // TILETYPE
+            WRITE(DAT_TYP_ARRAY);
+            WRITE((int)ARRAY_SIZE(tileTypes));
+            WRITE(DAT_TYP_TILE_TYPE);
+            for (TileType &tileType : tileTypes) {
+                WRITE(tileType.id);
+                WRITE(tileType.anim);
+                WRITE(tileType.material);
+                WRITE(tileType.flags);
+                WRITE(tileType.autoTileMask);
+            }
+        } while (0);
+
+        if (f) {
+            fclose(f);
+        }
+        return err;
+#undef WRITE
+    }
+
+    Err Load(const char *filename)
+    {
+        //extern GfxFile gfxFiles[];
+        //extern MusFile musFiles[];
+        //extern SfxFile sfxFiles[];
+        //extern GfxFrame gfxFrames[];
+        //extern GfxAnim gfxAnims[];
+        //extern TileMat tileMats[];
+        //extern TileType tileTypes[];
+        return RN_SUCCESS;
     }
 
     void PlaySound(SfxFileId id, bool multi, float pitchVariance)
