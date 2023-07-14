@@ -157,7 +157,7 @@ Err GameServer::Start(void)
     InitClientServerConfig(config);
 
     // Loopback interface
-    //yojimbo::Address address("127.0.0.1", SV_PORT);
+    yojimbo::Address address("127.0.0.1", SV_PORT);
     //yojimbo::Address address("::1", SV_PORT);
 
     // Any interface
@@ -165,7 +165,6 @@ Err GameServer::Start(void)
     //yojimbo::Address address("::", SV_PORT);
 
     //yojimbo::Address address("192.168.0.143", SV_PORT);
-    yojimbo::Address address("68.9.219.64", SV_PORT);
     //yojimbo::Address address("slime.theprogrammingjunkie.com", SV_PORT);
 
     if (!address.IsValid()) {
@@ -480,7 +479,7 @@ uint32_t GameServer::SpawnProjectile(uint32_t mapId, Vector2 position, Vector2 d
         // [Physics] random speed
         bulletPhysics.velocity = bulletVelocity;
         bulletPhysics.drag = 0.02f;
-        bulletSprite.anims[data::DIR_N] = data::GFX_ANIM_PRJ_BULLET;
+        bulletSprite.anims[data::DIR_N] = data::GFX_ANIM_PRJ_FIREBALL;
 
         BroadcastEntitySpawn(bulletId);
         return bulletId;
@@ -510,15 +509,19 @@ void GameServer::UpdateServerPlayers(void)
 
                 if (inputCmd->fire) {
                     Entity &playerEntity = entityDb->entities[playerIndex];
-                    Vector2 projSpawnLoc{ playerEntity.position.x, playerEntity.position.y - 24 };
-                    uint32_t bulletId = SpawnProjectile(playerEntity.mapId, projSpawnLoc, inputCmd->facing);
-                    if (bulletId) {
-                        size_t bulletIndex = entityDb->FindEntityIndex(bulletId);
-                        const AspectPhysics &bulletPhysics = entityDb->physics[bulletIndex];
+                    if (now - playerEntity.lastAttackedAt > playerEntity.attackCooldown) {
+                        Vector2 projSpawnLoc{ playerEntity.position.x, playerEntity.position.y - 24 };
+                        uint32_t bulletId = SpawnProjectile(playerEntity.mapId, projSpawnLoc, inputCmd->facing);
+                        if (bulletId) {
+                            size_t bulletIndex = entityDb->FindEntityIndex(bulletId);
+                            const AspectPhysics &bulletPhysics = entityDb->physics[bulletIndex];
 
-                        // Recoil
-                        Vector2 recoilForce = Vector2Negate(bulletPhysics.velocity);
-                        playerPhysics.ApplyForce(recoilForce);
+                            // Recoil
+                            Vector2 recoilForce = Vector2Negate(bulletPhysics.velocity);
+                            playerPhysics.ApplyForce(recoilForce);
+                        }
+                        playerEntity.lastAttackedAt = now;
+                        playerEntity.attackCooldown = 0.3;
                     }
                 }
             } else {
@@ -870,7 +873,9 @@ void GameServer::Tick(void)
 
         data::Sprite &sprite = entityDb->sprite[entityIndex];
         AspectPhysics &physics = entityDb->physics[entityIndex];
-        data::UpdateSprite(sprite, entity.type, physics.velocity, SV_TICK_DT);
+
+        bool newlySpawned = entity.spawnedAt == now;
+        data::UpdateSprite(sprite, entity.type, physics.velocity, SV_TICK_DT, newlySpawned);
     }
 
     tick++;

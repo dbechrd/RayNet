@@ -69,7 +69,7 @@ void draw_menu_connecting(GameClient &client)
         campfire.anims[0] = data::GFX_ANIM_OBJ_CAMPFIRE;
     }
 
-    data::UpdateSprite(campfire, Entity_None, {}, client.frameDt);
+    data::UpdateSprite(campfire, Entity_None, {}, client.frameDt, !connectingDotIdxLastUpdatedAt);
     if (!connectingDotIdxLastUpdatedAt) {
         connectingDotIdxLastUpdatedAt = client.now;
     } else if (client.now > connectingDotIdxLastUpdatedAt + 0.5) {
@@ -375,7 +375,7 @@ int main(int argc, char *argv[])
 
         // TODO: Move this somewhere in client?
         if (client->world && client->world->musBackgroundMusic) {
-            Music &music = data::musFiles[client->world->musBackgroundMusic].music;
+            Music &music = data::pack1.musFiles[client->world->musBackgroundMusic].music;
             if (!IsMusicStreamPlaying(music)) {
                 PlayMusicStream(music);
             }

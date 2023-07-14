@@ -19,6 +19,7 @@ const char *EditModeStr(EditMode mode)
         case EditMode_Paths:    return "Paths";
         case EditMode_Warps:    return "Warps";
         case EditMode_Entities: return "Entities";
+        case EditMode_SfxFile:  return "Sfx";
         default: return "<null>";
     }
 }
@@ -460,6 +461,9 @@ UIState Editor::DrawUI_ActionBar(Vector2 position, GameServer &server, double no
         if (uiActionBar.Button(EditModeStr((EditMode)i), mode == i, BLUE, DARKBLUE).pressed) {
             mode = (EditMode)i;
         }
+        if (i % 6 == 5) {
+            uiActionBar.Newline();
+        }
     }
     uiActionBar.Newline();
 
@@ -479,16 +483,20 @@ UIState Editor::DrawUI_ActionBar(Vector2 position, GameServer &server, double no
             DrawUI_Wang(uiActionBar, now);
             break;
         }
-        case EditMode_Entities: {
-            DrawUI_EntityActions(uiActionBar, now);
-            break;
-        }
         case EditMode_Paths: {
             DrawUI_PathActions(uiActionBar, now);
             break;
         }
         case EditMode_Warps: {
             DrawUI_WarpActions(uiActionBar, now);
+            break;
+        }
+        case EditMode_Entities: {
+            DrawUI_EntityActions(uiActionBar, now);
+            break;
+        }
+        case EditMode_SfxFile: {
+            DrawUI_SfxFiles(uiActionBar, now);
             break;
         }
     }
@@ -878,22 +886,7 @@ void Editor::DrawUI_Wang(UI &uiActionBar, double now)
     }
     uiActionBar.PopStyle();
 }
-void Editor::DrawUI_EntityActions(UI &uiActionBar, double now)
-{
-    if (uiActionBar.Button("Despawn all", MAROON).pressed) {
-        for (const Entity &entity : entityDb->entities) {
-            if (entity.type == Entity_Player || entity.mapId != map->id) {
-                continue;
-            }
-            assert(entity.id && entity.type);
-            entityDb->DespawnEntity(entity.id, now);
-        }
-    }
 
-    if (uiActionBar.Button(TextFormat("Despawn Test %d", state.entities.testId)).pressed) {
-        state.entities.testId++;
-    };
-}
 void Editor::DrawUI_PathActions(UI &uiActionBar, double now)
 {
     if (state.pathNodes.cursor.dragging) {
@@ -979,4 +972,47 @@ void Editor::DrawUI_WarpActions(UI &uiActionBar, double now)
     }
 
     uiActionBar.PopStyle();
+}
+void Editor::DrawUI_EntityActions(UI &uiActionBar, double now)
+{
+    if (uiActionBar.Button("Despawn all", MAROON).pressed) {
+        for (const Entity &entity : entityDb->entities) {
+            if (entity.type == Entity_Player || entity.mapId != map->id) {
+                continue;
+            }
+            assert(entity.id && entity.type);
+            entityDb->DespawnEntity(entity.id, now);
+        }
+    }
+
+    if (uiActionBar.Button(TextFormat("Despawn Test %d", state.entities.testId)).pressed) {
+        state.entities.testId++;
+    };
+}
+void Editor::DrawUI_SfxFiles(UI &uiActionBar, double now)
+{
+    for (data::SfxFile &sfxFile : data::pack1.sfxFiles) {
+        Color color = sfxFile.id == state.sfxFiles.selectedSfx ? ORANGE : BLUE;
+        if (uiActionBar.Button(data::SfxFileIdStr(sfxFile.id), color).pressed) {
+            state.sfxFiles.selectedSfx = sfxFile.id;
+        }
+        uiActionBar.Newline();
+    }
+
+    if (state.sfxFiles.selectedSfx) {
+        data::SfxFile &sfxFile = data::pack1.sfxFiles[state.sfxFiles.selectedSfx];
+        uiActionBar.Text("id");
+        uiActionBar.Text(TextFormat("%d", sfxFile.id));
+        uiActionBar.Newline();
+
+        uiActionBar.Text("path");
+        static STB_TexteditState txtPath{};
+        uiActionBar.Textbox(txtPath, sfxFile.path);
+        uiActionBar.Newline();
+
+        uiActionBar.Text("pitch variance");
+        static STB_TexteditState txtPitchVariance{};
+        uiActionBar.TextboxFloat(txtPitchVariance, sfxFile.pitch_variance);
+        uiActionBar.Newline();
+    }
 }

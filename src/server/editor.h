@@ -13,6 +13,7 @@ enum EditMode {
     EditMode_Paths,
     EditMode_Warps,
     EditMode_Entities,
+    EditMode_SfxFile,
     EditMode_Count
 };
 
@@ -36,10 +37,6 @@ struct EditModeWang {
     WangMap wangMap;
 };
 
-struct EditModeEntities {
-    int testId = 0;
-};
-
 struct EditModePathNodes {
     struct {
         bool dragging;
@@ -51,6 +48,14 @@ struct EditModePathNodes {
     } cursor;
 };
 
+struct EditModeEntities {
+    int testId = 0;
+};
+
+struct EditModeSfxFiles {
+    int selectedSfx = 0;
+};
+
 struct EditModeState {
     bool showColliders{};
     bool showTileIds{};
@@ -59,6 +64,7 @@ struct EditModeState {
     EditModeWang wang;
     EditModeEntities entities;
     EditModePathNodes pathNodes;
+    EditModeSfxFiles sfxFiles;
 };
 
 struct Editor {
@@ -90,7 +96,8 @@ private:
     void DrawUI_TileActions(UI &uiActionBar, double now);
     void DrawUI_Tilesheet(UI &uiActionBar, double now);
     void DrawUI_Wang(UI &uiActionBar, double now);
-    void DrawUI_EntityActions(UI &uiActionBar, double now);
     void DrawUI_PathActions(UI &uiActionBar, double now);
     void DrawUI_WarpActions(UI &uiActionBar, double now);
+    void DrawUI_EntityActions(UI &uiActionBar, double now);
+    void DrawUI_SfxFiles(UI &uiActionBar, double now);
 };

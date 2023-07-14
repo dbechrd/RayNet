@@ -38,15 +38,17 @@ enum EntityType {
 const char *EntityTypeStr(EntityType type);
 
 struct Entity {
-    uint32_t id;
-    uint32_t mapId;
-    EntityType type;
-    double spawnedAt;
-    double despawnedAt;
-    Vector2 position;
+    uint32_t    id             {};
+    uint32_t    mapId          {};
+    EntityType  type           {};
+    double      spawnedAt      {};
+    double      despawnedAt    {};
+    Vector2     position       {};
+    double      lastAttackedAt {};
+    double      attackCooldown {};
 
     // TODO: Separate this out into its own array?
-    uint32_t freelist_next;
+    uint32_t freelist_next {};
 };
 
 struct AspectCollision {

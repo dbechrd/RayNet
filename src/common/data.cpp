@@ -19,6 +19,8 @@ namespace data {
 
 #undef ENUM_STR_GENERATOR
 
+    Pack pack1{};
+
     GfxFile gfxFiles[] = {
         { GFX_FILE_NONE },
         // id                      texture path
@@ -26,7 +28,7 @@ namespace data {
         { GFX_FILE_CHR_MAGE,       "resources/mage.png" },
         { GFX_FILE_NPC_LILY,       "resources/lily.png" },
         { GFX_FILE_OBJ_CAMPFIRE,   "resources/campfire.png" },
-        { GFX_FILE_PRJ_BULLET,     "resources/bullet.png" },
+        { GFX_FILE_PRJ_FIREBALL,   "resources/fireball.png" },
         { GFX_FILE_TIL_OVERWORLD,  "resources/tiles32.png" },
         { GFX_FILE_TIL_AUTO_GRASS, "resources/autotile_3x3_min.png" },
     };
@@ -40,11 +42,12 @@ namespace data {
 
     SfxFile sfxFiles[] = {
         { SFX_FILE_NONE },
-        // id                      sound file path                 pitch variance
-        { SFX_FILE_SOFT_TICK,      "resources/soft_tick.wav"     , 0.03f },
-        { SFX_FILE_CAMPFIRE,       "resources/campfire.wav"      , 0.00f },
-        { SFX_FILE_FOOTSTEP_GRASS, "resources/footstep_grass.wav", 0.00f },
-        { SFX_FILE_FOOTSTEP_STONE, "resources/footstep_stone.wav", 0.00f },
+        // id                      sound file path                 pitch variance  multi
+        { SFX_FILE_SOFT_TICK,      "resources/soft_tick.wav"     , 0.03f,          true },
+        { SFX_FILE_CAMPFIRE,       "resources/campfire.wav"      , 0.00f,          false },
+        { SFX_FILE_FOOTSTEP_GRASS, "resources/footstep_grass.wav", 0.00f,          true },
+        { SFX_FILE_FOOTSTEP_STONE, "resources/footstep_stone.wav", 0.00f,          true },
+        { SFX_FILE_FIREBALL,       "resources/fireball.wav",       0.10f,          true },
     };
 
     GfxFrame gfxFrames[] = {
@@ -70,7 +73,7 @@ namespace data {
         { GFX_FRAME_OBJ_CAMPFIRE_7, GFX_FILE_OBJ_CAMPFIRE, 1792,  0, 256, 256 },
 
         // projectiles
-        { GFX_FRAME_PRJ_BULLET_0,   GFX_FILE_PRJ_BULLET,      0,  0,   8,   8 },
+        { GFX_FRAME_PRJ_FIREBALL_0, GFX_FILE_PRJ_FIREBALL,    0,  0,   8,   8 },
 
         // tiles
         { GFX_FRAME_TIL_GRASS,      GFX_FILE_TIL_OVERWORLD,   0, 96,  32,  32 },
@@ -144,7 +147,7 @@ namespace data {
         { GFX_ANIM_OBJ_CAMPFIRE,      SFX_FILE_CAMPFIRE,      60,        8,        4, { GFX_FRAME_OBJ_CAMPFIRE_0, GFX_FRAME_OBJ_CAMPFIRE_1, GFX_FRAME_OBJ_CAMPFIRE_2, GFX_FRAME_OBJ_CAMPFIRE_3, GFX_FRAME_OBJ_CAMPFIRE_4, GFX_FRAME_OBJ_CAMPFIRE_5, GFX_FRAME_OBJ_CAMPFIRE_6, GFX_FRAME_OBJ_CAMPFIRE_7 }},
 
         // projectiles
-        { GFX_ANIM_PRJ_BULLET,        SFX_FILE_NONE,          60,        1,        0, { GFX_FRAME_PRJ_BULLET_0 }},
+        { GFX_ANIM_PRJ_FIREBALL,      SFX_FILE_FIREBALL,      60,        1,        0, { GFX_FRAME_PRJ_FIREBALL_0 }},
 
         // tiles
         { GFX_ANIM_TIL_GRASS,         SFX_FILE_NONE,          60,        1,        0, { GFX_FRAME_TIL_GRASS }},
@@ -327,9 +330,19 @@ namespace data {
             printf("[data] WARN: Failed to generate placeholder image\n");
         }
 
-        Save("dat/test.dat");
-        Load("dat/test.dat");
+        Err err;
+        err = Save("dat/test.dat");
+        if (err) {
+            assert(!err);
+            TraceLog(LOG_ERROR, "Failed to save data file.\n");
+        }
+        err = Load("dat/test.dat");
+        if (err) {
+            assert(!err);
+            TraceLog(LOG_ERROR, "Failed to load data file.\n");
+        }
     }
+
     void Free(void)
     {
         for (GfxFile &gfxFile : gfxFiles) {
@@ -506,7 +519,6 @@ namespace data {
     {
         Err err = RN_SUCCESS;
 
-        Pack pack{};
         PackStream stream{};
         stream.f = fopen(filename, "wb");
         if (!stream.f) {
@@ -514,11 +526,68 @@ namespace data {
         }
 
         stream.process = (ProcessFn)fwrite;
-        stream.pack = &pack;
+        stream.pack = &pack1;
 
         err = Process(stream);
 
         fclose(stream.f);
+        return err;
+    }
+
+    Err Validate(Pack &pack)
+    {
+        Err err = RN_SUCCESS;
+
+        // Ensure every array element is initialized and in contiguous order by id
+#define ID_CHECK(type, name, arr)                       \
+            for (type name : arr) {                     \
+                static int i = 0;                       \
+                if (name.id != i) {                     \
+                    assert(!"expected contiguous IDs"); \
+                    return RN_BAD_FILE_READ;            \
+                }                                       \
+                i++;                                    \
+            }
+
+        ID_CHECK(GfxFile  &, gfxFile,  pack.gfxFiles);
+        ID_CHECK(MusFile  &, musFile,  pack.musFiles);
+        ID_CHECK(SfxFile  &, sfxFile,  pack.sfxFiles);
+        ID_CHECK(GfxFrame &, gfxFrame, pack.gfxFrames);
+        ID_CHECK(GfxAnim  &, gfxAnim,  pack.gfxAnims);
+        ID_CHECK(Material &, material, pack.materials);
+        ID_CHECK(TileType &, tileType, pack.tileTypes);
+#undef ID_CHECK
+
+        for (GfxFile &gfxFile : pack.gfxFiles) {
+            if (!gfxFile.path.size()) continue;
+            gfxFile.texture = LoadTexture(gfxFile.path.c_str());
+        }
+        for (MusFile &musFile : pack.musFiles) {
+            if (!musFile.path.size()) continue;
+            musFile.music = LoadMusicStream(musFile.path.c_str());
+        }
+        for (SfxFile &sfxFile : pack.sfxFiles) {
+            if (!sfxFile.path.size()) continue;
+            sfxFile.sound = LoadSound(sfxFile.path.c_str());
+        }
+
+        // Generate checkerboard image in slot 0 as a placeholder for when other images fail to load
+        Image placeholderImg = GenImageChecked(16, 16, 4, 4, MAGENTA, WHITE);
+        if (placeholderImg.width) {
+            Texture placeholderTex = LoadTextureFromImage(placeholderImg);
+            if (placeholderTex.width) {
+                pack.gfxFiles[0].texture = placeholderTex;
+                pack.gfxFrames[0].gfx = GFX_FILE_NONE;
+                pack.gfxFrames[0].w = placeholderTex.width;
+                pack.gfxFrames[0].h = placeholderTex.height;
+            } else {
+                printf("[data] WARN: Failed to generate placeholder texture\n");
+            }
+            UnloadImage(placeholderImg);
+        } else {
+            printf("[data] WARN: Failed to generate placeholder image\n");
+        }
+
         return err;
     }
 
@@ -526,29 +595,30 @@ namespace data {
     {
         Err err = RN_SUCCESS;
 
-        Pack pack{};
         PackStream stream{};
         stream.f = fopen(filename, "rb");
         if (!stream.f) {
             return RN_BAD_FILE_READ;
         }
-
         stream.process = (ProcessFn)fread;
-        stream.pack = &pack;
-
+        stream.pack = &pack1;
         err = Process(stream);
-
         fclose(stream.f);
+
+        if (!err) {
+            err = Validate(*stream.pack);
+        }
+
         return err;
     }
 
-    void PlaySound(SfxFileId id, bool multi, float pitchVariance)
+    void PlaySound(SfxFileId id, float pitchVariance)
     {
         SfxFile &sfxFile = sfxFiles[id];
         float variance = pitchVariance ? pitchVariance : sfxFile.pitch_variance;
         SetSoundPitch(sfxFile.sound, 1.0f + GetRandomFloatVariance(variance));
 
-        if (multi) {
+        if (sfxFile.multi) {
             PlaySoundMulti(sfxFile.sound);
         } else if (!IsSoundPlaying(sfxFile.sound)) {
             PlaySound(sfxFile.sound);
@@ -563,7 +633,7 @@ namespace data {
         const GfxFrame &frame = gfxFrames[frameId];
         return frame;
     }
-    void UpdateSprite(Sprite &sprite, EntityType entityType, Vector2 velocity, double dt)
+    void UpdateSprite(Sprite &sprite, EntityType entityType, Vector2 velocity, double dt, bool newlySpawned)
     {
         sprite.animAccum += dt;
 
@@ -590,11 +660,8 @@ namespace data {
             sprite.animAccum -= animFrameTime;
         }
 
-        if (anim.sound) {
-            const SfxFile &sfxFile = sfxFiles[anim.sound];
-            if (!IsSoundPlaying(sfxFile.sound)) {
-                PlaySound(sfxFile.sound);
-            }
+        if (newlySpawned && anim.sound) {
+            PlaySound(anim.sound);
         }
     }
     void ResetSprite(Sprite &sprite)

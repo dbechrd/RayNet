@@ -42,9 +42,8 @@ Err GameClient::TryConnect(void)
     yojimbo::random_bytes((uint8_t *)&clientId, 8);
     printf("yj: client id is %.16" PRIx64 "\n", clientId);
 
-    //yojimbo::Address serverAddress("127.0.0.1", SV_PORT);
+    yojimbo::Address serverAddress("127.0.0.1", SV_PORT);
     //yojimbo::Address serverAddress("192.168.0.143", SV_PORT);
-    yojimbo::Address serverAddress("68.9.219.64", SV_PORT);
     //yojimbo::Address serverAddress("slime.theprogrammingjunkie.com", SV_PORT);
 
     if (!serverAddress.IsValid()) {
@@ -164,12 +163,6 @@ void GameClient::ProcessMessages(void)
                         if (map) {
                             if (entityDb->SpawnEntity(msg->entityId, msg->type, now)) {
                                 world->ApplySpawnEvent(*msg);
-
-                                // HACK: Remove this insanely janky nonsense
-                                // and have some sort of OnSpawnTrigger thingy
-                                if (msg->type == Entity_Projectile) {
-                                    data::PlaySound(data::SFX_FILE_SOFT_TICK);
-                                }
                             }
                         } else {
                             printf("[game_client] Failed to load map id %u to spawn entity id %u\n", msg->mapId, msg->entityId);

@@ -152,7 +152,13 @@ void ClientWorld::ApplySpawnEvent(const Msg_S_EntitySpawn &entitySpawn)
             break;
         }
         case Entity_Projectile: {
-            sprite.anims[data::DIR_N] = data::GFX_ANIM_PRJ_BULLET;
+            sprite.anims[data::DIR_N] = data::GFX_ANIM_PRJ_FIREBALL;
+            //data::GfxAnim &gfxAnim = data::pack1.gfxAnims[sprite.anims[data::DIR_N]];
+            //static bool foo = false;
+            //if (!foo) {
+            //    //data::PlaySound(gfxAnim.sound);
+            //    foo = true;
+            //}
             break;
         };
     }
@@ -345,7 +351,8 @@ void ClientWorld::UpdateEntities(GameClient &client)
             }
         }
 
-        data::UpdateSprite(sprite, entity.type, physics.velocity, client.frameDt);
+        bool newlySpawned = entity.spawnedAt == client.now;
+        data::UpdateSprite(sprite, entity.type, physics.velocity, client.frameDt, newlySpawned);
 
         const double duration = CL_DIALOG_DURATION_MIN + CL_DIALOG_DURATION_PER_CHAR * dialog.message.size();
         if (dialog.spawnedAt && client.now - dialog.spawnedAt > duration) {
@@ -454,8 +461,8 @@ void ClientWorld::DrawDialog(AspectDialog &dialog, Vector2 topCenterScreen)
         topCenterScreen.x - msgSize.x / 2,
         topCenterScreen.y - msgSize.y - bgPad.y * 2 - marginBottom
     };
-    msgPos.x = floorf(msgPos.x);
-    msgPos.y = floorf(msgPos.y);
+    //msgPos.x = floorf(msgPos.x);
+    //msgPos.y = floorf(msgPos.y);
 
     Rectangle msgBgRect{
         msgPos.x - bgPad.x,

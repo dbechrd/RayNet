@@ -41,7 +41,7 @@ namespace data {
     gen(GFX_FILE_CHR_MAGE)       \
     gen(GFX_FILE_NPC_LILY)       \
     gen(GFX_FILE_OBJ_CAMPFIRE)   \
-    gen(GFX_FILE_PRJ_BULLET)     \
+    gen(GFX_FILE_PRJ_FIREBALL)   \
     gen(GFX_FILE_TIL_OVERWORLD)  \
     gen(GFX_FILE_TIL_AUTO_GRASS)
 
@@ -75,7 +75,8 @@ namespace data {
     gen(SFX_FILE_SOFT_TICK)      \
     gen(SFX_FILE_CAMPFIRE)       \
     gen(SFX_FILE_FOOTSTEP_GRASS) \
-    gen(SFX_FILE_FOOTSTEP_STONE)
+    gen(SFX_FILE_FOOTSTEP_STONE) \
+    gen(SFX_FILE_FIREBALL)
 
     enum SfxFileId : uint16_t {
         SFX_FILE_IDS(ENUM_GEN_VALUE)
@@ -85,6 +86,7 @@ namespace data {
         SfxFileId id;
         std::string path;
         float pitch_variance;
+        bool multi;
         ::Sound sound;
     };
 
@@ -106,7 +108,7 @@ namespace data {
     /* gen(GFX_FRAME_OBJ_FLAG_1) */  \
     /* gen(GFX_FRAME_OBJ_FLAG_2) */  \
     /* gen(GFX_FRAME_OBJ_FLAG_3) */  \
-    gen(GFX_FRAME_PRJ_BULLET_0)      \
+    gen(GFX_FRAME_PRJ_FIREBALL_0)    \
     gen(GFX_FRAME_TIL_GRASS)         \
     gen(GFX_FRAME_TIL_STONE_PATH)    \
     gen(GFX_FRAME_TIL_WALL)          \
@@ -180,7 +182,7 @@ namespace data {
     gen(GFX_ANIM_NPC_LILY_E)         \
     gen(GFX_ANIM_NPC_LILY_W)         \
     gen(GFX_ANIM_OBJ_CAMPFIRE)       \
-    gen(GFX_ANIM_PRJ_BULLET)         \
+    gen(GFX_ANIM_PRJ_FIREBALL)       \
     /* gen(GFX_ANIM_FLAG) */         \
     gen(GFX_ANIM_TIL_GRASS)          \
     gen(GFX_ANIM_TIL_STONE_PATH)     \
@@ -246,6 +248,8 @@ namespace data {
         uint8_t frameCount;
         uint8_t frameDelay;
         GfxFrameId frames[8];
+
+        bool soundPlayed;
     };
 
     struct Sprite {
@@ -399,13 +403,7 @@ namespace data {
     const char *MaterialIdStr(MaterialId id);
     const char *TileTypeIdStr(TileTypeId id);
 
-    extern GfxFile gfxFiles[];
-    extern MusFile musFiles[];
-    extern SfxFile sfxFiles[];
-    extern GfxFrame gfxFrames[];
-    extern GfxAnim gfxAnims[];
-    extern Material materials[];
-    extern TileType tileTypes[];
+    extern Pack pack1;
 
     void Init(void);
     void Free(void);
@@ -413,10 +411,10 @@ namespace data {
     Err Save(const char *filename);
     Err Load(const char *filename);
 
-    void PlaySound(SfxFileId id, bool multi = true, float pitchVariance = 0.0f);
+    void PlaySound(SfxFileId id, float pitchVariance = 0.0f);
 
     const GfxFrame &GetSpriteFrame(const Sprite &sprite);
-    void UpdateSprite(Sprite &sprite, EntityType entityType, Vector2 velocity, double dt);
+    void UpdateSprite(Sprite &sprite, EntityType entityType, Vector2 velocity, double dt, bool newlySpawned);
     void ResetSprite(Sprite &sprite);
     void DrawSprite(const Sprite &sprite, Vector2 pos);
 }
