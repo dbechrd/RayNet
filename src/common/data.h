@@ -11,6 +11,19 @@ enum EntityType;
 ////////////////////////////////////////////////////////////////////////////
 
 namespace data {
+    enum DataType : uint8_t {
+        DAT_TYP_ARRAY,
+        DAT_TYP_GFX_FILE,
+        DAT_TYP_MUS_FILE,
+        DAT_TYP_SFX_FILE,
+        DAT_TYP_GFX_FRAME,
+        DAT_TYP_GFX_ANIM,
+        DAT_TYP_SPRITE,
+        DAT_TYP_MATERIAL,
+        DAT_TYP_TILE_TYPE,
+        DAT_TYP_COUNT
+    };
+
     enum Direction : uint8_t {
         DIR_N,
         DIR_E,
@@ -36,8 +49,9 @@ namespace data {
         GFX_FILE_IDS(ENUM_GEN_VALUE)
     };
     struct GfxFile {
+        static const DataType type = DAT_TYP_GFX_FILE;
         GfxFileId id;
-        const char *path;
+        std::string path;
         ::Texture texture;
     };
 
@@ -50,8 +64,9 @@ namespace data {
         MUS_FILE_IDS(ENUM_GEN_VALUE)
     };
     struct MusFile {
+        static const DataType type = DAT_TYP_MUS_FILE;
         MusFileId id;
-        const char *path;
+        std::string path;
         ::Music music;
     };
 
@@ -66,8 +81,9 @@ namespace data {
         SFX_FILE_IDS(ENUM_GEN_VALUE)
     };
     struct SfxFile {
+        static const DataType type = DAT_TYP_SFX_FILE;
         SfxFileId id;
-        const char *path;
+        std::string path;
         float pitch_variance;
         ::Sound sound;
     };
@@ -148,6 +164,7 @@ namespace data {
         GFX_FRAME_IDS(ENUM_GEN_VALUE)
     };
     struct GfxFrame {
+        static const DataType type = DAT_TYP_GFX_FRAME;
         GfxFrameId id;
         GfxFileId gfx;
         uint16_t x;
@@ -222,6 +239,7 @@ namespace data {
         GFX_ANIM_IDS(ENUM_GEN_VALUE)
     };
     struct GfxAnim {
+        static const DataType type = DAT_TYP_GFX_ANIM;
         GfxAnimId id;
         SfxFileId sound;
         uint8_t frameRate;
@@ -231,6 +249,7 @@ namespace data {
     };
 
     struct Sprite {
+        static const DataType type = DAT_TYP_SPRITE;
         Direction dir;
         GfxAnimId anims[8];  // for each direction
         uint8_t animFrame; // current frame index
@@ -248,6 +267,7 @@ namespace data {
     };
 
     struct Material {
+        static const DataType type = DAT_TYP_MATERIAL;
         MaterialId id;
         SfxFileId footstepSnd;
     };
@@ -319,6 +339,7 @@ namespace data {
     };
 
     struct TileType {
+        static const DataType type = DAT_TYP_TILE_TYPE;
         TileTypeId  id;
         GfxAnimId   anim;
         MaterialId  material;
@@ -327,16 +348,47 @@ namespace data {
         //Color color;  // color for minimap/wang tile editor (top left pixel of tile)
     };
 
-    enum DataType : uint8_t {
-        DAT_TYP_ARRAY,
-        DAT_TYP_GFX_FILE,
-        DAT_TYP_MUS_FILE,
-        DAT_TYP_SFX_FILE,
-        DAT_TYP_GFX_FRAME,
-        DAT_TYP_GFX_ANIM,
-        DAT_TYP_MATERIAL,
-        DAT_TYP_TILE_TYPE,
-        DAT_COUNT
+    struct PackTocEntry {
+        DataType type;
+        int offset;
+
+        PackTocEntry() = default;
+        PackTocEntry(DataType type, int offset) : type(type), offset(offset) {}
+    };
+
+    struct PackToc {
+        std::vector<PackTocEntry> entries;
+    };
+
+    // Inspired by https://twitter.com/angealbertini/status/1340712669247119360
+    struct Pack {
+        int magic;
+        int version;
+        int tocOffset;
+
+        std::vector<GfxFile> gfxFiles;
+        std::vector<MusFile> musFiles;
+        std::vector<SfxFile> sfxFiles;
+        std::vector<GfxFrame> gfxFrames;
+        std::vector<GfxAnim> gfxAnims;
+        std::vector<Material> materials;
+        std::vector<TileType> tileTypes;
+
+        PackToc toc;
+    };
+
+    //enum PackStreamMode {
+    //    PACK_MODE_READ,
+    //    PACK_MODE_WRITE,
+    //};
+
+    typedef size_t (*ProcessFn)(void *buffer, size_t size, size_t count, FILE* stream);
+
+    struct PackStream {
+        //PackStreamMode mode;
+        FILE *f;
+        ProcessFn process;
+        Pack *pack;
     };
 
     const char *GfxFileIdStr(GfxFileId id);

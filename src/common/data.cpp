@@ -298,16 +298,16 @@ namespace data {
         #undef ID_CHECK
 
         for (GfxFile &gfxFile : gfxFiles) {
-            if (!gfxFile.path) continue;
-            gfxFile.texture = LoadTexture(gfxFile.path);
+            if (!gfxFile.path.size()) continue;
+            gfxFile.texture = LoadTexture(gfxFile.path.c_str());
         }
         for (MusFile &musFile : musFiles) {
-            if (!musFile.path) continue;
-            musFile.music = LoadMusicStream(musFile.path);
+            if (!musFile.path.size()) continue;
+            musFile.music = LoadMusicStream(musFile.path.c_str());
         }
         for (SfxFile &sfxFile : sfxFiles) {
-            if (!sfxFile.path) continue;
-            sfxFile.sound = LoadSound(sfxFile.path);
+            if (!sfxFile.path.size()) continue;
+            sfxFile.sound = LoadSound(sfxFile.path.c_str());
         }
 
         // Generate checkerboard image in slot 0 as a placeholder for when other images fail to load
@@ -328,6 +328,7 @@ namespace data {
         }
 
         Save("dat/test.dat");
+        Load("dat/test.dat");
     }
     void Free(void)
     {
@@ -342,135 +343,203 @@ namespace data {
         }
     }
 
-    void WriteString(FILE *f, const char *str)
+#define PROC(v) stream.process(&v, sizeof(v), 1, stream.f);
+
+    void Process(PackStream &stream, std::string &str)
     {
-        uint16_t len = str ? (uint16_t)strlen(str) : 0;
-        fwrite(&len, sizeof(len), 1, f);
-        if (len) {
-            fwrite(str, sizeof(*str), len, f);
-        }
-        fflush(f);
+        uint16_t len = (uint16_t)str.size();
+        PROC(len);
+        str.resize(len);
+        stream.process(str.data(), 1, len, stream.f);
     }
+
+    void Process(PackStream &stream, GfxFile &gfxFile)
+    {
+        PROC(gfxFile.id);
+        Process(stream, gfxFile.path);
+    }
+
+    void Process(PackStream &stream, MusFile &musFile)
+    {
+        PROC(musFile.id);
+        Process(stream, musFile.path);
+    }
+
+    void Process(PackStream &stream, SfxFile &sfxFile)
+    {
+        PROC(sfxFile.id);
+        Process(stream, sfxFile.path);
+    }
+
+    void Process(PackStream &stream, GfxFrame &gfxFrame)
+    {
+        PROC(gfxFrame.id);
+        PROC(gfxFrame.gfx);
+        PROC(gfxFrame.x);
+        PROC(gfxFrame.y);
+        PROC(gfxFrame.w);
+        PROC(gfxFrame.h);
+    }
+
+    void Process(PackStream &stream, GfxAnim &gfxAnim)
+    {
+        PROC(gfxAnim.id);
+        PROC(gfxAnim.sound);
+        PROC(gfxAnim.frameRate);
+        PROC(gfxAnim.frameCount);
+        PROC(gfxAnim.frameDelay);
+        for (int i = 0; i < gfxAnim.frameCount; i++) {
+            PROC(gfxAnim.frames[i]);
+        }
+    }
+
+    void Process(PackStream &stream, Material &material)
+    {
+        PROC(material.id);
+        PROC(material.footstepSnd);
+    }
+
+    void Process(PackStream &stream, TileType &tileType)
+    {
+        PROC(tileType.id);
+        PROC(tileType.anim);
+        PROC(tileType.material);
+        PROC(tileType.flags);
+        PROC(tileType.autoTileMask);
+    }
+
+    Err Process(PackStream &stream)
+    {
+        static const int MAGIC = 0x9291BBDB;
+        static const int VERSION = 1;
+
+        Err err = RN_SUCCESS;
+
+        Pack &pack = *stream.pack;
+
+        pack.magic = MAGIC;
+        PROC(pack.magic);
+        if (pack.magic != MAGIC) {
+            return RN_BAD_FILE_READ;
+        }
+
+        pack.version = VERSION;
+        PROC(pack.version);
+        if (pack.version > VERSION) {
+            return RN_BAD_FILE_READ;
+        }
+
+        int tocOffsetPos = ftell(stream.f);
+        pack.tocOffset = 0;
+        PROC(pack.tocOffset);
+
+        if (stream.process == (ProcessFn)fwrite) {
+
+#define WRITE_ARRAY(arr) \
+    for (auto &i : arr) { \
+        pack.toc.entries.push_back(PackTocEntry(i.type, ftell(stream.f))); \
+        Process(stream, i); \
+    }
+
+            WRITE_ARRAY(gfxFiles);
+            WRITE_ARRAY(musFiles);
+            WRITE_ARRAY(sfxFiles);
+            WRITE_ARRAY(gfxFrames);
+            WRITE_ARRAY(gfxAnims);
+            WRITE_ARRAY(materials);
+            WRITE_ARRAY(tileTypes);
+
+#undef WRITE_ARRAY
+
+            int tocOffset = ftell(stream.f);
+            int entryCount = (int)pack.toc.entries.size();
+            PROC(entryCount);
+            for (PackTocEntry &tocEntry : pack.toc.entries) {
+                PROC(tocEntry.type);
+                PROC(tocEntry.offset);
+            }
+
+            fseek(stream.f, tocOffsetPos, SEEK_SET);
+            PROC(tocOffset);
+        } else {
+            fseek(stream.f, pack.tocOffset, SEEK_SET);
+            int entryCount = 0;
+            PROC(entryCount);
+            pack.toc.entries.resize(entryCount);
+
+            int typeCounts[DAT_TYP_COUNT]{};
+            for (PackTocEntry &tocEntry : pack.toc.entries) {
+                PROC(tocEntry.type);
+                PROC(tocEntry.offset);
+                typeCounts[tocEntry.type]++;
+            }
+
+            pack.gfxFiles.resize(typeCounts[DAT_TYP_GFX_FILE]);
+            pack.musFiles.resize(typeCounts[DAT_TYP_MUS_FILE]);
+            pack.sfxFiles.resize(typeCounts[DAT_TYP_SFX_FILE]);
+            pack.gfxFrames.resize(typeCounts[DAT_TYP_GFX_FRAME]);
+            pack.gfxAnims.resize(typeCounts[DAT_TYP_GFX_ANIM]);
+            pack.materials.resize(typeCounts[DAT_TYP_MATERIAL]);
+            pack.tileTypes.resize(typeCounts[DAT_TYP_TILE_TYPE]);
+
+            int typeNextIndex[DAT_TYP_COUNT]{};
+
+            for (PackTocEntry &tocEntry : pack.toc.entries) {
+                fseek(stream.f, tocEntry.offset, SEEK_SET);
+                switch (tocEntry.type) {
+                    case DAT_TYP_GFX_FILE:  Process(stream, pack.gfxFiles [typeNextIndex[tocEntry.type]++]); break;
+                    case DAT_TYP_MUS_FILE:  Process(stream, pack.musFiles [typeNextIndex[tocEntry.type]++]); break;
+                    case DAT_TYP_SFX_FILE:  Process(stream, pack.sfxFiles [typeNextIndex[tocEntry.type]++]); break;
+                    case DAT_TYP_GFX_FRAME: Process(stream, pack.gfxFrames[typeNextIndex[tocEntry.type]++]); break;
+                    case DAT_TYP_GFX_ANIM:  Process(stream, pack.gfxAnims [typeNextIndex[tocEntry.type]++]); break;
+                    case DAT_TYP_MATERIAL:  Process(stream, pack.materials[typeNextIndex[tocEntry.type]++]); break;
+                    case DAT_TYP_TILE_TYPE: Process(stream, pack.tileTypes[typeNextIndex[tocEntry.type]++]); break;
+                }
+            }
+        }
+
+        return err;
+    }
+#undef PROC
 
     Err Save(const char *filename)
     {
-#define WRITE(v) { const auto vv = v; fwrite(&vv, sizeof(vv), 1, f); fflush(f); }
-
         Err err = RN_SUCCESS;
-        FILE *f = fopen(filename, "wb");
-        do {
-            if (!f) {
-                err = RN_BAD_FILE_WRITE; break;
-            }
 
-            const char magic[]{ (char)0xDB, (char)0xBB, (char)0x91, (char)0x92 };
-            int version = 1;
-
-            // magic
-            WRITE(magic[0]);
-            WRITE(magic[1]);
-            WRITE(magic[2]);
-            WRITE(magic[3]);
-
-            // version
-            WRITE(version);
-
-            // https://formats.kaitai.io/doom_wad/doom_wad.svg
-            // GFXFILE
-            WRITE(DAT_TYP_ARRAY);
-            WRITE((int)ARRAY_SIZE(gfxFiles));
-            WRITE(DAT_TYP_GFX_FILE);
-            for (GfxFile &gfxFile : gfxFiles) {
-                WRITE(gfxFile.id);
-                WriteString(f, gfxFile.path);
-            }
-
-            // MUSFILE
-            WRITE(DAT_TYP_ARRAY);
-            WRITE((int)ARRAY_SIZE(musFiles));
-            WRITE(DAT_TYP_MUS_FILE);
-            for (MusFile &musFile : musFiles) {
-                WRITE(musFile.id);
-                WriteString(f, musFile.path);
-            }
-
-            // SFXFILE
-            WRITE(DAT_TYP_ARRAY);
-            WRITE((int)ARRAY_SIZE(sfxFiles));
-            WRITE(DAT_TYP_SFX_FILE);
-            for (SfxFile &sfxFile : sfxFiles) {
-                WRITE(sfxFile.id);
-                WriteString(f, sfxFile.path);
-                WRITE(sfxFile.pitch_variance);
-            }
-
-            // GFXFRAME
-            WRITE(DAT_TYP_ARRAY);
-            WRITE((int)ARRAY_SIZE(gfxFrames));
-            WRITE(DAT_TYP_GFX_FRAME);
-            for (GfxFrame &gfxFrame : gfxFrames) {
-                WRITE(gfxFrame.id);
-                WRITE(gfxFrame.gfx);
-                WRITE(gfxFrame.x);
-                WRITE(gfxFrame.y);
-                WRITE(gfxFrame.w);
-                WRITE(gfxFrame.h);
-            }
-
-            // GFXANIM
-            WRITE(DAT_TYP_ARRAY);
-            WRITE((int)ARRAY_SIZE(gfxAnims));
-            WRITE(DAT_TYP_GFX_ANIM);
-            for (GfxAnim &gfxAnim : gfxAnims) {
-                WRITE(gfxAnim.id);
-                WRITE(gfxAnim.sound);
-                WRITE(gfxAnim.frameRate);
-                WRITE(gfxAnim.frameCount);
-                WRITE(gfxAnim.frameDelay);
-                for (int i = 0; i < gfxAnim.frameCount; i++) {
-                    WRITE(gfxAnim.frames[i]);
-                }
-            }
-
-            // MATERIAL
-            WRITE(DAT_TYP_ARRAY);
-            WRITE((int)ARRAY_SIZE(materials));
-            WRITE(DAT_TYP_MATERIAL);
-            for (Material &material : materials) {
-                WRITE(material.id);
-                WRITE(material.footstepSnd);
-            }
-
-            // TILETYPE
-            WRITE(DAT_TYP_ARRAY);
-            WRITE((int)ARRAY_SIZE(tileTypes));
-            WRITE(DAT_TYP_TILE_TYPE);
-            for (TileType &tileType : tileTypes) {
-                WRITE(tileType.id);
-                WRITE(tileType.anim);
-                WRITE(tileType.material);
-                WRITE(tileType.flags);
-                WRITE(tileType.autoTileMask);
-            }
-        } while (0);
-
-        if (f) {
-            fclose(f);
+        Pack pack{};
+        PackStream stream{};
+        stream.f = fopen(filename, "wb");
+        if (!stream.f) {
+            return RN_BAD_FILE_WRITE;
         }
+
+        stream.process = (ProcessFn)fwrite;
+        stream.pack = &pack;
+
+        err = Process(stream);
+
+        fclose(stream.f);
         return err;
-#undef WRITE
     }
 
     Err Load(const char *filename)
     {
-        //extern GfxFile gfxFiles[];
-        //extern MusFile musFiles[];
-        //extern SfxFile sfxFiles[];
-        //extern GfxFrame gfxFrames[];
-        //extern GfxAnim gfxAnims[];
-        //extern TileMat tileMats[];
-        //extern TileType tileTypes[];
-        return RN_SUCCESS;
+        Err err = RN_SUCCESS;
+
+        Pack pack{};
+        PackStream stream{};
+        stream.f = fopen(filename, "rb");
+        if (!stream.f) {
+            return RN_BAD_FILE_READ;
+        }
+
+        stream.process = (ProcessFn)fread;
+        stream.pack = &pack;
+
+        err = Process(stream);
+
+        fclose(stream.f);
+        return err;
     }
 
     void PlaySound(SfxFileId id, bool multi, float pitchVariance)
