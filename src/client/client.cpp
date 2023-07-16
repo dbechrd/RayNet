@@ -14,7 +14,7 @@ void draw_menu_main(GameClient &client, bool &quit)
     UIStyle uiStyleMenu {};
     uiStyleMenu.margin = {};
     uiStyleMenu.pad = { 16, 4 };
-    uiStyleMenu.bgColor[UI_CtrlTypeButton] = BLANK;
+    uiStyleMenu.bgColor = BLANK;
     uiStyleMenu.fgColor = RAYWHITE;
     uiStyleMenu.font = &fntBig;
     uiStyleMenu.alignH = TextAlign_Center;

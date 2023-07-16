@@ -917,13 +917,13 @@ void Editor::DrawUI_WarpActions(UI &uiActionBar, double now)
     }
     uiActionBar.Newline();
 
-    uiActionBar.PushStyleWidth(400);
+    uiActionBar.PushWidth(400);
 
     for (Warp &warp : map->warps) {
         uiActionBar.Text("collider");
         uiActionBar.Newline();
 
-        uiActionBar.PushStyleWidth(80);
+        uiActionBar.PushWidth(80);
 
         uiActionBar.Text("x");
         uiActionBar.Text("y");
@@ -991,11 +991,15 @@ void Editor::DrawUI_EntityActions(UI &uiActionBar, double now)
     };
     uiActionBar.Newline();
 
+    UIStyle searchStyle = uiActionBar.GetStyle();
+    searchStyle.size.x = 400;
+    searchStyle.pad = UIPad(8, 2);
+    searchStyle.margin = UIMargin(0, 0, 0, 6);
+    uiActionBar.PushStyle(searchStyle);
+
     static STB_TexteditState txtSearch{};
     static std::string filter{};
-    uiActionBar.PushStyleWidth(400);
     uiActionBar.Textbox(txtSearch, filter);
-    uiActionBar.PopStyle();
     uiActionBar.Newline();
 
     for (uint32_t i = 0; i < SV_MAX_ENTITIES; i++) {
@@ -1004,21 +1008,19 @@ void Editor::DrawUI_EntityActions(UI &uiActionBar, double now)
             continue;
         }
 
-        Color color = entity.id == state.entities.selectedId ? ORANGE : BLUE;
         const char *idStr = TextFormat("%d", entity.id);
         if (filter.size() && !StrFilter(idStr, filter.c_str())) {
             continue;
         }
 
-        if (uiActionBar.Button(idStr, color).pressed) {
-            if (state.entities.selectedId != entity.id) {
-                state.entities.selectedId = entity.id;
-            } else {
-                state.entities.selectedId = 0;
-            }
+        Color bgColor = entity.id == state.entities.selectedId ? ORANGE : BLUE;
+        if (uiActionBar.Text(idStr, WHITE, bgColor).down) {
+            state.entities.selectedId = entity.id;
         }
         uiActionBar.Newline();
     }
+
+    uiActionBar.PopStyle();
 
     if (state.entities.selectedId) {
         Entity &entity = entityDb->entities[state.entities.selectedId];
@@ -1030,25 +1032,31 @@ void Editor::DrawUI_EntityActions(UI &uiActionBar, double now)
 }
 void Editor::DrawUI_SfxFiles(UI &uiActionBar, double now)
 {
+    UIStyle searchStyle = uiActionBar.GetStyle();
+    searchStyle.size.x = 400;
+    searchStyle.pad = UIPad(8, 2);
+    searchStyle.margin = UIMargin(0, 0, 0, 6);
+    uiActionBar.PushStyle(searchStyle);
+
     static STB_TexteditState txtSearch{};
     static std::string filter{};
-    uiActionBar.PushStyleWidth(400);
     uiActionBar.Textbox(txtSearch, filter);
-    uiActionBar.PopStyle();
     uiActionBar.Newline();
 
     for (data::SfxFile &sfxFile : data::pack1.sfxFiles) {
-        Color color = sfxFile.id == state.sfxFiles.selectedSfx ? ORANGE : BLUE;
+        Color bgColor = sfxFile.id == state.sfxFiles.selectedSfx ? SKYBLUE : BLUE;
         const char *idStr = data::SfxFileIdStr(sfxFile.id);
         if (filter.size() && !StrFilter(idStr, filter.c_str())) {
             continue;
         }
 
-        if (uiActionBar.Button(idStr, color).pressed) {
+        if (uiActionBar.Text(idStr, WHITE, bgColor).down) {
             state.sfxFiles.selectedSfx = sfxFile.id;
         }
         uiActionBar.Newline();
     }
+
+    uiActionBar.PopStyle();
 
     if (state.sfxFiles.selectedSfx) {
         data::SfxFile &sfxFile = data::pack1.sfxFiles[state.sfxFiles.selectedSfx];

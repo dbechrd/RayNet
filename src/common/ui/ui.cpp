@@ -37,10 +37,59 @@ void UI::PushStyle(UIStyle style)
     styleStack.push(style);
 }
 
-void UI::PushStyleWidth(float width)
+void UI::PushMargin(UIMargin margin)
 {
-    UIStyle style{};
+    UIStyle style = GetStyle();
+    style.margin = margin;
+    PushStyle(style);
+}
+
+void UI::PushPadding(UIPad padding)
+{
+    UIStyle style = GetStyle();
+    style.pad = padding;
+    PushStyle(style);
+}
+
+void UI::PushScale(float scale)
+{
+    UIStyle style = GetStyle();
+    style.scale = scale;
+    PushStyle(style);
+}
+
+void UI::PushWidth(float width)
+{
+    UIStyle style = GetStyle();
     style.size.x = width;
+    PushStyle(style);
+}
+
+void UI::PushHeight(float height)
+{
+    UIStyle style = GetStyle();
+    style.size.y = height;
+    PushStyle(style);
+}
+
+void UI::PushBgColor(Color color, UI_CtrlType ctrlType)
+{
+    UIStyle style = GetStyle();
+    style.bgColor[ctrlType] = color;
+    PushStyle(style);
+}
+
+void UI::PushFgColor(Color color)
+{
+    UIStyle style = GetStyle();
+    style.fgColor = color;
+    PushStyle(style);
+}
+
+void UI::PushFont(Font &font)
+{
+    UIStyle style = GetStyle();
+    style.font = &font;
     PushStyle(style);
 }
 
@@ -188,9 +237,10 @@ UIState UI::Text(const char *text)
     return state;
 }
 
-UIState UI::Text(const char *text, Color fgColor)
+UIState UI::Text(const char *text, Color fgColor, Color bgColor)
 {
     UIStyle style = GetStyle();
+    style.bgColor[UI_CtrlTypeDefault] = bgColor;
     style.fgColor = fgColor;
     PushStyle(style);
     UIState state = Text(text);
@@ -283,17 +333,19 @@ UIState UI::Button(const char *text)
     Color bgColorFx = style.bgColor[UI_CtrlTypeButton];
     Color fgColorFx = style.fgColor;
     if (state.hover) {
-        bgColorFx = ColorBrightness(style.bgColor[UI_CtrlTypeButton], 0.3f);
+        bgColorFx = ColorBrightness(bgColorFx, 0.3f);
         // HACK(dlb): We should just make fgColor[state] for hover, down etc.
         // Perhaps with special values that mean "brighten" and "darken".
-        if (!bgColorFx.a) fgColorFx = YELLOW;
+        if (!fgColorFx.a) {
+            fgColorFx = YELLOW;
+        }
         if (state.down) {
-            bgColorFx = ColorBrightness(style.bgColor[UI_CtrlTypeButton], -0.3f);
+            bgColorFx = ColorBrightness(bgColorFx, -0.3f);
         }
     }
 
     // Draw drop shadow
-    if (style.bgColor[UI_CtrlTypeButton].a) {
+    if (bgColorFx.a) {
         DrawRectangleRounded(ctrlRect, cornerRoundness, cornerSegments, BLACK);
     }
 

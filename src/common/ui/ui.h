@@ -86,14 +86,21 @@ struct UI {
 
     UI(Vector2 position, UIStyle style);
     void PushStyle(UIStyle style);
-    void PushStyleWidth(float width);
+    void PushMargin(UIMargin margin);
+    void PushPadding(UIPad padding);
+    void PushScale(float scale);
+    void PushWidth(float width);
+    void PushHeight(float height);
+    void PushBgColor(Color color, UI_CtrlType ctrlType);
+    void PushFgColor(Color color);
+    void PushFont(Font &font);
     const UIStyle &GetStyle(void);
     void PopStyle(void);
 
     void Newline(void);
     void Space(Vector2 space);
     UIState Text(const char *text);
-    UIState Text(const char *text, Color fgColor);
+    UIState Text(const char *text, Color fgColor, Color bgColor = BLANK);
     UIState Image(Texture &texture, Rectangle srcRect = {});
     UIState Button(const char *text);
     UIState Button(const char *text, Color bgColor);
