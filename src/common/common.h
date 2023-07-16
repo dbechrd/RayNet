@@ -143,6 +143,8 @@ Rectangle RectConstrainToScreen(const Rectangle &rect);
 void dlb_DrawTextureRec(Texture2D texture, Rectangle source, Vector2 position, Color tint);
 void dlb_DrawTexturePro(Texture2D texture, Rectangle source, Rectangle dest, Vector2 origin, Color tint);
 
+bool StrFilter(const char *str, const char *filter);
+
 //     STB_TEXTEDIT_CHARTYPE             the character type
 #define STB_TEXTEDIT_CHARTYPE char
 

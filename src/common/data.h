@@ -50,9 +50,9 @@ namespace data {
     };
     struct GfxFile {
         static const DataType type = DAT_TYP_GFX_FILE;
-        GfxFileId id;
-        std::string path;
-        ::Texture texture;
+        GfxFileId   id      {};
+        std::string path    {};
+        ::Texture   texture {};
     };
 
 #define MUS_FILE_IDS(gen)           \
@@ -65,9 +65,9 @@ namespace data {
     };
     struct MusFile {
         static const DataType type = DAT_TYP_MUS_FILE;
-        MusFileId id;
-        std::string path;
-        ::Music music;
+        MusFileId   id    {};
+        std::string path  {};
+        ::Music     music {};
     };
 
 #define SFX_FILE_IDS(gen)        \
@@ -370,11 +370,11 @@ namespace data {
         int version;
         int tocOffset;
 
-        std::vector<GfxFile> gfxFiles;
-        std::vector<MusFile> musFiles;
-        std::vector<SfxFile> sfxFiles;
+        std::vector<GfxFile>  gfxFiles;
+        std::vector<MusFile>  musFiles;
+        std::vector<SfxFile>  sfxFiles;
         std::vector<GfxFrame> gfxFrames;
-        std::vector<GfxAnim> gfxAnims;
+        std::vector<GfxAnim>  gfxAnims;
         std::vector<Material> materials;
         std::vector<TileType> tileTypes;
 

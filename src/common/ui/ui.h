@@ -86,6 +86,7 @@ struct UI {
 
     UI(Vector2 position, UIStyle style);
     void PushStyle(UIStyle style);
+    void PushStyleWidth(float width);
     const UIStyle &GetStyle(void);
     void PopStyle(void);
 

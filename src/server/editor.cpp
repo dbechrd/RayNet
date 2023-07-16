@@ -245,9 +245,15 @@ void Editor::DrawEntityOverlays(Camera2D &camera, double now)
 {
     io.PushScope(IO::IO_EditorEntityOverlay);
 
+    Entity *selectedEntity = entityDb->FindEntity(state.entities.selectedId);
+    if (selectedEntity && selectedEntity->mapId == map->id) {
+        DrawTextEx(fntSmall, TextFormat("[selected in editor]\n%u", selectedEntity->id),
+            selectedEntity->position, fntSmall.baseSize, 1, WHITE);
+    }
+
     if (state.showEntityIds) {
         for (Entity &entity : entityDb->entities) {
-            if (entity.mapId == map->id) {
+            if (entity.mapId == map->id && entity.id != state.entities.selectedId) {
                 entityDb->DrawEntityIds(entity.id, camera);
             }
         }
@@ -285,7 +291,7 @@ void Editor::DrawEntityOverlay_Collision(Camera2D &camera, double now)
         assert(entity.id && entity.type);
 
         // [Debug] Draw entity texture rect
-        //DrawRectangleRec(map->EntityRect(entityId), Fade(SKYBLUE, 0.7f));
+        //DrawRectangleRec(map->EntityRect(i), Fade(SKYBLUE, 0.7f));
 
         // [Debug] Draw colliders
         if (state.showColliders) {
@@ -906,23 +912,18 @@ void Editor::DrawUI_WarpActions(UI &uiActionBar, double now)
     //}
     //uiActionBar.Newline();
 
-    UIStyle styleFullWidth{};
-    styleFullWidth.size.x = 400;
-    UIStyle width80{};
-    width80.size.x = 80;
-
     if (uiActionBar.Button("Add", DARKGREEN).pressed) {
         map->warps.push_back({});
     }
     uiActionBar.Newline();
 
-    uiActionBar.PushStyle(styleFullWidth);
+    uiActionBar.PushStyleWidth(400);
 
     for (Warp &warp : map->warps) {
         uiActionBar.Text("collider");
         uiActionBar.Newline();
 
-        uiActionBar.PushStyle(width80);
+        uiActionBar.PushStyleWidth(80);
 
         uiActionBar.Text("x");
         uiActionBar.Text("y");
@@ -988,12 +989,62 @@ void Editor::DrawUI_EntityActions(UI &uiActionBar, double now)
     if (uiActionBar.Button(TextFormat("Despawn Test %d", state.entities.testId)).pressed) {
         state.entities.testId++;
     };
+    uiActionBar.Newline();
+
+    static STB_TexteditState txtSearch{};
+    static std::string filter{};
+    uiActionBar.PushStyleWidth(400);
+    uiActionBar.Textbox(txtSearch, filter);
+    uiActionBar.PopStyle();
+    uiActionBar.Newline();
+
+    for (uint32_t i = 0; i < SV_MAX_ENTITIES; i++) {
+        Entity &entity = entityDb->entities[i];
+        if (!entity.id || entity.mapId != map->id) {
+            continue;
+        }
+
+        Color color = entity.id == state.entities.selectedId ? ORANGE : BLUE;
+        const char *idStr = TextFormat("%d", entity.id);
+        if (filter.size() && !StrFilter(idStr, filter.c_str())) {
+            continue;
+        }
+
+        if (uiActionBar.Button(idStr, color).pressed) {
+            if (state.entities.selectedId != entity.id) {
+                state.entities.selectedId = entity.id;
+            } else {
+                state.entities.selectedId = 0;
+            }
+        }
+        uiActionBar.Newline();
+    }
+
+    if (state.entities.selectedId) {
+        Entity &entity = entityDb->entities[state.entities.selectedId];
+
+        uiActionBar.Text("type");
+        uiActionBar.Text(EntityTypeStr(entity.type));
+        uiActionBar.Newline();
+    }
 }
 void Editor::DrawUI_SfxFiles(UI &uiActionBar, double now)
 {
+    static STB_TexteditState txtSearch{};
+    static std::string filter{};
+    uiActionBar.PushStyleWidth(400);
+    uiActionBar.Textbox(txtSearch, filter);
+    uiActionBar.PopStyle();
+    uiActionBar.Newline();
+
     for (data::SfxFile &sfxFile : data::pack1.sfxFiles) {
         Color color = sfxFile.id == state.sfxFiles.selectedSfx ? ORANGE : BLUE;
-        if (uiActionBar.Button(data::SfxFileIdStr(sfxFile.id), color).pressed) {
+        const char *idStr = data::SfxFileIdStr(sfxFile.id);
+        if (filter.size() && !StrFilter(idStr, filter.c_str())) {
+            continue;
+        }
+
+        if (uiActionBar.Button(idStr, color).pressed) {
             state.sfxFiles.selectedSfx = sfxFile.id;
         }
         uiActionBar.Newline();
@@ -1001,6 +1052,7 @@ void Editor::DrawUI_SfxFiles(UI &uiActionBar, double now)
 
     if (state.sfxFiles.selectedSfx) {
         data::SfxFile &sfxFile = data::pack1.sfxFiles[state.sfxFiles.selectedSfx];
+
         uiActionBar.Text("id");
         uiActionBar.Text(TextFormat("%d", sfxFile.id));
         uiActionBar.Newline();

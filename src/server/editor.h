@@ -50,6 +50,7 @@ struct EditModePathNodes {
 
 struct EditModeEntities {
     int testId = 0;
+    uint32_t selectedId = 0;
 };
 
 struct EditModeSfxFiles {

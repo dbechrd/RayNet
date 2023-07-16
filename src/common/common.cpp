@@ -331,6 +331,29 @@ void dlb_DrawTexturePro(Texture2D texture, Rectangle source, Rectangle dest, Vec
     }
 }
 
+bool StrFilter(const char *str, const char *filter)
+{
+    if (!filter || !*filter) {
+        return true;
+    }
+    if (!str) {
+        return false;
+    }
+
+    const char *s = str;
+    const char *f = filter;
+    while (*s) {
+        if (std::tolower(*s++) == std::tolower(*f++)) {
+            if (!*f) {
+                return true;
+            }
+        } else {
+            f = filter;
+        }
+    }
+    return false;
+}
+
 #include "collision.cpp"
 #include "data.cpp"
 #include "entity.cpp"

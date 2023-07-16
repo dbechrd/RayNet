@@ -37,6 +37,13 @@ void UI::PushStyle(UIStyle style)
     styleStack.push(style);
 }
 
+void UI::PushStyleWidth(float width)
+{
+    UIStyle style{};
+    style.size.x = width;
+    PushStyle(style);
+}
+
 const UIStyle &UI::GetStyle(void)
 {
     assert(styleStack.size());  // did you PopStyle too many times?
