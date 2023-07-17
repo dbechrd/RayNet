@@ -41,7 +41,7 @@ void GameServer::OnClientJoin(int clientIdx)
         return;
     }
 
-    uint32_t entityId = SpawnEntity(Entity_Player);
+    uint32_t entityId = SpawnEntity(data::ENTITY_PLAYER);
     if (entityId) {
         ServerPlayer &serverPlayer = players[clientIdx];
         serverPlayer.needsClockSync = true;
@@ -50,13 +50,13 @@ void GameServer::OnClientJoin(int clientIdx)
 
         size_t entityIndex = entityDb->FindEntityIndex(entityId);
 
-        Entity &entity = entityDb->entities[entityIndex];
-        AspectCollision &collision = entityDb->collision[entityIndex];
-        AspectLife &life = entityDb->life[entityIndex];
-        AspectPhysics &physics = entityDb->physics[entityIndex];
+        data::Entity &entity = entityDb->entities[entityIndex];
+        data::AspectCollision &collision = entityDb->collision[entityIndex];
+        data::AspectLife &life = entityDb->life[entityIndex];
+        data::AspectPhysics &physics = entityDb->physics[entityIndex];
         data::Sprite &sprite = entityDb->sprite[entityIndex];
 
-        entity.type = Entity_Player;
+        entity.type = data::ENTITY_PLAYER;
         entity.mapId = maps[0]->id;
         entity.position = { 1650, 435 };
         collision.radius = 10;
@@ -207,7 +207,7 @@ Tilemap *GameServer::FindMap(uint32_t mapId)
     return 0;
 }
 
-uint32_t GameServer::SpawnEntity(EntityType type)
+uint32_t GameServer::SpawnEntity(data::EntityType type)
 {
     uint32_t entityId = nextEntityId++;
     if (entityDb->SpawnEntity(entityId, type, now)) {
@@ -223,7 +223,7 @@ void GameServer::DespawnEntity(uint32_t entityId)
 }
 void GameServer::DestroyDespawnedEntities(void)
 {
-    for (Entity &entity : entityDb->entities) {
+    for (data::Entity &entity : entityDb->entities) {
         if (entity.type && entity.despawnedAt) {
             assert(entity.id);
             entityDb->DestroyEntity(entity.id);
@@ -240,10 +240,10 @@ void GameServer::SerializeSpawn(uint32_t entityId, Msg_S_EntitySpawn &entitySpaw
     assert(entityIndex);
     if (!entityIndex) return;
 
-    Entity          &entity    = entityDb->entities[entityIndex];
-    AspectCollision &collision = entityDb->collision[entityIndex];
-    AspectPhysics   &physics   = entityDb->physics[entityIndex];
-    AspectLife      &life      = entityDb->life[entityIndex];
+    data::Entity          &entity    = entityDb->entities[entityIndex];
+    data::AspectCollision &collision = entityDb->collision[entityIndex];
+    data::AspectPhysics   &physics   = entityDb->physics[entityIndex];
+    data::AspectLife      &life      = entityDb->life[entityIndex];
 
     entitySpawn.serverTime = lastTickedAt;
 
@@ -269,7 +269,7 @@ void GameServer::SerializeSpawn(uint32_t entityId, Msg_S_EntitySpawn &entitySpaw
 }
 void GameServer::SendEntitySpawn(int clientIdx, uint32_t entityId)
 {
-    Entity *entity = entityDb->FindEntity(entityId);
+    data::Entity *entity = entityDb->FindEntity(entityId);
     if (!entity) {
         printf("[game_server] could not find entity id %u. cannot send entity spawn msg.\n", entityId);
         return;
@@ -301,7 +301,7 @@ void GameServer::BroadcastEntitySpawn(uint32_t entityId)
 
 void GameServer::SendEntityDespawn(int clientIdx, uint32_t entityId)
 {
-    Entity *entity = entityDb->FindEntity(entityId, true);
+    data::Entity *entity = entityDb->FindEntity(entityId, true);
     if (!entity) {
         printf("[game_server] could not find entity id %u. cannot send entity despawn msg.\n", entityId);
         return;
@@ -356,7 +356,7 @@ void GameServer::BroadcastEntityDespawnTest(uint32_t testId)
 void GameServer::SendEntitySay(int clientIdx, uint32_t entityId, std::string message)
 {
     // TODO: Send only if the client is nearby, or the message is a global event
-    Entity *entity = entityDb->FindEntity(entityId);
+    data::Entity *entity = entityDb->FindEntity(entityId);
     if (!entity) {
         printf("[game_server] could not find entity id %u. cannot send entity say msg.\n", entityId);
         return;
@@ -421,8 +421,8 @@ void GameServer::ProcessMessages(void)
                         // TODO: Check if player is allowed to actually interact with this
                         // particular entity. E.g. are they even in the same map as them!?
                         // Proximity, etc.
-                        Entity *entity = entityDb->FindEntity(msg->entityId);
-                        if (entity && entity->type == Entity_NPC) {
+                        data::Entity *entity = entityDb->FindEntity(msg->entityId);
+                        if (entity && entity->type == data::ENTITY_NPC) {
                             //const char *text = TextFormat("Lily says: TPS is %d", (int)(1.0/SV_TICK_DT));
                             //SendEntitySay(clientIdx, msg->targetIndex, (uint32_t)strlen(text), text);
                         }
@@ -458,11 +458,11 @@ void GameServer::ProcessMessages(void)
 
 uint32_t GameServer::SpawnProjectile(uint32_t mapId, Vector2 position, Vector2 direction)
 {
-    uint32_t bulletId = SpawnEntity(Entity_Projectile);
+    uint32_t bulletId = SpawnEntity(data::ENTITY_PROJECTILE);
     if (bulletId) {
         size_t bulletIndex = entityDb->FindEntityIndex(bulletId);
-        Entity &bulletEntity = entityDb->entities[bulletIndex];
-        AspectPhysics &bulletPhysics = entityDb->physics[bulletIndex];
+        data::Entity &bulletEntity = entityDb->entities[bulletIndex];
+        data::AspectPhysics &bulletPhysics = entityDb->physics[bulletIndex];
         data::Sprite &bulletSprite = entityDb->sprite[bulletIndex];
 
         // [Entity] position
@@ -503,25 +503,26 @@ void GameServer::UpdateServerPlayers(void)
         if (inputCmd) {
             size_t playerIndex = entityDb->FindEntityIndex(player.entityId);
             if (playerIndex) {
-                AspectPhysics &playerPhysics = entityDb->physics[playerIndex];
+                data::AspectCombat &playerCombat = entityDb->combat[playerIndex];
+                data::AspectPhysics &playerPhysics = entityDb->physics[playerIndex];
                 Vector2 moveForce = inputCmd->GenerateMoveForce(playerPhysics.speed);
                 playerPhysics.ApplyForce(moveForce);
 
                 if (inputCmd->fire) {
-                    Entity &playerEntity = entityDb->entities[playerIndex];
-                    if (now - playerEntity.lastAttackedAt > playerEntity.attackCooldown) {
+                    data::Entity &playerEntity = entityDb->entities[playerIndex];
+                    if (now - playerCombat.lastAttackedAt > playerCombat.attackCooldown) {
                         Vector2 projSpawnLoc{ playerEntity.position.x, playerEntity.position.y - 24 };
                         uint32_t bulletId = SpawnProjectile(playerEntity.mapId, projSpawnLoc, inputCmd->facing);
                         if (bulletId) {
                             size_t bulletIndex = entityDb->FindEntityIndex(bulletId);
-                            const AspectPhysics &bulletPhysics = entityDb->physics[bulletIndex];
+                            const data::AspectPhysics &bulletPhysics = entityDb->physics[bulletIndex];
 
                             // Recoil
                             Vector2 recoilForce = Vector2Negate(bulletPhysics.velocity);
                             playerPhysics.ApplyForce(recoilForce);
                         }
-                        playerEntity.lastAttackedAt = now;
-                        playerEntity.attackCooldown = 0.3;
+                        playerCombat.lastAttackedAt = now;
+                        playerCombat.attackCooldown = 0.3;
                     }
                 }
             } else {
@@ -539,24 +540,24 @@ void GameServer::TickSpawnTownNPCs(uint32_t mapId)
 
         // Make sure entity still exists
         if (entityId) {
-            Entity *entity = entityDb->FindEntity(entityId);
+            data::Entity *entity = entityDb->FindEntity(entityId);
             if (!entity) {
                 entityId = 0;
             }
         }
 
         if (!entityId && ((int)tick % 100 == i * 10)) {
-            entityId = SpawnEntity(Entity_NPC);
+            entityId = SpawnEntity(data::ENTITY_NPC);
             if (entityId) {
                 size_t entityIndex = entityDb->FindEntityIndex(entityId);
-                Entity &entity = entityDb->entities[entityIndex];
-                AspectCollision &collision = entityDb->collision[entityIndex];
-                AspectLife &life = entityDb->life[entityIndex];
-                AspectPathfind &pathfind = entityDb->pathfind[entityIndex];
-                AspectPhysics &physics = entityDb->physics[entityIndex];
+                data::Entity &entity = entityDb->entities[entityIndex];
+                data::AspectCollision &collision = entityDb->collision[entityIndex];
+                data::AspectLife &life = entityDb->life[entityIndex];
+                data::AspectPathfind &pathfind = entityDb->pathfind[entityIndex];
+                data::AspectPhysics &physics = entityDb->physics[entityIndex];
                 data::Sprite &sprite = entityDb->sprite[entityIndex];
 
-                entity.type = Entity_NPC;
+                entity.type = data::ENTITY_NPC;
                 entity.mapId = mapId;
                 entity.position = { 0, 0 };
 
@@ -595,24 +596,24 @@ void GameServer::TickSpawnCaveNPCs(uint32_t mapId)
 
         // Make sure entity still exists
         if (entityId) {
-            Entity *entity = entityDb->FindEntity(entityId);
+            data::Entity *entity = entityDb->FindEntity(entityId);
             if (!entity) {
                 entityId = 0;
             }
         }
 
         if (!entityId && ((int)tick % 100 == i * 10)) {
-            entityId = SpawnEntity(Entity_NPC);
+            entityId = SpawnEntity(data::ENTITY_NPC);
             if (entityId) {
                 size_t entityIndex = entityDb->FindEntityIndex(entityId);
-                Entity &entity = entityDb->entities[entityIndex];
-                AspectCollision &collision = entityDb->collision[entityIndex];
-                AspectLife &life = entityDb->life[entityIndex];
-                AspectPathfind &pathfind = entityDb->pathfind[entityIndex];
-                AspectPhysics &physics = entityDb->physics[entityIndex];
+                data::Entity &entity = entityDb->entities[entityIndex];
+                data::AspectCollision &collision = entityDb->collision[entityIndex];
+                data::AspectLife &life = entityDb->life[entityIndex];
+                data::AspectPathfind &pathfind = entityDb->pathfind[entityIndex];
+                data::AspectPhysics &physics = entityDb->physics[entityIndex];
                 data::Sprite &sprite = entityDb->sprite[entityIndex];
 
-                entity.type = Entity_NPC;
+                entity.type = data::ENTITY_NPC;
                 entity.mapId = mapId;
                 entity.position = { 1620, 450 };
 
@@ -638,13 +639,13 @@ void GameServer::TickEntityBot(uint32_t entityId, double dt)
     size_t entityIndex = entityDb->FindEntityIndex(entityId);
     if (!entityIndex) return;
 
-    Entity &entity = entityDb->entities[entityIndex];
+    data::Entity &entity = entityDb->entities[entityIndex];
 
     Tilemap *map = FindMap(entity.mapId);
     if (!map) return;
 
     // TODO: tick_pathfind?
-    AspectPathfind &pathfind = entityDb->pathfind[entityIndex];
+    data::AspectPathfind &pathfind = entityDb->pathfind[entityIndex];
     if (pathfind.active) {
         AiPathNode *aiPathNode = map->GetPathNode(pathfind.pathId, pathfind.pathNodeTarget);
         if (aiPathNode) {
@@ -664,7 +665,7 @@ void GameServer::TickEntityBot(uint32_t entityId, double dt)
                 pathfind.pathNodeLastArrivedAt = 0;
                 pathfind.pathNodeArrivedAt = 0;
 
-                AspectPhysics &physics = entityDb->physics[entityIndex];
+                data::AspectPhysics &physics = entityDb->physics[entityIndex];
                 Vector2 moveForce = toTarget;
                 moveForce = Vector2Normalize(moveForce);
                 moveForce = Vector2Scale(moveForce, physics.speed);
@@ -710,7 +711,7 @@ void GameServer::TickEntityProjectile(uint32_t entityId, double dt)
 
     entityDb->EntityTick(entityId, dt);
 
-    Entity &entity = entityDb->entities[entityIndex];
+    data::Entity &entity = entityDb->entities[entityIndex];
     if (entity.despawnedAt) {
         return;
     }
@@ -720,11 +721,11 @@ void GameServer::TickEntityProjectile(uint32_t entityId, double dt)
     }
 
     if (!entity.despawnedAt) {
-        for (Entity &target : entityDb->entities) {
-            if (target.type == Entity_NPC && !target.despawnedAt && target.mapId == entity.mapId) {
+        for (data::Entity &target : entityDb->entities) {
+            if (target.type == data::ENTITY_NPC && !target.despawnedAt && target.mapId == entity.mapId) {
                 assert(target.id);
                 size_t targetIndex = entityDb->FindEntityIndex(target.id);
-                AspectLife &life = entityDb->life[targetIndex];
+                data::AspectLife &life = entityDb->life[targetIndex];
                 if (life.Dead()) {
                     continue;
                 }
@@ -746,15 +747,15 @@ void GameServer::TickEntityProjectile(uint32_t entityId, double dt)
         }
     }
 }
-void GameServer::WarpEntity(Tilemap &map, uint32_t entityId, Warp &warp)
+void GameServer::WarpEntity(Tilemap &map, uint32_t entityId, data::AspectWarp &warp)
 {
     assert(entityId);
 
     size_t entityIndex = entityDb->FindEntityIndex(entityId);
     if (!entityIndex) return;
 
-    Entity &entity = entityDb->entities[entityIndex];
-    AspectCollision &collision = entityDb->collision[entityIndex];
+    data::Entity &entity = entityDb->entities[entityIndex];
+    data::AspectCollision &collision = entityDb->collision[entityIndex];
 
     if (warp.destMap.size()) {
         // TODO: We need to move our entity to the new map
@@ -763,7 +764,7 @@ void GameServer::WarpEntity(Tilemap &map, uint32_t entityId, Warp &warp)
             // TODO: Move entity to other map?
             entity.mapId = map->id;
             entity.position = warp.destPos;
-            AspectPhysics &physics = entityDb->physics[entityIndex];
+            data::AspectPhysics &physics = entityDb->physics[entityIndex];
             physics.forceAccum = {};
             physics.velocity = {};
         } else {
@@ -817,18 +818,23 @@ void GameServer::TickResolveEntityWarpCollisions(Tilemap &map, uint32_t entityId
     size_t entityIndex = entityDb->FindEntityIndex(entityId);
     if (!entityIndex) return;
 
-    Entity &entity = entityDb->entities[entityIndex];
-    if (entity.type != Entity_Player) {
+    data::Entity &entity = entityDb->entities[entityIndex];
+    if (entity.type != data::ENTITY_PLAYER) {
         return;
     }
 
-    AspectCollision &collision = entityDb->collision[entityIndex];
+    data::AspectCollision &collision = entityDb->collision[entityIndex];
     if (!collision.radius) {
         return;
     }
 
     bool onWarp = false;
-    for (Warp &warp : map.warps) {
+    for (data::Entity &warpEntity : entityDb->entities) {
+        if (!warpEntity.id || warpEntity.despawnedAt || warpEntity.mapId != entity.mapId) {
+            continue;
+        }
+
+        data::AspectWarp &warp = entityDb->warp[entityIndex];
         onWarp = dlb_CheckCollisionCircleRec(entity.position, collision.radius, warp.collider, 0);
         if (onWarp) {
             // De-bounce warps. Only allow warping after entity has moved off any warps
@@ -848,7 +854,7 @@ void GameServer::Tick(void)
     TickSpawnCaveNPCs(2);
 
     // Tick entites
-    for (Entity &entity : entityDb->entities) {
+    for (data::Entity &entity : entityDb->entities) {
         if (!entity.type || entity.despawnedAt) {
             continue;
         }
@@ -860,9 +866,9 @@ void GameServer::Tick(void)
         // TODO: if (map.sleeping) continue
 
         switch (entity.type) {
-            case Entity_NPC:        TickEntityBot        (entity.id, SV_TICK_DT); break;
-            case Entity_Player:     TickEntityPlayer     (entity.id, SV_TICK_DT); break;
-            case Entity_Projectile: TickEntityProjectile (entity.id, SV_TICK_DT); break;
+            case data::ENTITY_NPC:        TickEntityBot        (entity.id, SV_TICK_DT); break;
+            case data::ENTITY_PLAYER:     TickEntityPlayer     (entity.id, SV_TICK_DT); break;
+            case data::ENTITY_PROJECTILE: TickEntityProjectile (entity.id, SV_TICK_DT); break;
         }
 
         Tilemap *map = FindMap(entity.mapId);
@@ -872,7 +878,7 @@ void GameServer::Tick(void)
         }
 
         data::Sprite &sprite = entityDb->sprite[entityIndex];
-        AspectPhysics &physics = entityDb->physics[entityIndex];
+        data::AspectPhysics &physics = entityDb->physics[entityIndex];
 
         bool newlySpawned = entity.spawnedAt == now;
         data::UpdateSprite(sprite, entity.type, physics.velocity, SV_TICK_DT, newlySpawned);
@@ -890,10 +896,10 @@ void GameServer::SerializeSnapshot(uint32_t entityId, Msg_S_EntitySnapshot &enti
     assert(entityIndex);
     if (!entityIndex) return;
 
-    Entity          &entity    = entityDb->entities[entityIndex];
-    AspectCollision &collision = entityDb->collision[entityIndex];
-    AspectPhysics   &physics   = entityDb->physics[entityIndex];
-    AspectLife      &life      = entityDb->life[entityIndex];
+    data::Entity          &entity    = entityDb->entities[entityIndex];
+    data::AspectCollision &collision = entityDb->collision[entityIndex];
+    data::AspectPhysics   &physics   = entityDb->physics[entityIndex];
+    data::AspectLife      &life      = entityDb->life[entityIndex];
 
     entitySnapshot.serverTime = lastTickedAt;
 
@@ -923,7 +929,7 @@ void GameServer::SendClientSnapshots(void)
         }
 
         ServerPlayer &serverPlayer = players[clientIdx];
-        Entity *entity = entityDb->FindEntity(serverPlayer.entityId);
+        data::Entity *entity = entityDb->FindEntity(serverPlayer.entityId);
         if (!entity) {
             assert(0);
             printf("[game_server] could not find client id %d's entity id %u. cannot send snapshots\n", clientIdx, serverPlayer.entityId);
@@ -948,7 +954,7 @@ void GameServer::SendClientSnapshots(void)
         }
 
         // TODO: Send only the world state that's relevant to this particular client
-        for (Entity &entity : entityDb->entities) {
+        for (data::Entity &entity : entityDb->entities) {
             if (!entity.id || !entity.type) {
                 assert(!entity.id && !entity.type);  // why has one but not other!?
                 continue;

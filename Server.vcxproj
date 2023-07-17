@@ -47,7 +47,6 @@
     <ClInclude Include="src\common\collision.cpp" />
     <ClInclude Include="src\common\common.cpp" />
     <ClInclude Include="src\common\data.cpp" />
-    <ClInclude Include="src\common\entity.cpp" />
     <ClInclude Include="src\common\entity_db.cpp" />
     <ClInclude Include="src\common\file_utils.cpp" />
     <ClInclude Include="src\common\histogram.cpp" />

@@ -93,7 +93,7 @@ struct GameServer {
 
     Tilemap *FindMap(uint32_t mapId);
 
-    uint32_t SpawnEntity(EntityType type);
+    uint32_t SpawnEntity(data::EntityType type);
     void DespawnEntity(uint32_t entityId);
 
     void BroadcastEntityDespawnTest(uint32_t testId);
@@ -132,7 +132,7 @@ private:
     void TickPlayer(Tilemap &map, uint32_t entityId, double dt);
     void TickBot(Tilemap &map, uint32_t entityId, double dt);
     void TickProjectile(Tilemap &map, uint32_t entityId, double dt);
-    void WarpEntity(Tilemap &map, uint32_t entityId, Warp &warp);
+    void WarpEntity(Tilemap &map, uint32_t entityId, data::AspectWarp &warp);
     void TickResolveEntityWarpCollisions(Tilemap &map, uint32_t entityId, double now);
     void Tick(void);
     void SerializeSnapshot(uint32_t entityId, Msg_S_EntitySnapshot &entitySnapshot);

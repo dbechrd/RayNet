@@ -6,10 +6,10 @@ struct Msg_S_EntitySpawn : public yojimbo::Message
     double      serverTime {};
 
     // Entity
-    uint32_t    entityId   {};
-    EntityType  type       {};
-    uint32_t    mapId      {};
-    Vector2     position   {};
+    uint32_t          entityId   {};
+    data::EntityType  type       {};
+    uint32_t          mapId      {};
+    Vector2           position   {};
 
     // Collision
     float       radius     {};
@@ -36,9 +36,9 @@ struct Msg_S_EntitySpawn : public yojimbo::Message
 
         // Collision
         switch (type) {
-            case Entity_NPC:
-            case Entity_Player:
-            case Entity_Projectile:
+            case data::ENTITY_NPC:
+            case data::ENTITY_PLAYER:
+            case data::ENTITY_PROJECTILE:
             {
                 serialize_varint32(stream, radius);
                 break;
@@ -47,9 +47,9 @@ struct Msg_S_EntitySpawn : public yojimbo::Message
 
         // Physics
         switch (type) {
-            case Entity_NPC:
-            case Entity_Player:
-            case Entity_Projectile:
+            case data::ENTITY_NPC:
+            case data::ENTITY_PLAYER:
+            case data::ENTITY_PROJECTILE:
             {
                 serialize_float(stream, drag);
                 serialize_float(stream, speed);
@@ -60,8 +60,8 @@ struct Msg_S_EntitySpawn : public yojimbo::Message
 
         // Life
         switch (type) {
-            case Entity_NPC:
-            case Entity_Player:
+            case data::ENTITY_NPC:
+            case data::ENTITY_PLAYER:
             {
                 serialize_varint32(stream, maxHealth);
                 serialize_varint32(stream, health);

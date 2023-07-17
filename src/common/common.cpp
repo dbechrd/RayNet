@@ -334,6 +334,9 @@ void dlb_DrawTexturePro(Texture2D texture, Rectangle source, Rectangle dest, Vec
 bool StrFilter(const char *str, const char *filter)
 {
     if (!filter || !*filter) {
+        return false;
+    }
+    if (!strcmp(filter, "*")) {
         return true;
     }
     if (!str) {
@@ -356,7 +359,6 @@ bool StrFilter(const char *str, const char *filter)
 
 #include "collision.cpp"
 #include "data.cpp"
-#include "entity.cpp"
 #include "file_utils.cpp"
 #include "entity_db.cpp"
 #include "histogram.cpp"

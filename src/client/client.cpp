@@ -14,7 +14,7 @@ void draw_menu_main(GameClient &client, bool &quit)
     UIStyle uiStyleMenu {};
     uiStyleMenu.margin = {};
     uiStyleMenu.pad = { 16, 4 };
-    uiStyleMenu.bgColor = BLANK;
+    uiStyleMenu.bgColor[UI_CtrlTypeButton] = BLANK;
     uiStyleMenu.fgColor = RAYWHITE;
     uiStyleMenu.font = &fntBig;
     uiStyleMenu.alignH = TextAlign_Center;
@@ -69,7 +69,7 @@ void draw_menu_connecting(GameClient &client)
         campfire.anims[0] = data::GFX_ANIM_OBJ_CAMPFIRE;
     }
 
-    data::UpdateSprite(campfire, Entity_None, {}, client.frameDt, !connectingDotIdxLastUpdatedAt);
+    data::UpdateSprite(campfire, data::ENTITY_NONE, {}, client.frameDt, !connectingDotIdxLastUpdatedAt);
     if (!connectingDotIdxLastUpdatedAt) {
         connectingDotIdxLastUpdatedAt = client.now;
     } else if (client.now > connectingDotIdxLastUpdatedAt + 0.5) {
@@ -230,7 +230,7 @@ void draw_f3_menu(GameClient &client)
         Camera2D &camera = client.world->camera2d;
         Vector2 cursorWorldPos = GetScreenToWorld2D(GetMousePosition(), camera);
         DRAW_TEXT("cursorWld", "%.f, %.f", cursorWorldPos.x, cursorWorldPos.y);
-        Entity *localPlayer = client.world->LocalPlayer();
+        data::Entity *localPlayer = client.world->LocalPlayer();
         if (localPlayer) {
             DRAW_TEXT("player", "%.2f, %.2f", localPlayer->position.x, localPlayer->position.y);
         }
@@ -442,7 +442,7 @@ int main(int argc, char *argv[])
         //--------------------
         // Accmulate input every frame
         if (client->yj_client->IsConnected()) {
-            Entity *localPlayer = client->world->LocalPlayer();
+            data::Entity *localPlayer = client->world->LocalPlayer();
             if (localPlayer) {
                 // TODO: Update facing direction elsewhere, then just get localPlayer.facing here?
                 Camera2D &camera = client->world->camera2d;
@@ -503,7 +503,7 @@ int main(int argc, char *argv[])
         histoFps.Push(histoEntry);
 
         if (client->yj_client->IsConnected()) {
-            Entity *localPlayer = client->world->LocalPlayer();
+            data::Entity *localPlayer = client->world->LocalPlayer();
             if (localPlayer) {
                 // Update world
                 client->world->Update(*client);

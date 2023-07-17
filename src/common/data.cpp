@@ -16,6 +16,7 @@ namespace data {
     ENUM_STR_GENERATOR(GfxAnimId,  GFX_ANIM_IDS);
     ENUM_STR_GENERATOR(MaterialId, MATERIAL_IDS);
     ENUM_STR_GENERATOR(TileTypeId, TILE_TYPE_IDS);
+    ENUM_STR_GENERATOR(EntityType, ENTITY_TYPES);
 
 #undef ENUM_STR_GENERATOR
 
@@ -421,6 +422,86 @@ namespace data {
         PROC(tileType.autoTileMask);
     }
 
+    void Process(PackStream &stream, AspectCombat &combat) {
+    }
+
+    void Process(PackStream &stream, AspectCollision &collision) {
+    }
+
+    void Process(PackStream &stream, AspectDialog &dialog) {
+    }
+
+    void Process(PackStream &stream, AspectLife &life) {
+    }
+
+    void Process(PackStream &stream, AspectPathfind &pathfind) {
+    }
+
+    void Process(PackStream &stream, AspectPhysics &physics) {
+    }
+
+    void Process(PackStream &stream, Sprite &sprite) {
+    }
+
+    void Process(PackStream &stream, AspectWarp &warp)
+    {
+        PROC(warp.collider.x);
+        PROC(warp.collider.y);
+        PROC(warp.collider.width);
+        PROC(warp.collider.height);
+
+        PROC(warp.destPos.x);
+        PROC(warp.destPos.y);
+
+        Process(stream, warp.destMap);
+        Process(stream, warp.templateMap);
+        Process(stream, warp.templateTileset);
+
+        //Vector2 TL{ 1632, 404 };
+        //Vector2 BR{ 1696, 416 };
+        //Vector2 size = Vector2Subtract(BR, TL);
+        //Rectangle warpRect{};
+        //warpRect.x = TL.x;
+        //warpRect.y = TL.y;
+        //warpRect.width = size.x;
+        //warpRect.height = size.y;
+
+        //warp.collider = warpRect;
+        //// Bottom center of warp (assume maps line up and are same size for now)
+        //warp.destPos.x = BR.x - size.x / 2;
+        //warp.destPos.y = BR.y;
+        //warp.templateMap = "maps/cave.dat";
+        //warp.templateTileset = "resources/wang/tileset2x2.png";
+    }
+
+    void Process(PackStream &stream, Entity &entity)
+    {
+        bool alive = entity.id && !entity.despawnedAt && entity.type;
+        PROC(alive);
+        if (alive) {
+            PROC(entity.id);
+            PROC(entity.mapId);
+            PROC(entity.type);
+            PROC(entity.spawnedAt);
+            PROC(entity.position.x);
+            PROC(entity.position.y);
+        }
+
+#define PROCESS_ARRAY(arr) \
+        for (auto &i : stream.pack->arr) { Process(stream, i); }
+
+        PROCESS_ARRAY(combat   );
+        PROCESS_ARRAY(collision);
+        PROCESS_ARRAY(dialog   );
+        PROCESS_ARRAY(life     );
+        PROCESS_ARRAY(pathfind );
+        PROCESS_ARRAY(physics  );
+        PROCESS_ARRAY(sprite   );
+        PROCESS_ARRAY(warp     );
+
+#undef PROCESS_ARRAY
+    }
+
     Err Process(PackStream &stream)
     {
         static const int MAGIC = 0x9291BBDB;
@@ -450,10 +531,11 @@ namespace data {
 
 #define WRITE_ARRAY(arr) \
     for (auto &i : arr) { \
-        pack.toc.entries.push_back(PackTocEntry(i.type, ftell(stream.f))); \
+        pack.toc.entries.push_back(PackTocEntry(i.dtype, ftell(stream.f))); \
         Process(stream, i); \
     }
 
+            // TODO: These should all be pack.blah
             WRITE_ARRAY(gfxFiles);
             WRITE_ARRAY(musFiles);
             WRITE_ARRAY(sfxFiles);
@@ -461,6 +543,7 @@ namespace data {
             WRITE_ARRAY(gfxAnims);
             WRITE_ARRAY(materials);
             WRITE_ARRAY(tileTypes);
+            WRITE_ARRAY(pack.entities);
 
 #undef WRITE_ARRAY
 
@@ -468,7 +551,7 @@ namespace data {
             int entryCount = (int)pack.toc.entries.size();
             PROC(entryCount);
             for (PackTocEntry &tocEntry : pack.toc.entries) {
-                PROC(tocEntry.type);
+                PROC(tocEntry.dtype);
                 PROC(tocEntry.offset);
             }
 
@@ -482,9 +565,9 @@ namespace data {
 
             int typeCounts[DAT_TYP_COUNT]{};
             for (PackTocEntry &tocEntry : pack.toc.entries) {
-                PROC(tocEntry.type);
+                PROC(tocEntry.dtype);
                 PROC(tocEntry.offset);
-                typeCounts[tocEntry.type]++;
+                typeCounts[tocEntry.dtype]++;
             }
 
             pack.gfxFiles.resize(typeCounts[DAT_TYP_GFX_FILE]);
@@ -495,18 +578,30 @@ namespace data {
             pack.materials.resize(typeCounts[DAT_TYP_MATERIAL]);
             pack.tileTypes.resize(typeCounts[DAT_TYP_TILE_TYPE]);
 
+            assert(typeCounts[DAT_TYP_ENTITY] == SV_MAX_ENTITIES);
+            pack.entities .resize(typeCounts[DAT_TYP_ENTITY]);
+            pack.combat   .resize(typeCounts[DAT_TYP_ENTITY]);
+            pack.collision.resize(typeCounts[DAT_TYP_ENTITY]);
+            pack.dialog   .resize(typeCounts[DAT_TYP_ENTITY]);
+            pack.life     .resize(typeCounts[DAT_TYP_ENTITY]);
+            pack.pathfind .resize(typeCounts[DAT_TYP_ENTITY]);
+            pack.physics  .resize(typeCounts[DAT_TYP_ENTITY]);
+            pack.sprite   .resize(typeCounts[DAT_TYP_ENTITY]);
+            pack.warp     .resize(typeCounts[DAT_TYP_ENTITY]);
+
             int typeNextIndex[DAT_TYP_COUNT]{};
 
             for (PackTocEntry &tocEntry : pack.toc.entries) {
                 fseek(stream.f, tocEntry.offset, SEEK_SET);
-                switch (tocEntry.type) {
-                    case DAT_TYP_GFX_FILE:  Process(stream, pack.gfxFiles [typeNextIndex[tocEntry.type]++]); break;
-                    case DAT_TYP_MUS_FILE:  Process(stream, pack.musFiles [typeNextIndex[tocEntry.type]++]); break;
-                    case DAT_TYP_SFX_FILE:  Process(stream, pack.sfxFiles [typeNextIndex[tocEntry.type]++]); break;
-                    case DAT_TYP_GFX_FRAME: Process(stream, pack.gfxFrames[typeNextIndex[tocEntry.type]++]); break;
-                    case DAT_TYP_GFX_ANIM:  Process(stream, pack.gfxAnims [typeNextIndex[tocEntry.type]++]); break;
-                    case DAT_TYP_MATERIAL:  Process(stream, pack.materials[typeNextIndex[tocEntry.type]++]); break;
-                    case DAT_TYP_TILE_TYPE: Process(stream, pack.tileTypes[typeNextIndex[tocEntry.type]++]); break;
+                switch (tocEntry.dtype) {
+                    case DAT_TYP_GFX_FILE:  Process(stream, pack.gfxFiles [typeNextIndex[tocEntry.dtype]++]); break;
+                    case DAT_TYP_MUS_FILE:  Process(stream, pack.musFiles [typeNextIndex[tocEntry.dtype]++]); break;
+                    case DAT_TYP_SFX_FILE:  Process(stream, pack.sfxFiles [typeNextIndex[tocEntry.dtype]++]); break;
+                    case DAT_TYP_GFX_FRAME: Process(stream, pack.gfxFrames[typeNextIndex[tocEntry.dtype]++]); break;
+                    case DAT_TYP_GFX_ANIM:  Process(stream, pack.gfxAnims [typeNextIndex[tocEntry.dtype]++]); break;
+                    case DAT_TYP_MATERIAL:  Process(stream, pack.materials[typeNextIndex[tocEntry.dtype]++]); break;
+                    case DAT_TYP_TILE_TYPE: Process(stream, pack.tileTypes[typeNextIndex[tocEntry.dtype]++]); break;
+                    case DAT_TYP_ENTITY:    Process(stream, pack.entities [typeNextIndex[tocEntry.dtype]++]); break;
                 }
             }
         }
@@ -639,7 +734,7 @@ namespace data {
 
         // TODO: Make this more general and stop taking in entityType.
         switch (entityType) {
-            case Entity_Player: case Entity_NPC: {
+            case ENTITY_PLAYER: case ENTITY_NPC: {
                 if (velocity.x > 0) {
                     sprite.dir = data::DIR_E;
                 } else {

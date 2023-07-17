@@ -27,83 +27,6 @@ struct GhostSnapshot {
 };
 typedef RingBuffer<GhostSnapshot, CL_SNAPSHOT_COUNT> AspectGhost;
 
-enum EntityType {
-    Entity_None,
-    Entity_Player,
-    Entity_NPC,
-    Entity_Projectile,
-    Entity_Count,
-};
-
-const char *EntityTypeStr(EntityType type);
-
-struct Entity {
-    uint32_t    id             {};
-    uint32_t    mapId          {};
-    EntityType  type           {};
-    double      spawnedAt      {};
-    double      despawnedAt    {};
-    Vector2     position       {};
-    double      lastAttackedAt {};
-    double      attackCooldown {};
-
-    // TODO: Separate this out into its own array?
-    uint32_t freelist_next {};
-};
-
-struct AspectCollision {
-    float radius    {};  // collision
-    bool  colliding {};  // not sync'd, local flag for debugging colliders
-    bool  onWarp    {};  // currently colliding with a warp (used to prevent ping-ponging)
-};
-
-struct AspectDialog {
-    double      spawnedAt {};  // time when dialog was spawned
-    std::string message   {};  // what they're saying
-};
-
-struct AspectLife {
-    int maxHealth;
-    int health;
-    float healthSmooth;  // client-only to smoothly interpolate health changes
-
-    void TakeDamage(int damage) {
-        if (damage >= health) {
-            health = 0;
-        } else {
-            health -= damage;
-        }
-    }
-
-    bool Alive(void) {
-        return health > 0;
-    }
-
-    bool Dead(void) {
-        return !Alive();
-    }
-};
-
-struct AspectPathfind {
-    bool active;  // if false, don't pathfind
-    int pathId;
-    int pathNodeLastArrivedAt;
-    int pathNodeTarget;
-    double pathNodeArrivedAt;
-};
-
-struct AspectPhysics {
-    float drag;
-    float speed;
-    Vector2 forceAccum;
-    Vector2 velocity;
-
-    void ApplyForce(Vector2 force) {
-        forceAccum.x += force.x;
-        forceAccum.y += force.y;
-    }
-};
-
 #if 0
 // A random idea that probably makes no sense:
 struct Player : public Entity {
@@ -127,51 +50,54 @@ struct Projectile : public Entity {
 #endif
 
 struct EntityCollisionTuple {
-    Entity          &entity;
-    AspectCollision &collision;
-    AspectPhysics   &physics;
+    data::Entity          &entity;
+    data::AspectCollision &collision;
+    data::AspectPhysics   &physics;
 
-    EntityCollisionTuple(Entity &entity, AspectCollision &collision, AspectPhysics &physics)
+    EntityCollisionTuple(data::Entity &entity, data::AspectCollision &collision, data::AspectPhysics &physics)
         : entity(entity), collision(collision), physics(physics) {}
 };
 
 struct EntityInterpolateTuple {
-    Entity        &entity;
-    AspectPhysics &physics;
-    AspectLife    &life;
-    data::Sprite  &sprite;
+    data::Entity        &entity;
+    data::AspectPhysics &physics;
+    data::AspectLife    &life;
+    data::Sprite        &sprite;
 
-    EntityInterpolateTuple(Entity &entity, AspectPhysics &physics, AspectLife &life, data::Sprite &sprite)
+    EntityInterpolateTuple(data::Entity &entity, data::AspectPhysics &physics, data::AspectLife &life, data::Sprite &sprite)
         : entity(entity), physics(physics), life(life), sprite(sprite) {}
 };
 
 struct EntitySpriteTuple {
-    Entity       &entity;
+    data::Entity &entity;
     data::Sprite &sprite;
 
-    EntitySpriteTuple(Entity &entity, data::Sprite &sprite)
+    EntitySpriteTuple(data::Entity &entity, data::Sprite &sprite)
         : entity(entity), sprite(sprite) {}
 };
 
 struct EntityTickTuple {
-    Entity        &entity;
-    AspectLife    &life;
-    AspectPhysics &physics;
-    data::Sprite  &sprite;
+    data::Entity        &entity;
+    data::AspectLife    &life;
+    data::AspectPhysics &physics;
+    data::Sprite        &sprite;
 
-    EntityTickTuple(Entity &entity, AspectLife &life, AspectPhysics &physics, data::Sprite &sprite)
+    EntityTickTuple(data::Entity &entity, data::AspectLife &life, data::AspectPhysics &physics, data::Sprite &sprite)
         : entity(entity), life(life), physics(physics), sprite(sprite) {}
 };
 
 struct EntityData {
-    Entity          entity   {};
-    AspectCollision collision{};
-    AspectDialog    dialog   {};
-    AspectGhost     ghosts   {};
-    AspectLife      life     {};
-    AspectPathfind  pathfind {};
-    AspectPhysics   physics  {};
-    data::Sprite    sprite   {};
+    data::Entity          entity    {};
+    data::AspectCombat    combat    {};
+    data::AspectCollision collision {};
+    data::AspectDialog    dialog    {};
+    data::AspectLife      life      {};
+    data::AspectPathfind  pathfind  {};
+    data::AspectPhysics   physics   {};
+    data::Sprite          sprite    {};
+    data::AspectWarp      warp      {};
+
+    AspectGhost           ghosts    {};
 };
 //
 //struct EntityDataRef {

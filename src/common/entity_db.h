@@ -1,4 +1,5 @@
 #pragma once
+#include "common.h"
 #include "entity.h"
 
 struct EntityDB {
@@ -6,20 +7,23 @@ struct EntityDB {
     std::unordered_map<uint32_t, size_t> entityIndexById{};
 
     // TODO: Rename these so they don't collide with local variables all the time
-    std::vector<Entity>          entities  {SV_MAX_ENTITIES};
-    std::vector<AspectCollision> collision {SV_MAX_ENTITIES};
-    std::vector<AspectDialog>    dialog    {SV_MAX_ENTITIES};
-    std::vector<AspectGhost>     ghosts    {SV_MAX_ENTITIES};
-    std::vector<AspectLife>      life      {SV_MAX_ENTITIES};
-    std::vector<AspectPathfind>  pathfind  {SV_MAX_ENTITIES};
-    std::vector<AspectPhysics>   physics   {SV_MAX_ENTITIES};
-    std::vector<data::Sprite>    sprite    {SV_MAX_ENTITIES};
+    std::vector<data::Entity>          entities  {SV_MAX_ENTITIES};
+    std::vector<data::AspectCombat>    combat    {SV_MAX_ENTITIES};
+    std::vector<data::AspectCollision> collision {SV_MAX_ENTITIES};
+    std::vector<data::AspectDialog>    dialog    {SV_MAX_ENTITIES};
+    std::vector<data::AspectLife>      life      {SV_MAX_ENTITIES};
+    std::vector<data::AspectPathfind>  pathfind  {SV_MAX_ENTITIES};
+    std::vector<data::AspectPhysics>   physics   {SV_MAX_ENTITIES};
+    std::vector<data::Sprite>          sprite    {SV_MAX_ENTITIES};
+    std::vector<data::AspectWarp>      warp      {SV_MAX_ENTITIES};
+
+    std::vector<AspectGhost>           ghosts    {SV_MAX_ENTITIES};
 
     EntityDB(void);
 
     size_t FindEntityIndex(uint32_t entityId);
-    Entity *FindEntity(uint32_t entityId, bool deadOrAlive = false);
-    bool SpawnEntity(uint32_t entityId, EntityType entityType, double now);
+    data::Entity *FindEntity(uint32_t entityId, bool deadOrAlive = false);
+    bool SpawnEntity(uint32_t entityId, data::EntityType entityType, double now);
     bool DespawnEntity(uint32_t entityId, double now);
     void DestroyEntity(uint32_t entityId);
 

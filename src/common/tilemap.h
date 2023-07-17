@@ -36,17 +36,6 @@ struct TileDef {
     Color color;  // color for minimap/wang tile editor (top left pixel of tile)
 };
 
- struct Warp {
-     Rectangle collider{};
-     Vector2 destPos{};
-
-     // You either need this
-     std::string destMap{};          // regular map to warp to
-     // Or both of these
-     std::string templateMap{};      // template map to make a copy of for procgen
-     std::string templateTileset{};  // wang tileset to use for procgen
- };
-
  struct TileRef {
      uint32_t mapIndex;
      uint32_t x;
@@ -83,7 +72,6 @@ struct Tilemap {
     std::vector<AiPathNode> pathNodes       {};  // 94 19 56 22 57
     std::vector<uint32_t>   pathNodeIndices {};  // 0 1 2 | 3 4 5
     std::vector<AiPath>     paths           {};  // offset, length | 0, 3 | 3, 3
-    std::vector<Warp>       warps           {};
 
     // TODO: Actually have more than 1 chunk..
     double chunkLastUpdatedAt{};  // used by server to know when chunks are dirty on clients

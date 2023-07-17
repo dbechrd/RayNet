@@ -6,7 +6,7 @@ EntityDB::EntityDB(void)
 {
     entity_freelist = 1;  // 0 is reserved for null entity
     for (uint32_t i = 1; i < entities.size() - 1; i++) {
-        Entity &entity = entities[i];
+        data::Entity &entity = entities[i];
         entities[i].freelist_next = i + 1;
     }
 }
@@ -23,11 +23,11 @@ size_t EntityDB::FindEntityIndex(uint32_t entityId)
     }
     return 0;
 }
-Entity *EntityDB::FindEntity(uint32_t entityId, bool deadOrAlive)
+data::Entity *EntityDB::FindEntity(uint32_t entityId, bool deadOrAlive)
 {
     size_t entityIndex = FindEntityIndex(entityId);
     if (entityIndex) {
-        Entity &entity = entities[entityIndex];
+        data::Entity &entity = entities[entityIndex];
         assert(entity.id == entityId);
         assert(entity.type);
         if (deadOrAlive || !entity.despawnedAt) {
@@ -36,12 +36,12 @@ Entity *EntityDB::FindEntity(uint32_t entityId, bool deadOrAlive)
     }
     return 0;
 }
-bool EntityDB::SpawnEntity(uint32_t entityId, EntityType entityType, double now)
+bool EntityDB::SpawnEntity(uint32_t entityId, data::EntityType entityType, double now)
 {
     assert(entityId);
     assert(entityType);
 
-    Entity *entity = FindEntity(entityId);
+    data::Entity *entity = FindEntity(entityId);
     if (entity) {
         assert(0);
         printf("[entity_db] Failed to spawn entity id %u of type %s. An entity with that id already exists.\n", entityId, EntityTypeStr(entityType));
@@ -50,7 +50,7 @@ bool EntityDB::SpawnEntity(uint32_t entityId, EntityType entityType, double now)
 
     if (entity_freelist) {
         size_t entityIndex = entity_freelist;
-        Entity &e = entities[entityIndex];
+        data::Entity &e = entities[entityIndex];
         entity_freelist = e.freelist_next;
 
         e.freelist_next = 0;
@@ -68,7 +68,7 @@ bool EntityDB::DespawnEntity(uint32_t entityId, double now)
 {
     assert(entityId);
 
-    Entity *entity = FindEntity(entityId);
+    data::Entity *entity = FindEntity(entityId);
     if (entity && !entity->despawnedAt) {
         entity->despawnedAt = now;
         return true;
@@ -83,12 +83,13 @@ void EntityDB::DestroyEntity(uint32_t entityId)
 
     size_t entityIndex = FindEntityIndex(entityId);
     if (entityIndex) {
-        Entity &entity = entities[entityIndex];
+        data::Entity &entity = entities[entityIndex];
         assert(entity.id);   // wtf happened man
         assert(entity.type); // wtf happened man
 
         // Clear aspects
         entities  [entityIndex] = {};
+        combat    [entityIndex] = {};
         collision [entityIndex] = {};
         dialog    [entityIndex] = {};
         ghosts    [entityIndex] = {};
@@ -96,6 +97,7 @@ void EntityDB::DestroyEntity(uint32_t entityId)
         pathfind  [entityIndex] = {};
         physics   [entityIndex] = {};
         sprite    [entityIndex] = {};
+        warp      [entityIndex] = {};
 
         // Remove from map
         entityIndexById.erase(entityId);
@@ -127,7 +129,7 @@ Rectangle EntityDB::EntityRect(uint32_t entityId)
 
     size_t entityIndex = FindEntityIndex(entityId);
     if (entityIndex) {
-        Entity &entity = entities[entityIndex];
+        data::Entity &entity = entities[entityIndex];
         data::Sprite &sprite = this->sprite[entityIndex];
         EntitySpriteTuple data{ entity, sprite };
         return EntityRect(data);
@@ -200,9 +202,9 @@ void EntityDB::EntityTick(uint32_t entityId, double dt)
     size_t entityIndex = FindEntityIndex(entityId);
     if (!entityIndex) return;
 
-    Entity &entity = entities[entityIndex];
-    AspectLife &life = this->life[entityIndex];
-    AspectPhysics &physics = this->physics[entityIndex];
+    data::Entity &entity = entities[entityIndex];
+    data::AspectLife &life = this->life[entityIndex];
+    data::AspectPhysics &physics = this->physics[entityIndex];
     data::Sprite &sprite = this->sprite[entityIndex];
 
     EntityTickTuple data{ entity, life, physics, sprite };
@@ -215,14 +217,14 @@ void EntityDB::DrawEntityIds(uint32_t entityId, Camera2D &camera)
     size_t entityIndex = FindEntityIndex(entityId);
     if (!entityIndex) return;
 
-    Entity &entity = entities[entityIndex];
+    data::Entity &entity = entities[entityIndex];
     if (!entity.id || !entity.type) {
         assert(!entity.id && !entity.type);
         return;
     }
 
     DrawTextEx(fntSmall, TextFormat("%u", entity.id), entity.position,
-        fntSmall.baseSize, 1, WHITE);
+        fntSmall.baseSize / camera.zoom, 1 / camera.zoom, WHITE);
 }
 void EntityDB::DrawEntityHoverInfo(uint32_t entityId)
 {
@@ -231,7 +233,7 @@ void EntityDB::DrawEntityHoverInfo(uint32_t entityId)
     size_t entityIndex = FindEntityIndex(entityId);
     if (!entityIndex) return;
 
-    AspectLife &life = this->life[entityIndex];
+    data::AspectLife &life = this->life[entityIndex];
     if (!life.maxHealth) return;
 
     const float borderWidth = 1;
@@ -281,7 +283,7 @@ void EntityDB::DrawEntity(uint32_t entityId)
 {
     size_t entityIndex = FindEntityIndex(entityId);
     if (entityIndex) {
-        Entity &entity = entities[entityIndex];
+        data::Entity &entity = entities[entityIndex];
         data::Sprite &sprite = this->sprite[entityIndex];
         EntitySpriteTuple data{ entity, sprite };
         const Rectangle rect = EntityRect(data);

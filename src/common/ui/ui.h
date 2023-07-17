@@ -101,12 +101,13 @@ struct UI {
     void Space(Vector2 space);
     UIState Text(const char *text);
     UIState Text(const char *text, Color fgColor, Color bgColor = BLANK);
+    UIState Label(const char *text, int width);
     UIState Image(Texture &texture, Rectangle srcRect = {});
     UIState Button(const char *text);
     UIState Button(const char *text, Color bgColor);
     UIState Button(const char *text, bool pressed, Color bgColor, Color bgColorPressed);
     UIState Textbox(STB_TexteditState &state, std::string &text);
-    void TextboxFloat(STB_TexteditState &stbState, float &value);
+    UIState TextboxFloat(STB_TexteditState &stbState, float &value, float width = 0);
 
     inline Vector2 CursorScreen(void) {
         return Vector2Add(position, cursor);

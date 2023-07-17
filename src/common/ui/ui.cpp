@@ -248,6 +248,14 @@ UIState UI::Text(const char *text, Color fgColor, Color bgColor)
     return state;
 }
 
+UIState UI::Label(const char *text, int width)
+{
+    PushWidth(100);
+    UIState state = Text(text);
+    PopStyle();
+    return state;
+}
+
 UIState UI::Image(Texture &texture, Rectangle srcRect)
 {
     if (!srcRect.width) {
@@ -336,7 +344,7 @@ UIState UI::Button(const char *text)
         bgColorFx = ColorBrightness(bgColorFx, 0.3f);
         // HACK(dlb): We should just make fgColor[state] for hover, down etc.
         // Perhaps with special values that mean "brighten" and "darken".
-        if (!fgColorFx.a) {
+        if (!bgColorFx.a) {
             fgColorFx = YELLOW;
         }
         if (state.down) {
@@ -658,7 +666,11 @@ UIState UI::Textbox(STB_TexteditState &stbState, std::string &text)
     }
 
     // Background
-    DrawRectangleRec(ctrlRect, DARKGRAY); //BLUE_DESAT);
+    Color bgColor = style.bgColor[UI_CtrlTypeDefault];
+    if (!bgColor.a) {
+        bgColor = DARKGRAY;
+    }
+    DrawRectangleRec(ctrlRect, bgColor);
 
     // Border
     DrawRectangleLinesEx(ctrlRect, 1, BLACK);
@@ -727,7 +739,7 @@ UIState UI::Textbox(STB_TexteditState &stbState, std::string &text)
     return state;
 }
 
-void UI::TextboxFloat(STB_TexteditState &stbState, float &value)
+UIState UI::TextboxFloat(STB_TexteditState &stbState, float &value, float width)
 {
 #if 0
     const char *valueCstr = TextFormat("%.2f", value);
@@ -755,12 +767,15 @@ void UI::TextboxFloat(STB_TexteditState &stbState, float &value)
 #else
     const char *valueCstr = TextFormat("%.2f", value);
     std::string valueStr{valueCstr};
+    if (width) PushWidth(width);
     UIState state = Textbox(stbState, valueStr);
+    if (width) PopStyle();
     char *end = 0;
     float newValue = strtof(valueStr.c_str(), &end);
     if (*end != '\0') {
         // todo: check errors before saving float value
     }
     value = newValue;
+    return state;
 #endif
 }

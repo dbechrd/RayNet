@@ -71,11 +71,9 @@ Err Tilemap::Save(std::string path)
         uint32_t pathNodeCount = pathNodes.size();
         uint32_t pathNodeIndexCount = pathNodeIndices.size();
         uint32_t pathCount = paths.size();
-        uint32_t warpCount = warps.size();
         fwrite(&pathNodeCount, sizeof(pathNodeCount), 1, file);
         fwrite(&pathNodeIndexCount, sizeof(pathNodeIndexCount), 1, file);
         fwrite(&pathCount, sizeof(pathCount), 1, file);
-        fwrite(&warpCount, sizeof(warpCount), 1, file);
 
         for (const TileDef &tileDef : tileDefs) {
             fwrite(&tileDef.collide, sizeof(tileDef.collide), 1, file);
@@ -102,28 +100,6 @@ Err Tilemap::Save(std::string path)
         for (const AiPath &aiPath : paths) {
             fwrite(&aiPath.pathNodeIndexOffset, sizeof(aiPath.pathNodeIndexOffset), 1, file);
             fwrite(&aiPath.pathNodeIndexCount, sizeof(aiPath.pathNodeIndexCount), 1, file);
-        }
-
-        for (const Warp &warp : warps) {
-            fwrite(&warp.collider.x, sizeof(warp.collider.x), 1, file);
-            fwrite(&warp.collider.y, sizeof(warp.collider.y), 1, file);
-            fwrite(&warp.collider.width, sizeof(warp.collider.width), 1, file);
-            fwrite(&warp.collider.height, sizeof(warp.collider.height), 1, file);
-
-            fwrite(&warp.destPos.x, sizeof(warp.destPos.x), 1, file);
-            fwrite(&warp.destPos.y, sizeof(warp.destPos.y), 1, file);
-
-            uint32_t destMapLen = warp.destMap.size();
-            fwrite(&destMapLen, 1, sizeof(destMapLen), file);
-            fwrite(warp.destMap.c_str(), 1, warp.destMap.size(), file);
-
-            uint32_t templateMapLen = warp.templateMap.size();
-            fwrite(&templateMapLen, 1, sizeof(templateMapLen), file);
-            fwrite(warp.templateMap.c_str(), 1, warp.templateMap.size(), file);
-
-            uint32_t templateTilesetLen = warp.templateTileset.size();
-            fwrite(&templateTilesetLen, 1, sizeof(templateTilesetLen), file);
-            fwrite(warp.templateTileset.c_str(), 1, warp.templateTileset.size(), file);
         }
     } while (0);
 
@@ -204,7 +180,6 @@ Err Tilemap::Load(std::string path)
         pathNodes.resize(pathNodeCount);
         pathNodeIndices.resize(pathNodeIndexCount);
         paths.resize(pathCount);
-        warps.resize(warpCount);
 
         for (uint32_t i = 0; i < tileDefCount; i++) {
             TileDef &tileDef = tileDefs[i];
@@ -243,61 +218,6 @@ Err Tilemap::Load(std::string path)
         for (AiPath &aiPath : paths) {
             fread(&aiPath.pathNodeIndexOffset, sizeof(aiPath.pathNodeIndexOffset), 1, file);
             fread(&aiPath.pathNodeIndexCount, sizeof(aiPath.pathNodeIndexCount), 1, file);
-        }
-
-        for (Warp &warp : warps) {
-            if (version >= 5) {
-                fread(&warp.collider.x, sizeof(warp.collider.x), 1, file);
-                fread(&warp.collider.y, sizeof(warp.collider.y), 1, file);
-                fread(&warp.collider.width, sizeof(warp.collider.width), 1, file);
-                fread(&warp.collider.height, sizeof(warp.collider.height), 1, file);
-
-                fread(&warp.destPos.x, sizeof(warp.destPos.x), 1, file);
-                fread(&warp.destPos.y, sizeof(warp.destPos.y), 1, file);
-
-                uint32_t destMapLen = 0;
-                fread(&destMapLen, 1, sizeof(destMapLen), file);
-                if (destMapLen > PATH_LEN_MAX) {
-                    err = RN_OUT_OF_BOUNDS; break;
-                }
-                char destMapBuf[PATH_LEN_MAX + 1]{};
-                fread(destMapBuf, 1, destMapLen, file);
-                warp.destMap = destMapBuf;
-
-                uint32_t templateMapLen = warp.templateMap.size();
-                fread(&templateMapLen, 1, sizeof(templateMapLen), file);
-                if (templateMapLen > PATH_LEN_MAX) {
-                    err = RN_OUT_OF_BOUNDS; break;
-                }
-                char templateMapBuf[PATH_LEN_MAX + 1]{};
-                fread(templateMapBuf, 1, templateMapLen, file);
-                warp.templateMap = templateMapBuf;
-
-                uint32_t templateTilesetLen = warp.templateTileset.size();
-                fread(&templateTilesetLen, 1, sizeof(templateTilesetLen), file);
-                if (templateTilesetLen > PATH_LEN_MAX) {
-                    err = RN_OUT_OF_BOUNDS; break;
-                }
-                char templateTilesetBuf[PATH_LEN_MAX + 1]{};
-                fread(templateTilesetBuf, 1, templateTilesetLen, file);
-                warp.templateTileset = templateTilesetBuf;
-            } else {
-                Vector2 TL{ 1632, 404 };
-                Vector2 BR{ 1696, 416 };
-                Vector2 size = Vector2Subtract(BR, TL);
-                Rectangle warpRect{};
-                warpRect.x = TL.x;
-                warpRect.y = TL.y;
-                warpRect.width = size.x;
-                warpRect.height = size.y;
-
-                warp.collider = warpRect;
-                // Bottom center of warp (assume maps line up and are same size for now)
-                warp.destPos.x = BR.x - size.x / 2;
-                warp.destPos.y = BR.y;
-                warp.templateMap = "maps/cave.dat";
-                warp.templateTileset = "resources/wang/tileset2x2.png";
-            }
         }
     } while (0);
     if (file) fclose(file);
@@ -602,19 +522,19 @@ void Tilemap::ResolveEntityTerrainCollisions(uint32_t entityId)
         return;
     }
 
-    Entity &entity = entityDb->entities[entityIndex];
+    data::Entity &entity = entityDb->entities[entityIndex];
     assert(entity.id == entityId);
     assert(entity.type);
     if (entity.despawnedAt) {
         return;
     }
 
-    AspectCollision &collision = entityDb->collision[entityIndex];
+    data::AspectCollision &collision = entityDb->collision[entityIndex];
     if (!collision.radius) {
         return;
     }
 
-    AspectPhysics &physics = entityDb->physics[entityIndex];
+    data::AspectPhysics &physics = entityDb->physics[entityIndex];
 
     EntityCollisionTuple data{ entity, collision, physics };
     ResolveEntityTerrainCollisions(data);
@@ -685,7 +605,8 @@ void Tilemap::DrawTileIds(Camera2D &camera)
         for (int x = xMin; x < xMax; x++) {
             Tile tile = At(x, y);
             Vector2 tilePos = { (float)x * TILE_W + pad, (float)y * TILE_W + pad };
-            DrawTextEx(fntSmall, TextFormat("%d", tile), tilePos, fntSmall.baseSize * (0.5f / camera.zoom), 1 / camera.zoom, WHITE);
+            //DrawTextEx(fntSmall, TextFormat("%d", tile), tilePos, fntSmall.baseSize * (0.5f / camera.zoom), 1 / camera.zoom, WHITE);
+            DrawTextEx(fntSmall, TextFormat("%d", tile), tilePos, fntSmall.baseSize / camera.zoom, 1 / camera.zoom, WHITE);
         }
     }
 }

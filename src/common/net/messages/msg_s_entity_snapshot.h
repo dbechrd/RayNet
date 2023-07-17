@@ -7,10 +7,10 @@ struct Msg_S_EntitySnapshot : public yojimbo::Message
     double      serverTime {};
 
     // Entity
-    uint32_t    entityId   {};
-    EntityType  type       {};  // doesn't change, but needed for switch statements in deserializer
-    uint32_t    mapId      {};
-    Vector2     position   {};
+    uint32_t          entityId   {};
+    data::EntityType  type       {};  // doesn't change, but needed for switch statements in deserializer
+    uint32_t          mapId      {};
+    Vector2           position   {};
 
     // Collision
     //float       radius     {};  // when would this ever change? doesn't.. for now.
@@ -42,9 +42,9 @@ struct Msg_S_EntitySnapshot : public yojimbo::Message
 
         // Physics
         switch (type) {
-            case Entity_NPC:
-            case Entity_Player:
-            case Entity_Projectile:
+            case data::ENTITY_NPC:
+            case data::ENTITY_PLAYER:
+            case data::ENTITY_PROJECTILE:
             {
                 serialize_float(stream, velocity.x);
                 serialize_float(stream, velocity.y);
@@ -53,8 +53,8 @@ struct Msg_S_EntitySnapshot : public yojimbo::Message
 
         // Life
         switch (type) {
-            case Entity_NPC:
-            case Entity_Player:
+            case data::ENTITY_NPC:
+            case data::ENTITY_PLAYER:
             {
                 serialize_varint32(stream, maxHealth);
                 serialize_varint32(stream, health);
@@ -64,7 +64,7 @@ struct Msg_S_EntitySnapshot : public yojimbo::Message
 
         // TODO: Also check if player is the clientIdx player. I.e. don't leak
         //       input info to all other players.
-        if (type == Entity_Player) {
+        if (type == data::ENTITY_PLAYER) {
             serialize_uint32(stream, lastProcessedInputCmd);
         }
 

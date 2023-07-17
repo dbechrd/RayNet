@@ -156,7 +156,7 @@ void GameClient::ProcessMessages(void)
                 {
                     Msg_S_EntitySpawn *msg = (Msg_S_EntitySpawn *)yjMsg;
                     //printf("[ENTITY_SPAWN] id=%u mapId=%u\n", msg->entityId, msg->mapId);
-                    Entity *entity = entityDb->FindEntity(msg->entityId);
+                    data::Entity *entity = entityDb->FindEntity(msg->entityId);
                     if (!entity) {
                         Tilemap *map = world->FindOrLoadMap(msg->mapId);
                         assert(map && "why no map? we get chunks before entities, right!?");

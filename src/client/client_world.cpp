@@ -32,11 +32,11 @@ ClientWorld::~ClientWorld(void)
     }
 }
 
-Entity *ClientWorld::LocalPlayer(void) {
-    Entity *localPlayer = entityDb->FindEntity(localPlayerEntityId);
+data::Entity *ClientWorld::LocalPlayer(void) {
+    data::Entity *localPlayer = entityDb->FindEntity(localPlayerEntityId);
     if (localPlayer) {
-        assert(localPlayer->type == Entity_Player);
-        if (localPlayer->type == Entity_Player) {
+        assert(localPlayer->type == data::ENTITY_PLAYER);
+        if (localPlayer->type == data::ENTITY_PLAYER) {
             return localPlayer;
         }
     }
@@ -45,7 +45,7 @@ Entity *ClientWorld::LocalPlayer(void) {
 
 Tilemap *ClientWorld::LocalPlayerMap(void)
 {
-    Entity *localPlayer = LocalPlayer();
+    data::Entity *localPlayer = LocalPlayer();
     if (localPlayer && localPlayer->mapId) {
         return FindOrLoadMap(localPlayer->mapId);
     }
@@ -123,11 +123,11 @@ void ClientWorld::ApplySpawnEvent(const Msg_S_EntitySpawn &entitySpawn)
         return;
     }
 
-    Entity          &entity    = entityDb->entities[entityIndex];
-    AspectCollision &collision = entityDb->collision[entityIndex];
-    AspectPhysics   &physics   = entityDb->physics[entityIndex];
-    AspectLife      &life      = entityDb->life[entityIndex];
-    data::Sprite    &sprite    = entityDb->sprite[entityIndex];
+    data::Entity          &entity    = entityDb->entities[entityIndex];
+    data::AspectCollision &collision = entityDb->collision[entityIndex];
+    data::AspectPhysics   &physics   = entityDb->physics[entityIndex];
+    data::AspectLife      &life      = entityDb->life[entityIndex];
+    data::Sprite          &sprite    = entityDb->sprite[entityIndex];
 
     entity.type      = entitySpawn.type;
     entity.mapId     = entitySpawn.mapId;
@@ -141,17 +141,17 @@ void ClientWorld::ApplySpawnEvent(const Msg_S_EntitySpawn &entitySpawn)
 
     // TODO: Look it up from somewhere based on entity type?
     switch (entity.type) {
-        case Entity_Player: {
+        case data::ENTITY_PLAYER: {
             sprite.anims[data::DIR_E] = data::GFX_ANIM_CHR_MAGE_E;
             sprite.anims[data::DIR_W] = data::GFX_ANIM_CHR_MAGE_W;
             break;
         }
-        case Entity_NPC: {
+        case data::ENTITY_NPC: {
             sprite.anims[data::DIR_E] = data::GFX_ANIM_NPC_LILY_E;
             sprite.anims[data::DIR_W] = data::GFX_ANIM_NPC_LILY_W;
             break;
         }
-        case Entity_Projectile: {
+        case data::ENTITY_PROJECTILE: {
             sprite.anims[data::DIR_N] = data::GFX_ANIM_PRJ_FIREBALL;
             //data::GfxAnim &gfxAnim = data::pack1.gfxAnims[sprite.anims[data::DIR_N]];
             //static bool foo = false;
@@ -192,10 +192,10 @@ void ClientWorld::ApplyStateInterpolated(uint32_t entityId,
         return;
     }
 
-    Entity        &entity  = entityDb->entities[entityIndex];
-    AspectPhysics &physics = entityDb->physics[entityIndex];
-    AspectLife    &life    = entityDb->life[entityIndex];
-    data::Sprite  &sprite  = entityDb->sprite[entityIndex];
+    data::Entity        &entity  = entityDb->entities[entityIndex];
+    data::AspectPhysics &physics = entityDb->physics[entityIndex];
+    data::AspectLife    &life    = entityDb->life[entityIndex];
+    data::Sprite        &sprite  = entityDb->sprite[entityIndex];
 
     EntityInterpolateTuple data{ entity, physics, life, sprite };
     ApplyStateInterpolated(data, a, b, alpha, dt);
@@ -209,7 +209,7 @@ Err ClientWorld::CreateDialog(uint32_t entityId, std::string message, double now
         return RN_OUT_OF_BOUNDS;
     }
 
-    AspectDialog &dialog = entityDb->dialog[entityIndex];
+    data::AspectDialog &dialog = entityDb->dialog[entityIndex];
     dialog.spawnedAt = now;
     dialog.message = message;
     return RN_SUCCESS;
@@ -220,16 +220,16 @@ void ClientWorld::UpdateEntities(GameClient &client)
     hoveredEntityId = 0;
     Tilemap *localPlayerMap = LocalPlayerMap();
 
-    for (Entity &entity : entityDb->entities) {
-        if (entity.type == Entity_None) {
+    for (data::Entity &entity : entityDb->entities) {
+        if (!entity.type) {
             continue;
         }
 
         size_t entityIndex = entityDb->FindEntityIndex(entity.id);
-        AspectPhysics &physics = entityDb->physics[entityIndex];
+        data::AspectPhysics &physics = entityDb->physics[entityIndex];
         AspectGhost &ghost = entityDb->ghosts[entityIndex];
         data::Sprite &sprite = entityDb->sprite[entityIndex];
-        AspectDialog &dialog = entityDb->dialog[entityIndex];
+        data::AspectDialog &dialog = entityDb->dialog[entityIndex];
 
         // Local player
         if (entity.id == localPlayerEntityId) {
@@ -376,7 +376,7 @@ void ClientWorld::DrawEntitySnapshotShadows(uint32_t entityId, Controller &contr
         size_t entityIndex = entityDb->FindEntityIndex(entityId);
         if (!entityIndex) return;
 
-        Entity &entity = entityDb->entities[entityIndex];
+        data::Entity &entity = entityDb->entities[entityIndex];
         AspectGhost &ghost = entityDb->ghosts[entityIndex];
 
         EntityData ghostData{};
@@ -452,7 +452,7 @@ void ClientWorld::DrawEntitySnapshotShadows(uint32_t entityId, Controller &contr
 }
 
 // TODO(dlb): Where should this live? Probably not in ClientWorld?
-void ClientWorld::DrawDialog(AspectDialog &dialog, Vector2 topCenterScreen)
+void ClientWorld::DrawDialog(data::AspectDialog &dialog, Vector2 topCenterScreen)
 {
     const float marginBottom = 4.0f;
     Vector2 bgPad{ 12, 8 };
@@ -498,14 +498,14 @@ void ClientWorld::DrawDialogs(Camera2D &camera)
         return;
     }
 
-    for (Entity &entity : entityDb->entities) {
+    for (data::Entity &entity : entityDb->entities) {
         if (!entity.type || entity.despawnedAt || entity.mapId != map->id) {
             continue;
         }
         assert(entity.id);
 
         size_t entityIndex = entityDb->FindEntityIndex(entity.id);
-        AspectDialog &dialog = entityDb->dialog[entityIndex];
+        data::AspectDialog &dialog = entityDb->dialog[entityIndex];
         if (dialog.spawnedAt) {
             const Vector2 topCenter = entityDb->EntityTopCenter(entity.id);
             const Vector2 topCenterScreen = GetWorldToScreen2D(topCenter, camera);
@@ -534,7 +534,7 @@ void ClientWorld::Draw(Controller &controller, double now, double dt)
     //--------------------
     // Draw the entities
     cursorWorldPos = GetScreenToWorld2D(GetMousePosition(), camera2d);
-    for (Entity &entity : entityDb->entities) {
+    for (data::Entity &entity : entityDb->entities) {
         if (!entity.type || entity.despawnedAt || entity.mapId != map->id) {
             continue;
         }
@@ -551,7 +551,7 @@ void ClientWorld::Draw(Controller &controller, double now, double dt)
     //--------------------
     // Draw entity info
     if (hoveredEntityId) {
-        Entity *entity = entityDb->FindEntity(hoveredEntityId);
+        data::Entity *entity = entityDb->FindEntity(hoveredEntityId);
         if (entity) {
             entityDb->DrawEntityHoverInfo(hoveredEntityId);
         } else {

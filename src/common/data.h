@@ -1,8 +1,6 @@
 #pragma once
 #include "common.h"
 
-enum EntityType;
-
 ////////////////////////////////////////////////////////////////////////////
 // TileFrame: textureId, x, y, w, h
 // TileGraphic: uint8_t id, const char *name, animLen[8], frames[8], delays[8] (up to 8 anims, for each direction)
@@ -21,6 +19,7 @@ namespace data {
         DAT_TYP_SPRITE,
         DAT_TYP_MATERIAL,
         DAT_TYP_TILE_TYPE,
+        DAT_TYP_ENTITY,
         DAT_TYP_COUNT
     };
 
@@ -49,7 +48,7 @@ namespace data {
         GFX_FILE_IDS(ENUM_GEN_VALUE)
     };
     struct GfxFile {
-        static const DataType type = DAT_TYP_GFX_FILE;
+        static const DataType dtype = DAT_TYP_GFX_FILE;
         GfxFileId   id      {};
         std::string path    {};
         ::Texture   texture {};
@@ -64,7 +63,7 @@ namespace data {
         MUS_FILE_IDS(ENUM_GEN_VALUE)
     };
     struct MusFile {
-        static const DataType type = DAT_TYP_MUS_FILE;
+        static const DataType dtype = DAT_TYP_MUS_FILE;
         MusFileId   id    {};
         std::string path  {};
         ::Music     music {};
@@ -82,12 +81,12 @@ namespace data {
         SFX_FILE_IDS(ENUM_GEN_VALUE)
     };
     struct SfxFile {
-        static const DataType type = DAT_TYP_SFX_FILE;
-        SfxFileId id;
-        std::string path;
-        float pitch_variance;
-        bool multi;
-        ::Sound sound;
+        static const DataType dtype = DAT_TYP_SFX_FILE;
+        SfxFileId   id             {};
+        std::string path           {};
+        float       pitch_variance {};
+        bool        multi          {};
+        ::Sound     sound          {};
     };
 
 #define GFX_FRAME_IDS(gen)           \
@@ -166,13 +165,13 @@ namespace data {
         GFX_FRAME_IDS(ENUM_GEN_VALUE)
     };
     struct GfxFrame {
-        static const DataType type = DAT_TYP_GFX_FRAME;
-        GfxFrameId id;
-        GfxFileId gfx;
-        uint16_t x;
-        uint16_t y;
-        uint16_t w;
-        uint16_t h;
+        static const DataType dtype = DAT_TYP_GFX_FRAME;
+        GfxFrameId id  {};
+        GfxFileId  gfx {};
+        uint16_t   x   {};
+        uint16_t   y   {};
+        uint16_t   w   {};
+        uint16_t   h   {};
     };
 
 #define GFX_ANIM_IDS(gen)            \
@@ -241,23 +240,23 @@ namespace data {
         GFX_ANIM_IDS(ENUM_GEN_VALUE)
     };
     struct GfxAnim {
-        static const DataType type = DAT_TYP_GFX_ANIM;
-        GfxAnimId id;
-        SfxFileId sound;
-        uint8_t frameRate;
-        uint8_t frameCount;
-        uint8_t frameDelay;
-        GfxFrameId frames[8];
+        static const DataType dtype = DAT_TYP_GFX_ANIM;
+        GfxAnimId  id         {};
+        SfxFileId  sound      {};
+        uint8_t    frameRate  {};
+        uint8_t    frameCount {};
+        uint8_t    frameDelay {};
+        GfxFrameId frames[8]  {};
 
-        bool soundPlayed;
+        bool soundPlayed{};
     };
 
     struct Sprite {
-        static const DataType type = DAT_TYP_SPRITE;
-        Direction dir;
-        GfxAnimId anims[8];  // for each direction
-        uint8_t animFrame; // current frame index
-        double animAccum; // time since last update
+        static const DataType dtype = DAT_TYP_SPRITE;
+        Direction dir       {};
+        GfxAnimId anims[8]  {};  // for each direction
+        uint8_t   animFrame {};  // current frame index
+        double    animAccum {};  // time since last update
     };
 
 #define MATERIAL_IDS(gen) \
@@ -271,9 +270,9 @@ namespace data {
     };
 
     struct Material {
-        static const DataType type = DAT_TYP_MATERIAL;
-        MaterialId id;
-        SfxFileId footstepSnd;
+        static const DataType dtype = DAT_TYP_MATERIAL;
+        MaterialId id          {};
+        SfxFileId  footstepSnd {};
     };
 
 #define TILE_TYPE_IDS(gen)  \
@@ -343,21 +342,118 @@ namespace data {
     };
 
     struct TileType {
-        static const DataType type = DAT_TYP_TILE_TYPE;
-        TileTypeId  id;
-        GfxAnimId   anim;
-        MaterialId  material;
-        TileFlags   flags;
-        uint8_t     autoTileMask;
+        static const DataType dtype = DAT_TYP_TILE_TYPE;
+        TileTypeId  id           {};
+        GfxAnimId   anim         {};
+        MaterialId  material     {};
+        TileFlags   flags        {};
+        uint8_t     autoTileMask {};
         //Color color;  // color for minimap/wang tile editor (top left pixel of tile)
     };
 
+    ////////////////////////////////////////////////////////////////////////////
+
+    // Best rap song: "i added it outta habit" by dandymcgee
+#define ENTITY_TYPES(gen)  \
+    gen(ENTITY_NONE)       \
+    gen(ENTITY_PLAYER)     \
+    gen(ENTITY_NPC)        \
+    gen(ENTITY_PROJECTILE)
+
+    enum EntityType : uint8_t {
+        ENTITY_TYPES(ENUM_GEN_VALUE)
+    };
+
+    struct Entity {
+        static const DataType dtype = DAT_TYP_ENTITY;
+        uint32_t    id             {};
+        uint32_t    mapId          {};
+        EntityType  type           {};
+        double      spawnedAt      {};
+        double      despawnedAt    {};
+        Vector2     position       {};
+
+        // TODO: Separate this out into its own array?
+        uint32_t freelist_next {};
+    };
+
+    struct AspectCollision {
+        float radius    {};  // collision
+        bool  colliding {};  // not sync'd, local flag for debugging colliders
+        bool  onWarp    {};  // currently colliding with a warp (used to prevent ping-ponging)
+    };
+
+    struct AspectCombat {
+        double lastAttackedAt {};
+        double attackCooldown {};
+    };
+
+    struct AspectDialog {
+        double      spawnedAt {};  // time when dialog was spawned
+        std::string message   {};  // what they're saying
+    };
+
+    struct AspectLife {
+        float maxHealth;
+        float health;
+        float healthSmooth;  // client-only to smoothly interpolate health changes
+
+        void TakeDamage(int damage) {
+            if (damage >= health) {
+                health = 0;
+            } else {
+                health -= damage;
+            }
+        }
+
+        bool Alive(void) {
+            return health > 0;
+        }
+
+        bool Dead(void) {
+            return !Alive();
+        }
+    };
+
+    struct AspectPathfind {
+        bool active;  // if false, don't pathfind
+        int pathId;
+        int pathNodeLastArrivedAt;
+        int pathNodeTarget;
+        double pathNodeArrivedAt;
+    };
+
+    struct AspectPhysics {
+        float drag;
+        float speed;
+        Vector2 forceAccum;
+        Vector2 velocity;
+
+        void ApplyForce(Vector2 force) {
+            forceAccum.x += force.x;
+            forceAccum.y += force.y;
+        }
+    };
+
+    struct AspectWarp {
+        Rectangle collider{};
+        Vector2 destPos{};
+
+        // You either need this
+        std::string destMap{};          // regular map to warp to
+        // Or both of these
+        std::string templateMap{};      // template map to make a copy of for procgen
+        std::string templateTileset{};  // wang tileset to use for procgen
+    };
+
+    ////////////////////////////////////////////////////////////////////////////
+
     struct PackTocEntry {
-        DataType type;
-        int offset;
+        DataType dtype  {};
+        int      offset {};
 
         PackTocEntry() = default;
-        PackTocEntry(DataType type, int offset) : type(type), offset(offset) {}
+        PackTocEntry(DataType dtype, int offset) : dtype(dtype), offset(offset) {}
     };
 
     struct PackToc {
@@ -366,19 +462,29 @@ namespace data {
 
     // Inspired by https://twitter.com/angealbertini/status/1340712669247119360
     struct Pack {
-        int magic;
-        int version;
-        int tocOffset;
+        int magic     {};
+        int version   {};
+        int tocOffset {};
 
-        std::vector<GfxFile>  gfxFiles;
-        std::vector<MusFile>  musFiles;
-        std::vector<SfxFile>  sfxFiles;
-        std::vector<GfxFrame> gfxFrames;
-        std::vector<GfxAnim>  gfxAnims;
-        std::vector<Material> materials;
-        std::vector<TileType> tileTypes;
+        std::vector<GfxFile>  gfxFiles  {};
+        std::vector<MusFile>  musFiles  {};
+        std::vector<SfxFile>  sfxFiles  {};
+        std::vector<GfxFrame> gfxFrames {};
+        std::vector<GfxAnim>  gfxAnims  {};
+        std::vector<Material> materials {};
+        std::vector<TileType> tileTypes {};
 
-        PackToc toc;
+        std::vector<Entity>          entities  {SV_MAX_ENTITIES};
+        std::vector<AspectCombat>    combat    {SV_MAX_ENTITIES};
+        std::vector<AspectCollision> collision {SV_MAX_ENTITIES};
+        std::vector<AspectDialog>    dialog    {SV_MAX_ENTITIES};
+        std::vector<AspectLife>      life      {SV_MAX_ENTITIES};
+        std::vector<AspectPathfind>  pathfind  {SV_MAX_ENTITIES};
+        std::vector<AspectPhysics>   physics   {SV_MAX_ENTITIES};
+        std::vector<Sprite>          sprite    {SV_MAX_ENTITIES};
+        std::vector<AspectWarp>      warp      {SV_MAX_ENTITIES};
+
+        PackToc toc {};
     };
 
     //enum PackStreamMode {
@@ -390,9 +496,9 @@ namespace data {
 
     struct PackStream {
         //PackStreamMode mode;
-        FILE *f;
-        ProcessFn process;
-        Pack *pack;
+        FILE *    f       {};
+        ProcessFn process {};
+        Pack *    pack    {};
     };
 
     const char *GfxFileIdStr(GfxFileId id);
@@ -402,6 +508,7 @@ namespace data {
     const char *GfxAnimIdStr(GfxAnimId id);
     const char *MaterialIdStr(MaterialId id);
     const char *TileTypeIdStr(TileTypeId id);
+    const char *EntityTypeStr(EntityType type);
 
     extern Pack pack1;
 

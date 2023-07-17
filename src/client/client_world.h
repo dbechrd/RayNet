@@ -29,7 +29,7 @@ struct ClientWorld {
     data::MusFileId musBackgroundMusic{};
 
     ~ClientWorld(void);
-    Entity *LocalPlayer(void);
+    data::Entity *LocalPlayer(void);
     Tilemap *LocalPlayerMap(void);
 
     Tilemap *FindOrLoadMap(uint32_t mapId);
@@ -50,6 +50,6 @@ private:
     void UpdateEntities(GameClient &gameClient);
 
     void DrawEntitySnapshotShadows(uint32_t entityId, Controller &controller, double now, double dt);
-    void DrawDialog(AspectDialog &dialog, Vector2 topCenterScreen);
+    void DrawDialog(data::AspectDialog &dialog, Vector2 topCenterScreen);
     void DrawDialogs(Camera2D &camera);
 };
