@@ -50,6 +50,6 @@ private:
     void UpdateEntities(GameClient &gameClient);
 
     void DrawEntitySnapshotShadows(uint32_t entityId, Controller &controller, double now, double dt);
-    void DrawDialog(data::AspectDialog &dialog, Vector2 topCenterScreen);
+    void DrawDialog(data::AspectDialog &dialog, Vector2 bottomCenterScreen);
     void DrawDialogs(Camera2D &camera);
 };

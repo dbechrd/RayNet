@@ -366,12 +366,12 @@ namespace data {
 
     struct Entity {
         static const DataType dtype = DAT_TYP_ENTITY;
-        uint32_t    id             {};
-        uint32_t    mapId          {};
-        EntityType  type           {};
-        double      spawnedAt      {};
-        double      despawnedAt    {};
-        Vector2     position       {};
+        uint32_t   id          {};
+        uint32_t   mapId       {};
+        EntityType type        {};
+        double     spawnedAt   {};
+        double     despawnedAt {};
+        Vector2    position    {};
 
         // TODO: Separate this out into its own array?
         uint32_t freelist_next {};
@@ -390,6 +390,7 @@ namespace data {
 
     struct AspectDialog {
         double      spawnedAt {};  // time when dialog was spawned
+        std::string title     {};  // name of NPC, submenu, etc.
         std::string message   {};  // what they're saying
     };
 

@@ -58,7 +58,9 @@ void GameServer::OnClientJoin(int clientIdx)
 
         entity.type = data::ENTITY_PLAYER;
         entity.mapId = maps[0]->id;
-        entity.position = { 1650, 435 };
+        const Vector2 caveEntrance{ 1650, 435 };
+        const Vector2 townCenter{ 830, 1180 };
+        entity.position = townCenter;
         collision.radius = 10;
         life.maxHealth = 100;
         life.health = life.maxHealth;
@@ -568,7 +570,7 @@ void GameServer::TickSpawnTownNPCs(uint32_t mapId)
 
                 Tilemap *map = FindMap(mapId);
                 if (map) {
-                    pathfind.active = true;
+                    pathfind.active = false;
                     pathfind.pathId = 0;
                     AiPathNode *aiPathNode = map->GetPathNode(pathfind.pathId, 0);
                     if (aiPathNode) {

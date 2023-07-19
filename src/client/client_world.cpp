@@ -211,6 +211,7 @@ Err ClientWorld::CreateDialog(uint32_t entityId, std::string message, double now
 
     data::AspectDialog &dialog = entityDb->dialog[entityIndex];
     dialog.spawnedAt = now;
+    dialog.title = "Lily";
     dialog.message = message;
     return RN_SUCCESS;
 }
@@ -452,23 +453,43 @@ void ClientWorld::DrawEntitySnapshotShadows(uint32_t entityId, Controller &contr
 }
 
 // TODO(dlb): Where should this live? Probably not in ClientWorld?
-void ClientWorld::DrawDialog(data::AspectDialog &dialog, Vector2 topCenterScreen)
+void ClientWorld::DrawDialog(data::AspectDialog &dialog, Vector2 bottomCenterScreen)
 {
+    bottomCenterScreen.x = roundf(bottomCenterScreen.x);
+    bottomCenterScreen.y = roundf(bottomCenterScreen.y);
+
     const float marginBottom = 4.0f;
-    Vector2 bgPad{ 12, 8 };
-    Vector2 msgSize = MeasureTextEx(fntSmall, dialog.message.c_str(), fntSmall.baseSize, 1.0f);
+    const Vector2 bgPad{ 12, 8 };
+
+    const Vector2 titleSize = MeasureTextEx(fntSmall, dialog.title.c_str(), fntSmall.baseSize, 1);
+    const Vector2 msgSize = MeasureTextEx(fntSmall, dialog.message.c_str(), fntSmall.baseSize, 1);
+    const float bgHeight =
+        bgPad.y +
+        titleSize.y +
+        msgSize.y +
+        bgPad.y;
+
+    const float bgTop = bottomCenterScreen.y - marginBottom - bgHeight;
+    float cursorY = bgTop + bgPad.y;
+
+    Vector2 titlePos{
+        roundf(bottomCenterScreen.x - titleSize.x / 2),
+        cursorY
+    };
+    cursorY += titleSize.y;
+
     Vector2 msgPos{
-        topCenterScreen.x - msgSize.x / 2,
-        topCenterScreen.y - msgSize.y - bgPad.y * 2 - marginBottom
+        roundf(bottomCenterScreen.x - msgSize.x / 2),
+        cursorY
     };
     //msgPos.x = floorf(msgPos.x);
     //msgPos.y = floorf(msgPos.y);
 
-    Rectangle msgBgRect{
-        msgPos.x - bgPad.x,
-        msgPos.y - bgPad.y,
-        msgSize.x + bgPad.x * 2,
-        msgSize.y + bgPad.y * 2
+    Rectangle bgRect{
+        MIN(titlePos.x, msgPos.x) - bgPad.x,
+        bgTop,
+        MAX(titleSize.x, msgSize.x) + bgPad.x * 2,
+        bgPad.y + titleSize.y + msgSize.y + bgPad.y
     };
     //msgBgRect.x = floorf(msgBgRect.x);
     //msgBgRect.y = floorf(msgBgRect.y);
@@ -483,10 +504,11 @@ void ClientWorld::DrawDialog(data::AspectDialog &dialog, Vector2 topCenterScreen
     nPatch.right = 16;
     nPatch.bottom = 16;
     nPatch.layout = NPATCH_NINE_PATCH;
-    DrawTextureNPatch(nPatchTex, nPatch, msgBgRect, {}, 0, WHITE);
+    DrawTextureNPatch(nPatchTex, nPatch, bgRect, {}, 0, WHITE);
     //DrawRectangleRounded(msgBgRect, 0.2f, 6, Fade(BLACK, 0.5));
     //DrawRectangleRoundedLines(msgBgRect, 0.2f, 6, 1.0f, RAYWHITE);
-    DrawTextEx(fntSmall, dialog.message.c_str(), msgPos, fntSmall.baseSize, 1.0f, RAYWHITE);
+    dlb_DrawTextEx(fntSmall, dialog.title.c_str(), titlePos, fntSmall.baseSize, 1.0f, GOLD);
+    dlb_DrawTextEx(fntSmall, dialog.message.c_str(), msgPos, fntSmall.baseSize, 1.0f, RAYWHITE);
     //DrawTextShadowEx(fntSmall, dialog.message, msgPos, FONT_SIZE, RAYWHITE);
 }
 

@@ -86,7 +86,7 @@
 #define CL_RENDER_DISTANCE              1
 #define CL_CAMERA_LERP                  1
 #define CL_CLIENT_SIDE_PREDICT          1
-#define CL_DIALOG_DURATION_MIN          0.5
+#define CL_DIALOG_DURATION_MIN          1.0
 #define CL_DIALOG_DURATION_PER_CHAR     0.1
 
 #define CL_DBG_ONE_SCREEN      0
@@ -129,6 +129,7 @@ Err InitCommon(void);
 void FreeCommon(void);
 Font dlb_LoadFontFromMemory(const char *fileType, const unsigned char *fileData, int dataSize, int fontSize, int *fontChars, int glyphCount, int type);
 Font dlb_LoadFontEx(const char *fileName, int fontSize, int *fontChars, int glyphCount, int type);
+void dlb_DrawTextEx(Font font, const char *text, Vector2 position, float fontSize, float spacing, Color tint);
 
 float GetRandomFloatZeroToOne(void);
 float GetRandomFloatMinusOneToOne(void);
