@@ -497,7 +497,7 @@ void ClientWorld::DrawDialog(data::AspectDialog &dialog, Vector2 bottomCenterScr
     //msgBgRect.height = floorf(msgBgRect.height);
 
     NPatchInfo nPatch{};
-    Texture &nPatchTex = data::gfxFiles[data::GFX_FILE_DLG_NPATCH].texture;
+    Texture &nPatchTex = data::pack1.gfxFiles[data::GFX_FILE_DLG_NPATCH].texture;
     nPatch.source = { 0, 0, (float)nPatchTex.width, (float)nPatchTex.height };
     nPatch.left = 16;
     nPatch.top = 16;

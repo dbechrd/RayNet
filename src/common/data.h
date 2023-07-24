@@ -517,7 +517,8 @@ namespace data {
     void Free(void);
 
     Err Save(const char *filename);
-    Err Load(const char *filename);
+    Err Load(const char *filename, Pack &pack);
+    void Unload(Pack &pack);
 
     void PlaySound(SfxFileId id, float pitchVariance = 0.0f);
 
