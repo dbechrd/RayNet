@@ -423,9 +423,7 @@ namespace data {
     {
         PROC(gfxFile.id);
         Process(stream, gfxFile.path);
-        if (stream.pack->version >= 2) {
-            Process(stream, gfxFile.data_buffer);
-        }
+        Process(stream, gfxFile.data_buffer);
         if (stream.mode == PACK_MODE_READ && !gfxFile.data_buffer.length && !gfxFile.path.empty()) {
             ReadFileIntoDataBuffer(gfxFile.path.c_str(), gfxFile.data_buffer);
         }
@@ -449,16 +447,9 @@ namespace data {
     {
         PROC(sfxFile.id);
         Process(stream, sfxFile.path);
-        if (stream.pack->version >= 2) {
-            Process(stream, sfxFile.data_buffer);
-        }
-        if (stream.pack->version >= 3) {
-            PROC(sfxFile.pitch_variance);
-            PROC(sfxFile.multi);
-        }
-        if (stream.mode == PACK_MODE_READ) {
-            printf("");
-        }
+        Process(stream, sfxFile.data_buffer);
+        PROC(sfxFile.pitch_variance);
+        PROC(sfxFile.multi);
         if (stream.mode == PACK_MODE_READ && !sfxFile.data_buffer.length && !sfxFile.path.empty()) {
             ReadFileIntoDataBuffer(sfxFile.path.c_str(), sfxFile.data_buffer);
         }
@@ -494,12 +485,10 @@ namespace data {
     }
 
     void Process(PackStream &stream, Sprite &sprite) {
-        if (stream.pack->version >= 4) {
-            PROC(sprite.id);
-            assert(ARRAY_SIZE(sprite.anims) == 8); // if this changes, version must increment
-            for (int i = 0; i < 8; i++) {
-                PROC(sprite.anims[i]);
-            }
+        PROC(sprite.id);
+        assert(ARRAY_SIZE(sprite.anims) == 8); // if this changes, version must increment
+        for (int i = 0; i < 8; i++) {
+            PROC(sprite.anims[i]);
         }
     }
 
