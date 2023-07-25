@@ -66,7 +66,7 @@ Tilemap *ClientWorld::FindOrLoadMap(uint32_t mapId)
             case 1: mapName = LEVEL_001; break;
             case 2: mapName = LEVEL_CAVE; break;
         }
-        // TODO: Load map and add to maps/mapdsById
+        // TODO: LoadPack map and add to maps/mapdsById
 
         map = new Tilemap();
         if (map) {
@@ -123,42 +123,37 @@ void ClientWorld::ApplySpawnEvent(const Msg_S_EntitySpawn &entitySpawn)
         return;
     }
 
-    data::Entity          &entity    = entityDb->entities[entityIndex];
-    data::AspectCollision &collision = entityDb->collision[entityIndex];
-    data::AspectPhysics   &physics   = entityDb->physics[entityIndex];
-    data::AspectLife      &life      = entityDb->life[entityIndex];
-    data::Sprite          &sprite    = entityDb->sprite[entityIndex];
+    data::Entity          &entity     = entityDb->entities  [entityIndex];
+    data::AspectCollision &eCollision = entityDb->collision [entityIndex];
+    data::AspectPhysics   &ePhysics   = entityDb->physics   [entityIndex];
+    data::AspectLife      &eLife      = entityDb->life      [entityIndex];
+    data::AspectSprite    &eSprite    = entityDb->sprite    [entityIndex];
 
-    entity.type      = entitySpawn.type;
-    entity.mapId     = entitySpawn.mapId;
-    entity.position  = entitySpawn.position;
-    collision.radius = entitySpawn.radius;
-    physics.drag     = entitySpawn.drag;
-    physics.speed    = entitySpawn.speed;
-    physics.velocity = entitySpawn.velocity;
-    life.maxHealth   = entitySpawn.maxHealth;
-    life.health      = entitySpawn.health;
+    entity.type       = entitySpawn.type;
+    entity.mapId      = entitySpawn.mapId;
+    entity.position   = entitySpawn.position;
+    eCollision.radius = entitySpawn.radius;
+    ePhysics.drag     = entitySpawn.drag;
+    ePhysics.speed    = entitySpawn.speed;
+    ePhysics.velocity = entitySpawn.velocity;
+    eLife.maxHealth   = entitySpawn.maxHealth;
+    eLife.health      = entitySpawn.health;
 
     // TODO: Look it up from somewhere based on entity type?
     switch (entity.type) {
         case data::ENTITY_PLAYER: {
-            sprite.anims[data::DIR_E] = data::GFX_ANIM_CHR_MAGE_E;
-            sprite.anims[data::DIR_W] = data::GFX_ANIM_CHR_MAGE_W;
+            eSprite.sprite = data::SPRITE_CHR_MAGE;
+            //eSprite.direction = data::DIR_E;
             break;
         }
         case data::ENTITY_NPC: {
-            sprite.anims[data::DIR_E] = data::GFX_ANIM_NPC_LILY_E;
-            sprite.anims[data::DIR_W] = data::GFX_ANIM_NPC_LILY_W;
+            eSprite.sprite = data::SPRITE_NPC_LILY;
+            //eSprite.direction = data::DIR_E;
             break;
         }
         case data::ENTITY_PROJECTILE: {
-            sprite.anims[data::DIR_N] = data::GFX_ANIM_PRJ_FIREBALL;
-            //data::GfxAnim &gfxAnim = data::pack1.gfxAnims[sprite.anims[data::DIR_N]];
-            //static bool foo = false;
-            //if (!foo) {
-            //    //data::PlaySound(gfxAnim.sound);
-            //    foo = true;
-            //}
+            eSprite.sprite = data::SPRITE_PRJ_FIREBALL;
+            //eSprite.direction = data::DIR_N;
             break;
         };
     }
@@ -192,10 +187,10 @@ void ClientWorld::ApplyStateInterpolated(uint32_t entityId,
         return;
     }
 
-    data::Entity        &entity  = entityDb->entities[entityIndex];
-    data::AspectPhysics &physics = entityDb->physics[entityIndex];
-    data::AspectLife    &life    = entityDb->life[entityIndex];
-    data::Sprite        &sprite  = entityDb->sprite[entityIndex];
+    data::Entity        &entity  = entityDb->entities [entityIndex];
+    data::AspectPhysics &physics = entityDb->physics  [entityIndex];
+    data::AspectLife    &life    = entityDb->life     [entityIndex];
+    data::AspectSprite  &sprite  = entityDb->sprite   [entityIndex];
 
     EntityInterpolateTuple data{ entity, physics, life, sprite };
     ApplyStateInterpolated(data, a, b, alpha, dt);
@@ -227,19 +222,19 @@ void ClientWorld::UpdateEntities(GameClient &client)
         }
 
         size_t entityIndex = entityDb->FindEntityIndex(entity.id);
-        data::AspectPhysics &physics = entityDb->physics[entityIndex];
-        AspectGhost &ghost = entityDb->ghosts[entityIndex];
-        data::Sprite &sprite = entityDb->sprite[entityIndex];
-        data::AspectDialog &dialog = entityDb->dialog[entityIndex];
+        data::AspectPhysics &ePhysics = entityDb->physics[entityIndex];
+        AspectGhost &eGhost = entityDb->ghosts[entityIndex];
+        data::AspectSprite &eSprite = entityDb->sprite[entityIndex];
+        data::AspectDialog &eDialog = entityDb->dialog[entityIndex];
 
         // Local player
         if (entity.id == localPlayerEntityId) {
             uint32_t latestSnapInputSeq = 0;
 
             // Apply latest snapshot
-            const GhostSnapshot &latestSnapshot = ghost.newest();
+            const GhostSnapshot &latestSnapshot = eGhost.newest();
             if (latestSnapshot.serverTime) {
-                ApplyStateInterpolated(entity.id, ghost.newest(), ghost.newest(), 0, client.frameDt);
+                ApplyStateInterpolated(entity.id, eGhost.newest(), eGhost.newest(), 0, client.frameDt);
                 latestSnapInputSeq = latestSnapshot.lastProcessedInputCmd;
             }
 
@@ -252,7 +247,7 @@ void ClientWorld::UpdateEntities(GameClient &client)
                 for (size_t cmdIndex = 0; cmdIndex < client.controller.cmdQueue.size(); cmdIndex++) {
                     InputCmd &inputCmd = client.controller.cmdQueue[cmdIndex];
                     if (inputCmd.seq > latestSnapInputSeq) {
-                        physics.ApplyForce(inputCmd.GenerateMoveForce(physics.speed));
+                        ePhysics.ApplyForce(inputCmd.GenerateMoveForce(ePhysics.speed));
                         entityDb->EntityTick(entity.id, SV_TICK_DT);
                         map->ResolveEntityTerrainCollisions(entity.id);
                     }
@@ -261,8 +256,8 @@ void ClientWorld::UpdateEntities(GameClient &client)
                 cmdAccumDt = client.now - client.controller.lastInputSampleAt;
                 if (cmdAccumDt > 0) {
                     Vector2 posBefore = entity.position;
-                    cmdAccumForce = client.controller.cmdAccum.GenerateMoveForce(physics.speed);
-                    physics.ApplyForce(cmdAccumForce);
+                    cmdAccumForce = client.controller.cmdAccum.GenerateMoveForce(ePhysics.speed);
+                    ePhysics.ApplyForce(cmdAccumForce);
                     entityDb->EntityTick(entity.id, SV_TICK_DT);
                     map->ResolveEntityTerrainCollisions(entity.id);
                     entity.position.x = LERP(posBefore.x, entity.position.x, cmdAccumDt / SV_TICK_DT);
@@ -299,7 +294,7 @@ void ClientWorld::UpdateEntities(GameClient &client)
                     "svr_now   %.3f\n"
                     "cmd_accum %.3f",
                     entity.position.x,
-                    physics.velocity.x,
+                    ePhysics.velocity.x,
                     cmdAccumDt > 0 ? cmdAccumForce.x : 0,
                     cmdAccumDt > 0 ? cmdAccumForce.y : 0,
                     client.ServerNow(),
@@ -311,8 +306,8 @@ void ClientWorld::UpdateEntities(GameClient &client)
             const double renderAt = client.ServerNow() - SV_TICK_DT;
 
             size_t snapshotBIdx = 0;
-            while (snapshotBIdx < ghost.size()
-                && ghost[snapshotBIdx].serverTime <= renderAt)
+            while (snapshotBIdx < eGhost.size()
+                && eGhost[snapshotBIdx].serverTime <= renderAt)
             {
                 snapshotBIdx++;
             }
@@ -321,14 +316,14 @@ void ClientWorld::UpdateEntities(GameClient &client)
             const GhostSnapshot *snapshotB = 0;
 
             if (snapshotBIdx <= 0) {
-                snapshotA = &ghost.oldest();
-                snapshotB = &ghost.oldest();
+                snapshotA = &eGhost.oldest();
+                snapshotB = &eGhost.oldest();
             } else if (snapshotBIdx >= CL_SNAPSHOT_COUNT) {
-                snapshotA = &ghost.newest();
-                snapshotB = &ghost.newest();
+                snapshotA = &eGhost.newest();
+                snapshotB = &eGhost.newest();
             } else {
-                snapshotA = &ghost[snapshotBIdx - 1];
-                snapshotB = &ghost[snapshotBIdx];
+                snapshotA = &eGhost[snapshotBIdx - 1];
+                snapshotB = &eGhost[snapshotBIdx];
             }
 
             float alpha = 0;
@@ -353,11 +348,11 @@ void ClientWorld::UpdateEntities(GameClient &client)
         }
 
         bool newlySpawned = entity.spawnedAt == client.now;
-        data::UpdateSprite(sprite, entity.type, physics.velocity, client.frameDt, newlySpawned);
+        data::UpdateSprite(eSprite, entity.type, ePhysics.velocity, client.frameDt, newlySpawned);
 
-        const double duration = CL_DIALOG_DURATION_MIN + CL_DIALOG_DURATION_PER_CHAR * dialog.message.size();
-        if (dialog.spawnedAt && client.now - dialog.spawnedAt > duration) {
-            dialog = {};
+        const double duration = CL_DIALOG_DURATION_MIN + CL_DIALOG_DURATION_PER_CHAR * eDialog.message.size();
+        if (eDialog.spawnedAt && client.now - eDialog.spawnedAt > duration) {
+            eDialog = {};
         }
     }
 }

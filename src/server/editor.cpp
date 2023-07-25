@@ -1061,14 +1061,14 @@ void Editor::DrawUI_EntityActions(UI &uiActionBar, double now)
     if (state.entities.selectedId) {
         size_t entityIndex = entityDb->FindEntityIndex(state.entities.selectedId);
         data::Entity &entity = entityDb->entities[entityIndex];
-        data::AspectCombat    &combat    = entityDb->combat    [entityIndex];
-        data::AspectCollision &collision = entityDb->collision [entityIndex];
-        data::AspectDialog    &dialog    = entityDb->dialog    [entityIndex];
-        data::AspectLife      &life      = entityDb->life      [entityIndex];
-        data::AspectPathfind  &pathfind  = entityDb->pathfind  [entityIndex];
-        data::AspectPhysics   &physics   = entityDb->physics   [entityIndex];
-        data::Sprite          &sprite    = entityDb->sprite    [entityIndex];
-        data::AspectWarp      &warp      = entityDb->warp      [entityIndex];
+        data::AspectCombat    &eCombat    = entityDb->combat    [entityIndex];
+        data::AspectCollision &eCollision = entityDb->collision [entityIndex];
+        data::AspectDialog    &eDialog    = entityDb->dialog    [entityIndex];
+        data::AspectLife      &eLife      = entityDb->life      [entityIndex];
+        data::AspectPathfind  &ePathfind  = entityDb->pathfind  [entityIndex];
+        data::AspectPhysics   &ePhysics   = entityDb->physics   [entityIndex];
+        data::AspectSprite    &eSprite    = entityDb->sprite    [entityIndex];
+        data::AspectWarp      &eWarp      = entityDb->warp      [entityIndex];
 
         const int labelWidth = 100;
 
@@ -1096,7 +1096,7 @@ void Editor::DrawUI_EntityActions(UI &uiActionBar, double now)
         ////////////////////////////////////////////////////////////////////////
         // Combat
         uiActionBar.Label("attk cooldown", labelWidth);
-        const float attackCooldownLeft = MAX(0, combat.attackCooldown - (now - combat.lastAttackedAt));
+        const float attackCooldownLeft = MAX(0, eCombat.attackCooldown - (now - eCombat.lastAttackedAt));
         uiActionBar.Text(TextFormat("%.3f", attackCooldownLeft));
         uiActionBar.Newline();
 
@@ -1104,11 +1104,11 @@ void Editor::DrawUI_EntityActions(UI &uiActionBar, double now)
         // Collision
         uiActionBar.Label("radius", labelWidth);
         static STB_TexteditState txtRadius{};
-        uiActionBar.TextboxFloat(txtRadius, collision.radius, 80);
+        uiActionBar.TextboxFloat(txtRadius, eCollision.radius, 80);
         uiActionBar.Newline();
 
         uiActionBar.Label("colliding", labelWidth);
-        if (collision.colliding) {
+        if (eCollision.colliding) {
             uiActionBar.Text("True", RED);
         } else {
             uiActionBar.Text("False", WHITE);
@@ -1116,7 +1116,7 @@ void Editor::DrawUI_EntityActions(UI &uiActionBar, double now)
         uiActionBar.Newline();
 
         uiActionBar.Label("onWarp", labelWidth);
-        if (collision.onWarp) {
+        if (eCollision.onWarp) {
             uiActionBar.Text("True", SKYBLUE);
         } else {
             uiActionBar.Text("False", WHITE);
@@ -1127,32 +1127,32 @@ void Editor::DrawUI_EntityActions(UI &uiActionBar, double now)
         // Life
         uiActionBar.Label("health", labelWidth);
         static STB_TexteditState txtHealth{};
-        uiActionBar.TextboxFloat(txtHealth, life.health, 80);
+        uiActionBar.TextboxFloat(txtHealth, eLife.health, 80);
         uiActionBar.Text("/");
         static STB_TexteditState txtMaxHealth{};
-        uiActionBar.TextboxFloat(txtMaxHealth, life.maxHealth, 80);
+        uiActionBar.TextboxFloat(txtMaxHealth, eLife.maxHealth, 80);
         uiActionBar.Newline();
 
         ////////////////////////////////////////////////////////////////////////
         // Physics
         uiActionBar.Label("drag", labelWidth);
         static STB_TexteditState txtDrag{};
-        uiActionBar.TextboxFloat(txtDrag, physics.drag, 80);
+        uiActionBar.TextboxFloat(txtDrag, ePhysics.drag, 80);
         uiActionBar.Newline();
 
         uiActionBar.Label("speed", labelWidth);
         static STB_TexteditState txtSpeed{};
-        uiActionBar.TextboxFloat(txtSpeed, physics.speed, 80);
+        uiActionBar.TextboxFloat(txtSpeed, ePhysics.speed, 80);
         uiActionBar.Newline();
 
         uiActionBar.Label("velocity", labelWidth);
         uiActionBar.PushBgColor({ 127, 0, 0, 255 }, UI_CtrlTypeDefault);
         static STB_TexteditState txtVelX{};
-        uiActionBar.TextboxFloat(txtVelX, physics.velocity.x, 80);
+        uiActionBar.TextboxFloat(txtVelX, ePhysics.velocity.x, 80);
         uiActionBar.PopStyle();
         uiActionBar.PushBgColor({ 0, 127, 0, 255 }, UI_CtrlTypeDefault);
         static STB_TexteditState txtVelY{};
-        uiActionBar.TextboxFloat(txtVelY, physics.velocity.y, 80);
+        uiActionBar.TextboxFloat(txtVelY, ePhysics.velocity.y, 80);
         uiActionBar.PopStyle();
         uiActionBar.Newline();
     }

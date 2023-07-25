@@ -9,6 +9,7 @@
 ////////////////////////////////////////////////////////////////////////////
 
 namespace data {
+    // DO NOT re-order these! They are hard-coded in the TOC
     enum DataType : uint8_t {
         DAT_TYP_ARRAY,
         DAT_TYP_GFX_FILE,
@@ -16,12 +17,17 @@ namespace data {
         DAT_TYP_SFX_FILE,
         DAT_TYP_GFX_FRAME,
         DAT_TYP_GFX_ANIM,
-        DAT_TYP_SPRITE,
         DAT_TYP_MATERIAL,
         DAT_TYP_TILE_TYPE,
         DAT_TYP_ENTITY,
+        DAT_TYP_SPRITE,
         DAT_TYP_COUNT
     };
+
+    //enum DataFlag : uint32_t {
+    //    DAT_FLAG_EMBEDDED = 0x1,
+    //    DAT_FLAG_EXTERNAL = 0x2,
+    //};
 
     enum Direction : uint8_t {
         DIR_N,
@@ -32,6 +38,11 @@ namespace data {
         DIR_SE,
         DIR_SW,
         DIR_NW
+    };
+
+    struct DatBuffer {
+        size_t length;
+        uint8_t *bytes;
     };
 
 #define GFX_FILE_IDS(gen)        \
@@ -49,9 +60,10 @@ namespace data {
     };
     struct GfxFile {
         static const DataType dtype = DAT_TYP_GFX_FILE;
-        GfxFileId   id      {};
-        std::string path    {};
-        ::Texture   texture {};
+        GfxFileId   id          {};
+        std::string path        {};
+        DatBuffer   data_buffer {};
+        ::Texture   texture     {};
     };
 
 #define MUS_FILE_IDS(gen)           \
@@ -64,9 +76,10 @@ namespace data {
     };
     struct MusFile {
         static const DataType dtype = DAT_TYP_MUS_FILE;
-        MusFileId   id    {};
-        std::string path  {};
-        ::Music     music {};
+        MusFileId   id          {};
+        std::string path        {};
+        DatBuffer   data_buffer {};
+        ::Music     music       {};
     };
 
 #define SFX_FILE_IDS(gen)        \
@@ -86,6 +99,7 @@ namespace data {
         std::string path           {};
         float       pitch_variance {};
         bool        multi          {};
+        DatBuffer   data_buffer    {};
         ::Sound     sound          {};
     };
 
@@ -251,14 +265,6 @@ namespace data {
         bool soundPlayed{};
     };
 
-    struct Sprite {
-        static const DataType dtype = DAT_TYP_SPRITE;
-        Direction dir       {};
-        GfxAnimId anims[8]  {};  // for each direction
-        uint8_t   animFrame {};  // current frame index
-        double    animAccum {};  // time since last update
-    };
-
 #define MATERIAL_IDS(gen) \
     gen(MATERIAL_NONE)    \
     gen(MATERIAL_GRASS)   \
@@ -273,6 +279,35 @@ namespace data {
         static const DataType dtype = DAT_TYP_MATERIAL;
         MaterialId id          {};
         SfxFileId  footstepSnd {};
+    };
+
+#define SPRITE_IDS(gen)        \
+    gen(SPRITE_NONE)           \
+    gen(SPRITE_CHR_MAGE)       \
+    gen(SPRITE_NPC_LILY)       \
+    gen(SPRITE_OBJ_CAMPFIRE)   \
+    gen(SPRITE_PRJ_FIREBALL)
+
+    enum SpriteId : uint16_t {
+        SPRITE_IDS(ENUM_GEN_VALUE)
+    };
+
+    //apparition
+    //phantom
+    //shade
+    //shadow
+    //soul
+    //specter
+    //spook
+    //sprite
+    //umbra
+    //sylph
+    //vision
+    //wraith
+    struct Sprite {
+        static const DataType dtype = DAT_TYP_SPRITE;
+        SpriteId  id       {};
+        GfxAnimId anims[8] {};  // for each direction
     };
 
 #define TILE_TYPE_IDS(gen)  \
@@ -395,9 +430,9 @@ namespace data {
     };
 
     struct AspectLife {
-        float maxHealth;
-        float health;
-        float healthSmooth;  // client-only to smoothly interpolate health changes
+        float maxHealth    {};
+        float health       {};
+        float healthSmooth {};  // client-only to smoothly interpolate health changes
 
         void TakeDamage(int damage) {
             if (damage >= health) {
@@ -417,18 +452,18 @@ namespace data {
     };
 
     struct AspectPathfind {
-        bool active;  // if false, don't pathfind
-        int pathId;
-        int pathNodeLastArrivedAt;
-        int pathNodeTarget;
-        double pathNodeArrivedAt;
+        bool   active                {};  // if false, don't pathfind
+        int    pathId                {};
+        int    pathNodeLastArrivedAt {};
+        int    pathNodeTarget        {};
+        double pathNodeArrivedAt     {};
     };
 
     struct AspectPhysics {
-        float drag;
-        float speed;
-        Vector2 forceAccum;
-        Vector2 velocity;
+        float   drag       {};
+        float   speed      {};
+        Vector2 forceAccum {};
+        Vector2 velocity   {};
 
         void ApplyForce(Vector2 force) {
             forceAccum.x += force.x;
@@ -436,15 +471,22 @@ namespace data {
         }
     };
 
+    struct AspectSprite {
+        SpriteId  sprite    {};  // sprite resource
+        Direction direction {};  // current facing direction
+        uint8_t   animFrame {};  // current frame index
+        double    animAccum {};  // time since last update
+    };
+
     struct AspectWarp {
-        Rectangle collider{};
-        Vector2 destPos{};
+        Rectangle collider {};
+        Vector2   destPos  {};
 
         // You either need this
-        std::string destMap{};          // regular map to warp to
+        std::string destMap         {};  // regular map to warp to
         // Or both of these
-        std::string templateMap{};      // template map to make a copy of for procgen
-        std::string templateTileset{};  // wang tileset to use for procgen
+        std::string templateMap     {};  // template map to make a copy of for procgen
+        std::string templateTileset {};  // wang tileset to use for procgen
     };
 
     ////////////////////////////////////////////////////////////////////////////
@@ -473,6 +515,7 @@ namespace data {
         std::vector<GfxFrame> gfxFrames {};
         std::vector<GfxAnim>  gfxAnims  {};
         std::vector<Material> materials {};
+        std::vector<Sprite>   sprites   {};
         std::vector<TileType> tileTypes {};
 
         std::vector<Entity>          entities  {SV_MAX_ENTITIES};
@@ -482,24 +525,24 @@ namespace data {
         std::vector<AspectLife>      life      {SV_MAX_ENTITIES};
         std::vector<AspectPathfind>  pathfind  {SV_MAX_ENTITIES};
         std::vector<AspectPhysics>   physics   {SV_MAX_ENTITIES};
-        std::vector<Sprite>          sprite    {SV_MAX_ENTITIES};
+        std::vector<AspectSprite>    sprite    {SV_MAX_ENTITIES};
         std::vector<AspectWarp>      warp      {SV_MAX_ENTITIES};
 
         PackToc toc {};
     };
 
-    //enum PackStreamMode {
-    //    PACK_MODE_READ,
-    //    PACK_MODE_WRITE,
-    //};
+    enum PackStreamMode {
+        PACK_MODE_READ,
+        PACK_MODE_WRITE,
+    };
 
     typedef size_t (*ProcessFn)(void *buffer, size_t size, size_t count, FILE* stream);
 
     struct PackStream {
-        //PackStreamMode mode;
-        FILE *    f       {};
-        ProcessFn process {};
-        Pack *    pack    {};
+        PackStreamMode mode    {};
+        FILE *         f       {};
+        ProcessFn      process {};
+        Pack *         pack    {};
     };
 
     const char *GfxFileIdStr(GfxFileId id);
@@ -513,18 +556,21 @@ namespace data {
 
     extern Pack pack1;
 
+    void ReadFileIntoDataBuffer(std::string filename, DatBuffer &datBuffer);
+    void FreeDataBuffer(DatBuffer &datBuffer);
+
     void Init(void);
     void Free(void);
 
-    Err Save(const char *filename);
-    Err Load(const char *filename, Pack &pack);
-    void Unload(Pack &pack);
+    Err SavePack(const char *filename);
+    Err LoadPack(const char *filename, Pack &pack);
+    void UnloadPack(Pack &pack);
 
     void PlaySound(SfxFileId id, float pitchVariance = 0.0f);
 
-    const GfxFrame &GetSpriteFrame(const Sprite &sprite);
-    void UpdateSprite(Sprite &sprite, EntityType entityType, Vector2 velocity, double dt, bool newlySpawned);
-    void ResetSprite(Sprite &sprite);
-    void DrawSprite(const Sprite &sprite, Vector2 pos);
+    const GfxFrame &GetSpriteFrame(const AspectSprite &eSprite);
+    void UpdateSprite(AspectSprite &eSprite, EntityType entityType, Vector2 velocity, double dt, bool newlySpawned);
+    void ResetSprite(AspectSprite &eSprite);
+    void DrawSprite(const AspectSprite &eSprite, Vector2 pos);
 }
 ////////////////////////////////////////////////////////////////////////////

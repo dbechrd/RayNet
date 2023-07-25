@@ -7742,7 +7742,7 @@ if (!lTheSaveFileName)
 {
         tinyfd_messageBox(
                 "Error",
-                "Save file name is NULL",
+                "SavePack file name is NULL",
                 "ok",
                 "error",
                 1);

@@ -62,17 +62,17 @@ struct EntityInterpolateTuple {
     data::Entity        &entity;
     data::AspectPhysics &physics;
     data::AspectLife    &life;
-    data::Sprite        &sprite;
+    data::AspectSprite  &sprite;
 
-    EntityInterpolateTuple(data::Entity &entity, data::AspectPhysics &physics, data::AspectLife &life, data::Sprite &sprite)
+    EntityInterpolateTuple(data::Entity &entity, data::AspectPhysics &physics, data::AspectLife &life, data::AspectSprite &sprite)
         : entity(entity), physics(physics), life(life), sprite(sprite) {}
 };
 
 struct EntitySpriteTuple {
-    data::Entity &entity;
-    data::Sprite &sprite;
+    data::Entity       &entity;
+    data::AspectSprite &sprite;
 
-    EntitySpriteTuple(data::Entity &entity, data::Sprite &sprite)
+    EntitySpriteTuple(data::Entity &entity, data::AspectSprite &sprite)
         : entity(entity), sprite(sprite) {}
 };
 
@@ -80,9 +80,9 @@ struct EntityTickTuple {
     data::Entity        &entity;
     data::AspectLife    &life;
     data::AspectPhysics &physics;
-    data::Sprite        &sprite;
+    data::AspectSprite  &sprite;
 
-    EntityTickTuple(data::Entity &entity, data::AspectLife &life, data::AspectPhysics &physics, data::Sprite &sprite)
+    EntityTickTuple(data::Entity &entity, data::AspectLife &life, data::AspectPhysics &physics, data::AspectSprite &sprite)
         : entity(entity), life(life), physics(physics), sprite(sprite) {}
 };
 
@@ -94,7 +94,7 @@ struct EntityData {
     data::AspectLife      life      {};
     data::AspectPathfind  pathfind  {};
     data::AspectPhysics   physics   {};
-    data::Sprite          sprite    {};
+    data::AspectSprite    sprite    {};
     data::AspectWarp      warp      {};
 
     AspectGhost           ghosts    {};
@@ -108,7 +108,7 @@ struct EntityData {
 //    AspectLife      &life;
 //    AspectPathfind  &pathfind;
 //    AspectPhysics   &physics;
-//    data::Sprite    &sprite;
+//    AspectSprite    &sprite;
 //
 //    EntityDataRef(
 //        Entity          &entity,
@@ -118,7 +118,7 @@ struct EntityData {
 //        AspectLife      &life,
 //        AspectPathfind  &pathfind,
 //        AspectPhysics   &physics,
-//        data::Sprite    &sprite
+//        AspectSprite    &sprite
 //    ) :
 //        entity    (entity),
 //        collision (collision),

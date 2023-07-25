@@ -36,7 +36,7 @@ const char *ErrStr(Err err)
     }
 }
 
-// TODO: Load placeholder textures/sounds etc. if fail
+// TODO: LoadPack placeholder textures/sounds etc. if fail
 Err InitCommon(void)
 {
     Err err = RN_SUCCESS;
@@ -44,7 +44,7 @@ Err InitCommon(void)
     rnStringCatalog.Init();
     rnTextureCatalog.Init();
 
-    // Load SDF required shader (we use default vertex shader)
+    // LoadPack SDF required shader (we use default vertex shader)
     shdSdfText = LoadShader(0, "resources/shaders/sdf.fs");
 
     shdPixelFixer                     = LoadShader("resources/shaders/pixelfixer.vs", "resources/shaders/pixelfixer.fs");
@@ -81,7 +81,7 @@ void FreeCommon(void)
     data::Free();
 }
 
-// Load font from memory buffer, fileType refers to extension: i.e. ".ttf"
+// LoadPack font from memory buffer, fileType refers to extension: i.e. ".ttf"
 Font dlb_LoadFontFromMemory(const char *fileType, const unsigned char *fileData, int dataSize, int fontSize, int *fontChars, int glyphCount, int type)
 {
     Font font = { 0 };
@@ -121,7 +121,7 @@ Font dlb_LoadFontFromMemory(const char *fileType, const unsigned char *fileData,
     return font;
 }
 
-// Load Font from TTF font file with generation parameters
+// LoadPack Font from TTF font file with generation parameters
 // NOTE: You can pass an array with desired characters, those characters should be available in the font
 // if array is NULL, default char set is selected 32..126
 Font dlb_LoadFontEx(const char *fileName, int fontSize, int *fontChars, int glyphCount, int type)

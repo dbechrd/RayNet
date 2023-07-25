@@ -51,23 +51,23 @@ void GameServer::OnClientJoin(int clientIdx)
         size_t entityIndex = entityDb->FindEntityIndex(entityId);
 
         data::Entity &entity = entityDb->entities[entityIndex];
-        data::AspectCollision &collision = entityDb->collision[entityIndex];
-        data::AspectLife &life = entityDb->life[entityIndex];
-        data::AspectPhysics &physics = entityDb->physics[entityIndex];
-        data::Sprite &sprite = entityDb->sprite[entityIndex];
+        data::AspectCollision &eCollision = entityDb->collision [entityIndex];
+        data::AspectLife      &eLife      = entityDb->life      [entityIndex];
+        data::AspectPhysics   &ePhysics   = entityDb->physics   [entityIndex];
+        data::AspectSprite    &eSprite    = entityDb->sprite    [entityIndex];
 
         entity.type = data::ENTITY_PLAYER;
         entity.mapId = maps[0]->id;
         const Vector2 caveEntrance{ 1650, 435 };
         const Vector2 townCenter{ 830, 1180 };
         entity.position = townCenter;
-        collision.radius = 10;
-        life.maxHealth = 100;
-        life.health = life.maxHealth;
-        physics.speed = 1000;
-        physics.drag = 1.0f;
-        sprite.anims[data::DIR_E] = data::GFX_ANIM_CHR_MAGE_E;
-        sprite.anims[data::DIR_W] = data::GFX_ANIM_CHR_MAGE_W;
+        eCollision.radius = 10;
+        eLife.maxHealth = 100;
+        eLife.health = eLife.maxHealth;
+        ePhysics.speed = 1000;
+        ePhysics.drag = 1.0f;
+        eSprite.sprite = data::SPRITE_CHR_MAGE;
+        //eSprite.direction = data::DIR_E;  // what's it do if it defaults to North?
 
         TileChunkRecord mainMap{};
         serverPlayer.chunkList.push(mainMap);
@@ -242,10 +242,10 @@ void GameServer::SerializeSpawn(uint32_t entityId, Msg_S_EntitySpawn &entitySpaw
     assert(entityIndex);
     if (!entityIndex) return;
 
-    data::Entity          &entity    = entityDb->entities[entityIndex];
-    data::AspectCollision &collision = entityDb->collision[entityIndex];
-    data::AspectPhysics   &physics   = entityDb->physics[entityIndex];
-    data::AspectLife      &life      = entityDb->life[entityIndex];
+    data::Entity          &entity     = entityDb->entities  [entityIndex];
+    data::AspectCollision &eCollision = entityDb->collision [entityIndex];
+    data::AspectPhysics   &ePhysics   = entityDb->physics   [entityIndex];
+    data::AspectLife      &eLife      = entityDb->life      [entityIndex];
 
     entitySpawn.serverTime = lastTickedAt;
 
@@ -256,16 +256,16 @@ void GameServer::SerializeSpawn(uint32_t entityId, Msg_S_EntitySpawn &entitySpaw
     entitySpawn.position = entity.position;
 
     // Collision
-    entitySpawn.radius = collision.radius;
+    entitySpawn.radius = eCollision.radius;
 
     // Physics
-    entitySpawn.drag     = physics.drag;
-    entitySpawn.speed    = physics.speed;
-    entitySpawn.velocity = physics.velocity;
+    entitySpawn.drag     = ePhysics.drag;
+    entitySpawn.speed    = ePhysics.speed;
+    entitySpawn.velocity = ePhysics.velocity;
 
     // Life
-    entitySpawn.maxHealth = life.maxHealth;
-    entitySpawn.health    = life.health;
+    entitySpawn.maxHealth = eLife.maxHealth;
+    entitySpawn.health    = eLife.health;
 
     //SPAWN_PROP(bulletSprite.spritesheetId);
 }
@@ -462,26 +462,28 @@ uint32_t GameServer::SpawnProjectile(uint32_t mapId, Vector2 position, Vector2 d
 {
     uint32_t bulletId = SpawnEntity(data::ENTITY_PROJECTILE);
     if (bulletId) {
-        size_t bulletIndex = entityDb->FindEntityIndex(bulletId);
-        data::Entity &bulletEntity = entityDb->entities[bulletIndex];
-        data::AspectPhysics &bulletPhysics = entityDb->physics[bulletIndex];
-        data::Sprite &bulletSprite = entityDb->sprite[bulletIndex];
+        size_t entityIndex = entityDb->FindEntityIndex(bulletId);
+        data::Entity &entity = entityDb->entities[entityIndex];
+        data::AspectPhysics &ePhysics = entityDb->physics [entityIndex];
+        data::AspectSprite  &eSprite  = entityDb->sprite  [entityIndex];
 
         // [Entity] position
-        bulletEntity.position = position;
-        bulletEntity.mapId = mapId;
+        entity.position = position;
+        entity.mapId = mapId;
 
-        // [Physics] shoot in facing bulletDirection
-        Vector2 bulletDirection = Vector2Scale(direction, 100);
+        // [Physics] shoot in facing direction
+        Vector2 dir = Vector2Scale(direction, 100);
         // [Physics] add a bit of random spread
-        bulletDirection.x += GetRandomValue(-20, 20);
-        bulletDirection.y += GetRandomValue(-20, 20);
-        bulletDirection = Vector2Normalize(bulletDirection);
-        Vector2 bulletVelocity = Vector2Scale(bulletDirection, 200); //GetRandomValue(800, 1000));;
+        dir.x += GetRandomValue(-20, 20);
+        dir.y += GetRandomValue(-20, 20);
+        dir = Vector2Normalize(dir);
+        Vector2 velocity = Vector2Scale(dir, 200); //GetRandomValue(800, 1000));;
         // [Physics] random speed
-        bulletPhysics.velocity = bulletVelocity;
-        bulletPhysics.drag = 0.02f;
-        bulletSprite.anims[data::DIR_N] = data::GFX_ANIM_PRJ_FIREBALL;
+        ePhysics.velocity = velocity;
+        ePhysics.drag = 0.02f;
+
+        eSprite.sprite = data::SPRITE_PRJ_FIREBALL;
+        //eSprite.direction = data::DIR_E;
 
         BroadcastEntitySpawn(bulletId);
         return bulletId;
@@ -505,8 +507,9 @@ void GameServer::UpdateServerPlayers(void)
         if (inputCmd) {
             size_t playerIndex = entityDb->FindEntityIndex(player.entityId);
             if (playerIndex) {
-                data::AspectCombat &playerCombat = entityDb->combat[playerIndex];
-                data::AspectPhysics &playerPhysics = entityDb->physics[playerIndex];
+                data::AspectCombat &playerCombat   = entityDb->combat  [playerIndex];
+                data::AspectPhysics &playerPhysics = entityDb->physics [playerIndex];
+
                 Vector2 moveForce = inputCmd->GenerateMoveForce(playerPhysics.speed);
                 playerPhysics.ApplyForce(moveForce);
 
@@ -553,36 +556,36 @@ void GameServer::TickSpawnTownNPCs(uint32_t mapId)
             if (entityId) {
                 size_t entityIndex = entityDb->FindEntityIndex(entityId);
                 data::Entity &entity = entityDb->entities[entityIndex];
-                data::AspectCollision &collision = entityDb->collision[entityIndex];
-                data::AspectLife &life = entityDb->life[entityIndex];
-                data::AspectPathfind &pathfind = entityDb->pathfind[entityIndex];
-                data::AspectPhysics &physics = entityDb->physics[entityIndex];
-                data::Sprite &sprite = entityDb->sprite[entityIndex];
+                data::AspectCollision &eCollision = entityDb->collision [entityIndex];
+                data::AspectLife      &eLife      = entityDb->life      [entityIndex];
+                data::AspectPathfind  &ePathfind  = entityDb->pathfind  [entityIndex];
+                data::AspectPhysics   &ePhysics   = entityDb->physics   [entityIndex];
+                data::AspectSprite    &eSprite    = entityDb->sprite    [entityIndex];
 
                 entity.type = data::ENTITY_NPC;
                 entity.mapId = mapId;
                 entity.position = { 0, 0 };
 
-                collision.radius = 10;
+                eCollision.radius = 10;
 
-                life.maxHealth = 100;
-                life.health = life.maxHealth;
+                eLife.maxHealth = 100;
+                eLife.health = eLife.maxHealth;
 
                 Tilemap *map = FindMap(mapId);
                 if (map) {
-                    pathfind.active = false;
-                    pathfind.pathId = 0;
-                    AiPathNode *aiPathNode = map->GetPathNode(pathfind.pathId, 0);
+                    ePathfind.active = false;
+                    ePathfind.pathId = 0;
+                    AiPathNode *aiPathNode = map->GetPathNode(ePathfind.pathId, 0);
                     if (aiPathNode) {
                         entity.position = aiPathNode->pos;
                     }
                 }
 
-                physics.speed = GetRandomValue(300, 600);
-                physics.drag = 1.0f;
+                ePhysics.speed = GetRandomValue(300, 600);
+                ePhysics.drag = 1.0f;
 
-                sprite.anims[data::DIR_E] = data::GFX_ANIM_NPC_LILY_E;
-                sprite.anims[data::DIR_W] = data::GFX_ANIM_NPC_LILY_W;
+                eSprite.sprite = data::SPRITE_NPC_LILY;
+                //eSprite.direction = data::DIR_E;
 
                 BroadcastEntitySpawn(entityId);
                 eid_bots[i] = entityId;
@@ -609,11 +612,11 @@ void GameServer::TickSpawnCaveNPCs(uint32_t mapId)
             if (entityId) {
                 size_t entityIndex = entityDb->FindEntityIndex(entityId);
                 data::Entity &entity = entityDb->entities[entityIndex];
-                data::AspectCollision &collision = entityDb->collision[entityIndex];
-                data::AspectLife &life = entityDb->life[entityIndex];
-                data::AspectPathfind &pathfind = entityDb->pathfind[entityIndex];
-                data::AspectPhysics &physics = entityDb->physics[entityIndex];
-                data::Sprite &sprite = entityDb->sprite[entityIndex];
+                data::AspectCollision &collision = entityDb->collision [entityIndex];
+                data::AspectLife      &life      = entityDb->life      [entityIndex];
+                data::AspectPathfind  &pathfind  = entityDb->pathfind  [entityIndex];
+                data::AspectPhysics   &physics   = entityDb->physics   [entityIndex];
+                data::AspectSprite    &sprite    = entityDb->sprite    [entityIndex];
 
                 entity.type = data::ENTITY_NPC;
                 entity.mapId = mapId;
@@ -627,8 +630,8 @@ void GameServer::TickSpawnCaveNPCs(uint32_t mapId)
                 physics.speed = GetRandomValue(300, 600);
                 physics.drag = 8.0f;
 
-                sprite.anims[data::DIR_E] = data::GFX_ANIM_NPC_LILY_E;
-                sprite.anims[data::DIR_W] = data::GFX_ANIM_NPC_LILY_W;
+                sprite.sprite = data::SPRITE_NPC_LILY;
+                //eSprite.direction = data::DIR_E;
 
                 BroadcastEntitySpawn(entityId);
                 eid_bots[i] = entityId;
@@ -708,7 +711,7 @@ void GameServer::TickEntityProjectile(uint32_t entityId, double dt)
     assert(entityIndex);
 
     // Gravity
-    //AspectPhysics &physics = map.physics[entityIndex];
+    //AspectPhysics &ePhysics = map.ePhysics[entityIndex];
     //playerEntity.ApplyForce({ 0, 5 });
 
     entityDb->EntityTick(entityId, dt);
@@ -879,11 +882,11 @@ void GameServer::Tick(void)
             TickResolveEntityWarpCollisions(*map, entity.id, now);
         }
 
-        data::Sprite &sprite = entityDb->sprite[entityIndex];
-        data::AspectPhysics &physics = entityDb->physics[entityIndex];
+        data::AspectSprite &eSprite = entityDb->sprite[entityIndex];
+        data::AspectPhysics &ePhysics = entityDb->physics[entityIndex];
 
         bool newlySpawned = entity.spawnedAt == now;
-        data::UpdateSprite(sprite, entity.type, physics.velocity, SV_TICK_DT, newlySpawned);
+        data::UpdateSprite(eSprite, entity.type, ePhysics.velocity, SV_TICK_DT, newlySpawned);
     }
 
     tick++;
@@ -898,10 +901,10 @@ void GameServer::SerializeSnapshot(uint32_t entityId, Msg_S_EntitySnapshot &enti
     assert(entityIndex);
     if (!entityIndex) return;
 
-    data::Entity          &entity    = entityDb->entities[entityIndex];
-    data::AspectCollision &collision = entityDb->collision[entityIndex];
-    data::AspectPhysics   &physics   = entityDb->physics[entityIndex];
-    data::AspectLife      &life      = entityDb->life[entityIndex];
+    data::Entity          &entity     = entityDb->entities  [entityIndex];
+    data::AspectCollision &eCollision = entityDb->collision [entityIndex];
+    data::AspectPhysics   &ePhysics   = entityDb->physics   [entityIndex];
+    data::AspectLife      &eLife      = entityDb->life      [entityIndex];
 
     entitySnapshot.serverTime = lastTickedAt;
 
@@ -912,16 +915,16 @@ void GameServer::SerializeSnapshot(uint32_t entityId, Msg_S_EntitySnapshot &enti
     entitySnapshot.position = entity.position;
 
     // Collision
-    //entitySnapshot.radius = collision.radius;
+    //entitySnapshot.radius = eCollision.radius;
 
     // Physics
-    //entitySnapshot.drag     = bulletPhysics.drag;
-    entitySnapshot.speed    = physics.speed;
-    entitySnapshot.velocity = physics.velocity;
+    //entitySnapshot.drag     = ePhysics.drag;
+    entitySnapshot.speed    = ePhysics.speed;
+    entitySnapshot.velocity = ePhysics.velocity;
 
     // Life
-    entitySnapshot.maxHealth = life.maxHealth;
-    entitySnapshot.health    = life.health;
+    entitySnapshot.maxHealth = eLife.maxHealth;
+    entitySnapshot.health    = eLife.health;
 }
 void GameServer::SendClientSnapshots(void)
 {

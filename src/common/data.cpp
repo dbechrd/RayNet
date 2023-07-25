@@ -134,7 +134,7 @@ namespace data {
         };
 
         GfxAnim gfxAnims[] = {
-            // id                         sound effect       frmRate  frmCount  frmDelay    frames
+            // id                         sound effect       frmRate  frmCount  frmDelay  frames
             { GFX_ANIM_NONE },
 
             // playable characters
@@ -215,6 +215,16 @@ namespace data {
             { MATERIAL_WATER, SFX_FILE_FOOTSTEP_GRASS },
         };
 
+        Sprite sprites[] = {
+            { SPRITE_NONE },
+            // id                    anims
+            //                       N                      E                    S              W                    NE             SE             SW             NW
+            { SPRITE_CHR_MAGE,     { GFX_ANIM_NONE,         GFX_ANIM_CHR_MAGE_E, GFX_ANIM_NONE, GFX_ANIM_CHR_MAGE_W, GFX_ANIM_NONE, GFX_ANIM_NONE, GFX_ANIM_NONE, GFX_ANIM_NONE } },
+            { SPRITE_NPC_LILY,     { GFX_ANIM_NONE,         GFX_ANIM_NPC_LILY_E, GFX_ANIM_NONE, GFX_ANIM_NPC_LILY_W, GFX_ANIM_NONE, GFX_ANIM_NONE, GFX_ANIM_NONE, GFX_ANIM_NONE } },
+            { SPRITE_OBJ_CAMPFIRE, { GFX_ANIM_OBJ_CAMPFIRE, GFX_ANIM_NONE,       GFX_ANIM_NONE, GFX_ANIM_NONE,       GFX_ANIM_NONE, GFX_ANIM_NONE, GFX_ANIM_NONE, GFX_ANIM_NONE } },
+            { SPRITE_PRJ_FIREBALL, { GFX_ANIM_PRJ_FIREBALL, GFX_ANIM_NONE,       GFX_ANIM_NONE, GFX_ANIM_NONE,       GFX_ANIM_NONE, GFX_ANIM_NONE, GFX_ANIM_NONE, GFX_ANIM_NONE } },
+        };
+
         TileType tileTypes[] = {
             { TILE_NONE },
             //id               gfx/anim                 material        auto_mask   flags
@@ -285,36 +295,55 @@ namespace data {
         };
     }
 
+    void ReadFileIntoDataBuffer(std::string filename, DatBuffer &datBuffer)
+    {
+        uint32_t bytesRead = 0;
+        datBuffer.bytes = LoadFileData(filename.c_str(), &bytesRead);
+        datBuffer.length = bytesRead;
+    }
+
+    void FreeDataBuffer(DatBuffer &datBuffer)
+    {
+        if (datBuffer.length) {
+            MemFree(datBuffer.bytes);
+            datBuffer = {};
+        }
+    }
+
     void Init(void)
     {
-        //// Ensure every array element is initialized and in contiguous order by id
-        //#define ID_CHECK(type, name, arr) \
-        //    for (type name : arr) { \
-        //        static int i = 0; \
-        //        assert(name.id == i++); \
-        //    }
+        // Ensure every array element is initialized and in contiguous order by id
+        #define ID_CHECK(type, name, arr) \
+            for (type name : arr) { \
+                static int i = 0; \
+                assert(name.id == i++); \
+            }
 
-        //ID_CHECK(GfxFile  &, gfxFile,  gfxFiles);
-        //ID_CHECK(MusFile  &, musFile,  musFiles);
-        //ID_CHECK(SfxFile  &, sfxFile,  sfxFiles);
-        //ID_CHECK(GfxFrame &, gfxFrame, gfxFrames);
-        //ID_CHECK(GfxAnim  &, gfxAnim,  gfxAnims);
-        //ID_CHECK(Material &, material, materials);
-        //ID_CHECK(TileType &, tileType, tileTypes);
-        //#undef ID_CHECK
+        ID_CHECK(GfxFile  &, gfxFile,  save::gfxFiles);
+        ID_CHECK(MusFile  &, musFile,  save::musFiles);
+        ID_CHECK(SfxFile  &, sfxFile,  save::sfxFiles);
+        ID_CHECK(GfxFrame &, gfxFrame, save::gfxFrames);
+        ID_CHECK(GfxAnim  &, gfxAnim,  save::gfxAnims);
+        ID_CHECK(Material &, material, save::materials);
+        ID_CHECK(Sprite   &, sprite,   save::sprites);
+        ID_CHECK(TileType &, tileType, save::tileTypes);
+        #undef ID_CHECK
 
-        //for (GfxFile &gfxFile : gfxFiles) {
-        //    if (!gfxFile.path.size()) continue;
-        //    gfxFile.texture = LoadTexture(gfxFile.path.c_str());
-        //}
-        //for (MusFile &musFile : musFiles) {
-        //    if (!musFile.path.size()) continue;
-        //    musFile.music = LoadMusicStream(musFile.path.c_str());
-        //}
-        //for (SfxFile &sfxFile : sfxFiles) {
-        //    if (!sfxFile.path.size()) continue;
-        //    sfxFile.sound = LoadSound(sfxFile.path.c_str());
-        //}
+        for (GfxFile &gfxFile : save::gfxFiles) {
+            if (!gfxFile.path.size()) continue;
+            ReadFileIntoDataBuffer(gfxFile.path, gfxFile.data_buffer);
+            gfxFile.texture = LoadTexture(gfxFile.path.c_str());
+        }
+        for (MusFile &musFile : save::musFiles) {
+            if (!musFile.path.size()) continue;
+            ReadFileIntoDataBuffer(musFile.path, musFile.data_buffer);
+            musFile.music = LoadMusicStream(musFile.path.c_str());
+        }
+        for (SfxFile &sfxFile : save::sfxFiles) {
+            if (!sfxFile.path.size()) continue;
+            ReadFileIntoDataBuffer(sfxFile.path, sfxFile.data_buffer);
+            sfxFile.sound = LoadSound(sfxFile.path.c_str());
+        }
 
         //// Generate checkerboard image in slot 0 as a placeholder for when other images fail to load
         //Image placeholderImg = GenImageChecked(16, 16, 4, 4, MAGENTA, WHITE);
@@ -334,21 +363,38 @@ namespace data {
         //}
 
         Err err;
-        err = Save("dat/test.dat");
+        err = SavePack("dat/test.dat");
         if (err) {
             assert(!err);
             TraceLog(LOG_ERROR, "Failed to save data file.\n");
         }
-        err = Load("dat/test.dat", pack1);
+        err = LoadPack("dat/test.dat", pack1);
         if (err) {
             assert(!err);
             TraceLog(LOG_ERROR, "Failed to load data file.\n");
         }
+
+#if 0
+        DatBuffer compressMe{};
+        uint32_t bytesRead = 0;
+        compressMe.bytes = LoadFileData("dat/test.dat", &bytesRead);
+        compressMe.length = bytesRead;
+
+        DatBuffer compressed{};
+        int32_t compressedSize = 0;
+        compressed.bytes = CompressData(compressMe.bytes, compressMe.length, &compressedSize);
+        compressed.length = compressedSize;
+
+        SaveFileData("dat/test.smol", compressed.bytes, compressed.length);
+
+        MemFree(compressed.bytes);
+        MemFree(compressMe.bytes);
+#endif
     }
 
     void Free(void)
     {
-        Unload(pack1);
+        UnloadPack(pack1);
     }
 
 #define PROC(v) stream.process(&v, sizeof(v), 1, stream.f);
@@ -361,22 +407,61 @@ namespace data {
         stream.process(str.data(), 1, len, stream.f);
     }
 
+    void Process(PackStream &stream, DatBuffer &buffer)
+    {
+        PROC(buffer.length);
+        if (buffer.length) {
+            if (!buffer.bytes) {
+                assert(stream.mode == PACK_MODE_READ);
+                buffer.bytes = (uint8_t *)MemAlloc(buffer.length);
+            }
+            stream.process(buffer.bytes, 1, buffer.length, stream.f);
+        }
+    }
+
     void Process(PackStream &stream, GfxFile &gfxFile)
     {
         PROC(gfxFile.id);
         Process(stream, gfxFile.path);
+        if (stream.pack->version >= 2) {
+            Process(stream, gfxFile.data_buffer);
+        }
+        if (stream.mode == PACK_MODE_READ && !gfxFile.data_buffer.length && !gfxFile.path.empty()) {
+            ReadFileIntoDataBuffer(gfxFile.path.c_str(), gfxFile.data_buffer);
+        }
     }
 
     void Process(PackStream &stream, MusFile &musFile)
     {
         PROC(musFile.id);
         Process(stream, musFile.path);
+
+        // NOTE(dlb): Music is streaming, don't read whole file into memory
+        //if (stream.pack->version >= 2) {
+        //    Process(stream, musFile.data_buffer);
+        //}
+        //if (stream.mode == PACK_MODE_READ && !musFile.data_buffer.length && !musFile.path.empty()) {
+        //    ReadFileIntoDataBuffer(musFile.path.c_str(), musFile.data_buffer);
+        //}
     }
 
     void Process(PackStream &stream, SfxFile &sfxFile)
     {
         PROC(sfxFile.id);
         Process(stream, sfxFile.path);
+        if (stream.pack->version >= 2) {
+            Process(stream, sfxFile.data_buffer);
+        }
+        if (stream.pack->version >= 3) {
+            PROC(sfxFile.pitch_variance);
+            PROC(sfxFile.multi);
+        }
+        if (stream.mode == PACK_MODE_READ) {
+            printf("");
+        }
+        if (stream.mode == PACK_MODE_READ && !sfxFile.data_buffer.length && !sfxFile.path.empty()) {
+            ReadFileIntoDataBuffer(sfxFile.path.c_str(), sfxFile.data_buffer);
+        }
     }
 
     void Process(PackStream &stream, GfxFrame &gfxFrame)
@@ -396,6 +481,7 @@ namespace data {
         PROC(gfxAnim.frameRate);
         PROC(gfxAnim.frameCount);
         PROC(gfxAnim.frameDelay);
+        assert(gfxAnim.frameCount <= ARRAY_SIZE(gfxAnim.frames));
         for (int i = 0; i < gfxAnim.frameCount; i++) {
             PROC(gfxAnim.frames[i]);
         }
@@ -405,6 +491,16 @@ namespace data {
     {
         PROC(material.id);
         PROC(material.footstepSnd);
+    }
+
+    void Process(PackStream &stream, Sprite &sprite) {
+        if (stream.pack->version >= 4) {
+            PROC(sprite.id);
+            assert(ARRAY_SIZE(sprite.anims) == 8); // if this changes, version must increment
+            for (int i = 0; i < 8; i++) {
+                PROC(sprite.anims[i]);
+            }
+        }
     }
 
     void Process(PackStream &stream, TileType &tileType)
@@ -434,7 +530,7 @@ namespace data {
     void Process(PackStream &stream, AspectPhysics &physics) {
     }
 
-    void Process(PackStream &stream, Sprite &sprite) {
+    void Process(PackStream &stream, AspectSprite &sprite) {
     }
 
     void Process(PackStream &stream, AspectWarp &warp)
@@ -499,7 +595,11 @@ namespace data {
     Err Process(PackStream &stream)
     {
         static const int MAGIC = 0x9291BBDB;
-        static const int VERSION = 1;
+        // v1: the O.G. pack file
+        // v2: add data buffers for gfx/mus/sfx
+        // v3: add pitch_variance / multi to sfx
+        // v4: add sprite resources
+        static const int VERSION = 4;
 
         Err err = RN_SUCCESS;
 
@@ -521,7 +621,7 @@ namespace data {
         pack.tocOffset = 0;
         PROC(pack.tocOffset);
 
-        if (stream.process == (ProcessFn)fwrite) {
+        if (stream.mode == PACK_MODE_WRITE) {
 
 #define WRITE_ARRAY(arr) \
     for (auto &i : arr) { \
@@ -537,6 +637,7 @@ namespace data {
             WRITE_ARRAY(save::gfxFrames);
             WRITE_ARRAY(save::gfxAnims);
             WRITE_ARRAY(save::materials);
+            WRITE_ARRAY(save::sprites);
             WRITE_ARRAY(save::tileTypes);
             WRITE_ARRAY(pack.entities);
 
@@ -565,12 +666,13 @@ namespace data {
                 typeCounts[tocEntry.dtype]++;
             }
 
-            pack.gfxFiles.resize(typeCounts[DAT_TYP_GFX_FILE]);
-            pack.musFiles.resize(typeCounts[DAT_TYP_MUS_FILE]);
-            pack.sfxFiles.resize(typeCounts[DAT_TYP_SFX_FILE]);
+            pack.gfxFiles .resize(typeCounts[DAT_TYP_GFX_FILE]);
+            pack.musFiles .resize(typeCounts[DAT_TYP_MUS_FILE]);
+            pack.sfxFiles .resize(typeCounts[DAT_TYP_SFX_FILE]);
             pack.gfxFrames.resize(typeCounts[DAT_TYP_GFX_FRAME]);
-            pack.gfxAnims.resize(typeCounts[DAT_TYP_GFX_ANIM]);
+            pack.gfxAnims .resize(typeCounts[DAT_TYP_GFX_ANIM]);
             pack.materials.resize(typeCounts[DAT_TYP_MATERIAL]);
+            pack.sprites  .resize(typeCounts[DAT_TYP_SPRITE]);
             pack.tileTypes.resize(typeCounts[DAT_TYP_TILE_TYPE]);
 
             assert(typeCounts[DAT_TYP_ENTITY] == SV_MAX_ENTITIES);
@@ -595,6 +697,7 @@ namespace data {
                     case DAT_TYP_GFX_FRAME: Process(stream, pack.gfxFrames[typeNextIndex[tocEntry.dtype]++]); break;
                     case DAT_TYP_GFX_ANIM:  Process(stream, pack.gfxAnims [typeNextIndex[tocEntry.dtype]++]); break;
                     case DAT_TYP_MATERIAL:  Process(stream, pack.materials[typeNextIndex[tocEntry.dtype]++]); break;
+                    case DAT_TYP_SPRITE:    Process(stream, pack.sprites  [typeNextIndex[tocEntry.dtype]++]); break;
                     case DAT_TYP_TILE_TYPE: Process(stream, pack.tileTypes[typeNextIndex[tocEntry.dtype]++]); break;
                     case DAT_TYP_ENTITY:    Process(stream, pack.entities [typeNextIndex[tocEntry.dtype]++]); break;
                 }
@@ -605,11 +708,12 @@ namespace data {
     }
 #undef PROC
 
-    Err Save(const char *filename)
+    Err SavePack(const char *filename)
     {
         Err err = RN_SUCCESS;
 
         PackStream stream{};
+        stream.mode = PACK_MODE_WRITE;
         stream.f = fopen(filename, "wb");
         if (!stream.f) {
             return RN_BAD_FILE_WRITE;
@@ -645,13 +749,14 @@ namespace data {
         ID_CHECK(GfxFrame &, gfxFrame, pack.gfxFrames);
         ID_CHECK(GfxAnim  &, gfxAnim,  pack.gfxAnims);
         ID_CHECK(Material &, material, pack.materials);
+        ID_CHECK(Sprite   &, sprite,   pack.sprites);
         ID_CHECK(TileType &, tileType, pack.tileTypes);
 #undef ID_CHECK
 
         return err;
     }
 
-    Err Preload(Pack &pack)
+    Err LoadResources(Pack &pack)
     {
         Err err = RN_SUCCESS;
 
@@ -690,11 +795,12 @@ namespace data {
         return err;
     }
 
-    Err Load(const char *filename, Pack &pack)
+    Err LoadPack(const char *filename, Pack &pack)
     {
         Err err = RN_SUCCESS;
 
         PackStream stream{};
+        stream.mode = PACK_MODE_READ;
         stream.f = fopen(filename, "rb");
         if (!stream.f) {
             return RN_BAD_FILE_READ;
@@ -709,7 +815,7 @@ namespace data {
             err = Validate(*stream.pack);
             if (err) break;
 
-            err = Preload(*stream.pack);
+            err = LoadResources(*stream.pack);
             if (err) break;
         } while(0);
 
@@ -717,16 +823,19 @@ namespace data {
         return err;
     }
 
-    void Unload(Pack &pack)
+    void UnloadPack(Pack &pack)
     {
         for (GfxFile &gfxFile : pack.gfxFiles) {
             UnloadTexture(gfxFile.texture);
+            FreeDataBuffer(gfxFile.data_buffer);
         }
         for (MusFile &musFile : pack.musFiles) {
             UnloadMusicStream(musFile.music);
+            FreeDataBuffer(musFile.data_buffer);
         }
         for (SfxFile &sfxFile : pack.sfxFiles) {
             UnloadSound(sfxFile.sound);
+            FreeDataBuffer(sfxFile.data_buffer);
         }
     }
 
@@ -743,48 +852,51 @@ namespace data {
         }
     }
 
-    const GfxFrame &GetSpriteFrame(const Sprite &sprite)
+    const GfxFrame &GetSpriteFrame(const AspectSprite &eSprite)
     {
-        const GfxAnimId animId = sprite.anims[sprite.dir];
+        const Sprite sprite = pack1.sprites[eSprite.sprite];
+        const GfxAnimId animId = sprite.anims[eSprite.direction];
         const GfxAnim &anim = pack1.gfxAnims[animId];
-        const GfxFrameId frameId = anim.frames[sprite.animFrame];
+        const GfxFrameId frameId = anim.frames[eSprite.animFrame];
         const GfxFrame &frame = pack1.gfxFrames[frameId];
         return frame;
     }
-    void UpdateSprite(Sprite &sprite, EntityType entityType, Vector2 velocity, double dt, bool newlySpawned)
+    void UpdateSprite(AspectSprite &eSprite, EntityType entityType, Vector2 velocity, double dt, bool newlySpawned)
     {
-        sprite.animAccum += dt;
+        eSprite.animAccum += dt;
 
         // TODO: Make this more general and stop taking in entityType.
         switch (entityType) {
             case ENTITY_PLAYER: case ENTITY_NPC: {
                 if (velocity.x > 0) {
-                    sprite.dir = data::DIR_E;
+                    eSprite.direction = data::DIR_E;
                 } else {
-                    sprite.dir = data::DIR_W;
+                    eSprite.direction = data::DIR_W;
                 }
                 break;
             }
         }
 
-        const GfxAnimId animId = sprite.anims[sprite.dir];
+        const Sprite sprite = pack1.sprites[eSprite.sprite];
+        const GfxAnimId animId = sprite.anims[eSprite.direction];
         const GfxAnim &anim = pack1.gfxAnims[animId];
         const double animFrameTime = (1.0 / anim.frameRate) * anim.frameDelay;
-        if (sprite.animAccum >= animFrameTime) {
-            sprite.animFrame++;
-            if (sprite.animFrame >= anim.frameCount) {
-                sprite.animFrame = 0;
+        if (eSprite.animAccum >= animFrameTime) {
+            eSprite.animFrame++;
+            if (eSprite.animFrame >= anim.frameCount) {
+                eSprite.animFrame = 0;
             }
-            sprite.animAccum -= animFrameTime;
+            eSprite.animAccum -= animFrameTime;
         }
 
         if (newlySpawned && anim.sound) {
             PlaySound(anim.sound);
         }
     }
-    void ResetSprite(Sprite &sprite)
+    void ResetSprite(AspectSprite &eSprite)
     {
-        const GfxAnimId animId = sprite.anims[sprite.dir];
+        const Sprite sprite = pack1.sprites[eSprite.sprite];
+        const GfxAnimId animId = sprite.anims[eSprite.direction];
         const GfxAnim &anim = pack1.gfxAnims[animId];
         if (anim.sound) {
             const SfxFile &sfxFile = pack1.sfxFiles[anim.sound];
@@ -793,12 +905,12 @@ namespace data {
             }
         }
 
-        sprite.animFrame = 0;
-        sprite.animAccum = 0;
+        eSprite.animFrame = 0;
+        eSprite.animAccum = 0;
     }
-    void DrawSprite(const Sprite &sprite, Vector2 pos)
+    void DrawSprite(const AspectSprite &eSprite, Vector2 pos)
     {
-        const GfxFrame &frame = GetSpriteFrame(sprite);
+        const GfxFrame &frame = GetSpriteFrame(eSprite);
         const GfxFile &file = pack1.gfxFiles[frame.gfx];
         const Rectangle frameRect{ (float)frame.x, (float)frame.y, (float)frame.w, (float)frame.h };
         //pos.x = floor(pos.x);

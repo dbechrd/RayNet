@@ -14,7 +14,7 @@ struct EntityDB {
     std::vector<data::AspectLife>      life      {SV_MAX_ENTITIES};
     std::vector<data::AspectPathfind>  pathfind  {SV_MAX_ENTITIES};
     std::vector<data::AspectPhysics>   physics   {SV_MAX_ENTITIES};
-    std::vector<data::Sprite>          sprite    {SV_MAX_ENTITIES};
+    std::vector<data::AspectSprite>    sprite    {SV_MAX_ENTITIES};
     std::vector<data::AspectWarp>      warp      {SV_MAX_ENTITIES};
 
     std::vector<AspectGhost>           ghosts    {SV_MAX_ENTITIES};

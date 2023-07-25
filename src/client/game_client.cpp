@@ -55,7 +55,7 @@ Err GameClient::TryConnect(void)
     world = new ClientWorld;
     world->camera2d.zoom = 2.0f;
     world->musBackgroundMusic = data::MUS_FILE_AMBIENT_OUTDOORS;
-    //world->map.Load(LEVEL_001, now);
+    //world->map.LoadPack(LEVEL_001, now);
     entityDb = new EntityDB;
     return RN_SUCCESS;
 }
@@ -180,9 +180,9 @@ void GameClient::ProcessMessages(void)
                     if (map) {
                         map->CL_DeserializeChunk(*msg);
                     } else {
-                        // TODO: Load the right map by ID somehow
+                        // TODO: LoadPack the right map by ID somehow
                         //if (msg->mapId != world->map.id) {
-                        //    //world->map.Load(tileChunk.mapName, 0);
+                        //    //world->map.LoadPack(tileChunk.mapName, 0);
                         //}
                     }
                     break;

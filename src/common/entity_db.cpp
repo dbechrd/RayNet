@@ -130,8 +130,8 @@ Rectangle EntityDB::EntityRect(uint32_t entityId)
     size_t entityIndex = FindEntityIndex(entityId);
     if (entityIndex) {
         data::Entity &entity = entities[entityIndex];
-        data::Sprite &sprite = this->sprite[entityIndex];
-        EntitySpriteTuple data{ entity, sprite };
+        data::AspectSprite &eSprite = sprite[entityIndex];
+        EntitySpriteTuple data{ entity, eSprite };
         return EntityRect(data);
     }
     return {};
@@ -203,11 +203,11 @@ void EntityDB::EntityTick(uint32_t entityId, double dt)
     if (!entityIndex) return;
 
     data::Entity &entity = entities[entityIndex];
-    data::AspectLife &life = this->life[entityIndex];
-    data::AspectPhysics &physics = this->physics[entityIndex];
-    data::Sprite &sprite = this->sprite[entityIndex];
+    data::AspectLife &eLife = life[entityIndex];
+    data::AspectPhysics &ePhysics = physics[entityIndex];
+    data::AspectSprite &eSprite = sprite[entityIndex];
 
-    EntityTickTuple data{ entity, life, physics, sprite };
+    EntityTickTuple data{ entity, eLife, ePhysics, eSprite };
     EntityTick(data, dt);
 }
 
@@ -284,9 +284,9 @@ void EntityDB::DrawEntity(uint32_t entityId)
     size_t entityIndex = FindEntityIndex(entityId);
     if (entityIndex) {
         data::Entity &entity = entities[entityIndex];
-        data::Sprite &sprite = this->sprite[entityIndex];
-        EntitySpriteTuple data{ entity, sprite };
+        data::AspectSprite &eSprite = sprite[entityIndex];
+        EntitySpriteTuple data{ entity, eSprite };
         const Rectangle rect = EntityRect(data);
-        data::DrawSprite(sprite, { rect.x, rect.y });
+        data::DrawSprite(eSprite, { rect.x, rect.y });
     }
 }

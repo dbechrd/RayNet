@@ -642,7 +642,7 @@ RLAPI void rlSetBlendFactorsSeparate(int glSrcRGB, int glDstRGB, int glSrcAlpha,
 // rlgl initialization functions
 RLAPI void rlglInit(int width, int height);             // Initialize rlgl (buffers, shaders, textures, states)
 RLAPI void rlglClose(void);                             // De-initialize rlgl (buffers, shaders, textures)
-RLAPI void rlLoadExtensions(void *loader);              // Load OpenGL extensions (loader function required)
+RLAPI void rlLoadExtensions(void *loader);              // LoadPack OpenGL extensions (loader function required)
 RLAPI int rlGetVersion(void);                           // Get current OpenGL version
 RLAPI void rlSetFramebufferWidth(int width);            // Set current framebuffer width
 RLAPI int rlGetFramebufferWidth(void);                  // Get default framebuffer width
@@ -656,8 +656,8 @@ RLAPI int *rlGetShaderLocsDefault(void);                // Get default shader lo
 // Render batch management
 // NOTE: rlgl provides a default render batch to behave like OpenGL 1.1 immediate mode
 // but this render batch API is exposed in case of custom batches are required
-RLAPI rlRenderBatch rlLoadRenderBatch(int numBuffers, int bufferElements);  // Load a render batch system
-RLAPI void rlUnloadRenderBatch(rlRenderBatch batch);                        // Unload render batch system
+RLAPI rlRenderBatch rlLoadRenderBatch(int numBuffers, int bufferElements);  // LoadPack a render batch system
+RLAPI void rlUnloadRenderBatch(rlRenderBatch batch);                        // UnloadPack render batch system
 RLAPI void rlDrawRenderBatch(rlRenderBatch *batch);                         // Draw render batch data (Update->Draw->Reset)
 RLAPI void rlSetRenderBatchActive(rlRenderBatch *batch);                    // Set the active render batch for rlgl (NULL for default internal)
 RLAPI void rlDrawRenderBatchActive(void);                                   // Update and draw internal render batch
@@ -668,9 +668,9 @@ RLAPI void rlSetTexture(unsigned int id);               // Set current texture f
 //------------------------------------------------------------------------------------------------------------------------
 
 // Vertex buffers management
-RLAPI unsigned int rlLoadVertexArray(void);                               // Load vertex array (vao) if supported
-RLAPI unsigned int rlLoadVertexBuffer(const void *buffer, int size, bool dynamic);            // Load a vertex buffer attribute
-RLAPI unsigned int rlLoadVertexBufferElement(const void *buffer, int size, bool dynamic);     // Load a new attributes element buffer
+RLAPI unsigned int rlLoadVertexArray(void);                               // LoadPack vertex array (vao) if supported
+RLAPI unsigned int rlLoadVertexBuffer(const void *buffer, int size, bool dynamic);            // LoadPack a vertex buffer attribute
+RLAPI unsigned int rlLoadVertexBufferElement(const void *buffer, int size, bool dynamic);     // LoadPack a new attributes element buffer
 RLAPI void rlUpdateVertexBuffer(unsigned int bufferId, const void *data, int dataSize, int offset);     // Update GPU buffer with new data
 RLAPI void rlUpdateVertexBufferElements(unsigned int id, const void *data, int dataSize, int offset);   // Update vertex buffer elements with new data
 RLAPI void rlUnloadVertexArray(unsigned int vaoId);
@@ -684,28 +684,28 @@ RLAPI void rlDrawVertexArrayInstanced(int offset, int count, int instances);
 RLAPI void rlDrawVertexArrayElementsInstanced(int offset, int count, const void *buffer, int instances);
 
 // Textures management
-RLAPI unsigned int rlLoadTexture(const void *data, int width, int height, int format, int mipmapCount); // Load texture in GPU
-RLAPI unsigned int rlLoadTextureDepth(int width, int height, bool useRenderBuffer);               // Load depth texture/renderbuffer (to be attached to fbo)
-RLAPI unsigned int rlLoadTextureCubemap(const void *data, int size, int format);                        // Load texture cubemap
+RLAPI unsigned int rlLoadTexture(const void *data, int width, int height, int format, int mipmapCount); // LoadPack texture in GPU
+RLAPI unsigned int rlLoadTextureDepth(int width, int height, bool useRenderBuffer);               // LoadPack depth texture/renderbuffer (to be attached to fbo)
+RLAPI unsigned int rlLoadTextureCubemap(const void *data, int size, int format);                        // LoadPack texture cubemap
 RLAPI void rlUpdateTexture(unsigned int id, int offsetX, int offsetY, int width, int height, int format, const void *data);  // Update GPU texture with new data
 RLAPI void rlGetGlTextureFormats(int format, unsigned int *glInternalFormat, unsigned int *glFormat, unsigned int *glType);  // Get OpenGL internal formats
 RLAPI const char *rlGetPixelFormatName(unsigned int format);              // Get name string for pixel format
-RLAPI void rlUnloadTexture(unsigned int id);                              // Unload texture from GPU memory
+RLAPI void rlUnloadTexture(unsigned int id);                              // UnloadPack texture from GPU memory
 RLAPI void rlGenTextureMipmaps(unsigned int id, int width, int height, int format, int *mipmaps); // Generate mipmap data for selected texture
 RLAPI void *rlReadTexturePixels(unsigned int id, int width, int height, int format);              // Read texture pixel data
 RLAPI unsigned char *rlReadScreenPixels(int width, int height);           // Read screen pixel data (color buffer)
 
 // Framebuffer management (fbo)
-RLAPI unsigned int rlLoadFramebuffer(int width, int height);              // Load an empty framebuffer
+RLAPI unsigned int rlLoadFramebuffer(int width, int height);              // LoadPack an empty framebuffer
 RLAPI void rlFramebufferAttach(unsigned int fboId, unsigned int texId, int attachType, int texType, int mipLevel);  // Attach texture/renderbuffer to a framebuffer
 RLAPI bool rlFramebufferComplete(unsigned int id);                        // Verify framebuffer is complete
 RLAPI void rlUnloadFramebuffer(unsigned int id);                          // Delete framebuffer from GPU
 
 // Shaders management
-RLAPI unsigned int rlLoadShaderCode(const char *vsCode, const char *fsCode);    // Load shader from code strings
+RLAPI unsigned int rlLoadShaderCode(const char *vsCode, const char *fsCode);    // LoadPack shader from code strings
 RLAPI unsigned int rlCompileShader(const char *shaderCode, int type);           // Compile custom shader and return shader id (type: RL_VERTEX_SHADER, RL_FRAGMENT_SHADER, RL_COMPUTE_SHADER)
-RLAPI unsigned int rlLoadShaderProgram(unsigned int vShaderId, unsigned int fShaderId); // Load custom shader program
-RLAPI void rlUnloadShaderProgram(unsigned int id);                              // Unload shader program
+RLAPI unsigned int rlLoadShaderProgram(unsigned int vShaderId, unsigned int fShaderId); // LoadPack custom shader program
+RLAPI void rlUnloadShaderProgram(unsigned int id);                              // UnloadPack shader program
 RLAPI int rlGetLocationUniform(unsigned int shaderId, const char *uniformName); // Get shader location uniform
 RLAPI int rlGetLocationAttrib(unsigned int shaderId, const char *attribName);   // Get shader location attribute
 RLAPI void rlSetUniform(int locIndex, const void *value, int uniformType, int count);   // Set shader value uniform
@@ -714,12 +714,12 @@ RLAPI void rlSetUniformSampler(int locIndex, unsigned int textureId);           
 RLAPI void rlSetShader(unsigned int id, int *locs);                             // Set shader currently active (id and locations)
 
 // Compute shader management
-RLAPI unsigned int rlLoadComputeShaderProgram(unsigned int shaderId);           // Load compute shader program
+RLAPI unsigned int rlLoadComputeShaderProgram(unsigned int shaderId);           // LoadPack compute shader program
 RLAPI void rlComputeShaderDispatch(unsigned int groupX, unsigned int groupY, unsigned int groupZ);  // Dispatch compute shader (equivalent to *draw* for graphics pipeline)
 
 // Shader buffer storage object management (ssbo)
-RLAPI unsigned int rlLoadShaderBuffer(unsigned int size, const void *data, int usageHint); // Load shader storage buffer object (SSBO)
-RLAPI void rlUnloadShaderBuffer(unsigned int ssboId);                           // Unload shader storage buffer object (SSBO)
+RLAPI unsigned int rlLoadShaderBuffer(unsigned int size, const void *data, int usageHint); // LoadPack shader storage buffer object (SSBO)
+RLAPI void rlUnloadShaderBuffer(unsigned int ssboId);                           // UnloadPack shader storage buffer object (SSBO)
 RLAPI void rlUpdateShaderBuffer(unsigned int id, const void *data, unsigned int dataSize, unsigned int offset); // Update SSBO buffer data
 RLAPI void rlBindShaderBuffer(unsigned int id, unsigned int index);             // Bind SSBO buffer
 RLAPI void rlReadShaderBuffer(unsigned int id, void *dest, unsigned int count, unsigned int offset); // Read SSBO buffer data (GPU->CPU)
@@ -741,8 +741,8 @@ RLAPI void rlSetMatrixProjectionStereo(Matrix right, Matrix left);        // Set
 RLAPI void rlSetMatrixViewOffsetStereo(Matrix right, Matrix left);        // Set eyes view offsets matrices for stereo rendering
 
 // Quick and dirty cube/quad buffers load->draw->unload
-RLAPI void rlLoadDrawCube(void);     // Load and draw a cube
-RLAPI void rlLoadDrawQuad(void);     // Load and draw a quad
+RLAPI void rlLoadDrawCube(void);     // LoadPack and draw a cube
+RLAPI void rlLoadDrawQuad(void);     // LoadPack and draw a quad
 
 #if defined(__cplusplus)
 }
@@ -1040,8 +1040,8 @@ static PFNGLVERTEXATTRIBDIVISOREXTPROC glVertexAttribDivisor = NULL;
 // Module specific Functions Declaration
 //----------------------------------------------------------------------------------
 #if defined(GRAPHICS_API_OPENGL_33) || defined(GRAPHICS_API_OPENGL_ES2)
-static void rlLoadShaderDefault(void);      // Load default shader
-static void rlUnloadShaderDefault(void);    // Unload default shader
+static void rlLoadShaderDefault(void);      // LoadPack default shader
+static void rlUnloadShaderDefault(void);    // UnloadPack default shader
 #if defined(RLGL_SHOW_GL_DETAILS_INFO)
 static char *rlGetCompressedFormatName(int format); // Get compressed format official GL identifier name
 #endif  // RLGL_SHOW_GL_DETAILS_INFO
@@ -2131,14 +2131,14 @@ void rlglClose(void)
 #if defined(GRAPHICS_API_OPENGL_33) || defined(GRAPHICS_API_OPENGL_ES2)
     rlUnloadRenderBatch(RLGL.defaultBatch);
 
-    rlUnloadShaderDefault();          // Unload default shader
+    rlUnloadShaderDefault();          // UnloadPack default shader
 
-    glDeleteTextures(1, &RLGL.State.defaultTextureId); // Unload default texture
+    glDeleteTextures(1, &RLGL.State.defaultTextureId); // UnloadPack default texture
     TRACELOG(RL_LOG_INFO, "TEXTURE: [ID %i] Default texture unloaded successfully", RLGL.State.defaultTextureId);
 #endif
 }
 
-// Load OpenGL extensions
+// LoadPack OpenGL extensions
 // NOTE: External loader function must be provided
 void rlLoadExtensions(void *loader)
 {
@@ -2470,7 +2470,7 @@ int *rlGetShaderLocsDefault(void)
 
 // Render batch management
 //------------------------------------------------------------------------------------------------
-// Load render batch
+// LoadPack render batch
 rlRenderBatch rlLoadRenderBatch(int numBuffers, int bufferElements)
 {
     rlRenderBatch batch = { 0 };
@@ -2594,7 +2594,7 @@ rlRenderBatch rlLoadRenderBatch(int numBuffers, int bufferElements)
     return batch;
 }
 
-// Unload default internal buffers vertex data from CPU and GPU
+// UnloadPack default internal buffers vertex data from CPU and GPU
 void rlUnloadRenderBatch(rlRenderBatch batch)
 {
 #if defined(GRAPHICS_API_OPENGL_33) || defined(GRAPHICS_API_OPENGL_ES2)
@@ -2602,7 +2602,7 @@ void rlUnloadRenderBatch(rlRenderBatch batch)
     glBindBuffer(GL_ARRAY_BUFFER, 0);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
 
-    // Unload all vertex buffers data
+    // UnloadPack all vertex buffers data
     for (int i = 0; i < batch.bufferCount; i++)
     {
         // Unbind VAO attribs data
@@ -2632,7 +2632,7 @@ void rlUnloadRenderBatch(rlRenderBatch batch)
         RL_FREE(batch.vertexBuffer[i].indices);
     }
 
-    // Unload arrays
+    // UnloadPack arrays
     RL_FREE(batch.vertexBuffer);
     RL_FREE(batch.draws);
 #endif
@@ -2943,7 +2943,7 @@ unsigned int rlLoadTexture(const void *data, int width, int height, int format, 
     int mipHeight = height;
     int mipOffset = 0;          // Mipmap data offset
 
-    // Load the different mipmap levels
+    // LoadPack the different mipmap levels
     for (int i = 0; i < mipmapCount; i++)
     {
         unsigned int mipSize = rlGetPixelDataSize(mipWidth, mipHeight, format);
@@ -3033,7 +3033,7 @@ unsigned int rlLoadTexture(const void *data, int width, int height, int format, 
     return id;
 }
 
-// Load depth texture/renderbuffer (to be attached to fbo)
+// LoadPack depth texture/renderbuffer (to be attached to fbo)
 // WARNING: OpenGL ES 2.0 requires GL_OES_depth_texture and WebGL requires WEBGL_depth_texture extensions
 unsigned int rlLoadTextureDepth(int width, int height, bool useRenderBuffer)
 {
@@ -3090,7 +3090,7 @@ unsigned int rlLoadTextureDepth(int width, int height, bool useRenderBuffer)
     return id;
 }
 
-// Load texture cubemap
+// LoadPack texture cubemap
 // NOTE: Cubemap data is expected to be 6 images in a single data array (one after the other),
 // expected the following convention: +X, -X, +Y, -Y, +Z, -Z
 unsigned int rlLoadTextureCubemap(const void *data, int size, int format)
@@ -3108,7 +3108,7 @@ unsigned int rlLoadTextureCubemap(const void *data, int size, int format)
 
     if (glInternalFormat != -1)
     {
-        // Load cubemap faces
+        // LoadPack cubemap faces
         for (unsigned int i = 0; i < 6; i++)
         {
             if (data == NULL)
@@ -3237,7 +3237,7 @@ void rlGetGlTextureFormats(int format, unsigned int *glInternalFormat, unsigned 
     }
 }
 
-// Unload texture from GPU memory
+// UnloadPack texture from GPU memory
 void rlUnloadTexture(unsigned int id)
 {
     glDeleteTextures(1, &id);
@@ -3371,7 +3371,7 @@ unsigned char *rlReadScreenPixels(int width, int height)
 
 // Framebuffer management (fbo)
 //-----------------------------------------------------------------------------------------
-// Load a framebuffer to be used for rendering
+// LoadPack a framebuffer to be used for rendering
 // NOTE: No textures attached
 unsigned int rlLoadFramebuffer(int width, int height)
 {
@@ -3459,7 +3459,7 @@ bool rlFramebufferComplete(unsigned int id)
     return result;
 }
 
-// Unload framebuffer from GPU memory
+// UnloadPack framebuffer from GPU memory
 // NOTE: All attached textures/cubemaps/renderbuffers are also deleted
 void rlUnloadFramebuffer(unsigned int id)
 {
@@ -3487,7 +3487,7 @@ void rlUnloadFramebuffer(unsigned int id)
 
 // Vertex data management
 //-----------------------------------------------------------------------------------------
-// Load a new attributes buffer
+// LoadPack a new attributes buffer
 unsigned int rlLoadVertexBuffer(const void *buffer, int size, bool dynamic)
 {
     unsigned int id = 0;
@@ -3501,7 +3501,7 @@ unsigned int rlLoadVertexBuffer(const void *buffer, int size, bool dynamic)
     return id;
 }
 
-// Load a new attributes element buffer
+// LoadPack a new attributes element buffer
 unsigned int rlLoadVertexBufferElement(const void *buffer, int size, bool dynamic)
 {
     unsigned int id = 0;
@@ -3656,7 +3656,7 @@ void rlDisableStatePointer(int vertexAttribType)
 }
 #endif
 
-// Load vertex array object (VAO)
+// LoadPack vertex array object (VAO)
 unsigned int rlLoadVertexArray(void)
 {
     unsigned int vaoId = 0;
@@ -3685,7 +3685,7 @@ void rlSetVertexAttributeDivisor(unsigned int index, int divisor)
 #endif
 }
 
-// Unload vertex array object (VAO)
+// UnloadPack vertex array object (VAO)
 void rlUnloadVertexArray(unsigned int vaoId)
 {
 #if defined(GRAPHICS_API_OPENGL_33) || defined(GRAPHICS_API_OPENGL_ES2)
@@ -3698,7 +3698,7 @@ void rlUnloadVertexArray(unsigned int vaoId)
 #endif
 }
 
-// Unload vertex buffer (VBO)
+// UnloadPack vertex buffer (VBO)
 void rlUnloadVertexBuffer(unsigned int vboId)
 {
 #if defined(GRAPHICS_API_OPENGL_33) || defined(GRAPHICS_API_OPENGL_ES2)
@@ -3709,7 +3709,7 @@ void rlUnloadVertexBuffer(unsigned int vboId)
 
 // Shaders management
 //-----------------------------------------------------------------------------------------------
-// Load shader from code strings
+// LoadPack shader from code strings
 // NOTE: If shader string is NULL, using default vertex/fragment shaders
 unsigned int rlLoadShaderCode(const char *vsCode, const char *fsCode)
 {
@@ -3843,7 +3843,7 @@ unsigned int rlCompileShader(const char *shaderCode, int type)
     return shader;
 }
 
-// Load custom shader strings and return program id
+// LoadPack custom shader strings and return program id
 unsigned int rlLoadShaderProgram(unsigned int vShaderId, unsigned int fShaderId)
 {
     unsigned int program = 0;
@@ -3904,7 +3904,7 @@ unsigned int rlLoadShaderProgram(unsigned int vShaderId, unsigned int fShaderId)
     return program;
 }
 
-// Unload shader program
+// UnloadPack shader program
 void rlUnloadShaderProgram(unsigned int id)
 {
 #if defined(GRAPHICS_API_OPENGL_33) || defined(GRAPHICS_API_OPENGL_ES2)
@@ -4003,7 +4003,7 @@ void rlSetUniformSampler(int locIndex, unsigned int textureId)
         if (RLGL.State.activeTextureId[i] == 0)
         {
             glUniform1i(locIndex, 1 + i);              // Activate new texture unit
-            RLGL.State.activeTextureId[i] = textureId; // Save texture id for binding on drawing
+            RLGL.State.activeTextureId[i] = textureId; // SavePack texture id for binding on drawing
             break;
         }
     }
@@ -4023,7 +4023,7 @@ void rlSetShader(unsigned int id, int *locs)
 #endif
 }
 
-// Load compute shader program
+// LoadPack compute shader program
 unsigned int rlLoadComputeShaderProgram(unsigned int shaderId)
 {
     unsigned int program = 0;
@@ -4080,7 +4080,7 @@ void rlComputeShaderDispatch(unsigned int groupX, unsigned int groupY, unsigned 
 #endif
 }
 
-// Load shader storage buffer object (SSBO)
+// LoadPack shader storage buffer object (SSBO)
 unsigned int rlLoadShaderBuffer(unsigned int size, const void *data, int usageHint)
 {
     unsigned int ssbo = 0;
@@ -4096,7 +4096,7 @@ unsigned int rlLoadShaderBuffer(unsigned int size, const void *data, int usageHi
     return ssbo;
 }
 
-// Unload shader storage buffer object (SSBO)
+// UnloadPack shader storage buffer object (SSBO)
 void rlUnloadShaderBuffer(unsigned int ssboId)
 {
 #if defined(GRAPHICS_API_OPENGL_43)
@@ -4292,7 +4292,7 @@ void rlSetMatrixViewOffsetStereo(Matrix right, Matrix left)
 #endif
 }
 
-// Load and draw a quad in NDC
+// LoadPack and draw a quad in NDC
 void rlLoadDrawQuad(void)
 {
 #if defined(GRAPHICS_API_OPENGL_33) || defined(GRAPHICS_API_OPENGL_ES2)
@@ -4333,7 +4333,7 @@ void rlLoadDrawQuad(void)
 #endif
 }
 
-// Load and draw a cube in NDC
+// LoadPack and draw a cube in NDC
 void rlLoadDrawCube(void)
 {
 #if defined(GRAPHICS_API_OPENGL_33) || defined(GRAPHICS_API_OPENGL_ES2)
@@ -4445,7 +4445,7 @@ const char *rlGetPixelFormatName(unsigned int format)
 // Module specific Functions Definition
 //----------------------------------------------------------------------------------
 #if defined(GRAPHICS_API_OPENGL_33) || defined(GRAPHICS_API_OPENGL_ES2)
-// Load default shader (just vertex positioning and texture coloring)
+// LoadPack default shader (just vertex positioning and texture coloring)
 // NOTE: This shader program is used for internal buffers
 // NOTE: Loaded: RLGL.State.defaultShaderId, RLGL.State.defaultShaderLocs
 static void rlLoadShaderDefault(void)
@@ -4552,7 +4552,7 @@ static void rlLoadShaderDefault(void)
     else TRACELOG(RL_LOG_WARNING, "SHADER: [ID %i] Failed to load default shader", RLGL.State.defaultShaderId);
 }
 
-// Unload default shader
+// UnloadPack default shader
 // NOTE: Unloads: RLGL.State.defaultShaderId, RLGL.State.defaultShaderLocs
 static void rlUnloadShaderDefault(void)
 {

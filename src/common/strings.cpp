@@ -7,12 +7,12 @@ void StringCatalog::Init(void)
     entries.resize(STR_COUNT);
     entries[STR_NULL] = "<null>";
 
-    // TODO: Load from ui.lang file
+    // TODO: LoadPack from ui.lang file
     entries[STR_UI_MENU_PLAY]     = "Play";
     entries[STR_UI_MENU_OPTIONS]  = "Options";
     entries[STR_UI_MENU_QUIT]     = "Quit";
 
-    // TODO: Load from dialog.lang file
+    // TODO: LoadPack from dialog.lang file
     entries[STR_LILY_HELLO] = "Hello, welcome to the wonderful world of RayNet!";
 }
 

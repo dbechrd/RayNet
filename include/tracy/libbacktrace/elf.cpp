@@ -7343,7 +7343,7 @@ struct phdr_data
   int exe_descriptor;
 };
 
-/* Callback passed to dl_iterate_phdr.  Load debug info from shared
+/* Callback passed to dl_iterate_phdr.  LoadPack debug info from shared
    libraries.  */
 
 struct PhdrIterate
