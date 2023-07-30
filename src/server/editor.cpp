@@ -13,13 +13,14 @@
 const char *EditModeStr(EditMode mode)
 {
     switch (mode) {
-        case EditMode_Maps:     return "Maps";
-        case EditMode_Tiles:    return "Tiles";
-        case EditMode_Wang:     return "Wang";
-        case EditMode_Paths:    return "Paths";
-        case EditMode_Warps:    return "Warps";
-        case EditMode_Entities: return "Entities";
-        case EditMode_SfxFile:  return "Sfx";
+        case EditMode_Maps:      return "Maps";
+        case EditMode_Tiles:     return "Tiles";
+        case EditMode_Wang:      return "Wang";
+        case EditMode_Paths:     return "Paths";
+        case EditMode_Warps:     return "Warps";
+        case EditMode_Entities:  return "Entities";
+        case EditMode_SfxFiles:  return "Sfx";
+        case EditMode_PackFiles: return "Pack";
         default: return "<null>";
     }
 }
@@ -345,7 +346,7 @@ UIState Editor::DrawUI_ActionBar(Vector2 position, GameServer &server, double no
 
     // TODO: UI::Panel
     UIState uiState{};
-    const Rectangle actionBarRect{ position.x, position.y, 430.0f, GetRenderHeight() - 8.0f };
+    const Rectangle actionBarRect{ position.x, position.y, 430.0f, (float)GetRenderHeight() };
 #if 0
     DrawRectangleRounded(actionBarRect, 0.15f, 8, ASESPRITE_BEIGE);
     DrawRectangleRoundedLines(actionBarRect, 0.15f, 8, 2.0f, BLACK);
@@ -501,8 +502,12 @@ UIState Editor::DrawUI_ActionBar(Vector2 position, GameServer &server, double no
             DrawUI_EntityActions(uiActionBar, now);
             break;
         }
-        case EditMode_SfxFile: {
+        case EditMode_SfxFiles: {
             DrawUI_SfxFiles(uiActionBar, now);
+            break;
+        }
+        case EditMode_PackFiles: {
+            DrawUI_PackFiles(uiActionBar, now);
             break;
         }
     }
@@ -1034,7 +1039,7 @@ void Editor::DrawUI_EntityActions(UI &uiActionBar, double now)
     uiActionBar.PushStyle(searchStyle);
 
     static STB_TexteditState txtSearch{};
-    static std::string filter{};
+    static std::string filter{ "*" };
     uiActionBar.Textbox(txtSearch, filter);
     uiActionBar.Newline();
 
@@ -1044,7 +1049,7 @@ void Editor::DrawUI_EntityActions(UI &uiActionBar, double now)
             continue;
         }
 
-        const char *idStr = TextFormat("%d", entity.id);
+        const char *idStr = TextFormat("[%d] %s", entity.id, EntityTypeStr(entity.type));
         if (!StrFilter(idStr, filter.c_str())) {
             continue;
         }
@@ -1166,7 +1171,7 @@ void Editor::DrawUI_SfxFiles(UI &uiActionBar, double now)
     uiActionBar.PushStyle(searchStyle);
 
     static STB_TexteditState txtSearch{};
-    static std::string filter{};
+    static std::string filter{ "*" };
     uiActionBar.Textbox(txtSearch, filter);
     uiActionBar.Newline();
 
@@ -1206,5 +1211,150 @@ void Editor::DrawUI_SfxFiles(UI &uiActionBar, double now)
         static STB_TexteditState txtPitchVariance{};
         uiActionBar.TextboxFloat(txtPitchVariance, sfxFile.pitch_variance);
         uiActionBar.Newline();
+    }
+}
+void Editor::DrawUI_PackFiles(UI &uiActionBar, double now)
+{
+    UIStyle searchStyle = uiActionBar.GetStyle();
+    searchStyle.size.x = 400;
+    searchStyle.pad = UIPad(8, 2);
+    searchStyle.margin = UIMargin(0, 0, 0, 6);
+    uiActionBar.PushStyle(searchStyle);
+
+    static STB_TexteditState txtSearch{};
+    static std::string filter{ "*" };
+    uiActionBar.Textbox(txtSearch, filter);
+    uiActionBar.Newline();
+
+    for (data::Pack *packPtr : data::packs) {
+        if (!packPtr) {
+            continue;
+        }
+
+        data::Pack &pack = *packPtr;
+        if (!pack.version) {
+            continue;
+        }
+
+        Color bgColor = packPtr == state.packFiles.selectedPack ? SKYBLUE : BLUE;
+        const char *idStr = pack.path.c_str();
+        if (!StrFilter(idStr, filter.c_str())) {
+            continue;
+        }
+
+        if (uiActionBar.Text(idStr, WHITE, bgColor).down) {
+            state.packFiles.selectedPack = packPtr;
+        }
+        uiActionBar.Newline();
+    }
+
+    uiActionBar.PopStyle();
+
+    if (state.packFiles.selectedPack) {
+        data::Pack &pack = *state.packFiles.selectedPack;
+
+        const int labelWidth = 100;
+
+        uiActionBar.Label("version", labelWidth);
+        uiActionBar.Text(TextFormat("%d", pack.version));
+        uiActionBar.Newline();
+
+        uiActionBar.Label("tocEntries", labelWidth);
+        uiActionBar.Text(TextFormat("%zu", pack.toc.entries.size()));
+        uiActionBar.Newline();
+
+        ////////////////////////////////////////////////////////////////////////
+        // Scroll panel
+        static float panelHeightLastFrame = 0;
+
+        const Vector2 panelTopLeft = uiActionBar.CursorScreen();
+        const Rectangle panelRect{ panelTopLeft.x, panelTopLeft.y, 430, GetRenderHeight() - panelTopLeft.y };
+
+        const float scrollOffsetMax = panelHeightLastFrame - panelRect.height + 8;
+
+        // wheel: 1.0
+        //
+        // 0.016667
+        // 0.016667
+        // 0.041667
+        // 0.050000
+        // 0.066667
+        // 0.075000
+        // 0.091667
+        // 0.091667
+        // 0.083333
+        // 0.075000
+        // 0.066667
+        // 0.058333
+        // 0.050000
+        // 0.041667
+        // 0.033333
+        // 0.033333
+        // 0.025000
+        // 0.025000
+        // 0.025000
+        // 0.016667
+        // 0.016667
+        // 0.008333
+
+        static float scrollStacker = 0;
+        float &scrollOffset = state.packFiles.scrollOffset;
+        float &scrollOffsetTarget = state.packFiles.scrollOffsetTarget;
+        float &scrollVelocity = state.packFiles.scrollVelocity;
+        if (dlb_CheckCollisionPointRec(GetMousePosition(), panelRect)) {
+            const float mouseWheel = io.MouseWheelMove();
+            if (mouseWheel) {
+                scrollStacker += fabsf(mouseWheel);
+                float impulse = 4 * scrollStacker;
+                //if (fabsf(mouseWheel) > 1) impulse += powf(10, fabsf(mouseWheel));
+                if (mouseWheel < 0) impulse *= -1;
+                scrollVelocity += impulse;
+                printf("wheel: %f, target: %f\n", mouseWheel, scrollOffsetTarget);
+            } else {
+                scrollStacker = 0;
+            }
+        }
+
+        if (scrollVelocity) {
+            scrollOffsetTarget -= scrollVelocity;
+            scrollVelocity *= 0.95f;
+        }
+
+        scrollOffsetTarget = CLAMP(scrollOffsetTarget, 0, scrollOffsetMax);
+        scrollOffset = LERP(scrollOffset, scrollOffsetTarget, 0.1);
+        scrollOffset = CLAMP(scrollOffset, 0, scrollOffsetMax);
+
+        const float contentStartY = uiActionBar.CursorScreen().y;
+        uiActionBar.Space({ 0, -scrollOffset });
+        BeginScissorMode(panelRect.x, panelRect.y, panelRect.width, panelRect.height);
+
+        /////// BEGIN CONTENT ///////
+        for (data::PackTocEntry &entry : pack.toc.entries) {
+            //uiActionBar.Label(TextFormat("%s [offset=%d]", DataTypeStr(entry.dtype), entry.offset), labelWidth);
+            uiActionBar.Label(DataTypeStr(entry.dtype), 400);
+            uiActionBar.Newline();
+        }
+        /////// END CONTENT ///////
+
+        EndScissorMode();
+        uiActionBar.Space({ 0, scrollOffset });
+        const float contentEndY = uiActionBar.CursorScreen().y;
+        panelHeightLastFrame = contentEndY - contentStartY;
+
+        const float scrollRatio = panelRect.height / panelHeightLastFrame;
+        const float scrollbarWidth = 8;
+        const float scrollbarHeight = panelRect.height * scrollRatio;
+        const float scrollbarSpace = panelRect.height * (1 - scrollRatio);
+        const float scrollPct = scrollOffset / scrollOffsetMax;
+        Rectangle scrollbar{
+            430 - 2 - scrollbarWidth,
+            panelRect.y + scrollbarSpace * scrollPct,
+            scrollbarWidth,
+            scrollbarHeight
+        };
+        DrawRectangleRec(scrollbar, LIGHTGRAY);
+        ////////////////////////////////////////////////////////////////////////
+
+        DrawRectangleLinesEx(panelRect, 2, BLACK);
     }
 }

@@ -49,7 +49,9 @@
 #define CLAMP(x, min, max) (MIN(MAX((x), (min)), (max)))
 #define ARRAY_SIZE(arr) (sizeof(arr)/sizeof(arr[0]))
 #define ENUM_GEN_VALUE(e) e,
+#define ENUM_GEN_VALUE_DESC(e, d) e,
 #define ENUM_GEN_CASE_RETURN_STR(e) case e: return #e;
+#define ENUM_GEN_CASE_RETURN_DESC(e, d) case e: return d;
 
 // Custom colors
 
@@ -90,7 +92,7 @@
 #define CL_DIALOG_DURATION_PER_CHAR     0.1
 
 #define CL_DBG_ONE_SCREEN      0
-#define CL_DBG_TWO_SCREEN      1
+#define CL_DBG_TWO_SCREEN      0
 #define CL_DBG_SNAPSHOT_IDS    0
 #define CL_DBG_TILE_CULLING    0
 #define CL_DBG_CIRCLE_VS_REC   0

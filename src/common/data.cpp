@@ -1,26 +1,31 @@
 #include "data.h"
 
 namespace data {
-#define ENUM_STR_GENERATOR(type, enumDef)     \
-    const char *type##Str(type id) {          \
-        switch (id) {                         \
-            enumDef(ENUM_GEN_CASE_RETURN_STR) \
-            default: return "<unknown>";      \
-        }                                     \
+#define ENUM_STR_GENERATOR(type, enumDef, enumGen) \
+    const char *type##Str(type id) {               \
+        switch (id) {                              \
+            enumDef(enumGen)                       \
+            default: return "<unknown>";           \
+        }                                          \
     }
 
-    ENUM_STR_GENERATOR(GfxFileId,  GFX_FILE_IDS);
-    ENUM_STR_GENERATOR(MusFileId,  MUS_FILE_IDS);
-    ENUM_STR_GENERATOR(SfxFileId,  SFX_FILE_IDS);
-    ENUM_STR_GENERATOR(GfxFrameId, GFX_FRAME_IDS);
-    ENUM_STR_GENERATOR(GfxAnimId,  GFX_ANIM_IDS);
-    ENUM_STR_GENERATOR(MaterialId, MATERIAL_IDS);
-    ENUM_STR_GENERATOR(TileTypeId, TILE_TYPE_IDS);
-    ENUM_STR_GENERATOR(EntityType, ENTITY_TYPES);
+    ENUM_STR_GENERATOR(DataType,   DATA_TYPES   , ENUM_GEN_CASE_RETURN_DESC);
+    ENUM_STR_GENERATOR(GfxFileId,  GFX_FILE_IDS , ENUM_GEN_CASE_RETURN_STR);
+    ENUM_STR_GENERATOR(MusFileId,  MUS_FILE_IDS , ENUM_GEN_CASE_RETURN_STR);
+    ENUM_STR_GENERATOR(SfxFileId,  SFX_FILE_IDS , ENUM_GEN_CASE_RETURN_STR);
+    ENUM_STR_GENERATOR(GfxFrameId, GFX_FRAME_IDS, ENUM_GEN_CASE_RETURN_STR);
+    ENUM_STR_GENERATOR(GfxAnimId,  GFX_ANIM_IDS , ENUM_GEN_CASE_RETURN_STR);
+    ENUM_STR_GENERATOR(MaterialId, MATERIAL_IDS , ENUM_GEN_CASE_RETURN_STR);
+    ENUM_STR_GENERATOR(TileTypeId, TILE_TYPE_IDS, ENUM_GEN_CASE_RETURN_STR);
+    ENUM_STR_GENERATOR(EntityType, ENTITY_TYPES , ENUM_GEN_CASE_RETURN_STR);
 
 #undef ENUM_STR_GENERATOR
 
-    Pack pack1{};
+    Pack pack1{ "dat/test.dat" };
+
+    Pack *packs[] = {
+        &pack1
+    };
 
     namespace save {
         GfxFile gfxFiles[] = {
@@ -363,12 +368,12 @@ namespace data {
         //}
 
         Err err;
-        err = SavePack("dat/test.dat");
+        err = SavePack(pack1);
         if (err) {
             assert(!err);
             TraceLog(LOG_ERROR, "Failed to save data file.\n");
         }
-        err = LoadPack("dat/test.dat", pack1);
+        err = LoadPack(pack1);
         if (err) {
             assert(!err);
             TraceLog(LOG_ERROR, "Failed to load data file.\n");
@@ -697,19 +702,19 @@ namespace data {
     }
 #undef PROC
 
-    Err SavePack(const char *filename)
+    Err SavePack(Pack &pack)
     {
         Err err = RN_SUCCESS;
 
         PackStream stream{};
         stream.mode = PACK_MODE_WRITE;
-        stream.f = fopen(filename, "wb");
+        stream.f = fopen(pack.path.c_str(), "wb");
         if (!stream.f) {
             return RN_BAD_FILE_WRITE;
         }
 
         stream.process = (ProcessFn)fwrite;
-        stream.pack = &pack1;
+        stream.pack = &pack;
 
         err = Process(stream);
 
@@ -784,13 +789,13 @@ namespace data {
         return err;
     }
 
-    Err LoadPack(const char *filename, Pack &pack)
+    Err LoadPack(Pack &pack)
     {
         Err err = RN_SUCCESS;
 
         PackStream stream{};
         stream.mode = PACK_MODE_READ;
-        stream.f = fopen(filename, "rb");
+        stream.f = fopen(pack.path.c_str(), "rb");
         if (!stream.f) {
             return RN_BAD_FILE_READ;
         }

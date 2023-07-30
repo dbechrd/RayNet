@@ -10,17 +10,20 @@
 
 namespace data {
     // DO NOT re-order these! They are hard-coded in the TOC
+#define DATA_TYPES(gen) \
+        gen(DAT_TYP_ARRAY,     "ARRAY"    ) \
+        gen(DAT_TYP_GFX_FILE,  "GFX_FILE" ) \
+        gen(DAT_TYP_MUS_FILE,  "MUS_FILE" ) \
+        gen(DAT_TYP_SFX_FILE,  "SFX_FILE" ) \
+        gen(DAT_TYP_GFX_FRAME, "GFX_FRAME") \
+        gen(DAT_TYP_GFX_ANIM,  "GFX_ANIM" ) \
+        gen(DAT_TYP_MATERIAL,  "MATERIAL" ) \
+        gen(DAT_TYP_TILE_TYPE, "TILE_TYPE") \
+        gen(DAT_TYP_ENTITY,    "ENTITY"   ) \
+        gen(DAT_TYP_SPRITE,    "SPRITE"   )
+
     enum DataType : uint8_t {
-        DAT_TYP_ARRAY,
-        DAT_TYP_GFX_FILE,
-        DAT_TYP_MUS_FILE,
-        DAT_TYP_SFX_FILE,
-        DAT_TYP_GFX_FRAME,
-        DAT_TYP_GFX_ANIM,
-        DAT_TYP_MATERIAL,
-        DAT_TYP_TILE_TYPE,
-        DAT_TYP_ENTITY,
-        DAT_TYP_SPRITE,
+        DATA_TYPES(ENUM_GEN_VALUE_DESC)
         DAT_TYP_COUNT
     };
 
@@ -505,10 +508,18 @@ namespace data {
 
     // Inspired by https://twitter.com/angealbertini/status/1340712669247119360
     struct Pack {
-        int magic     {};
-        int version   {};
-        int tocOffset {};
+        std::string path      {};
+        int         magic     {};
+        int         version   {};
+        int         tocOffset {};
 
+        // static resources
+        // - textures
+        // - sounds
+        // - music
+        // - sprite defs
+        // - tile defs
+        // - object defs
         std::vector<GfxFile>  gfxFiles  {};
         std::vector<MusFile>  musFiles  {};
         std::vector<SfxFile>  sfxFiles  {};
@@ -518,6 +529,21 @@ namespace data {
         std::vector<Sprite>   sprites   {};
         std::vector<TileType> tileTypes {};
 
+        // static entities? (objects?)
+        // - doors
+        // - chests
+        // - fireplaces
+        // - workbenches
+        // - flowers
+        // - water
+
+        // dynamic entities
+        // - players
+        // - townfolk
+        // - pets
+        // - fauna
+        // - monsters
+        // - particles? maybe?
         std::vector<Entity>          entities  {SV_MAX_ENTITIES};
         std::vector<AspectCombat>    combat    {SV_MAX_ENTITIES};
         std::vector<AspectCollision> collision {SV_MAX_ENTITIES};
@@ -529,6 +555,8 @@ namespace data {
         std::vector<AspectWarp>      warp      {SV_MAX_ENTITIES};
 
         PackToc toc {};
+
+        Pack(std::string path) : path(path) {}
     };
 
     enum PackStreamMode {
@@ -545,6 +573,7 @@ namespace data {
         Pack *         pack    {};
     };
 
+    const char *DataTypeStr(DataType type);
     const char *GfxFileIdStr(GfxFileId id);
     const char *MusFileIdStr(MusFileId id);
     const char *SfxFileIdStr(SfxFileId id);
@@ -555,6 +584,7 @@ namespace data {
     const char *EntityTypeStr(EntityType type);
 
     extern Pack pack1;
+    extern Pack *packs[];
 
     void ReadFileIntoDataBuffer(std::string filename, DatBuffer &datBuffer);
     void FreeDataBuffer(DatBuffer &datBuffer);
@@ -562,8 +592,8 @@ namespace data {
     void Init(void);
     void Free(void);
 
-    Err SavePack(const char *filename);
-    Err LoadPack(const char *filename, Pack &pack);
+    Err SavePack(Pack &pack);
+    Err LoadPack(Pack &pack);
     void UnloadPack(Pack &pack);
 
     void PlaySound(SfxFileId id, float pitchVariance = 0.0f);

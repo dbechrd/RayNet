@@ -13,7 +13,8 @@ enum EditMode {
     EditMode_Paths,
     EditMode_Warps,
     EditMode_Entities,
-    EditMode_SfxFile,
+    EditMode_SfxFiles,
+    EditMode_PackFiles,
     EditMode_Count
 };
 
@@ -49,12 +50,19 @@ struct EditModePathNodes {
 };
 
 struct EditModeEntities {
-    int testId = 0;
-    uint32_t selectedId = 0;
+    int testId{};
+    uint32_t selectedId{};
 };
 
 struct EditModeSfxFiles {
-    int selectedSfx = 0;
+    int selectedSfx{};
+};
+
+struct EditModePackFiles {
+    data::Pack *selectedPack{};
+    float scrollOffset{};
+    float scrollOffsetTarget{};
+    float scrollVelocity{};
 };
 
 struct EditModeState {
@@ -66,6 +74,7 @@ struct EditModeState {
     EditModeEntities entities;
     EditModePathNodes pathNodes;
     EditModeSfxFiles sfxFiles;
+    EditModePackFiles packFiles;
 };
 
 struct Editor {
@@ -101,4 +110,5 @@ private:
     void DrawUI_WarpActions(UI &uiActionBar, double now);
     void DrawUI_EntityActions(UI &uiActionBar, double now);
     void DrawUI_SfxFiles(UI &uiActionBar, double now);
+    void DrawUI_PackFiles(UI &uiActionBar, double now);
 };

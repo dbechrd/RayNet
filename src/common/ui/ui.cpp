@@ -250,7 +250,7 @@ UIState UI::Text(const char *text, Color fgColor, Color bgColor)
 
 UIState UI::Label(const char *text, int width)
 {
-    PushWidth(100);
+    PushWidth(width);
     UIState state = Text(text);
     PopStyle();
     return state;
