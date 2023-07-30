@@ -1270,32 +1270,7 @@ void Editor::DrawUI_PackFiles(UI &uiActionBar, double now)
         const Vector2 panelTopLeft = uiActionBar.CursorScreen();
         const Rectangle panelRect{ panelTopLeft.x, panelTopLeft.y, 430, GetRenderHeight() - panelTopLeft.y };
 
-        const float scrollOffsetMax = panelHeightLastFrame - panelRect.height + 8;
-
-        // wheel: 1.0
-        //
-        // 0.016667
-        // 0.016667
-        // 0.041667
-        // 0.050000
-        // 0.066667
-        // 0.075000
-        // 0.091667
-        // 0.091667
-        // 0.083333
-        // 0.075000
-        // 0.066667
-        // 0.058333
-        // 0.050000
-        // 0.041667
-        // 0.033333
-        // 0.033333
-        // 0.025000
-        // 0.025000
-        // 0.025000
-        // 0.016667
-        // 0.016667
-        // 0.008333
+        const float scrollOffsetMax = MAX(0, panelHeightLastFrame - panelRect.height + 8);
 
         static float scrollStacker = 0;
         float &scrollOffset = state.packFiles.scrollOffset;
@@ -1329,11 +1304,54 @@ void Editor::DrawUI_PackFiles(UI &uiActionBar, double now)
         BeginScissorMode(panelRect.x, panelRect.y, panelRect.width, panelRect.height);
 
         /////// BEGIN CONTENT ///////
+        static struct DatTypeFilter {
+            bool enabled;
+            const char *text;
+            Color color;
+        } datTypeFilter[data::DAT_TYP_COUNT]{
+            { true, "ARR", ColorFromHSV(0 * (360.0f / (float)data::DAT_TYP_COUNT), 0.9f, 0.6f) },
+            { true, "GFX", ColorFromHSV(1 * (360.0f / (float)data::DAT_TYP_COUNT), 0.9f, 0.6f) },
+            { true, "MUS", ColorFromHSV(2 * (360.0f / (float)data::DAT_TYP_COUNT), 0.9f, 0.6f) },
+            { true, "SFX", ColorFromHSV(3 * (360.0f / (float)data::DAT_TYP_COUNT), 0.9f, 0.6f) },
+            { true, "FRM", ColorFromHSV(4 * (360.0f / (float)data::DAT_TYP_COUNT), 0.9f, 0.6f) },
+            { true, "ANM", ColorFromHSV(5 * (360.0f / (float)data::DAT_TYP_COUNT), 0.9f, 0.6f) },
+            { true, "MAT", ColorFromHSV(6 * (360.0f / (float)data::DAT_TYP_COUNT), 0.9f, 0.6f) },
+            { true, "TIL", ColorFromHSV(7 * (360.0f / (float)data::DAT_TYP_COUNT), 0.9f, 0.6f) },
+            { true, "ENT", ColorFromHSV(8 * (360.0f / (float)data::DAT_TYP_COUNT), 0.9f, 0.6f) },
+            { true, "SPT", ColorFromHSV(9 * (360.0f / (float)data::DAT_TYP_COUNT), 0.9f, 0.6f) },
+        };
+
+        uiActionBar.PushWidth(34);
+        for (int i = 0; i < data::DAT_TYP_COUNT; i++) {
+            DatTypeFilter &filter = datTypeFilter[i];
+            if (uiActionBar.Button(filter.text, filter.enabled, filter.color, ColorBrightness(filter.color, -0.3f)).pressed) {
+                if (io.KeyDown(KEY_LEFT_SHIFT)) {
+                    filter.enabled = !filter.enabled;
+                } else {
+                    for (int j = 0; j < data::DAT_TYP_COUNT; j++) {
+                        datTypeFilter[j].enabled = false;
+                    }
+                    filter.enabled = true;
+                }
+            }
+            if (i % 7 == 6 || i == data::DAT_TYP_COUNT - 1) {
+                uiActionBar.Newline();
+            }
+        }
+        uiActionBar.PopStyle();
+
+        uiActionBar.PushWidth(400);
         for (data::PackTocEntry &entry : pack.toc.entries) {
+            DatTypeFilter &filter = datTypeFilter[entry.dtype];
+            if (!filter.enabled) {
+                continue;
+            }
+
             //uiActionBar.Label(TextFormat("%s [offset=%d]", DataTypeStr(entry.dtype), entry.offset), labelWidth);
-            uiActionBar.Label(DataTypeStr(entry.dtype), 400);
+            uiActionBar.Text(DataTypeStr(entry.dtype), WHITE, filter.color);
             uiActionBar.Newline();
         }
+        uiActionBar.PopStyle();
         /////// END CONTENT ///////
 
         EndScissorMode();

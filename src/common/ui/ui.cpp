@@ -320,10 +320,15 @@ UIState UI::Button(const char *text)
     const float cornerRoundness = 0.2f;
     const float cornerSegments = 4;
 
-    Vector2 textSize = MeasureTextEx(*style.font, text, style.font->baseSize, 1.0f);
+    Vector2 size = style.size;
+    if (!size.x || !size.y) {
+        Vector2 textSize = MeasureTextEx(*style.font, text, style.font->baseSize, 1.0f);
+        if (!size.x) size.x = textSize.x;
+        if (!size.y) size.y = textSize.y;
+    }
     Vector2 ctrlSize{
-        style.pad.left + textSize.x + style.pad.right,
-        style.pad.top + textSize.y + style.pad.bottom
+        style.pad.left + size.x + style.pad.right,
+        style.pad.top + size.y + style.pad.bottom
     };
 
     Align(style, ctrlPosition, ctrlSize);
