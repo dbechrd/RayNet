@@ -351,7 +351,8 @@ UIState Editor::DrawUI_ActionBar(Vector2 position, GameServer &server, double no
     DrawRectangleRounded(actionBarRect, 0.15f, 8, ASESPRITE_BEIGE);
     DrawRectangleRoundedLines(actionBarRect, 0.15f, 8, 2.0f, BLACK);
 #else
-    DrawRectangleRec(actionBarRect, GREEN_DESAT); //ASESPRITE_BEIGE);
+    //DrawRectangleRec(actionBarRect, ColorBrightness(ASESPRITE_BEIGE, -0.1f));
+    DrawRectangleRec(actionBarRect, GRAYISH_BLUE);
     DrawRectangleLinesEx(actionBarRect, 2.0f, BLACK);
 #endif
     uiState.hover = dlb_CheckCollisionPointRec(GetMousePosition(), actionBarRect);
@@ -465,7 +466,7 @@ UIState Editor::DrawUI_ActionBar(Vector2 position, GameServer &server, double no
     uiActionBar.Newline();
 
     for (int i = 0; i < EditMode_Count; i++) {
-        if (uiActionBar.Button(EditModeStr((EditMode)i), mode == i, BLUE, DARKBLUE).pressed) {
+        if (uiActionBar.Button(EditModeStr((EditMode)i), mode == i, BLUE_DESAT, ColorBrightness(BLUE_DESAT, -0.3f)).pressed) {
             mode = (EditMode)i;
         }
         if (i % 6 == 5) {
@@ -530,7 +531,7 @@ void Editor::DrawUI_TileActions(UI &uiActionBar, double now)
 
     std::string tilesetPath = rnStringCatalog.GetString(map->textureId);
     uiActionBar.Text(tilesetPath.c_str());
-    if (uiActionBar.Button("Change tileset", ColorBrightness(ORANGE, -0.2f)).released) {
+    if (uiActionBar.Button("Change tileset", ColorBrightness(ORANGE, -0.3f)).released) {
         std::thread openFileThread([tilesetPath, mapFileFilter]{
             openRequest = tinyfd_openFileDialog(
                 "Open File",
@@ -1016,7 +1017,7 @@ void Editor::DrawUI_WarpActions(UI &uiActionBar, double now)
 }
 void Editor::DrawUI_EntityActions(UI &uiActionBar, double now)
 {
-    if (uiActionBar.Button("Despawn all", MAROON).pressed) {
+    if (uiActionBar.Button("Despawn all", ColorBrightness(MAROON, -0.3f)).pressed) {
         for (const data::Entity &entity : entityDb->entities) {
             if (entity.type == data::ENTITY_PLAYER || entity.mapId != map->id) {
                 continue;
@@ -1026,7 +1027,7 @@ void Editor::DrawUI_EntityActions(UI &uiActionBar, double now)
         }
     }
 
-    if (uiActionBar.Button(TextFormat("Despawn Test %d", state.entities.testId)).pressed) {
+    if (uiActionBar.Button(TextFormat("Despawn Test %d", state.entities.testId), ColorBrightness(MAROON, -0.3f)).pressed) {
         state.entities.testId++;
     };
     uiActionBar.Newline();
@@ -1054,7 +1055,7 @@ void Editor::DrawUI_EntityActions(UI &uiActionBar, double now)
             continue;
         }
 
-        Color bgColor = entity.id == state.entities.selectedId ? ORANGE : BLUE;
+        Color bgColor = entity.id == state.entities.selectedId ? ColorBrightness(ORANGE, -0.3f) : BLUE_DESAT;
         if (uiActionBar.Text(idStr, WHITE, bgColor).down) {
             state.entities.selectedId = entity.id;
         }
@@ -1180,7 +1181,7 @@ void Editor::DrawUI_SfxFiles(UI &uiActionBar, double now)
             continue;
         }
 
-        Color bgColor = sfxFile.id == state.sfxFiles.selectedSfx ? SKYBLUE : BLUE;
+        Color bgColor = sfxFile.id == state.sfxFiles.selectedSfx ? SKYBLUE : BLUE_DESAT;
         const char *idStr = sfxFile.path.c_str();
         if (!StrFilter(idStr, filter.c_str())) {
             continue;
@@ -1236,7 +1237,7 @@ void Editor::DrawUI_PackFiles(UI &uiActionBar, double now)
             continue;
         }
 
-        Color bgColor = packPtr == state.packFiles.selectedPack ? SKYBLUE : BLUE;
+        Color bgColor = packPtr == state.packFiles.selectedPack ? SKYBLUE : BLUE_DESAT;
         const char *idStr = pack.path.c_str();
         if (!StrFilter(idStr, filter.c_str())) {
             continue;
@@ -1324,7 +1325,7 @@ void Editor::DrawUI_PackFiles(UI &uiActionBar, double now)
         uiActionBar.PushWidth(34);
         for (int i = 0; i < data::DAT_TYP_COUNT; i++) {
             DatTypeFilter &filter = datTypeFilter[i];
-            if (uiActionBar.Button(filter.text, filter.enabled, filter.color, ColorBrightness(filter.color, -0.3f)).pressed) {
+            if (uiActionBar.Button(filter.text, filter.enabled, DARKGRAY, filter.color).pressed) {
                 if (io.KeyDown(KEY_LEFT_SHIFT)) {
                     filter.enabled = !filter.enabled;
                 } else {
@@ -1348,7 +1349,7 @@ void Editor::DrawUI_PackFiles(UI &uiActionBar, double now)
             }
 
             //uiActionBar.Label(TextFormat("%s [offset=%d]", DataTypeStr(entry.dtype), entry.offset), labelWidth);
-            uiActionBar.Text(DataTypeStr(entry.dtype), WHITE, filter.color);
+            uiActionBar.Text(DataTypeStr(entry.dtype), WHITE, ColorBrightness(filter.color, -0.2f));
             uiActionBar.Newline();
         }
         uiActionBar.PopStyle();

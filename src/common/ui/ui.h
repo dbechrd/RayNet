@@ -65,7 +65,7 @@ struct UIStyle {
     UIPad pad{ 8, 2 };
     float scale{ 1 };
     Vector2 size{ 0, 0 };
-    Color bgColor[UI_CtrlTypeCount]{ BLANK, BLUE };
+    Color bgColor[UI_CtrlTypeCount]{ BLANK, BLUE_DESAT };
     Color fgColor{ WHITE };
     Font *font{ &fntSmall };
     bool buttonPressed{};
