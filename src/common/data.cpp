@@ -1,6 +1,8 @@
 #include "data.h"
 
 namespace data {
+    Err LoadResources(Pack &pack);
+
 #define ENUM_STR_GENERATOR(type, enumDef, enumGen) \
     const char *type##Str(type id) {               \
         switch (id) {                              \
@@ -11,7 +13,7 @@ namespace data {
 
     ENUM_STR_GENERATOR(DataType,   DATA_TYPES   , ENUM_GEN_CASE_RETURN_DESC);
     ENUM_STR_GENERATOR(GfxFileId,  GFX_FILE_IDS , ENUM_GEN_CASE_RETURN_STR);
-    ENUM_STR_GENERATOR(MusFileId,  MUS_FILE_IDS , ENUM_GEN_CASE_RETURN_STR);
+    //ENUM_STR_GENERATOR(MusFileId,  MUS_FILE_IDS , ENUM_GEN_CASE_RETURN_STR);
     ENUM_STR_GENERATOR(SfxFileId,  SFX_FILE_IDS , ENUM_GEN_CASE_RETURN_STR);
     ENUM_STR_GENERATOR(GfxFrameId, GFX_FRAME_IDS, ENUM_GEN_CASE_RETURN_STR);
     ENUM_STR_GENERATOR(GfxAnimId,  GFX_ANIM_IDS , ENUM_GEN_CASE_RETURN_STR);
@@ -28,7 +30,23 @@ namespace data {
         &pack1
     };
 
-    namespace save {
+    void ReadFileIntoDataBuffer(std::string filename, DatBuffer &datBuffer)
+    {
+        uint32_t bytesRead = 0;
+        datBuffer.bytes = LoadFileData(filename.c_str(), &bytesRead);
+        datBuffer.length = bytesRead;
+    }
+
+    void FreeDataBuffer(DatBuffer &datBuffer)
+    {
+        if (datBuffer.length) {
+            MemFree(datBuffer.bytes);
+            datBuffer = {};
+        }
+    }
+
+    void Init(void)
+    {
         GfxFile gfxFiles[] = {
             { GFX_FILE_NONE },
             // id                      texture path
@@ -42,15 +60,15 @@ namespace data {
         };
 
         MusFile musFiles[] = {
-            { MUS_FILE_NONE },
-            // id                        music file path
-            { MUS_FILE_AMBIENT_OUTDOORS, "resources/copyright/345470__philip_goddard__branscombe-landslip-birds-and-sea-echoes-ese-from-cave-track.ogg" },
-            { MUS_FILE_AMBIENT_CAVE,     "resources/copyright/69391__zixem__cave_amb.wav" },
+            { "NONE" },
+            // id                  music file path
+            { "AMBIENT_OUTDOORS", "resources/copyright/345470__philip_goddard__branscombe-landslip-birds-and-sea-echoes-ese-from-cave-track.ogg" },
+            { "AMBIENT_CAVE",     "resources/copyright/69391__zixem__cave_amb.wav" },
         };
 
         SfxFile sfxFiles[] = {
             { SFX_FILE_NONE },
-            // id                      sound file path                 pitch variance  multi
+            // id                       sound file path                pitch variance  multi
             { SFX_FILE_SOFT_TICK,      "resources/soft_tick.wav"     , 0.03f,          true },
             { SFX_FILE_CAMPFIRE,       "resources/campfire.wav"      , 0.00f,          false },
             { SFX_FILE_FOOTSTEP_GRASS, "resources/footstep_grass.wav", 0.00f,          true },
@@ -299,25 +317,7 @@ namespace data {
             { TILE_AUTO_GRASS_46, GFX_ANIM_TIL_AUTO_GRASS_46, MATERIAL_GRASS, 0b11010110, TILE_FLAG_WALK },
             { TILE_AUTO_GRASS_47, GFX_ANIM_TIL_AUTO_GRASS_47, MATERIAL_GRASS, 0b11010000, TILE_FLAG_WALK },
         };
-    }
 
-    void ReadFileIntoDataBuffer(std::string filename, DatBuffer &datBuffer)
-    {
-        uint32_t bytesRead = 0;
-        datBuffer.bytes = LoadFileData(filename.c_str(), &bytesRead);
-        datBuffer.length = bytesRead;
-    }
-
-    void FreeDataBuffer(DatBuffer &datBuffer)
-    {
-        if (datBuffer.length) {
-            MemFree(datBuffer.bytes);
-            datBuffer = {};
-        }
-    }
-
-    void Init(void)
-    {
         // Ensure every array element is initialized and in contiguous order by id
         #define ID_CHECK(type, name, arr) \
             for (type name : arr) { \
@@ -325,51 +325,30 @@ namespace data {
                 assert(name.id == i++); \
             }
 
-        ID_CHECK(GfxFile  &, gfxFile,  save::gfxFiles);
-        ID_CHECK(MusFile  &, musFile,  save::musFiles);
-        ID_CHECK(SfxFile  &, sfxFile,  save::sfxFiles);
-        ID_CHECK(GfxFrame &, gfxFrame, save::gfxFrames);
-        ID_CHECK(GfxAnim  &, gfxAnim,  save::gfxAnims);
-        ID_CHECK(Material &, material, save::materials);
-        ID_CHECK(Sprite   &, sprite,   save::sprites);
-        ID_CHECK(TileType &, tileType, save::tileTypes);
+        ID_CHECK(GfxFile  &, gfxFile,  gfxFiles);
+        //ID_CHECK(MusFile  &, musFile,  musFiles);
+        ID_CHECK(SfxFile  &, sfxFile,  sfxFiles);
+        ID_CHECK(GfxFrame &, gfxFrame, gfxFrames);
+        ID_CHECK(GfxAnim  &, gfxAnim,  gfxAnims);
+        ID_CHECK(Material &, material, materials);
+        ID_CHECK(Sprite   &, sprite,   sprites);
+        ID_CHECK(TileType &, tileType, tileTypes);
         #undef ID_CHECK
 
-        for (GfxFile &gfxFile : save::gfxFiles) {
-            if (!gfxFile.path.size()) continue;
-            ReadFileIntoDataBuffer(gfxFile.path, gfxFile.data_buffer);
-            gfxFile.texture = LoadTexture(gfxFile.path.c_str());
-        }
-        for (MusFile &musFile : save::musFiles) {
-            if (!musFile.path.size()) continue;
-            ReadFileIntoDataBuffer(musFile.path, musFile.data_buffer);
-            musFile.music = LoadMusicStream(musFile.path.c_str());
-        }
-        for (SfxFile &sfxFile : save::sfxFiles) {
-            if (!sfxFile.path.size()) continue;
-            ReadFileIntoDataBuffer(sfxFile.path, sfxFile.data_buffer);
-            sfxFile.sound = LoadSound(sfxFile.path.c_str());
-        }
+        Pack packHardcode{ "dat/test.dat" };
+        for (auto &i : gfxFiles) packHardcode.gfxFiles.push_back(i);
+        for (auto &i : musFiles) packHardcode.musFiles.push_back(i);
+        for (auto &i : sfxFiles) packHardcode.sfxFiles.push_back(i);
+        for (auto &i : gfxFrames) packHardcode.gfxFrames.push_back(i);
+        for (auto &i : gfxAnims) packHardcode.gfxAnims.push_back(i);
+        for (auto &i : materials) packHardcode.materials.push_back(i);
+        for (auto &i : sprites) packHardcode.sprites.push_back(i);
+        for (auto &i : tileTypes) packHardcode.tileTypes.push_back(i);
 
-        //// Generate checkerboard image in slot 0 as a placeholder for when other images fail to load
-        //Image placeholderImg = GenImageChecked(16, 16, 4, 4, MAGENTA, WHITE);
-        //if (placeholderImg.width) {
-        //    Texture placeholderTex = LoadTextureFromImage(placeholderImg);
-        //    if (placeholderTex.width) {
-        //        gfxFiles[0].texture = placeholderTex;
-        //        gfxFrames[0].gfx = GFX_FILE_NONE;
-        //        gfxFrames[0].w = placeholderTex.width;
-        //        gfxFrames[0].h = placeholderTex.height;
-        //    } else {
-        //        printf("[data] WARN: Failed to generate placeholder texture\n");
-        //    }
-        //    UnloadImage(placeholderImg);
-        //} else {
-        //    printf("[data] WARN: Failed to generate placeholder image\n");
-        //}
+        LoadResources(packHardcode);
 
-        Err err;
-        err = SavePack(pack1);
+        Err err = RN_SUCCESS;
+        err = SavePack(packHardcode);
         if (err) {
             assert(!err);
             TraceLog(LOG_ERROR, "Failed to save data file.\n");
@@ -437,7 +416,7 @@ namespace data {
 
     void Process(PackStream &stream, MusFile &musFile)
     {
-        PROC(musFile.id);
+        Process(stream, musFile.id);
         Process(stream, musFile.path);
 
         // NOTE(dlb): Music is streaming, don't read whole file into memory
@@ -626,14 +605,14 @@ namespace data {
 
             // TODO: These should all be pack.blah after we've removed the
             // static data and switched to pack editing
-            WRITE_ARRAY(save::gfxFiles);
-            WRITE_ARRAY(save::musFiles);
-            WRITE_ARRAY(save::sfxFiles);
-            WRITE_ARRAY(save::gfxFrames);
-            WRITE_ARRAY(save::gfxAnims);
-            WRITE_ARRAY(save::materials);
-            WRITE_ARRAY(save::sprites);
-            WRITE_ARRAY(save::tileTypes);
+            WRITE_ARRAY(pack.gfxFiles);
+            WRITE_ARRAY(pack.musFiles);
+            WRITE_ARRAY(pack.sfxFiles);
+            WRITE_ARRAY(pack.gfxFrames);
+            WRITE_ARRAY(pack.gfxAnims);
+            WRITE_ARRAY(pack.materials);
+            WRITE_ARRAY(pack.sprites);
+            WRITE_ARRAY(pack.tileTypes);
             WRITE_ARRAY(pack.entities);
 
 #undef WRITE_ARRAY
@@ -742,7 +721,7 @@ namespace data {
             }
 
         ID_CHECK(GfxFile  &, gfxFile,  pack.gfxFiles);
-        ID_CHECK(MusFile  &, musFile,  pack.musFiles);
+        //ID_CHECK(MusFile  &, musFile,  pack.musFiles);
         ID_CHECK(SfxFile  &, sfxFile,  pack.sfxFiles);
         ID_CHECK(GfxFrame &, gfxFrame, pack.gfxFrames);
         ID_CHECK(GfxAnim  &, gfxAnim,  pack.gfxAnims);
@@ -757,6 +736,31 @@ namespace data {
     Err LoadResources(Pack &pack)
     {
         Err err = RN_SUCCESS;
+
+#if 0
+        for (GfxFile &gfxFile : pack.gfxFiles) {
+            if (!gfxFile.data_buffer.length) {
+                ReadFileIntoDataBuffer(gfxFile.path, gfxFile.data_buffer);
+            }
+            Image img = LoadImageFromMemory(".png", gfxFile.data_buffer.bytes, gfxFile.data_buffer.length);
+            gfxFile.texture = LoadTextureFromImage(img);
+            UnloadImage(img);
+        }
+        for (MusFile &musFile : pack.musFiles) {
+            if (!musFile.data_buffer.length) {
+                ReadFileIntoDataBuffer(musFile.path, musFile.data_buffer);
+            }
+            musFile.music = LoadMusicStreamFromMemory(".wav", musFile.data_buffer.bytes, musFile.data_buffer.length);
+        }
+        for (SfxFile &sfxFile : pack.sfxFiles) {
+            if (!sfxFile.data_buffer.length) {
+                ReadFileIntoDataBuffer(sfxFile.path, sfxFile.data_buffer);
+            }
+            Wave wav = LoadWaveFromMemory(".wav", sfxFile.data_buffer.bytes, sfxFile.data_buffer.length);
+            sfxFile.sound = LoadSoundFromWave(wav);
+            UnloadWave(wav);
+        }
+#endif
 
         for (GfxFile &gfxFile : pack.gfxFiles) {
             if (gfxFile.path.empty()) continue;

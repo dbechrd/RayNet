@@ -374,8 +374,8 @@ int main(int argc, char *argv[])
         bool doNetTick = client->netTickAccum >= SV_TICK_DT;
 
         // TODO: Move this somewhere in client?
-        if (client->world && client->world->musBackgroundMusic) {
-            Music &music = data::pack1.musFiles[client->world->musBackgroundMusic].music;
+        if (client->world && !client->world->musBackgroundMusic.empty()) {
+            Music &music = data::pack1.FindMusic(client->world->musBackgroundMusic).music;
             if (!IsMusicStreamPlaying(music)) {
                 PlayMusicStream(music);
             }

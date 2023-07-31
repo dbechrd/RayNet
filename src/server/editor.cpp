@@ -1367,13 +1367,13 @@ void Editor::DrawUI_PackFiles(UI &uiActionBar, double now)
                 case data::DAT_TYP_MUS_FILE:
                 {
                     data::MusFile &musFile = pack.musFiles[entry.index];
-                    desc = musFile.path.c_str();
+                    desc = musFile.id.c_str();
                     break;
                 }
                 case data::DAT_TYP_SFX_FILE:
                 {
                     data::SfxFile &sfxFile = pack.sfxFiles[entry.index];
-                    desc = sfxFile.path.c_str();
+                    desc = data::SfxFileIdStr(sfxFile.id);
                     break;
                 }
                 case data::DAT_TYP_GFX_FRAME:

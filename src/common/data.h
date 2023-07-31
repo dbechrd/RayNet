@@ -69,17 +69,17 @@ namespace data {
         ::Texture   texture     {};
     };
 
-#define MUS_FILE_IDS(gen)           \
-    gen(MUS_FILE_NONE)              \
-    gen(MUS_FILE_AMBIENT_OUTDOORS)  \
-    gen(MUS_FILE_AMBIENT_CAVE)      \
-
-    enum MusFileId : uint16_t {
-        MUS_FILE_IDS(ENUM_GEN_VALUE)
-    };
+//#define MUS_FILE_IDS(gen)           \
+//    gen(MUS_FILE_NONE)              \
+//    gen(MUS_FILE_AMBIENT_OUTDOORS)  \
+//    gen(MUS_FILE_AMBIENT_CAVE)      \
+//
+//    enum MusFileId : uint16_t {
+//        MUS_FILE_IDS(ENUM_GEN_VALUE)
+//    };
     struct MusFile {
         static const DataType dtype = DAT_TYP_MUS_FILE;
-        MusFileId   id          {};
+        std::string id          {};
         std::string path        {};
         DatBuffer   data_buffer {};
         ::Music     music       {};
@@ -530,6 +530,8 @@ namespace data {
         std::vector<Sprite>   sprites   {};
         std::vector<TileType> tileTypes {};
 
+        std::unordered_map<std::string, size_t> musFilesById{};
+
         // static entities? (objects?)
         // - doors
         // - chests
@@ -558,6 +560,15 @@ namespace data {
         PackToc toc {};
 
         Pack(std::string path) : path(path) {}
+
+        MusFile &FindMusic(std::string id) {
+            const auto &entry = musFilesById.find(id);
+            if (entry == musFilesById.end()) {
+                return musFiles[0];
+            } else {
+                return musFiles[entry->second];
+            }
+        }
     };
 
     enum PackStreamMode {
@@ -576,7 +587,7 @@ namespace data {
 
     const char *DataTypeStr(DataType type);
     const char *GfxFileIdStr(GfxFileId id);
-    const char *MusFileIdStr(MusFileId id);
+    //const char *MusFileIdStr(MusFileId id);
     const char *SfxFileIdStr(SfxFileId id);
     const char *GfxFrameIdStr(GfxFrameId id);
     const char *GfxAnimIdStr(GfxAnimId id);
