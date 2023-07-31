@@ -16,6 +16,7 @@ namespace data {
     ENUM_STR_GENERATOR(GfxFrameId, GFX_FRAME_IDS, ENUM_GEN_CASE_RETURN_STR);
     ENUM_STR_GENERATOR(GfxAnimId,  GFX_ANIM_IDS , ENUM_GEN_CASE_RETURN_STR);
     ENUM_STR_GENERATOR(MaterialId, MATERIAL_IDS , ENUM_GEN_CASE_RETURN_STR);
+    ENUM_STR_GENERATOR(SpriteId,   SPRITE_IDS,    ENUM_GEN_CASE_RETURN_STR);
     ENUM_STR_GENERATOR(TileTypeId, TILE_TYPE_IDS, ENUM_GEN_CASE_RETURN_STR);
     ENUM_STR_GENERATOR(EntityType, ENTITY_TYPES , ENUM_GEN_CASE_RETURN_STR);
 
@@ -684,17 +685,20 @@ namespace data {
 
             for (PackTocEntry &tocEntry : pack.toc.entries) {
                 fseek(stream.f, tocEntry.offset, SEEK_SET);
+                int &nextIndex = typeNextIndex[tocEntry.dtype];
+                tocEntry.index = nextIndex;
                 switch (tocEntry.dtype) {
-                    case DAT_TYP_GFX_FILE:  Process(stream, pack.gfxFiles [typeNextIndex[tocEntry.dtype]++]); break;
-                    case DAT_TYP_MUS_FILE:  Process(stream, pack.musFiles [typeNextIndex[tocEntry.dtype]++]); break;
-                    case DAT_TYP_SFX_FILE:  Process(stream, pack.sfxFiles [typeNextIndex[tocEntry.dtype]++]); break;
-                    case DAT_TYP_GFX_FRAME: Process(stream, pack.gfxFrames[typeNextIndex[tocEntry.dtype]++]); break;
-                    case DAT_TYP_GFX_ANIM:  Process(stream, pack.gfxAnims [typeNextIndex[tocEntry.dtype]++]); break;
-                    case DAT_TYP_MATERIAL:  Process(stream, pack.materials[typeNextIndex[tocEntry.dtype]++]); break;
-                    case DAT_TYP_SPRITE:    Process(stream, pack.sprites  [typeNextIndex[tocEntry.dtype]++]); break;
-                    case DAT_TYP_TILE_TYPE: Process(stream, pack.tileTypes[typeNextIndex[tocEntry.dtype]++]); break;
-                    case DAT_TYP_ENTITY:    Process(stream, pack.entities [typeNextIndex[tocEntry.dtype]++]); break;
+                    case DAT_TYP_GFX_FILE:  Process(stream, pack.gfxFiles [nextIndex]); break;
+                    case DAT_TYP_MUS_FILE:  Process(stream, pack.musFiles [nextIndex]); break;
+                    case DAT_TYP_SFX_FILE:  Process(stream, pack.sfxFiles [nextIndex]); break;
+                    case DAT_TYP_GFX_FRAME: Process(stream, pack.gfxFrames[nextIndex]); break;
+                    case DAT_TYP_GFX_ANIM:  Process(stream, pack.gfxAnims [nextIndex]); break;
+                    case DAT_TYP_MATERIAL:  Process(stream, pack.materials[nextIndex]); break;
+                    case DAT_TYP_SPRITE:    Process(stream, pack.sprites  [nextIndex]); break;
+                    case DAT_TYP_TILE_TYPE: Process(stream, pack.tileTypes[nextIndex]); break;
+                    case DAT_TYP_ENTITY:    Process(stream, pack.entities [nextIndex]); break;
                 }
+                nextIndex++;
             }
         }
 

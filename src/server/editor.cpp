@@ -1310,20 +1310,20 @@ void Editor::DrawUI_PackFiles(UI &uiActionBar, double now)
             const char *text;
             Color color;
         } datTypeFilter[data::DAT_TYP_COUNT]{
-            { true, "ARR", ColorFromHSV(0 * (360.0f / (float)data::DAT_TYP_COUNT), 0.9f, 0.6f) },
-            { true, "GFX", ColorFromHSV(1 * (360.0f / (float)data::DAT_TYP_COUNT), 0.9f, 0.6f) },
-            { true, "MUS", ColorFromHSV(2 * (360.0f / (float)data::DAT_TYP_COUNT), 0.9f, 0.6f) },
-            { true, "SFX", ColorFromHSV(3 * (360.0f / (float)data::DAT_TYP_COUNT), 0.9f, 0.6f) },
-            { true, "FRM", ColorFromHSV(4 * (360.0f / (float)data::DAT_TYP_COUNT), 0.9f, 0.6f) },
-            { true, "ANM", ColorFromHSV(5 * (360.0f / (float)data::DAT_TYP_COUNT), 0.9f, 0.6f) },
-            { true, "MAT", ColorFromHSV(6 * (360.0f / (float)data::DAT_TYP_COUNT), 0.9f, 0.6f) },
-            { true, "TIL", ColorFromHSV(7 * (360.0f / (float)data::DAT_TYP_COUNT), 0.9f, 0.6f) },
-            { true, "ENT", ColorFromHSV(8 * (360.0f / (float)data::DAT_TYP_COUNT), 0.9f, 0.6f) },
-            { true, "SPT", ColorFromHSV(9 * (360.0f / (float)data::DAT_TYP_COUNT), 0.9f, 0.6f) },
+            { false, "UNU", ColorFromHSV(0 * (360.0f / (float)data::DAT_TYP_COUNT), 0.9f, 0.6f) },
+            { true,  "GFX", ColorFromHSV(1 * (360.0f / (float)data::DAT_TYP_COUNT), 0.9f, 0.6f) },
+            { true,  "MUS", ColorFromHSV(2 * (360.0f / (float)data::DAT_TYP_COUNT), 0.9f, 0.6f) },
+            { true,  "SFX", ColorFromHSV(3 * (360.0f / (float)data::DAT_TYP_COUNT), 0.9f, 0.6f) },
+            { true,  "FRM", ColorFromHSV(4 * (360.0f / (float)data::DAT_TYP_COUNT), 0.9f, 0.6f) },
+            { true,  "ANM", ColorFromHSV(5 * (360.0f / (float)data::DAT_TYP_COUNT), 0.9f, 0.6f) },
+            { true,  "MAT", ColorFromHSV(6 * (360.0f / (float)data::DAT_TYP_COUNT), 0.9f, 0.6f) },
+            { true,  "TIL", ColorFromHSV(7 * (360.0f / (float)data::DAT_TYP_COUNT), 0.9f, 0.6f) },
+            { true,  "ENT", ColorFromHSV(8 * (360.0f / (float)data::DAT_TYP_COUNT), 0.9f, 0.6f) },
+            { true,  "SPT", ColorFromHSV(9 * (360.0f / (float)data::DAT_TYP_COUNT), 0.9f, 0.6f) },
         };
 
         uiActionBar.PushWidth(34);
-        for (int i = 0; i < data::DAT_TYP_COUNT; i++) {
+        for (int i = 1; i < data::DAT_TYP_COUNT; i++) {
             DatTypeFilter &filter = datTypeFilter[i];
             if (uiActionBar.Button(filter.text, filter.enabled, DARKGRAY, filter.color).pressed) {
                 if (io.KeyDown(KEY_LEFT_SHIFT)) {
@@ -1342,16 +1342,160 @@ void Editor::DrawUI_PackFiles(UI &uiActionBar, double now)
         uiActionBar.PopStyle();
 
         uiActionBar.PushWidth(400);
+        uiActionBar.PushMargin({ 0, 0, 0, 0 });
+
+        // Defer changing selection until after the loop has rendered every item
+        int newSelectedOffset = 0;
+
         for (data::PackTocEntry &entry : pack.toc.entries) {
             DatTypeFilter &filter = datTypeFilter[entry.dtype];
             if (!filter.enabled) {
                 continue;
             }
 
-            //uiActionBar.Label(TextFormat("%s [offset=%d]", DataTypeStr(entry.dtype), entry.offset), labelWidth);
-            uiActionBar.Text(DataTypeStr(entry.dtype), WHITE, ColorBrightness(filter.color, -0.2f));
+            bool selected = state.packFiles.selectedPackEntryOffset == entry.offset;
+
+            const char *desc = DataTypeStr(entry.dtype);
+
+            switch (entry.dtype) {
+                case data::DAT_TYP_GFX_FILE:
+                {
+                    data::GfxFile &gfxFile = pack.gfxFiles[entry.index];
+                    desc = gfxFile.path.c_str();
+                    break;
+                }
+                case data::DAT_TYP_MUS_FILE:
+                {
+                    data::MusFile &musFile = pack.musFiles[entry.index];
+                    desc = musFile.path.c_str();
+                    break;
+                }
+                case data::DAT_TYP_SFX_FILE:
+                {
+                    data::SfxFile &sfxFile = pack.sfxFiles[entry.index];
+                    desc = sfxFile.path.c_str();
+                    break;
+                }
+                case data::DAT_TYP_GFX_FRAME:
+                {
+                    data::GfxFrame &gfxFrame = pack.gfxFrames[entry.index];
+                    desc = data::GfxFrameIdStr(gfxFrame.id);
+                    break;
+                }
+                case data::DAT_TYP_GFX_ANIM:
+                {
+                    data::GfxAnim &gfxAnim = pack.gfxAnims[entry.index];
+                    desc = data::GfxAnimIdStr(gfxAnim.id);
+                    break;
+                }
+                case data::DAT_TYP_MATERIAL:
+                {
+                    data::Material &material = pack.materials[entry.index];
+                    desc = data::MaterialIdStr(material.id);
+                    break;
+                }
+                case data::DAT_TYP_TILE_TYPE:
+                {
+                    data::TileType &tileType = pack.tileTypes[entry.index];
+                    desc = data::TileTypeIdStr(tileType.id);
+                    break;
+                }
+                case data::DAT_TYP_ENTITY:
+                {
+                    data::Entity &entity = pack.entities[entry.index];
+                    desc = data::EntityTypeStr(entity.type);
+                    break;
+                }
+                case data::DAT_TYP_SPRITE:
+                {
+                    data::Sprite &sprite = pack.sprites[entry.index];
+                    desc = data::SpriteIdStr(sprite.id);
+                    break;
+                }
+            }
+
+            const char *text = TextFormat("[%s] %s", selected ? "-" : "+", desc);
+            if (uiActionBar.Text(text, WHITE, ColorBrightness(filter.color, -0.2f)).pressed) {
+                printf("pressed\n");
+                if (!selected) {
+                    newSelectedOffset = entry.offset;
+                } else {
+                    state.packFiles.selectedPackEntryOffset = 0;
+                }
+            }
             uiActionBar.Newline();
+
+            if (selected) {
+                switch (entry.dtype) {
+                    case data::DAT_TYP_GFX_FILE:
+                    {
+                        data::GfxFile &gfxFile = pack.gfxFiles[entry.index];
+                        uiActionBar.Label("Path", labelWidth);
+                        uiActionBar.Text(gfxFile.path.c_str());
+                        uiActionBar.Newline();
+                        break;
+                    }
+                    case data::DAT_TYP_MUS_FILE:
+                    {
+                        data::MusFile &musFile = pack.musFiles[entry.index];
+                        uiActionBar.Label("Path", labelWidth);
+                        uiActionBar.Text(musFile.path.c_str());
+                        uiActionBar.Newline();
+                        break;
+                    }
+                    case data::DAT_TYP_SFX_FILE:
+                    {
+                        data::SfxFile &sfxFile = pack.sfxFiles[entry.index];
+                        uiActionBar.Label("Path", labelWidth);
+                        uiActionBar.Text(sfxFile.path.c_str());
+                        uiActionBar.Newline();
+                        break;
+                    }
+                    case data::DAT_TYP_GFX_FRAME:
+                    {
+                        uiActionBar.Text("TODO");
+                        uiActionBar.Newline();
+                        break;
+                    }
+                    case data::DAT_TYP_GFX_ANIM:
+                    {
+                        uiActionBar.Text("TODO");
+                        uiActionBar.Newline();
+                        break;
+                    }
+                    case data::DAT_TYP_MATERIAL:
+                    {
+                        uiActionBar.Text("TODO");
+                        uiActionBar.Newline();
+                        break;
+                    }
+                    case data::DAT_TYP_TILE_TYPE:
+                    {
+                        uiActionBar.Text("TODO");
+                        uiActionBar.Newline();
+                        break;
+                    }
+                    case data::DAT_TYP_ENTITY:
+                    {
+                        uiActionBar.Text("TODO");
+                        uiActionBar.Newline();
+                        break;
+                    }
+                    case data::DAT_TYP_SPRITE:
+                    {
+                        uiActionBar.Text("TODO");
+                        uiActionBar.Newline();
+                        break;
+                    }
+                }
+            }
         }
+
+        if (newSelectedOffset) {
+            state.packFiles.selectedPackEntryOffset = newSelectedOffset;
+        }
+
+        uiActionBar.PopStyle();
         uiActionBar.PopStyle();
         /////// END CONTENT ///////
 

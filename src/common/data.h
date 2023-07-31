@@ -11,7 +11,7 @@
 namespace data {
     // DO NOT re-order these! They are hard-coded in the TOC
 #define DATA_TYPES(gen) \
-        gen(DAT_TYP_ARRAY,     "ARRAY"    ) \
+        gen(DAT_TYP_UNUSED,    "UNUSED"   ) \
         gen(DAT_TYP_GFX_FILE,  "GFX_FILE" ) \
         gen(DAT_TYP_MUS_FILE,  "MUS_FILE" ) \
         gen(DAT_TYP_SFX_FILE,  "SFX_FILE" ) \
@@ -496,7 +496,8 @@ namespace data {
 
     struct PackTocEntry {
         DataType dtype  {};
-        int      offset {};
+        int      offset {};  // byte offset in pack file binary data
+        int      index  {};  // index of data in the in-memory vector
 
         PackTocEntry() = default;
         PackTocEntry(DataType dtype, int offset) : dtype(dtype), offset(offset) {}

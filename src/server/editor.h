@@ -63,6 +63,7 @@ struct EditModePackFiles {
     float scrollOffset{};
     float scrollOffsetTarget{};
     float scrollVelocity{};
+    int selectedPackEntryOffset{};
 };
 
 struct EditModeState {
