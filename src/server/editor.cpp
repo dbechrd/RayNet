@@ -1425,12 +1425,14 @@ void Editor::DrawUI_PackFiles(UI &uiActionBar, double now)
             }
             uiActionBar.Newline();
 
+            int detailsLabelWidth = 40;
+
             if (selected) {
                 switch (entry.dtype) {
                     case data::DAT_TYP_GFX_FILE:
                     {
                         data::GfxFile &gfxFile = pack.gfxFiles[entry.index];
-                        uiActionBar.Label("Path", labelWidth);
+                        uiActionBar.Label("Path", detailsLabelWidth);
                         uiActionBar.Text(gfxFile.path.c_str());
                         uiActionBar.Newline();
                         break;
@@ -1438,7 +1440,7 @@ void Editor::DrawUI_PackFiles(UI &uiActionBar, double now)
                     case data::DAT_TYP_MUS_FILE:
                     {
                         data::MusFile &musFile = pack.musFiles[entry.index];
-                        uiActionBar.Label("Path", labelWidth);
+                        uiActionBar.Label("Path", detailsLabelWidth);
                         uiActionBar.Text(musFile.path.c_str());
                         uiActionBar.Newline();
                         break;
@@ -1446,14 +1448,48 @@ void Editor::DrawUI_PackFiles(UI &uiActionBar, double now)
                     case data::DAT_TYP_SFX_FILE:
                     {
                         data::SfxFile &sfxFile = pack.sfxFiles[entry.index];
-                        uiActionBar.Label("Path", labelWidth);
+                        uiActionBar.Label("Path", detailsLabelWidth);
                         uiActionBar.Text(sfxFile.path.c_str());
                         uiActionBar.Newline();
                         break;
                     }
                     case data::DAT_TYP_GFX_FRAME:
                     {
-                        uiActionBar.Text("TODO");
+                        data::GfxFrame &gfxFrame = pack.gfxFrames[entry.index];
+                        //uiActionBar.Label("rect", detailsLabelWidth);
+                        //uiActionBar.Text(TextFormat("%hu", gfxFrame.x));
+                        //uiActionBar.Text(TextFormat("%hu", gfxFrame.y));
+                        //uiActionBar.Text(TextFormat("%hu", gfxFrame.w));
+                        //uiActionBar.Text(TextFormat("%hu", gfxFrame.h));
+
+                        uiActionBar.Label("pos", detailsLabelWidth);
+
+                        uiActionBar.PushBgColor({ 127, 0, 0, 255 }, UI_CtrlTypeDefault);
+                        static STB_TexteditState txtX{};
+                        float x = (float)gfxFrame.x;
+                        uiActionBar.TextboxFloat(txtX, x, 40, "%.f");
+                        gfxFrame.x = CLAMP(x, 0, UINT16_MAX);
+                        uiActionBar.PopStyle();
+
+                        uiActionBar.PushBgColor({ 0, 127, 0, 255 }, UI_CtrlTypeDefault);
+                        static STB_TexteditState txtY{};
+                        float y = (float)gfxFrame.y;
+                        uiActionBar.TextboxFloat(txtY, y, 40, "%.f");
+                        gfxFrame.y = CLAMP(y, 0, UINT16_MAX);
+                        uiActionBar.PopStyle();
+
+                        uiActionBar.Label("size", detailsLabelWidth);
+
+                        static STB_TexteditState txtW{};
+                        float w = (float)gfxFrame.w;
+                        uiActionBar.TextboxFloat(txtW, w, 40, "%.f");
+                        gfxFrame.w = CLAMP(w, 0, UINT16_MAX);
+
+                        static STB_TexteditState txtH{};
+                        float h = (float)gfxFrame.h;
+                        uiActionBar.TextboxFloat(txtH, h, 40, "%.f");
+                        gfxFrame.h = CLAMP(h, 0, UINT16_MAX);
+
                         uiActionBar.Newline();
                         break;
                     }

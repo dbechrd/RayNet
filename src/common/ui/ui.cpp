@@ -5,6 +5,10 @@
 STB_TexteditState *UI::prevActiveEditor{};
 STB_TexteditState *UI::activeEditor{};
 
+bool UI::tabToNextEditor{};
+STB_TexteditState *UI::lastDrawnEditor{};
+STB_TexteditState *UI::tabToPrevEditor{};
+
 bool UI::UnfocusActiveEditor(void)
 {
     if (activeEditor) {
@@ -471,7 +475,7 @@ bool RN_stb_is_space(char ch)
 #define STB_TEXTEDIT_IMPLEMENTATION
 #include "stb_textedit.h"
 
-UIState UI::Textbox(STB_TexteditState &stbState, std::string &text)
+UIState UI::Textbox(STB_TexteditState &stbState, std::string &text, KeyCallback keyCallback, void *userData)
 {
     const Vector2 textOffset{ 8, 2 };
     const UIStyle &style = GetStyle();
@@ -507,9 +511,11 @@ UIState UI::Textbox(STB_TexteditState &stbState, std::string &text)
 
     static HoverHash prevHoverHash{};
     UIState state = CalcState(ctrlRect, prevHoverHash);
-    if (state.pressed) {
+    if (state.pressed || tabToNextEditor || &stbState == tabToPrevEditor) {
         prevActiveEditor = activeEditor;
         activeEditor = &stbState;
+        tabToNextEditor = false;
+        tabToPrevEditor = 0;
     }
 
     Vector2 mousePosRel{
@@ -527,6 +533,7 @@ UIState UI::Textbox(STB_TexteditState &stbState, std::string &text)
     const bool wasActive = prevActiveEditor == &stbState;
     const bool isActive = activeEditor == &stbState;
     const bool newlyActive = isActive && (!stbState.initialized || !wasActive);
+
     const double now = GetTime();
     const double timeSinceLastClick = now - lastClickTime;
     if (isActive) {
@@ -616,6 +623,15 @@ UIState UI::Textbox(STB_TexteditState &stbState, std::string &text)
         if (!io.KeyboardCaptured()) {
             int key = GetKeyPressed();
             while (key) {
+                if (keyCallback) {
+                    const char *newStr = keyCallback(key, userData);
+                    if (newStr) {
+                        str.data = newStr;
+                        key = GetKeyPressed();
+                        continue;
+                    }
+                }
+
                 if (io.KeyDown(KEY_LEFT_CONTROL) || io.KeyDown(KEY_RIGHT_CONTROL)) {
                     key |= STB_TEXTEDIT_K_CTRL;
                 }
@@ -658,10 +674,26 @@ UIState UI::Textbox(STB_TexteditState &stbState, std::string &text)
                         }
                     }
                 }
+                if (key == KEY_TAB) {
+                    // tell next textbox that draws to active
+                    tabToNextEditor = true;
+                } else if (key == (STB_TEXTEDIT_K_SHIFT | KEY_TAB)) {
+                    // tell previously drawn textbox to activate next frame
+                    tabToPrevEditor = lastDrawnEditor;
+                }
                 key = GetKeyPressed();
             }
             int ch = GetCharPressed();
             while (ch) {
+                /*if (keyCallback) {
+                    const char *newStr = keyCallback(ch, userData);
+                    if (newStr) {
+                        str.data = newStr;
+                        ch = GetCharPressed();
+                        continue;
+                    }
+                }*/
+
                 if (RN_stb_key_to_char(key) != -1) {
                     stb_textedit_key(&str, &stbState, ch);
                 }
@@ -741,10 +773,33 @@ UIState UI::Textbox(STB_TexteditState &stbState, std::string &text)
     // TODO: Render undo state just for fun?
 #endif
 
+    lastDrawnEditor = &stbState;
     return state;
 }
 
-UIState UI::TextboxFloat(STB_TexteditState &stbState, float &value, float width)
+struct TextboxFloatCallbackData {
+    const char *fmt;
+    float *val;
+};
+
+const char *AdjustFloat(int key, void *userData)
+{
+    TextboxFloatCallbackData *data = (TextboxFloatCallbackData *)userData;
+    const char *newStr = 0;
+
+    if (key == KEY_UP) {
+        *data->val += 1;
+        newStr = TextFormat(data->fmt, *data->val);
+    }
+    if (key == KEY_DOWN) {
+        *data->val -= 1;
+        newStr = TextFormat(data->fmt, *data->val);
+    }
+
+    return newStr;
+}
+
+UIState UI::TextboxFloat(STB_TexteditState &stbState, float &value, float width, const char *fmt)
 {
 #if 0
     const char *valueCstr = TextFormat("%.2f", value);
@@ -770,10 +825,20 @@ UIState UI::TextboxFloat(STB_TexteditState &stbState, float &value, float width)
         //return state;
     }
 #else
-    const char *valueCstr = TextFormat("%.2f", value);
+    /*if (activeEditor == &stbState) {
+        if (io.KeyDown(KEY_UP)) {
+            value += 1;
+        }
+        if (io.KeyDown(KEY_DOWN)) {
+            value -= 1;
+        }
+    }*/
+
+    const char *valueCstr = TextFormat(fmt, value);
     std::string valueStr{valueCstr};
     if (width) PushWidth(width);
-    UIState state = Textbox(stbState, valueStr);
+    TextboxFloatCallbackData data{ fmt, &value };
+    UIState state = Textbox(stbState, valueStr, AdjustFloat, (void *)&data);
     if (width) PopStyle();
     char *end = 0;
     float newValue = strtof(valueStr.c_str(), &end);

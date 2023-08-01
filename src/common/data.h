@@ -596,7 +596,7 @@ namespace data {
     const char *EntityTypeStr(EntityType type);
 
     extern Pack pack1;
-    extern Pack *packs[];
+    extern Pack *packs[1];
 
     void ReadFileIntoDataBuffer(std::string filename, DatBuffer &datBuffer);
     void FreeDataBuffer(DatBuffer &datBuffer);

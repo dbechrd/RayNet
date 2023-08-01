@@ -106,8 +106,10 @@ struct UI {
     UIState Button(const char *text);
     UIState Button(const char *text, Color bgColor);
     UIState Button(const char *text, bool pressed, Color bgColor, Color bgColorPressed);
-    UIState Textbox(STB_TexteditState &state, std::string &text);
-    UIState TextboxFloat(STB_TexteditState &stbState, float &value, float width = 0);
+
+    typedef const char *(*KeyCallback)(int key, void *userData);
+    UIState Textbox(STB_TexteditState &state, std::string &text, KeyCallback keyCallback = 0, void *userData = 0);
+    UIState TextboxFloat(STB_TexteditState &stbState, float &value, float width = 0, const char *fmt = "%.2f");
 
     inline Vector2 CursorScreen(void) {
         return Vector2Add(position, cursor);
@@ -124,6 +126,10 @@ private:
     std::stack<UIStyle> styleStack{};
     static STB_TexteditState *prevActiveEditor;
     static STB_TexteditState *activeEditor;
+
+    static bool tabToNextEditor;  // for tab
+    static STB_TexteditState *lastDrawnEditor;  // for shift-tab (1 frame delay)
+    static STB_TexteditState *tabToPrevEditor;  // for shift-tab (1 frame delay)
 
     void UpdateAudio(const UIState &uiState);
     void UpdateCursor(const UIStyle &style, Rectangle &ctrlRect);

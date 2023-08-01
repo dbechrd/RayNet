@@ -26,7 +26,7 @@ namespace data {
 
     Pack pack1{ "dat/test.dat" };
 
-    Pack *packs[] = {
+    Pack *packs[1] = {
         &pack1
     };
 
@@ -336,13 +336,13 @@ namespace data {
         #undef ID_CHECK
 
         Pack packHardcode{ "dat/test.dat" };
-        for (auto &i : gfxFiles) packHardcode.gfxFiles.push_back(i);
-        for (auto &i : musFiles) packHardcode.musFiles.push_back(i);
-        for (auto &i : sfxFiles) packHardcode.sfxFiles.push_back(i);
+        for (auto &i : gfxFiles)  packHardcode.gfxFiles.push_back(i);
+        for (auto &i : musFiles)  packHardcode.musFiles.push_back(i);
+        for (auto &i : sfxFiles)  packHardcode.sfxFiles.push_back(i);
         for (auto &i : gfxFrames) packHardcode.gfxFrames.push_back(i);
-        for (auto &i : gfxAnims) packHardcode.gfxAnims.push_back(i);
+        for (auto &i : gfxAnims)  packHardcode.gfxAnims.push_back(i);
         for (auto &i : materials) packHardcode.materials.push_back(i);
-        for (auto &i : sprites) packHardcode.sprites.push_back(i);
+        for (auto &i : sprites)   packHardcode.sprites.push_back(i);
         for (auto &i : tileTypes) packHardcode.tileTypes.push_back(i);
 
         LoadResources(packHardcode);
