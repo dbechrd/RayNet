@@ -131,6 +131,18 @@ private:
     static STB_TexteditState *lastDrawnEditor;  // for shift-tab (1 frame delay)
     static STB_TexteditState *tabToPrevEditor;  // for shift-tab (1 frame delay)
 
+    struct HoverHash {
+        Vector2 position{};
+
+        HoverHash(void) {};
+        HoverHash(Vector2 position) : position(position) {}
+
+        bool Equals(HoverHash &other) {
+            return Vector2Equals(position, other.position);
+        }
+    };
+
+    UIState CalcState(Rectangle &ctrlRect, HoverHash &prevHoverHash);
     void UpdateAudio(const UIState &uiState);
     void UpdateCursor(const UIStyle &style, Rectangle &ctrlRect);
 };

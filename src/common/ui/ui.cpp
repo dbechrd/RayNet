@@ -19,17 +19,6 @@ bool UI::UnfocusActiveEditor(void)
     return false;
 }
 
-struct HoverHash {
-    Vector2 position{};
-
-    HoverHash(void) {};
-    HoverHash(Vector2 position) : position(position) {}
-
-    bool Equals(HoverHash &other) {
-        return Vector2Equals(position, other.position);
-    }
-};
-
 UI::UI(Vector2 position, UIStyle style)
 {
     this->position = position;
@@ -128,10 +117,13 @@ void Align(const UIStyle &style, Vector2 &position, const Vector2 &size)
     }
 }
 
-UIState CalcState(Rectangle &ctrlRect, HoverHash &prevHoverHash)
+UIState UI::CalcState(Rectangle &ctrlRect, HoverHash &prevHoverHash)
 {
     HoverHash hash{ { ctrlRect.x, ctrlRect.y } };
     bool prevHoveredCtrl = hash.Equals(prevHoverHash);
+
+    static HoverHash prevPressedHash{};
+    bool prevPressedCtrl = hash.Equals(prevPressedHash);
 
     UIState state{};
     if (dlb_CheckCollisionPointRec(GetMousePosition(), ctrlRect)) {
@@ -142,6 +134,10 @@ UIState CalcState(Rectangle &ctrlRect, HoverHash &prevHoverHash)
             state.down = true;
             if (io.MouseButtonPressed(MOUSE_BUTTON_LEFT)) {
                 state.pressed = true;
+                if (!prevPressedCtrl) {
+                    UnfocusActiveEditor();
+                }
+                prevPressedHash = hash;
             }
         } else if (io.MouseButtonReleased(MOUSE_BUTTON_LEFT)) {
             state.released = true;
