@@ -60,9 +60,6 @@ struct EditModeSfxFiles {
 
 struct EditModePackFiles {
     data::Pack *selectedPack{};
-    float scrollOffset{};
-    float scrollOffsetTarget{};
-    float scrollVelocity{};
     int selectedPackEntryOffset{};
 };
 

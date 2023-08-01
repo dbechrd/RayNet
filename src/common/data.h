@@ -609,6 +609,8 @@ namespace data {
     void UnloadPack(Pack &pack);
 
     void PlaySound(SfxFileId id, float pitchVariance = 0.0f);
+    bool IsSoundPlaying(SfxFileId id);
+    void StopSound(SfxFileId id);
 
     const GfxFrame &GetSpriteFrame(const AspectSprite &eSprite);
     void UpdateSprite(AspectSprite &eSprite, EntityType entityType, Vector2 velocity, double dt, bool newlySpawned);

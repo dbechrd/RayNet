@@ -73,7 +73,7 @@ namespace data {
             { SFX_FILE_CAMPFIRE,       "resources/campfire.wav"      , 0.00f,          false },
             { SFX_FILE_FOOTSTEP_GRASS, "resources/footstep_grass.wav", 0.00f,          true },
             { SFX_FILE_FOOTSTEP_STONE, "resources/footstep_stone.wav", 0.00f,          true },
-            { SFX_FILE_FIREBALL,       "resources/fireball.wav",       0.10f,          true },
+            { SFX_FILE_FIREBALL,       "resources/fireball.wav",       0.05f,          true },
         };
 
         GfxFrame gfxFrames[] = {
@@ -852,6 +852,25 @@ namespace data {
         } else if (!IsSoundPlaying(sfxFile.sound)) {
             PlaySound(sfxFile.sound);
         }
+    }
+
+    bool IsSoundPlaying(SfxFileId id)
+    {
+        SfxFile &sfxFile = pack1.sfxFiles[id];
+        return IsSoundPlaying(sfxFile.sound);
+    }
+
+    void StopSound(SfxFileId id)
+    {
+        SfxFile &sfxFile = pack1.sfxFiles[id];
+
+        StopSound(sfxFile.sound);
+
+        //if (sfxFile.multi) {
+        //    StopSoundMulti();
+        //} else {
+        //    StopSound(sfxFile.sound);
+        //}
     }
 
     const GfxFrame &GetSpriteFrame(const AspectSprite &eSprite)

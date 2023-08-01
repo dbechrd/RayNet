@@ -58,7 +58,7 @@ enum UIElementType {
 #endif
 
 struct UIStyle {
-    UIMargin margin{ 6, 0, 0, 6 };
+    UIMargin margin{ 4, 0, 0, 4 };
     float buttonBorderThickness{ 1 };
     float imageBorderThickness{ 2 };
     Color borderColor{ BLANK };
@@ -109,7 +109,7 @@ struct UI {
 
     typedef const char *(*KeyCallback)(int key, void *userData);
     UIState Textbox(STB_TexteditState &state, std::string &text, KeyCallback keyCallback = 0, void *userData = 0);
-    UIState TextboxFloat(STB_TexteditState &stbState, float &value, float width = 0, const char *fmt = "%.2f");
+    UIState TextboxFloat(STB_TexteditState &stbState, float &value, float width = 0, const char *fmt = "%.2f", float increment = 1);
 
     inline Vector2 CursorScreen(void) {
         return Vector2Add(position, cursor);

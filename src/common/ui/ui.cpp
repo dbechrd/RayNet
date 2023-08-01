@@ -152,7 +152,7 @@ UIState UI::CalcState(Rectangle &ctrlRect, HoverHash &prevHoverHash)
 void UI::UpdateAudio(const UIState &uiState)
 {
     if (uiState.released) {
-        data::PlaySound(data::SFX_FILE_SOFT_TICK);
+        //data::PlaySound(data::SFX_FILE_SOFT_TICK);
     } else if (uiState.entered) {
         data::PlaySound(data::SFX_FILE_SOFT_TICK, false);
     }
@@ -232,7 +232,8 @@ UIState UI::Text(const char *text)
     // Draw text
     DrawTextShadowEx(*style.font, text, contentPos, style.fgColor);
 
-    state.contentRect = ctrlRect;
+    //state.contentRect = ctrlRect;
+    state.contentRect = { contentPos.x, contentPos.y, contentSize.x, contentSize.y };
     UpdateCursor(style, ctrlRect);
     return state;
 }
@@ -776,6 +777,7 @@ UIState UI::Textbox(STB_TexteditState &stbState, std::string &text, KeyCallback 
 struct TextboxFloatCallbackData {
     const char *fmt;
     float *val;
+    float increment;
 };
 
 const char *AdjustFloat(int key, void *userData)
@@ -784,18 +786,18 @@ const char *AdjustFloat(int key, void *userData)
     const char *newStr = 0;
 
     if (key == KEY_UP) {
-        *data->val += 1;
+        *data->val += data->increment;
         newStr = TextFormat(data->fmt, *data->val);
     }
     if (key == KEY_DOWN) {
-        *data->val -= 1;
+        *data->val -= data->increment;
         newStr = TextFormat(data->fmt, *data->val);
     }
 
     return newStr;
 }
 
-UIState UI::TextboxFloat(STB_TexteditState &stbState, float &value, float width, const char *fmt)
+UIState UI::TextboxFloat(STB_TexteditState &stbState, float &value, float width, const char *fmt, float increment)
 {
 #if 0
     const char *valueCstr = TextFormat("%.2f", value);
@@ -833,7 +835,7 @@ UIState UI::TextboxFloat(STB_TexteditState &stbState, float &value, float width,
     const char *valueCstr = TextFormat(fmt, value);
     std::string valueStr{valueCstr};
     if (width) PushWidth(width);
-    TextboxFloatCallbackData data{ fmt, &value };
+    TextboxFloatCallbackData data{ fmt, &value, increment };
     UIState state = Textbox(stbState, valueStr, AdjustFloat, (void *)&data);
     if (width) PopStyle();
     char *end = 0;
