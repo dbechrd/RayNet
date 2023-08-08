@@ -15,6 +15,7 @@ enum EditMode {
     EditMode_Entities,
     EditMode_SfxFiles,
     EditMode_PackFiles,
+    EditMode_Debug,
     EditMode_Count
 };
 
@@ -63,23 +64,29 @@ struct EditModePackFiles {
     int selectedPackEntryOffset{};
 };
 
+struct EditModeDebug {
+    int foo{};
+};
+
 struct EditModeState {
-    bool showColliders{};
-    bool showTileIds{};
-    bool showEntityIds{};
-    EditModeTiles tiles;
-    EditModeWang wang;
-    EditModeEntities entities;
-    EditModePathNodes pathNodes;
-    EditModeSfxFiles sfxFiles;
-    EditModePackFiles packFiles;
+    bool showColliders {};
+    bool showTileIds   {};
+    bool showEntityIds {};
+
+    EditModeTiles     tiles     {};
+    EditModeWang      wang      {};
+    EditModeEntities  entities  {};
+    EditModePathNodes pathNodes {};
+    EditModeSfxFiles  sfxFiles  {};
+    EditModePackFiles packFiles {};
+    EditModeDebug     debug     {};
 };
 
 struct Editor {
-    bool active{};
-    EditMode mode{};
-    EditModeState state{};
-    Tilemap *map{};
+    bool          active {};
+    EditMode      mode   {};
+    EditModeState state  {};
+    Tilemap *     map    {};
 
     Editor(Tilemap *map) : map(map) {}
     Err Init(void);
@@ -109,4 +116,5 @@ private:
     void DrawUI_EntityActions(UI &uiActionBar, double now);
     void DrawUI_SfxFiles(UI &uiActionBar, double now);
     void DrawUI_PackFiles(UI &uiActionBar, double now);
+    void DrawUI_Debug(UI &uiActionBar, double now);
 };

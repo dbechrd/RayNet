@@ -5,6 +5,7 @@
 #include "../common/texture_catalog.h"
 #include "../common/tilemap.h"
 #include "../common/ui/ui.h"
+#include "../common/uid.h"
 #include "editor.h"
 #include "game_server.h"
 #include "stb_herringbone_wang_tile.h"
@@ -21,6 +22,7 @@ const char *EditModeStr(EditMode mode)
         case EditMode_Entities:  return "Entities";
         case EditMode_SfxFiles:  return "Sfx";
         case EditMode_PackFiles: return "Pack";
+        case EditMode_Debug:     return "Debug";
         default: return "<null>";
     }
 }
@@ -509,6 +511,10 @@ UIState Editor::DrawUI_ActionBar(Vector2 position, GameServer &server, double no
         }
         case EditMode_PackFiles: {
             DrawUI_PackFiles(uiActionBar, now);
+            break;
+        }
+        case EditMode_Debug: {
+            DrawUI_Debug(uiActionBar, now);
             break;
         }
     }
@@ -1603,5 +1609,14 @@ void Editor::DrawUI_PackFiles(UI &uiActionBar, double now)
         }
 
         EndScrollPanel(uiActionBar, scrollPanel);
+    }
+}
+
+void Editor::DrawUI_Debug(UI &uiActionBar, double now)
+{
+    static UID uid = NextUID();
+    uiActionBar.Text(TextFormat("%.*s", 20, uid.bytes));
+    if (true || uiActionBar.Button("NextUID").pressed) {
+        uid = NextUID();
     }
 }

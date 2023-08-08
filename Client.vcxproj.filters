@@ -1,68 +1,22 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
-    <ClCompile Include="src\client\client.cpp" />
     <ClCompile Include="include\tracy\TracyClient.cpp" />
     <ClCompile Include="include\tinyfiledialogs.c" />
     <ClCompile Include="include\stb_herringbone_wang_tile.cpp" />
+    <ClCompile Include="src\client\client.cpp" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="res\client.ico" />
   </ItemGroup>
   <ItemGroup>
-    <ResourceCompile Include="src\client\Client.rc" />
-  </ItemGroup>
-  <ItemGroup>
-    <ClInclude Include="src\common\wang.h" />
-    <ClInclude Include="src\common\collision.h" />
-    <ClInclude Include="src\common\common.h" />
-    <ClInclude Include="src\common\data.h" />
-    <ClInclude Include="src\common\entity.h" />
-    <ClInclude Include="src\common\entity_db.h" />
-    <ClInclude Include="src\common\file_utils.h" />
-    <ClInclude Include="src\common\histogram.h" />
-    <ClInclude Include="src\common\input_command.h" />
-    <ClInclude Include="src\common\io.h" />
-    <ClInclude Include="src\common\ring_buffer.h" />
     <ClInclude Include="src\common\spritesheet.h" />
-    <ClInclude Include="src\common\strings.h" />
-    <ClInclude Include="src\common\texture_catalog.h" />
-    <ClInclude Include="src\common\tilemap.h" />
-    <ClInclude Include="src\common\collision.cpp" />
-    <ClInclude Include="src\common\common.cpp" />
-    <ClInclude Include="src\common\data.cpp" />
     <ClInclude Include="src\common\entity.cpp" />
-    <ClInclude Include="src\common\entity_db.cpp" />
-    <ClInclude Include="src\common\file_utils.cpp" />
-    <ClInclude Include="src\common\io.cpp" />
-    <ClInclude Include="src\common\kv_writer.cpp" />
     <ClInclude Include="src\common\spritesheet.cpp" />
-    <ClInclude Include="src\common\strings.cpp" />
-    <ClInclude Include="src\common\texture_catalog.cpp" />
-    <ClInclude Include="src\common\tilemap.cpp" />
-    <ClInclude Include="src\common\wang.cpp" />
-    <ClInclude Include="src\common\ui\ui.h" />
-    <ClInclude Include="src\common\ui\ui.cpp" />
-    <ClInclude Include="src\common\net\net.h" />
-    <ClInclude Include="src\common\net\messages\msg_c_entity_interact.h" />
-    <ClInclude Include="src\common\net\messages\msg_c_input_commands.h" />
-    <ClInclude Include="src\common\net\messages\msg_c_tile_interact.h" />
-    <ClInclude Include="src\common\net\messages\msg_s_clock_sync.h" />
-    <ClInclude Include="src\common\net\messages\msg_s_entity_despawn.h" />
-    <ClInclude Include="src\common\net\messages\msg_s_entity_say.h" />
-    <ClInclude Include="src\common\net\messages\msg_s_entity_snapshot.h" />
-    <ClInclude Include="src\common\net\messages\msg_s_entity_spawn.h" />
-    <ClInclude Include="src\common\net\messages\msg_s_tile_chunk.h" />
-    <ClInclude Include="src\common\net\net.cpp" />
     <ClInclude Include="src\common\audio\audio.h" />
     <ClInclude Include="src\common\audio\audio.cpp" />
-    <ClInclude Include="src\client\client_world.h" />
-    <ClInclude Include="src\client\game_client.h" />
-    <ClInclude Include="src\client\resource.h" />
-    <ClInclude Include="src\client\todo.h" />
-    <ClInclude Include="src\client\client_world.cpp" />
-    <ClInclude Include="src\client\game_client.cpp" />
-    <ClInclude Include="src\client\todo.cpp" />
-    <ClInclude Include="src\common\histogram.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="src\client\Client.rc" />
   </ItemGroup>
 </Project>

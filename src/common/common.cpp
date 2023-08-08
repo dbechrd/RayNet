@@ -412,4 +412,5 @@ bool StrFilter(const char *str, const char *filter)
 #include "texture_catalog.cpp"
 #include "tilemap.cpp"
 #include "ui/ui.cpp"
+#include "uid.cpp"
 #include "wang.cpp"

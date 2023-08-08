@@ -44,6 +44,7 @@ namespace data {
     };
 
     struct DatBuffer {
+        bool filename;  // if true, the buffer contains a filename not the file data
         size_t length;
         uint8_t *bytes;
     };
@@ -77,6 +78,41 @@ namespace data {
 //    enum MusFileId : uint16_t {
 //        MUS_FILE_IDS(ENUM_GEN_VALUE)
 //    };
+
+#if 0
+    struct Idx {
+        uint16_t index      {};
+        uint16_t generation {};
+    };
+
+    // Idea: Store all resources in a giant array. When looking up, if the index
+    // is valid check and generation matches, return resource. Otherwise, look
+    // up the resource by name and populate index/generation.
+    struct ResId {
+        const char *id         {};
+        uint16_t    index      {};
+        uint16_t    generation {};
+    };
+#endif
+
+    struct MusFile_Dat {
+        static const DataType dtype = DAT_TYP_MUS_FILE;
+        DatBuffer buf {};
+    };
+
+    struct MusFile_Mem {
+        MusFile_Dat * dat   {};
+        ::Music       music {};
+    };
+
+    struct MapArea_Dat {
+        const char *musAmbientId;
+    };
+
+    struct MapArea_Mem {
+
+    };
+
     struct MusFile {
         static const DataType dtype = DAT_TYP_MUS_FILE;
         std::string id          {};
