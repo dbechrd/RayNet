@@ -6,7 +6,7 @@
 
 void Tilemap::SV_SerializeChunk(Msg_S_TileChunk &tileChunk, uint32_t x, uint32_t y)
 {
-    tileChunk.mapId = id;
+    tileChunk.map_id = id;
     tileChunk.x = x;
     tileChunk.y = y;
     for (uint32_t ty = y; ty < SV_TILE_CHUNK_WIDTH; ty++) {
@@ -18,14 +18,14 @@ void Tilemap::SV_SerializeChunk(Msg_S_TileChunk &tileChunk, uint32_t x, uint32_t
 
 void Tilemap::CL_DeserializeChunk(Msg_S_TileChunk &tileChunk)
 {
-    if (id = tileChunk.mapId) {
+    if (id = tileChunk.map_id) {
         for (uint32_t ty = tileChunk.y; ty < SV_TILE_CHUNK_WIDTH; ty++) {
             for (uint32_t tx = tileChunk.x; tx < SV_TILE_CHUNK_WIDTH; tx++) {
                 Set(tileChunk.x + tx, tileChunk.y + ty, tileChunk.tileDefs[ty * SV_TILE_CHUNK_WIDTH + tx], 0);
             }
         }
     } else {
-        printf("[tilemap] Failed to deserialize chunk with mapId %u into map with id %u\n", tileChunk.mapId, id);
+        printf("[tilemap] Failed to deserialize chunk with mapId %u into map with id %u\n", tileChunk.map_id, id);
     }
 }
 

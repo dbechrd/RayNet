@@ -45,12 +45,6 @@ struct ServerPlayer {
     RingBuffer<InputCmd, CL_SEND_INPUT_COUNT> inputQueue{};
     // TODO(dlb): Also send tile chunks whenever a client enters the render distance of it
     RingBuffer<TileChunkRecord, CL_RENDER_DISTANCE*CL_RENDER_DISTANCE> chunkList{};
-
-    // TODO: Check if player is allowed to actually interact with this
-    // particular entity. E.g. are they even in the same map as them!?
-    // Proximity, etc. If they leave proximity, send EntityInteractCancel
-    uint32_t entityInteractId {};
-    uint32_t entityInteractDialogId {};
 };
 
 class GameServerNetAdapter : public NetAdapter
@@ -99,7 +93,7 @@ struct GameServer {
 
     Tilemap *FindMap(uint32_t mapId);
 
-    uint32_t SpawnEntity(data::EntityType type);
+    data::Entity *SpawnEntity(data::EntityType type);
     void DespawnEntity(uint32_t entityId);
 
     void BroadcastEntityDespawnTest(uint32_t testId);
@@ -120,7 +114,7 @@ private:
 
     void SendEntityDespawnTest(int clientIdx, uint32_t testId);
 
-    void SendEntitySay(int clientIdx, uint32_t entityId, std::string message);
+    void SendEntitySay(int clientIdx, uint32_t entityId, uint32_t dialogId, std::string message);
     void BroadcastEntitySay(uint32_t entityId, std::string message);
 
     void SendTileChunk(int clientIdx, Tilemap &map, uint32_t x, uint32_t y);
@@ -128,7 +122,7 @@ private:
 
     // All part of Update()
     void ProcessMessages(void);
-    uint32_t SpawnProjectile(uint32_t mapId, Vector2 position, Vector2 direction);
+    data::Entity *SpawnProjectile(uint32_t mapId, Vector2 position, Vector2 direction);
     void UpdateServerPlayers(void);
     void TickSpawnTownNPCs(uint32_t mapId);
     void TickSpawnCaveNPCs(uint32_t mapId);

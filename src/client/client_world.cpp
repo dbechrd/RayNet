@@ -13,7 +13,7 @@ GhostSnapshot::GhostSnapshot(Msg_S_EntitySnapshot &msg)
     lastProcessedInputCmd = msg.lastProcessedInputCmd;
 
     // Entity
-    mapId    = msg.mapId;
+    map_id   = msg.mapId;
     position = msg.position;
 
     // Physics
@@ -21,8 +21,8 @@ GhostSnapshot::GhostSnapshot(Msg_S_EntitySnapshot &msg)
     velocity = msg.velocity;
 
     // Life
-    maxHealth = msg.maxHealth;
-    health    = msg.health;
+    hp_max   = msg.maxHealth;
+    hp       = msg.health;
 }
 
 ClientWorld::~ClientWorld(void)
@@ -46,23 +46,23 @@ data::Entity *ClientWorld::LocalPlayer(void) {
 Tilemap *ClientWorld::LocalPlayerMap(void)
 {
     data::Entity *localPlayer = LocalPlayer();
-    if (localPlayer && localPlayer->mapId) {
-        return FindOrLoadMap(localPlayer->mapId);
+    if (localPlayer && localPlayer->map_id) {
+        return FindOrLoadMap(localPlayer->map_id);
     }
     return 0;
 }
 
-Tilemap *ClientWorld::FindOrLoadMap(uint32_t mapId)
+Tilemap *ClientWorld::FindOrLoadMap(uint32_t map_id)
 {
-    assert(mapId);
+    assert(map_id);
     Tilemap *map = 0;
 
-    const auto &mapEntry = mapsById.find(mapId);
+    const auto &mapEntry = mapsById.find(map_id);
     if (mapEntry != mapsById.end()) {
         map = maps[mapEntry->second];
     } else {
         std::string mapName = "unknownMapId";
-        switch (mapId) {
+        switch (map_id) {
             case 1: mapName = LEVEL_001; break;
             case 2: mapName = LEVEL_CAVE; break;
         }
@@ -72,16 +72,16 @@ Tilemap *ClientWorld::FindOrLoadMap(uint32_t mapId)
         if (map) {
             Err err = map->Load(mapName);
             if (!err) {
-                map->id = mapId;
+                map->id = map_id;
                 mapsById[map->id] = maps.size();
                 maps.push_back(map);
             } else {
-                printf("Failed to load map id %u with code %d\n", mapId, err);
+                printf("Failed to load map id %u with code %d\n", map_id, err);
                 delete map;
                 map = 0;
             }
         } else {
-            printf("Failed to allocate space to load map id %u\n", mapId);
+            printf("Failed to allocate space to load map id %u\n", map_id);
         }
     }
 
@@ -111,23 +111,23 @@ bool ClientWorld::CopyEntityData(uint32_t entityId, EntityData &data)
 
 void ClientWorld::ApplySpawnEvent(const Msg_S_EntitySpawn &entitySpawn)
 {
-    size_t entityIndex = entityDb->FindEntityIndex(entitySpawn.entityId);
+    size_t entityIndex = entityDb->FindEntityIndex(entitySpawn.entity_id);
     if (!entityIndex) {
-        printf("[client_world] Failed to spawn entity. Entity id %u not found.\n", entitySpawn.entityId);
+        printf("[client_world] Failed to spawn entity. Entity id %u not found.\n", entitySpawn.entity_id);
         return;
     }
 
     data::Entity &entity = entityDb->entities[entityIndex];
 
     entity.type     = entitySpawn.type;
-    entity.mapId    = entitySpawn.mapId;
+    entity.map_id   = entitySpawn.map_id;
     entity.position = entitySpawn.position;
     entity.radius   = entitySpawn.radius;
     entity.drag     = entitySpawn.drag;
     entity.speed    = entitySpawn.speed;
     entity.velocity = entitySpawn.velocity;
-    entity.hp_max   = entitySpawn.maxHealth;
-    entity.hp       = entitySpawn.health;
+    entity.hp_max   = entitySpawn.hp_max;
+    entity.hp       = entitySpawn.hp;
 
     // TODO: Look it up from somewhere based on entity type?
     switch (entity.type) {
@@ -149,18 +149,18 @@ void ClientWorld::ApplySpawnEvent(const Msg_S_EntitySpawn &entitySpawn)
 void ClientWorld::ApplyStateInterpolated(data::Entity &entity,
     const GhostSnapshot &a, const GhostSnapshot &b, float alpha, float dt)
 {
-    if (b.mapId != a.mapId) {
+    if (b.map_id != a.map_id) {
         alpha = 1.0f;
     }
-    entity.mapId = b.mapId;
+    entity.map_id = b.map_id;
     entity.position.x = LERP(a.position.x, b.position.x, alpha);
     entity.position.y = LERP(a.position.y, b.position.y, alpha);
 
     entity.velocity.x = LERP(a.velocity.x, b.velocity.x, alpha);
     entity.velocity.y = LERP(a.velocity.y, b.velocity.y, alpha);
 
-    entity.hp_max    = b.maxHealth;
-    entity.hp        = b.health;
+    entity.hp_max    = b.hp_max;
+    entity.hp        = b.hp;
     entity.hp_smooth = LERP(entity.hp_smooth, entity.hp, 1.0f - powf(1.0f - 0.999f, dt));
     //entity.hp_smooth += ((entity.hp_smooth < entity.hp) ? 1 : -1) * dt * 20;
 }
@@ -177,7 +177,7 @@ void ClientWorld::ApplyStateInterpolated(uint32_t entityId,
     ApplyStateInterpolated(*entity, a, b, alpha, dt);
 }
 
-Err ClientWorld::CreateDialog(uint32_t entityId, std::string message, double now)
+Err ClientWorld::CreateDialog(uint32_t entityId, uint32_t dialogId, std::string message, double now)
 {
     data::Entity *entity = entityDb->FindEntity(entityId);
     if (!entity) {
@@ -186,6 +186,7 @@ Err ClientWorld::CreateDialog(uint32_t entityId, std::string message, double now
     }
 
     entity->dialog_spawned_at = now;
+    entity->dialog_id = dialogId;
     entity->dialog_title = "Lily";
     entity->dialog_message = message;
     return RN_SUCCESS;
@@ -201,7 +202,7 @@ void ClientWorld::UpdateEntities(GameClient &client)
             continue;
         }
 
-        size_t entityIndex = entityDb->FindEntityIndex(entity.id);
+        uint32_t entityIndex = entityDb->FindEntityIndex(entity.id);
         AspectGhost &eGhost = entityDb->ghosts[entityIndex];
 
         // Local player
@@ -218,13 +219,13 @@ void ClientWorld::UpdateEntities(GameClient &client)
 #if CL_CLIENT_SIDE_PREDICT
             double cmdAccumDt{};
             Vector2 cmdAccumForce{};
-            Tilemap *map = FindOrLoadMap(entity.mapId);
+            Tilemap *map = FindOrLoadMap(entity.map_id);
             if (map) {
                 // Apply unacked input
                 for (size_t cmdIndex = 0; cmdIndex < client.controller.cmdQueue.size(); cmdIndex++) {
                     InputCmd &inputCmd = client.controller.cmdQueue[cmdIndex];
                     if (inputCmd.seq > latestSnapInputSeq) {
-                        ePhysics.ApplyForce(inputCmd.GenerateMoveForce(ePhysics.speed));
+                        entity.ApplyForce(inputCmd.GenerateMoveForce(entity.speed));
                         entityDb->EntityTick(entity.id, SV_TICK_DT);
                         map->ResolveEntityTerrainCollisions(entity.id);
                     }
@@ -233,8 +234,8 @@ void ClientWorld::UpdateEntities(GameClient &client)
                 cmdAccumDt = client.now - client.controller.lastInputSampleAt;
                 if (cmdAccumDt > 0) {
                     Vector2 posBefore = entity.position;
-                    cmdAccumForce = client.controller.cmdAccum.GenerateMoveForce(ePhysics.speed);
-                    ePhysics.ApplyForce(cmdAccumForce);
+                    cmdAccumForce = client.controller.cmdAccum.GenerateMoveForce(entity.speed);
+                    entity.ApplyForce(cmdAccumForce);
                     entityDb->EntityTick(entity.id, SV_TICK_DT);
                     map->ResolveEntityTerrainCollisions(entity.id);
                     entity.position.x = LERP(posBefore.x, entity.position.x, cmdAccumDt / SV_TICK_DT);
@@ -271,7 +272,7 @@ void ClientWorld::UpdateEntities(GameClient &client)
                     "svr_now   %.3f\n"
                     "cmd_accum %.3f",
                     entity.position.x,
-                    ePhysics.velocity.x,
+                    entity.velocity.x,
                     cmdAccumDt > 0 ? cmdAccumForce.x : 0,
                     cmdAccumDt > 0 ? cmdAccumForce.y : 0,
                     client.ServerNow(),
@@ -311,7 +312,7 @@ void ClientWorld::UpdateEntities(GameClient &client)
 
             ApplyStateInterpolated(entity.id, *snapshotA, *snapshotB, alpha, client.frameDt);
 
-            if (localPlayerMap && entity.mapId == localPlayerMap->id) {
+            if (localPlayerMap && entity.map_id == localPlayerMap->id) {
                 const Vector2 cursorWorldPos = GetScreenToWorld2D(GetMousePosition(), camera2d);
                 bool hover = dlb_CheckCollisionPointRec(cursorWorldPos, entityDb->EntityRect(entity.id));
                 if (hover) {
@@ -330,11 +331,11 @@ void ClientWorld::UpdateEntities(GameClient &client)
         }
 
         bool newlySpawned = entity.spawned_at == client.now;
-        data::UpdateSprite(eSprite, entity.type, ePhysics.velocity, client.frameDt, newlySpawned);
+        data::UpdateSprite(entity, client.frameDt, newlySpawned);
 
-        const double duration = CL_DIALOG_DURATION_MIN + CL_DIALOG_DURATION_PER_CHAR * eDialog.message.size();
-        if (eDialog.spawned_at && client.now - eDialog.spawned_at > duration) {
-            eDialog = {};
+        const double duration = CL_DIALOG_DURATION_MIN + CL_DIALOG_DURATION_PER_CHAR * entity.dialog_message.size();
+        if (entity.dialog_spawned_at && client.now - entity.dialog_spawned_at > duration) {
+            entity.ClearDialog();
         }
     }
 }
@@ -365,19 +366,14 @@ void ClientWorld::DrawEntitySnapshotShadows(uint32_t entityId, Controller &contr
         // to decides to look up the entity by id instead of using the tuple's data.
         ghostData.entity.id = 0;
 
-        EntityInterpolateTuple ghostInterpData{ ghostData.entity, ghostData.physics, ghostData.life, ghostData.sprite };
-        EntitySpriteTuple ghostSpriteData{ ghostData.entity, ghostData.sprite };
-        EntityTickTuple ghostTickData{ ghostData.entity, ghostData.life, ghostData.physics, ghostData.sprite };
-        EntityCollisionTuple ghostCollisionData{ ghostData.entity, ghostData.collision, ghostData.physics };
-
         for (int i = 0; i < ghost.size(); i++) {
             if (!ghost[i].serverTime) {
                 continue;
             }
-            ApplyStateInterpolated(ghostInterpData, ghost[i], ghost[i], 0, dt);
+            ApplyStateInterpolated(ghostData.entity, ghost[i], ghost[i], 0, dt);
 
             const float scalePer = 1.0f / (CL_SNAPSHOT_COUNT + 1);
-            Rectangle ghostRect = entityDb->EntityRect(ghostSpriteData);
+            Rectangle ghostRect = entityDb->EntityRect(ghostData.entity);
             ghostRect = RectShrink(ghostRect, scalePer);
             DrawRectangleRec(ghostRect, Fade(RED, 0.1f));
             DrawRectangleLinesEx(ghostRect, 1, Fade(RED, 0.8f));
@@ -386,22 +382,22 @@ void ClientWorld::DrawEntitySnapshotShadows(uint32_t entityId, Controller &contr
         // NOTE(dlb): These aren't actually snapshot shadows, they're client-side prediction shadows
         if (entity.id == localPlayerEntityId) {
 #if CL_CLIENT_SIDE_PREDICT
-            Tilemap *map = FindOrLoadMap(entity.mapId);
+            Tilemap *map = FindOrLoadMap(entity.map_id);
             if (map) {
                 uint32_t lastProcessedInputCmd = 0;
                 const GhostSnapshot &latestSnapshot = ghost.newest();
                 if (latestSnapshot.serverTime) {
-                    ApplyStateInterpolated(ghostInterpData, latestSnapshot, latestSnapshot, 0, dt);
+                    ApplyStateInterpolated(ghostData.entity, latestSnapshot, latestSnapshot, 0, dt);
                     lastProcessedInputCmd = latestSnapshot.lastProcessedInputCmd;
                 }
 
                 for (size_t cmdIndex = 0; cmdIndex < controller.cmdQueue.size(); cmdIndex++) {
                     InputCmd &inputCmd = controller.cmdQueue[cmdIndex];
                     if (inputCmd.seq > lastProcessedInputCmd) {
-                        ghostData.physics.ApplyForce(inputCmd.GenerateMoveForce(ghostData.physics.speed));
-                        entityDb->EntityTick(ghostTickData, SV_TICK_DT);
-                        map->ResolveEntityTerrainCollisions(ghostCollisionData);
-                        Rectangle ghostRect = entityDb->EntityRect(ghostSpriteData);
+                        ghostData.entity.ApplyForce(inputCmd.GenerateMoveForce(ghostData.entity.speed));
+                        entityDb->EntityTick(ghostData.entity, SV_TICK_DT);
+                        map->ResolveEntityTerrainCollisions(ghostData.entity);
+                        Rectangle ghostRect = entityDb->EntityRect(ghostData.entity);
                         DrawRectangleRec(ghostRect, Fade(GREEN, 0.1f));
                         DrawRectangleLinesEx(ghostRect, 1, Fade(GREEN, 0.8f));
                     }
@@ -414,14 +410,14 @@ void ClientWorld::DrawEntitySnapshotShadows(uint32_t entityId, Controller &contr
              const double cmdAccumDt = now - controller.lastInputSampleAt;
             if (cmdAccumDt > 0) {
                 Vector2 posBefore = ghostData.entity.position;
-                Vector2 cmdAccumForce = controller.cmdAccum.GenerateMoveForce(ghostData.physics.speed);
-                ghostData.physics.ApplyForce(cmdAccumForce);
-                entityDb->EntityTick(ghostTickData, SV_TICK_DT);
-                map->ResolveEntityTerrainCollisions(ghostCollisionData);
+                Vector2 cmdAccumForce = controller.cmdAccum.GenerateMoveForce(ghostData.entity.speed);
+                ghostData.entity.ApplyForce(cmdAccumForce);
+                entityDb->EntityTick(ghostData.entity, SV_TICK_DT);
+                map->ResolveEntityTerrainCollisions(ghostData.entity);
                 ghostData.entity.position.y = LERP(posBefore.y, ghostData.entity.position.y, cmdAccumDt / SV_TICK_DT);
                 ghostData.entity.position.x = LERP(posBefore.x, ghostData.entity.position.x, cmdAccumDt / SV_TICK_DT);
             }
-            Rectangle ghostRect = entityDb->EntityRect(ghostSpriteData);
+            Rectangle ghostRect = entityDb->EntityRect(ghostData.entity);
             ghostRect.x = floorf(ghostRect.x);
             ghostRect.y = floorf(ghostRect.y);
             DrawRectangleLinesEx(ghostRect, 1, Fade(BLUE, 0.8f));
@@ -528,7 +524,7 @@ void ClientWorld::DrawDialog(GameClient &client, data::Entity &entity, Vector2 b
         if (pressed) {
             switch (node.type) {
                 case FancyTextNode::DIALOG_OPTION: {
-                    client.SendEntityInteractDialogOption(entity.id, node.optionId);
+                    client.SendEntityInteractDialogOption(entity, node.optionId);
                     break;
                 }
                 case FancyTextNode::HOVER_TIP: {
@@ -549,7 +545,7 @@ void ClientWorld::DrawDialogs(GameClient &client, Camera2D &camera)
     }
 
     for (data::Entity &entity : entityDb->entities) {
-        if (!entity.type || entity.despawned_at || entity.mapId != map->id) {
+        if (!entity.type || entity.despawned_at || entity.map_id != map->id) {
             continue;
         }
         assert(entity.id);
@@ -586,7 +582,7 @@ void ClientWorld::Draw(GameClient &client)
     // Draw the entities
     cursorWorldPos = GetScreenToWorld2D(GetMousePosition(), camera2d);
     for (data::Entity &entity : entityDb->entities) {
-        if (!entity.type || entity.despawned_at || entity.mapId != map->id) {
+        if (!entity.type || entity.despawned_at || entity.map_id != map->id) {
             continue;
         }
         assert(entity.id);

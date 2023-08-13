@@ -13,8 +13,9 @@ struct EntityDB {
     EntityDB(void);
 
     size_t FindEntityIndex(uint32_t entityId);
-    data::Entity *FindEntity(uint32_t entityId, bool deadOrAlive = false);
-    bool SpawnEntity(uint32_t entityId, data::EntityType entityType, double now);
+    data::Entity *FindEntity(uint32_t entityId, bool evenIfDespawned = false);
+    data::Entity *FindEntity(uint32_t entityId, data::EntityType type, bool evenIfDespawned = false);
+    data::Entity *SpawnEntity(uint32_t entityId, data::EntityType type, double now);
     bool DespawnEntity(uint32_t entityId, double now);
     void DestroyEntity(uint32_t entityId);
 

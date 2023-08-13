@@ -90,13 +90,14 @@ void GameClient::SendEntityInteract(uint32_t entityId)
     }
 }
 
-void GameClient::SendEntityInteractDialogOption(uint32_t entityId, uint32_t optionId)
+void GameClient::SendEntityInteractDialogOption(data::Entity &entity, uint32_t optionId)
 {
     if (yj_client->CanSendMessage(MSG_C_ENTITY_INTERACT_DIALOG_OPTION)) {
         Msg_C_EntityInteractDialogOption *msg = (Msg_C_EntityInteractDialogOption *)yj_client->CreateMessage(MSG_C_ENTITY_INTERACT_DIALOG_OPTION);
         if (msg) {
-            msg->entityId = entityId;
-            msg->optionId = optionId;
+            msg->entity_id = entity.id;
+            msg->dialog_id = entity.dialog_id;
+            msg->option_id = optionId;
             yj_client->SendMessage(MSG_C_ENTITY_INTERACT_DIALOG_OPTION, msg);
         } else {
             printf("Failed to create ENTITY_INTERACT_DIALOG_OPTION message.\n");
@@ -155,7 +156,7 @@ void GameClient::ProcessMessages(void)
                 case MSG_S_ENTITY_SAY:
                 {
                     Msg_S_EntitySay *msg = (Msg_S_EntitySay *)yjMsg;
-                    world->CreateDialog(msg->entityId, msg->message, now);
+                    world->CreateDialog(msg->entity_id, msg->dialog_id, msg->message, now);
                     break;
                 }
                 case MSG_S_ENTITY_SNAPSHOT:
@@ -172,17 +173,17 @@ void GameClient::ProcessMessages(void)
                 case MSG_S_ENTITY_SPAWN:
                 {
                     Msg_S_EntitySpawn *msg = (Msg_S_EntitySpawn *)yjMsg;
-                    //printf("[ENTITY_SPAWN] id=%u mapId=%u\n", msg->entityId, msg->mapId);
-                    data::Entity *entity = entityDb->FindEntity(msg->entityId);
+                    //printf("[ENTITY_SPAWN] id=%u mapId=%u\n", msg->entity_id, msg->map_id);
+                    data::Entity *entity = entityDb->FindEntity(msg->entity_id);
                     if (!entity) {
-                        Tilemap *map = world->FindOrLoadMap(msg->mapId);
+                        Tilemap *map = world->FindOrLoadMap(msg->map_id);
                         assert(map && "why no map? we get chunks before entities, right!?");
                         if (map) {
-                            if (entityDb->SpawnEntity(msg->entityId, msg->type, now)) {
+                            if (entityDb->SpawnEntity(msg->entity_id, msg->type, now)) {
                                 world->ApplySpawnEvent(*msg);
                             }
                         } else {
-                            printf("[game_client] Failed to load map id %u to spawn entity id %u\n", msg->mapId, msg->entityId);
+                            printf("[game_client] Failed to load map id %u to spawn entity id %u\n", msg->map_id, msg->entity_id);
                         }
                     } else {
                         assert(!"why two spawn events for same entityId??");
@@ -193,7 +194,7 @@ void GameClient::ProcessMessages(void)
                 {
                     Msg_S_TileChunk *msg = (Msg_S_TileChunk *)yjMsg;
 
-                    Tilemap *map = world->FindOrLoadMap(msg->mapId);
+                    Tilemap *map = world->FindOrLoadMap(msg->map_id);
                     if (map) {
                         map->CL_DeserializeChunk(*msg);
                     } else {

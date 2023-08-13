@@ -239,8 +239,10 @@ void Editor::DrawGroundOverlay_Paths(Camera2D &camera, double now)
 }
 void Editor::DrawGroundOverlay_Warps(Camera2D &camera, double now)
 {
-    for (const data::AspectWarp &warp : data::pack1.warp) {
-        DrawRectangleRec(warp.collider, Fade(SKYBLUE, 0.7f));
+    for (const data::Entity &entity : data::pack1.entities) {
+        if (entity.type == data::ENTITY_WARP) {
+            DrawRectangleRec(entity.warp_collider, Fade(SKYBLUE, 0.7f));
+        }
     }
 }
 
@@ -249,14 +251,14 @@ void Editor::DrawEntityOverlays(Camera2D &camera, double now)
     io.PushScope(IO::IO_EditorEntityOverlay);
 
     data::Entity *selectedEntity = entityDb->FindEntity(state.entities.selectedId);
-    if (selectedEntity && selectedEntity->mapId == map->id) {
+    if (selectedEntity && selectedEntity->map_id == map->id) {
         DrawTextEx(fntSmall, TextFormat("[selected in editor]\n%u", selectedEntity->id),
             selectedEntity->position, fntSmall.baseSize / camera.zoom, 1 / camera.zoom, WHITE);
     }
 
     if (state.showEntityIds) {
         for (data::Entity &entity : entityDb->entities) {
-            if (entity.mapId == map->id && entity.id != state.entities.selectedId) {
+            if (entity.map_id == map->id && entity.id != state.entities.selectedId) {
                 entityDb->DrawEntityIds(entity.id, camera);
             }
         }
@@ -288,7 +290,7 @@ void Editor::DrawEntityOverlays(Camera2D &camera, double now)
 void Editor::DrawEntityOverlay_Collision(Camera2D &camera, double now)
 {
     for (data::Entity &entity : entityDb->entities) {
-        if (entity.mapId != map->id) {
+        if (entity.map_id != map->id) {
             continue;
         }
         assert(entity.id && entity.type);
@@ -298,13 +300,11 @@ void Editor::DrawEntityOverlay_Collision(Camera2D &camera, double now)
 
         // [Debug] Draw colliders
         if (state.showColliders) {
-            size_t entityIndex = entityDb->FindEntityIndex(entity.id);
-            data::AspectCollision &collider = entityDb->collision[entityIndex];
-            if (collider.radius) {
+            if (entity.radius) {
                 DrawCircle(
                     entity.position.x, entity.position.y,
-                    collider.radius,
-                    collider.colliding ? Fade(RED, 0.5) : Fade(LIME, 0.5)
+                    entity.radius,
+                    entity.colliding ? Fade(RED, 0.5) : Fade(LIME, 0.5)
                 );
             }
         }
@@ -642,7 +642,7 @@ void Editor::DrawUI_Tilesheet(UI &uiActionBar, double now)
                 const Color color = Fade(MAROON, 0.7f);
 
                 Vector2 cursor{};
-                uint8_t mask = map->tileDefs[i].autoTileMask;
+                uint8_t mask = map->tileDefs[i].auto_tile_mask;
                 if (mask & 0b10000000) DrawRectangleRectOffset(tileDefRectScreen, cursor, color);
                 cursor.x += tileThird;
 
@@ -725,15 +725,15 @@ void Editor::DrawUI_Tilesheet(UI &uiActionBar, double now)
                         //printf("x: %d, y: %d, s: %d\n", tileXSegment, tileYSegment, tileSegment);
                         TileDef &tileDef = map->tileDefs[tileIdx];
                         switch (tileSegment) {
-                            case 0: tileDef.autoTileMask ^= 0b10000000; break;
-                            case 1: tileDef.autoTileMask ^= 0b01000000; break;
-                            case 2: tileDef.autoTileMask ^= 0b00100000; break;
-                            case 3: tileDef.autoTileMask ^= 0b00010000; break;
-                            case 4: tileDef.autoTileMask ^= 0b00000000; break;
-                            case 5: tileDef.autoTileMask ^= 0b00001000; break;
-                            case 6: tileDef.autoTileMask ^= 0b00000100; break;
-                            case 7: tileDef.autoTileMask ^= 0b00000010; break;
-                            case 8: tileDef.autoTileMask ^= 0b00000001; break;
+                            case 0: tileDef.auto_tile_mask ^= 0b10000000; break;
+                            case 1: tileDef.auto_tile_mask ^= 0b01000000; break;
+                            case 2: tileDef.auto_tile_mask ^= 0b00100000; break;
+                            case 3: tileDef.auto_tile_mask ^= 0b00010000; break;
+                            case 4: tileDef.auto_tile_mask ^= 0b00000000; break;
+                            case 5: tileDef.auto_tile_mask ^= 0b00001000; break;
+                            case 6: tileDef.auto_tile_mask ^= 0b00000100; break;
+                            case 7: tileDef.auto_tile_mask ^= 0b00000010; break;
+                            case 8: tileDef.auto_tile_mask ^= 0b00000001; break;
                         }
                         break;
                     }
@@ -966,7 +966,11 @@ void Editor::DrawUI_WarpActions(UI &uiActionBar, double now)
     //    uiActionBar.Newline();
     //}
 
-    for (data::AspectWarp &warp : data::pack1.warp) {
+    for (data::Entity &entity : data::pack1.entities) {
+        if (entity.type != data::ENTITY_WARP) {
+            continue;
+        }
+
         uiActionBar.Text("collider");
         uiActionBar.Newline();
 
@@ -979,13 +983,13 @@ void Editor::DrawUI_WarpActions(UI &uiActionBar, double now)
         uiActionBar.Newline();
 
         static STB_TexteditState txtColliderX{};
-        uiActionBar.TextboxFloat(txtColliderX, warp.collider.x);
+        uiActionBar.TextboxFloat(txtColliderX, entity.warp_collider.x);
         static STB_TexteditState txtColliderY{};
-        uiActionBar.TextboxFloat(txtColliderY, warp.collider.y);
+        uiActionBar.TextboxFloat(txtColliderY, entity.warp_collider.y);
         static STB_TexteditState txtColliderW{};
-        uiActionBar.TextboxFloat(txtColliderW, warp.collider.width);
+        uiActionBar.TextboxFloat(txtColliderW, entity.warp_collider.width);
         static STB_TexteditState txtColliderH{};
-        uiActionBar.TextboxFloat(txtColliderH, warp.collider.height);
+        uiActionBar.TextboxFloat(txtColliderH, entity.warp_collider.height);
         uiActionBar.Newline();
 
         uiActionBar.Text("destX");
@@ -993,9 +997,9 @@ void Editor::DrawUI_WarpActions(UI &uiActionBar, double now)
         uiActionBar.Newline();
 
         static STB_TexteditState txtDestX{};
-        uiActionBar.TextboxFloat(txtDestX, warp.destPos.x);
+        uiActionBar.TextboxFloat(txtDestX, entity.warp_dest_pos.x);
         static STB_TexteditState txtDestY{};
-        uiActionBar.TextboxFloat(txtDestY, warp.destPos.y);
+        uiActionBar.TextboxFloat(txtDestY, entity.warp_dest_pos.y);
         uiActionBar.Newline();
 
         uiActionBar.PopStyle();
@@ -1003,19 +1007,19 @@ void Editor::DrawUI_WarpActions(UI &uiActionBar, double now)
         uiActionBar.Text("destMap");
         uiActionBar.Newline();
         static STB_TexteditState txtDestMap{};
-        uiActionBar.Textbox(txtDestMap, warp.destMap);
+        uiActionBar.Textbox(txtDestMap, entity.warp_dest_map);
         uiActionBar.Newline();
 
         uiActionBar.Text("templateMap");
         uiActionBar.Newline();
         static STB_TexteditState txtTemplateMap{};
-        uiActionBar.Textbox(txtTemplateMap, warp.templateMap);
+        uiActionBar.Textbox(txtTemplateMap, entity.warp_template_map);
         uiActionBar.Newline();
 
         uiActionBar.Text("templateTileset");
         uiActionBar.Newline();
         static STB_TexteditState txtTemplateTileset{};
-        uiActionBar.Textbox(txtTemplateTileset, warp.templateTileset);
+        uiActionBar.Textbox(txtTemplateTileset, entity.warp_template_tileset);
         uiActionBar.Newline();
     }
 
@@ -1025,7 +1029,7 @@ void Editor::DrawUI_EntityActions(UI &uiActionBar, double now)
 {
     if (uiActionBar.Button("Despawn all", ColorBrightness(MAROON, -0.3f)).pressed) {
         for (const data::Entity &entity : entityDb->entities) {
-            if (entity.type == data::ENTITY_PLAYER || entity.mapId != map->id) {
+            if (entity.type == data::ENTITY_PLAYER || entity.map_id != map->id) {
                 continue;
             }
             assert(entity.id && entity.type);
@@ -1052,7 +1056,7 @@ void Editor::DrawUI_EntityActions(UI &uiActionBar, double now)
 
     for (uint32_t i = 0; i < SV_MAX_ENTITIES; i++) {
         data::Entity &entity = entityDb->entities[i];
-        if (!entity.id || entity.mapId != map->id) {
+        if (!entity.id || entity.map_id != map->id) {
             continue;
         }
 
@@ -1071,102 +1075,96 @@ void Editor::DrawUI_EntityActions(UI &uiActionBar, double now)
     uiActionBar.PopStyle();
 
     if (state.entities.selectedId) {
-        size_t entityIndex = entityDb->FindEntityIndex(state.entities.selectedId);
-        data::Entity &entity = entityDb->entities[entityIndex];
-        data::AspectCombat    &eCombat    = entityDb->combat    [entityIndex];
-        data::AspectCollision &eCollision = entityDb->collision [entityIndex];
-        data::AspectDialog    &eDialog    = entityDb->dialog    [entityIndex];
-        data::AspectLife      &eLife      = entityDb->life      [entityIndex];
-        data::AspectPathfind  &ePathfind  = entityDb->pathfind  [entityIndex];
-        data::AspectPhysics   &ePhysics   = entityDb->physics   [entityIndex];
-        data::AspectSprite    &eSprite    = entityDb->sprite    [entityIndex];
-        data::AspectWarp      &eWarp      = entityDb->warp      [entityIndex];
+        data::Entity *entity = entityDb->FindEntity(state.entities.selectedId);
+        if (entity) {
+            const int labelWidth = 100;
 
-        const int labelWidth = 100;
+            ////////////////////////////////////////////////////////////////////////
+            // Entity
+            uiActionBar.Label("id", labelWidth);
+            uiActionBar.Text(TextFormat("%d", entity->id));
+            uiActionBar.Newline();
 
-        ////////////////////////////////////////////////////////////////////////
-        // Entity
-        uiActionBar.Label("id", labelWidth);
-        uiActionBar.Text(TextFormat("%d", entity.id));
-        uiActionBar.Newline();
+            uiActionBar.Label("type", labelWidth);
+            uiActionBar.Text(EntityTypeStr(entity->type));
+            uiActionBar.Newline();
 
-        uiActionBar.Label("type", labelWidth);
-        uiActionBar.Text(EntityTypeStr(entity.type));
-        uiActionBar.Newline();
+            uiActionBar.Label("position", labelWidth);
+            uiActionBar.PushBgColor({ 127, 0, 0, 255 }, UI_CtrlTypeDefault);
+            static STB_TexteditState txtPosX{};
+            uiActionBar.TextboxFloat(txtPosX, entity->position.x, 80);
+            uiActionBar.PopStyle();
+            uiActionBar.PushBgColor({ 0, 127, 0, 255 }, UI_CtrlTypeDefault);
+            static STB_TexteditState txtPosY{};
+            uiActionBar.TextboxFloat(txtPosY, entity->position.y, 80);
+            uiActionBar.PopStyle();
+            uiActionBar.Newline();
 
-        uiActionBar.Label("position", labelWidth);
-        uiActionBar.PushBgColor({ 127, 0, 0, 255 }, UI_CtrlTypeDefault);
-        static STB_TexteditState txtPosX{};
-        uiActionBar.TextboxFloat(txtPosX, entity.position.x, 80);
-        uiActionBar.PopStyle();
-        uiActionBar.PushBgColor({ 0, 127, 0, 255 }, UI_CtrlTypeDefault);
-        static STB_TexteditState txtPosY{};
-        uiActionBar.TextboxFloat(txtPosY, entity.position.y, 80);
-        uiActionBar.PopStyle();
-        uiActionBar.Newline();
+            ////////////////////////////////////////////////////////////////////////
+            // Combat
+            uiActionBar.Label("attk cooldown", labelWidth);
+            const float attackCooldownLeft = MAX(0, entity->attack_cooldown - (now - entity->last_attacked_at));
+            uiActionBar.Text(TextFormat("%.3f", attackCooldownLeft));
+            uiActionBar.Newline();
 
-        ////////////////////////////////////////////////////////////////////////
-        // Combat
-        uiActionBar.Label("attk cooldown", labelWidth);
-        const float attackCooldownLeft = MAX(0, eCombat.attackCooldown - (now - eCombat.lastAttackedAt));
-        uiActionBar.Text(TextFormat("%.3f", attackCooldownLeft));
-        uiActionBar.Newline();
+            ////////////////////////////////////////////////////////////////////////
+            // Collision
+            uiActionBar.Label("radius", labelWidth);
+            static STB_TexteditState txtRadius{};
+            uiActionBar.TextboxFloat(txtRadius, entity->radius, 80);
+            uiActionBar.Newline();
 
-        ////////////////////////////////////////////////////////////////////////
-        // Collision
-        uiActionBar.Label("radius", labelWidth);
-        static STB_TexteditState txtRadius{};
-        uiActionBar.TextboxFloat(txtRadius, eCollision.radius, 80);
-        uiActionBar.Newline();
+            uiActionBar.Label("colliding", labelWidth);
+            if (entity->colliding) {
+                uiActionBar.Text("True", RED);
+            } else {
+                uiActionBar.Text("False", WHITE);
+            }
+            uiActionBar.Newline();
 
-        uiActionBar.Label("colliding", labelWidth);
-        if (eCollision.colliding) {
-            uiActionBar.Text("True", RED);
+            uiActionBar.Label("onWarp", labelWidth);
+            if (entity->on_warp) {
+                uiActionBar.Text("True", SKYBLUE);
+            } else {
+                uiActionBar.Text("False", WHITE);
+            }
+            uiActionBar.Newline();
+
+            ////////////////////////////////////////////////////////////////////////
+            // Life
+            uiActionBar.Label("health", labelWidth);
+            static STB_TexteditState txtHealth{};
+            uiActionBar.TextboxFloat(txtHealth, entity->hp, 80);
+            uiActionBar.Text("/");
+            static STB_TexteditState txtMaxHealth{};
+            uiActionBar.TextboxFloat(txtMaxHealth, entity->hp_max, 80);
+            uiActionBar.Newline();
+
+            ////////////////////////////////////////////////////////////////////////
+            // Physics
+            uiActionBar.Label("drag", labelWidth);
+            static STB_TexteditState txtDrag{};
+            uiActionBar.TextboxFloat(txtDrag, entity->drag, 80);
+            uiActionBar.Newline();
+
+            uiActionBar.Label("speed", labelWidth);
+            static STB_TexteditState txtSpeed{};
+            uiActionBar.TextboxFloat(txtSpeed, entity->speed, 80);
+            uiActionBar.Newline();
+
+            uiActionBar.Label("velocity", labelWidth);
+            uiActionBar.PushBgColor({ 127, 0, 0, 255 }, UI_CtrlTypeDefault);
+            static STB_TexteditState txtVelX{};
+            uiActionBar.TextboxFloat(txtVelX, entity->velocity.x, 80);
+            uiActionBar.PopStyle();
+            uiActionBar.PushBgColor({ 0, 127, 0, 255 }, UI_CtrlTypeDefault);
+            static STB_TexteditState txtVelY{};
+            uiActionBar.TextboxFloat(txtVelY, entity->velocity.y, 80);
+            uiActionBar.PopStyle();
+            uiActionBar.Newline();
         } else {
-            uiActionBar.Text("False", WHITE);
+            state.entities.selectedId = 0;
         }
-        uiActionBar.Newline();
-
-        uiActionBar.Label("onWarp", labelWidth);
-        if (eCollision.onWarp) {
-            uiActionBar.Text("True", SKYBLUE);
-        } else {
-            uiActionBar.Text("False", WHITE);
-        }
-        uiActionBar.Newline();
-
-        ////////////////////////////////////////////////////////////////////////
-        // Life
-        uiActionBar.Label("health", labelWidth);
-        static STB_TexteditState txtHealth{};
-        uiActionBar.TextboxFloat(txtHealth, eLife.health, 80);
-        uiActionBar.Text("/");
-        static STB_TexteditState txtMaxHealth{};
-        uiActionBar.TextboxFloat(txtMaxHealth, eLife.maxHealth, 80);
-        uiActionBar.Newline();
-
-        ////////////////////////////////////////////////////////////////////////
-        // Physics
-        uiActionBar.Label("drag", labelWidth);
-        static STB_TexteditState txtDrag{};
-        uiActionBar.TextboxFloat(txtDrag, ePhysics.drag, 80);
-        uiActionBar.Newline();
-
-        uiActionBar.Label("speed", labelWidth);
-        static STB_TexteditState txtSpeed{};
-        uiActionBar.TextboxFloat(txtSpeed, ePhysics.speed, 80);
-        uiActionBar.Newline();
-
-        uiActionBar.Label("velocity", labelWidth);
-        uiActionBar.PushBgColor({ 127, 0, 0, 255 }, UI_CtrlTypeDefault);
-        static STB_TexteditState txtVelX{};
-        uiActionBar.TextboxFloat(txtVelX, ePhysics.velocity.x, 80);
-        uiActionBar.PopStyle();
-        uiActionBar.PushBgColor({ 0, 127, 0, 255 }, UI_CtrlTypeDefault);
-        static STB_TexteditState txtVelY{};
-        uiActionBar.TextboxFloat(txtVelY, ePhysics.velocity.y, 80);
-        uiActionBar.PopStyle();
-        uiActionBar.Newline();
     }
 }
 void Editor::DrawUI_SfxFiles(UI &uiActionBar, double now)
@@ -1182,7 +1180,7 @@ void Editor::DrawUI_SfxFiles(UI &uiActionBar, double now)
     uiActionBar.Textbox(txtSearch, filter);
     uiActionBar.Newline();
 
-    for (data::SfxFile &sfxFile : data::pack1.sfxFiles) {
+    for (data::SfxFile &sfxFile : data::pack1.sfx_files) {
         if (!sfxFile.id) {
             continue;
         }
@@ -1203,7 +1201,7 @@ void Editor::DrawUI_SfxFiles(UI &uiActionBar, double now)
 
     if (state.sfxFiles.selectedSfx) {
         const int labelWidth = 100;
-        data::SfxFile &sfxFile = data::pack1.sfxFiles[state.sfxFiles.selectedSfx];
+        data::SfxFile &sfxFile = data::pack1.sfx_files[state.sfxFiles.selectedSfx];
 
         uiActionBar.Label("id", labelWidth);
         uiActionBar.Text(TextFormat("%d", sfxFile.id));
@@ -1402,31 +1400,31 @@ void Editor::DrawUI_PackFiles(UI &uiActionBar, double now)
             switch (entry.dtype) {
                 case data::DAT_TYP_GFX_FILE:
                 {
-                    data::GfxFile &gfxFile = pack.gfxFiles[entry.index];
+                    data::GfxFile &gfxFile = pack.gfx_files[entry.index];
                     desc = gfxFile.path.c_str();
                     break;
                 }
                 case data::DAT_TYP_MUS_FILE:
                 {
-                    data::MusFile &musFile = pack.musFiles[entry.index];
+                    data::MusFile &musFile = pack.mus_files[entry.index];
                     desc = musFile.id.c_str();
                     break;
                 }
                 case data::DAT_TYP_SFX_FILE:
                 {
-                    data::SfxFile &sfxFile = pack.sfxFiles[entry.index];
+                    data::SfxFile &sfxFile = pack.sfx_files[entry.index];
                     desc = data::SfxFileIdStr(sfxFile.id);
                     break;
                 }
                 case data::DAT_TYP_GFX_FRAME:
                 {
-                    data::GfxFrame &gfxFrame = pack.gfxFrames[entry.index];
+                    data::GfxFrame &gfxFrame = pack.gfx_frames[entry.index];
                     desc = data::GfxFrameIdStr(gfxFrame.id);
                     break;
                 }
                 case data::DAT_TYP_GFX_ANIM:
                 {
-                    data::GfxAnim &gfxAnim = pack.gfxAnims[entry.index];
+                    data::GfxAnim &gfxAnim = pack.gfx_anims[entry.index];
                     desc = data::GfxAnimIdStr(gfxAnim.id);
                     break;
                 }
@@ -1438,7 +1436,7 @@ void Editor::DrawUI_PackFiles(UI &uiActionBar, double now)
                 }
                 case data::DAT_TYP_TILE_TYPE:
                 {
-                    data::TileType &tileType = pack.tileTypes[entry.index];
+                    data::TileType &tileType = pack.tile_types[entry.index];
                     desc = data::TileTypeIdStr(tileType.id);
                     break;
                 }
@@ -1479,7 +1477,7 @@ void Editor::DrawUI_PackFiles(UI &uiActionBar, double now)
                 switch (entry.dtype) {
                     case data::DAT_TYP_GFX_FILE:
                     {
-                        data::GfxFile &gfxFile = pack.gfxFiles[entry.index];
+                        data::GfxFile &gfxFile = pack.gfx_files[entry.index];
                         uiActionBar.Label("Path", detailsLabelWidth);
                         uiActionBar.Text(gfxFile.path.c_str());
                         uiActionBar.Newline();
@@ -1487,7 +1485,7 @@ void Editor::DrawUI_PackFiles(UI &uiActionBar, double now)
                     }
                     case data::DAT_TYP_MUS_FILE:
                     {
-                        data::MusFile &musFile = pack.musFiles[entry.index];
+                        data::MusFile &musFile = pack.mus_files[entry.index];
                         uiActionBar.Label("Path", detailsLabelWidth);
                         uiActionBar.Text(musFile.path.c_str());
                         uiActionBar.Newline();
@@ -1498,7 +1496,7 @@ void Editor::DrawUI_PackFiles(UI &uiActionBar, double now)
                         static int labelWidth = 100;
                         const float textboxWidth = 400 - 16 - labelWidth;
 
-                        data::SfxFile &sfxFile = pack.sfxFiles[entry.index];
+                        data::SfxFile &sfxFile = pack.sfx_files[entry.index];
 
                         int newLabelWidth = 0;
                         UIState uiPath = uiActionBar.Label("path", labelWidth);
@@ -1532,7 +1530,7 @@ void Editor::DrawUI_PackFiles(UI &uiActionBar, double now)
                     }
                     case data::DAT_TYP_GFX_FRAME:
                     {
-                        data::GfxFrame &gfxFrame = pack.gfxFrames[entry.index];
+                        data::GfxFrame &gfxFrame = pack.gfx_frames[entry.index];
                         //uiActionBar.Label("rect", detailsLabelWidth);
                         //uiActionBar.Text(TextFormat("%hu", gfxFrame.x));
                         //uiActionBar.Text(TextFormat("%hu", gfxFrame.y));

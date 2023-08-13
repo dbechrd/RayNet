@@ -3,13 +3,15 @@
 
 struct Msg_C_EntityInteractDialogOption : public yojimbo::Message
 {
-    uint32_t entityId{};
-    uint32_t optionId{};
+    uint32_t entity_id{};
+    uint32_t dialog_id{};
+    uint32_t option_id{};
 
     template <typename Stream> bool Serialize(Stream &stream)
     {
-        serialize_uint32(stream, entityId);
-        serialize_uint32(stream, optionId);
+        serialize_uint32(stream, entity_id);
+        serialize_uint32(stream, dialog_id);
+        serialize_uint32(stream, option_id);
         return true;
     }
 

@@ -69,7 +69,7 @@ void draw_menu_connecting(GameClient &client)
         campfire.sprite = data::SPRITE_OBJ_CAMPFIRE;
     }
 
-    data::UpdateSprite(campfire, {}, client.frameDt, !connectingDotIdxLastUpdatedAt);
+    data::UpdateSprite(campfire, client.frameDt, !connectingDotIdxLastUpdatedAt);
     if (!connectingDotIdxLastUpdatedAt) {
         connectingDotIdxLastUpdatedAt = client.now;
     } else if (client.now > connectingDotIdxLastUpdatedAt + 0.5) {

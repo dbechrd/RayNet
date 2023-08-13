@@ -260,7 +260,7 @@ Err Play(GameServer &server)
                 // NOTE(dlb): We could build an array of { entityIndex, position.y } and sort it
                 // each frame, then render the entities in that order.
                 for (data::Entity &entity : entityDb->entities) {
-                    if (entity.mapId == editor.map->id) {
+                    if (entity.map_id == editor.map->id) {
                         entityDb->DrawEntity(entity.id);
                     }
                 }

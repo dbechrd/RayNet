@@ -3,7 +3,8 @@
 
 struct Msg_S_EntitySay : public yojimbo::Message
 {
-    uint32_t entityId{};
+    uint32_t entity_id{};
+    uint32_t dialog_id{};
     std::string message{};
 
     //enum SayDuration {
@@ -21,7 +22,8 @@ struct Msg_S_EntitySay : public yojimbo::Message
             strncpy(messageBuf, message.c_str(), SV_MAX_ENTITY_SAY_MSG_LEN - 1);
         }
 
-        serialize_uint32(stream, entityId);
+        serialize_uint32(stream, entity_id);
+        serialize_uint32(stream, dialog_id);
         serialize_uint32(stream, messageLen);
         if (messageLen > SV_MAX_ENTITY_SAY_MSG_LEN) {
             return false;

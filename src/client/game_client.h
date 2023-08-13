@@ -38,7 +38,7 @@ struct GameClient {
     Err TryConnect(void);
     void SendInput(const Controller &controller);
     void SendEntityInteract(uint32_t entityId);
-    void SendEntityInteractDialogOption(uint32_t entityId, uint32_t optionId);
+    void SendEntityInteractDialogOption(data::Entity &entity, uint32_t optionId);
     void SendTileInteract(uint32_t x, uint32_t y);
     void ProcessMessages(void);
     void Update(void);

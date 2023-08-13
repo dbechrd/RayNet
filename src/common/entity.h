@@ -8,7 +8,7 @@ struct GhostSnapshot {
     double   serverTime {};
 
     // Entity
-    uint32_t mapId      {};
+    uint32_t map_id     {};
     Vector2  position   {};
 
     // Physics
@@ -16,8 +16,8 @@ struct GhostSnapshot {
     Vector2  velocity   {};
 
     // Life
-    int      maxHealth  {};
-    int      health     {};
+    int      hp_max     {};
+    int      hp         {};
 
     // TODO: Wtf do I do with this shit?
     uint32_t lastProcessedInputCmd {};
@@ -28,6 +28,6 @@ struct GhostSnapshot {
 typedef RingBuffer<GhostSnapshot, CL_SNAPSHOT_COUNT> AspectGhost;
 
 struct EntityData {
-    data::Entity          entity    {};
-    AspectGhost           ghosts    {};
+    data::Entity entity {};
+    AspectGhost  ghosts {};
 };

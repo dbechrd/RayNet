@@ -451,7 +451,8 @@ namespace data {
     gen(ENTITY_NONE)       \
     gen(ENTITY_PLAYER)     \
     gen(ENTITY_NPC)        \
-    gen(ENTITY_PROJECTILE)
+    gen(ENTITY_PROJECTILE) \
+    gen(ENTITY_WARP)
 
     enum EntityType : uint8_t {
         ENTITY_TYPES(ENUM_GEN_VALUE)
@@ -462,7 +463,7 @@ namespace data {
 
         //// Entity ////
         uint32_t   id           {};
-        uint32_t   mapId        {};
+        uint32_t   map_id       {};
         EntityType type         {};
         double     spawned_at   {};
         double     despawned_at {};
@@ -482,12 +483,19 @@ namespace data {
 
         //// Dialog ////
         // server-side
-        DialogId    dialog_id         {};  // Root node of dialog tree
+        DialogId    dialog_root_id    {};  // Root node of dialog tree
 
         // client-side
         double      dialog_spawned_at {};  // time when dialog was spawned
+        uint32_t    dialog_id         {};  // which dialog is active
         std::string dialog_title      {};  // name of NPC, submenu, etc.
         std::string dialog_message    {};  // what they're saying
+
+        void ClearDialog(void) {
+            dialog_spawned_at = 0;
+            dialog_title = {};
+            dialog_message = {};
+        }
 
         //// Life ////
         float hp_max    {};
@@ -659,7 +667,7 @@ namespace data {
     void StopSound(SfxFileId id);
 
     const GfxFrame &GetSpriteFrame(const Entity &entity);
-    void UpdateSprite(Entity &entity, Vector2 velocity, double dt, bool newlySpawned);
+    void UpdateSprite(Entity &entity, double dt, bool newlySpawned);
     void ResetSprite(Entity &entity);
     void DrawSprite(const Entity &entity, Vector2 pos);
 }

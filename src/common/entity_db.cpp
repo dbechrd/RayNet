@@ -24,29 +24,37 @@ size_t EntityDB::FindEntityIndex(uint32_t entityId)
     }
     return 0;
 }
-data::Entity *EntityDB::FindEntity(uint32_t entityId, bool deadOrAlive)
+data::Entity *EntityDB::FindEntity(uint32_t entityId, bool evenIfDespawned)
 {
     size_t entityIndex = FindEntityIndex(entityId);
     if (entityIndex) {
         data::Entity &entity = entities[entityIndex];
         assert(entity.id == entityId);
         assert(entity.type);
-        if (deadOrAlive || !entity.despawned_at) {
+        if (evenIfDespawned || !entity.despawned_at) {
             return &entity;
         }
     }
     return 0;
 }
-bool EntityDB::SpawnEntity(uint32_t entityId, data::EntityType entityType, double now)
+data::Entity *EntityDB::FindEntity(uint32_t entityId, data::EntityType type, bool evenIfDespawned)
+{
+    data::Entity *entity = FindEntity(entityId, evenIfDespawned);
+    if (entity && entity->type != type) {
+        return 0;
+    }
+    return entity;
+}
+data::Entity *EntityDB::SpawnEntity(uint32_t entityId, data::EntityType type, double now)
 {
     assert(entityId);
-    assert(entityType);
+    assert(type);
 
     data::Entity *entity = FindEntity(entityId);
     if (entity) {
         assert(0);
-        printf("[entity_db] Failed to spawn entity id %u of type %s. An entity with that id already exists.\n", entityId, EntityTypeStr(entityType));
-        return false;
+        printf("[entity_db] Failed to spawn entity id %u of type %s. An entity with that id already exists.\n", entityId, EntityTypeStr(type));
+        return 0;
     }
 
     if (entity_freelist) {
@@ -56,13 +64,13 @@ bool EntityDB::SpawnEntity(uint32_t entityId, data::EntityType entityType, doubl
 
         e.freelist_next = 0;
         e.id = entityId;
-        e.type = entityType;
+        e.type = type;
         e.spawned_at = now;
         entityIndexById[entityId] = entityIndex;
-        return true;
+        return &e;
     } else {
-        printf("[entity_db] Failed to spawn entity id %u of type %s. Freelist is empty.\n", entityId, EntityTypeStr(entityType));
-        return false;
+        printf("[entity_db] Failed to spawn entity id %u of type %s. Freelist is empty.\n", entityId, EntityTypeStr(type));
+        return 0;
     }
 }
 bool EntityDB::DespawnEntity(uint32_t entityId, double now)

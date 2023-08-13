@@ -519,7 +519,7 @@ namespace data {
         }
 
         PROC(entity.id);
-        PROC(entity.mapId);
+        PROC(entity.map_id);
         PROC(entity.type);
         PROC(entity.spawned_at);
         //PROC(entity.despawned_at);
@@ -533,8 +533,9 @@ namespace data {
         //PROC(entity.last_attacked_at);
         //PROC(entity.attack_cooldown);
 
-        PROC(entity.dialog_id);
+        PROC(entity.dialog_root_id);
         //PROC(entity.dialog_spawned_at);
+        //PROC(entity.dialog_id);
         //PROC(entity.dialog_title);
         //PROC(entity.dialog_message);
 
@@ -904,14 +905,14 @@ namespace data {
 
         return frame;
     }
-    void UpdateSprite(Entity &entity, Vector2 velocity, double dt, bool newlySpawned)
+    void UpdateSprite(Entity &entity, double dt, bool newlySpawned)
     {
         entity.anim_accum += dt;
 
         // TODO: Make this more general and stop taking in entityType.
         switch (entity.type) {
             case ENTITY_PLAYER: case ENTITY_NPC: {
-                if (velocity.x > 0) {
+                if (entity.velocity.x > 0) {
                     entity.direction = data::DIR_E;
                 } else {
                     entity.direction = data::DIR_W;
