@@ -425,8 +425,8 @@ void GameServer::ProcessMessages(void)
                         // Proximity, etc.
                         data::Entity *entity = entityDb->FindEntity(msg->entityId);
                         if (entity && entity->type == data::ENTITY_NPC) {
-                            //const char *text = TextFormat("Lily says: TPS is %d", (int)(1.0/SV_TICK_DT));
-                            //SendEntitySay(clientIdx, msg->targetIndex, (uint32_t)strlen(text), text);
+                            const char *text = "Hello, traveler!\n\n{Hi.}\n{That's not my name!}\n{Goodbye.}";
+                            SendEntitySay(clientIdx, entity->id, text);
                         }
                         break;
                     }
@@ -754,7 +754,7 @@ void GameServer::TickEntityProjectile(uint32_t entityId, double dt)
                 if (CheckCollisionRecs(projectileHitbox, targetHitbox)) {
                     life.TakeDamage(GetRandomValue(3, 8));
                     if (life.Alive()) {
-                        BroadcastEntitySay(target.id, TextFormat("Ouch! You hit me with\nprojectile #%u!\n\n{Sorry}\n{Fuck you}", entity.id));
+                        BroadcastEntitySay(target.id, TextFormat("Ouch! You hit me with\nprojectile #%u!", entity.id));
                     } else {
                         DespawnEntity(target.id);
                     }

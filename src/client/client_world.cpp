@@ -338,6 +338,7 @@ void ClientWorld::UpdateEntities(GameClient &client)
                 const Vector2 cursorWorldPos = GetScreenToWorld2D(GetMousePosition(), camera2d);
                 bool hover = dlb_CheckCollisionPointRec(cursorWorldPos, entityDb->EntityRect(entity.id));
                 if (hover) {
+                    io.CaptureMouse();
                     bool down = io.MouseButtonPressed(MOUSE_BUTTON_LEFT);
                     if (down) {
                         client.SendEntityInteract(entity.id);
@@ -359,7 +360,9 @@ void ClientWorld::UpdateEntities(GameClient &client)
 
 void ClientWorld::Update(GameClient &client)
 {
+    io.PushScope(IO::IO_GameNPC);
     UpdateEntities(client);
+    io.PopScope();
 }
 
 void ClientWorld::DrawEntitySnapshotShadows(uint32_t entityId, Controller &controller, double now, double dt)
@@ -557,7 +560,7 @@ void ClientWorld::DrawDialog(GameClient &client, uint32_t entityId, data::Aspect
 
 void ClientWorld::DrawDialogs(GameClient &client, Camera2D &camera)
 {
-    io.PushScope(IO::IO_GameDialog);
+    io.PushScope(IO::IO_GameNPCDialog);
 
     Tilemap *map = LocalPlayerMap();
     if (!map) {
