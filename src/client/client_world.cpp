@@ -539,8 +539,8 @@ void ClientWorld::DrawDialog(GameClient &client, uint32_t entityId, data::Aspect
         bool hoverable = false;
         switch (node.type) {
             case FancyTextNode::TEXT:          col = RAYWHITE; break;
-            case FancyTextNode::DIALOG_OPTION: col = SKYBLUE;  hoverable = true; break;
-            case FancyTextNode::HOVER_TIP:     col = YELLOW;   hoverable = true; break;
+            case FancyTextNode::DIALOG_OPTION: col = SKYBLUE;         hoverable = true; break;
+            case FancyTextNode::HOVER_TIP:     col = ASESPRITE_BEIGE; hoverable = true; break;
         }
         //col = ColorFromHSV((float)i / tree.nodes.size() * 360.0f, 0.8f, 0.8f);
         bool hovered = false;

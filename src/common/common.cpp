@@ -219,7 +219,7 @@ void dlb_DrawTextEx(Font font, const char *text, size_t textLen, Vector2 positio
         i += codepointByteCount;   // Move text bytes counter to codepointSize codepoint
     }
 
-    Color col = (hovered && *hovered) ? WHITE : tint;
+    Color col = (hovered && *hovered) ? ColorBrightness(tint, 0.5f) : tint;
     for (GlyphDrawCmd &cmd : glyphDrawCmds) {
         DrawTextCodepoint(font, cmd.codepoint, cmd.pos, fontSize, col);
     }
