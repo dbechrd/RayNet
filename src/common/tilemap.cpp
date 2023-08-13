@@ -77,7 +77,7 @@ Err Tilemap::Save(std::string path)
 
         for (const TileDef &tileDef : tileDefs) {
             fwrite(&tileDef.collide, sizeof(tileDef.collide), 1, file);
-            fwrite(&tileDef.autoTileMask, sizeof(tileDef.autoTileMask), 1, file);
+            fwrite(&tileDef.auto_tile_mask, sizeof(tileDef.auto_tile_mask), 1, file);
         }
 
         if (tiles.size() != (size_t)width * height) {
@@ -189,7 +189,7 @@ Err Tilemap::Load(std::string path)
             fread(&tileDef.collide, sizeof(tileDef.collide), 1, file);
 
             if (version >= 6) {
-                fread(&tileDef.autoTileMask, sizeof(tileDef.autoTileMask), 1, file);
+                fread(&tileDef.auto_tile_mask, sizeof(tileDef.auto_tile_mask), 1, file);
             }
 
             assert(tileDef.x < texEntry.image.width);
@@ -471,17 +471,17 @@ AiPathNode *Tilemap::GetPathNode(uint32_t pathId, uint32_t pathNodeIndex) {
     return 0;
 }
 
-void Tilemap::ResolveEntityTerrainCollisions(EntityCollisionTuple &data)
+void Tilemap::ResolveEntityTerrainCollisions(data::Entity &entity)
 {
-    data.collision.colliding = false;
+    entity.colliding = false;
 
     Vector2 topLeft{
-        data.entity.position.x - data.collision.radius,
-        data.entity.position.y - data.collision.radius
+        entity.position.x - entity.radius,
+        entity.position.y - entity.radius
     };
     Vector2 bottomRight{
-        data.entity.position.x + data.collision.radius,
-        data.entity.position.y + data.collision.radius
+        entity.position.x + entity.radius,
+        entity.position.y + entity.radius
     };
 
     int yMin = CLAMP(floorf(topLeft.y / TILE_W), 0, height);
@@ -502,11 +502,11 @@ void Tilemap::ResolveEntityTerrainCollisions(EntityCollisionTuple &data)
                     tileRect.width = TILE_W;
                     tileRect.height = TILE_W;
                     Manifold manifold{};
-                    if (dlb_CheckCollisionCircleRec(data.entity.position, data.collision.radius, tileRect, &manifold)) {
-                        data.collision.colliding = true;
-                        if (Vector2DotProduct(data.physics.velocity, manifold.normal) < 0) {
-                            data.entity.position.x += manifold.normal.x * manifold.depth;
-                            data.entity.position.y += manifold.normal.y * manifold.depth;
+                    if (dlb_CheckCollisionCircleRec(entity.position, entity.radius, tileRect, &manifold)) {
+                        entity.colliding = true;
+                        if (Vector2DotProduct(entity.velocity, manifold.normal) < 0) {
+                            entity.position.x += manifold.normal.x * manifold.depth;
+                            entity.position.y += manifold.normal.y * manifold.depth;
                         }
                     }
                 }
@@ -517,27 +517,12 @@ void Tilemap::ResolveEntityTerrainCollisions(EntityCollisionTuple &data)
 void Tilemap::ResolveEntityTerrainCollisions(uint32_t entityId)
 {
     assert(entityId);
-    size_t entityIndex = entityDb->FindEntityIndex(entityId);
-    if (!entityIndex) {
+    data::Entity *entity = entityDb->FindEntity(entityId);
+    if (!entity || !entity->Alive() || !entity->radius) {
         return;
     }
 
-    data::Entity &entity = entityDb->entities[entityIndex];
-    assert(entity.id == entityId);
-    assert(entity.type);
-    if (entity.despawnedAt) {
-        return;
-    }
-
-    data::AspectCollision &collision = entityDb->collision[entityIndex];
-    if (!collision.radius) {
-        return;
-    }
-
-    data::AspectPhysics &physics = entityDb->physics[entityIndex];
-
-    EntityCollisionTuple data{ entity, collision, physics };
-    ResolveEntityTerrainCollisions(data);
+    ResolveEntityTerrainCollisions(*entity);
 }
 
 void Tilemap::DrawTile(Texture2D tex, Tile tile, Vector2 position)

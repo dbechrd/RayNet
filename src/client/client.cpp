@@ -52,7 +52,7 @@ void draw_menu_main(GameClient &client, bool &quit)
     //DrawTexture(fntBig.texture, GetRenderWidth() - fntBig.texture.width, 0, WHITE);
 }
 
-static data::AspectSprite campfire{};
+static data::Entity campfire{};
 
 static const char *connectingStrs[] = {
     "Connecting",
@@ -69,7 +69,7 @@ void draw_menu_connecting(GameClient &client)
         campfire.sprite = data::SPRITE_OBJ_CAMPFIRE;
     }
 
-    data::UpdateSprite(campfire, data::ENTITY_NONE, {}, client.frameDt, !connectingDotIdxLastUpdatedAt);
+    data::UpdateSprite(campfire, {}, client.frameDt, !connectingDotIdxLastUpdatedAt);
     if (!connectingDotIdxLastUpdatedAt) {
         connectingDotIdxLastUpdatedAt = client.now;
     } else if (client.now > connectingDotIdxLastUpdatedAt + 0.5) {

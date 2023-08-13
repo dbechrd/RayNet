@@ -8,15 +8,6 @@ struct EntityDB {
 
     // TODO: Rename these so they don't collide with local variables all the time
     std::vector<data::Entity>          entities  {SV_MAX_ENTITIES};
-    std::vector<data::AspectCombat>    combat    {SV_MAX_ENTITIES};
-    std::vector<data::AspectCollision> collision {SV_MAX_ENTITIES};
-    std::vector<data::AspectDialog>    dialog    {SV_MAX_ENTITIES};
-    std::vector<data::AspectLife>      life      {SV_MAX_ENTITIES};
-    std::vector<data::AspectPathfind>  pathfind  {SV_MAX_ENTITIES};
-    std::vector<data::AspectPhysics>   physics   {SV_MAX_ENTITIES};
-    std::vector<data::AspectSprite>    sprite    {SV_MAX_ENTITIES};
-    std::vector<data::AspectWarp>      warp      {SV_MAX_ENTITIES};
-
     std::vector<AspectGhost>           ghosts    {SV_MAX_ENTITIES};
 
     EntityDB(void);
@@ -27,10 +18,10 @@ struct EntityDB {
     bool DespawnEntity(uint32_t entityId, double now);
     void DestroyEntity(uint32_t entityId);
 
-    Rectangle EntityRect(EntitySpriteTuple &data);
+    Rectangle EntityRect(data::Entity &entity);
     Rectangle EntityRect(uint32_t entityId);
     Vector2 EntityTopCenter(uint32_t entityId);
-    void EntityTick(EntityTickTuple &data, double dt);
+    void EntityTick(data::Entity &entity, double dt);
     void EntityTick(uint32_t entityId, double dt);
 
     void DrawEntityIds(uint32_t mapId, Camera2D &camera);

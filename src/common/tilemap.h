@@ -32,7 +32,7 @@ struct TileDef {
     uint8_t w;
     uint8_t h;
     uint8_t collide;
-    uint8_t autoTileMask;
+    uint8_t auto_tile_mask;
     Color color;  // color for minimap/wang tile editor (top left pixel of tile)
 };
 
@@ -104,7 +104,7 @@ struct Tilemap {
     uint32_t GetNextPathNodeIndex(uint32_t pathId, uint32_t pathNodeIndex);
     AiPathNode *GetPathNode(uint32_t pathId, uint32_t pathNodeIndex);
 
-    void ResolveEntityTerrainCollisions(EntityCollisionTuple &data);
+    void ResolveEntityTerrainCollisions(data::Entity &entity);
     void ResolveEntityTerrainCollisions(uint32_t entityId);
 
     void DrawTile(Texture2D tex, Tile tile, Vector2 position);

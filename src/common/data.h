@@ -295,12 +295,12 @@ namespace data {
     };
     struct GfxAnim {
         static const DataType dtype = DAT_TYP_GFX_ANIM;
-        GfxAnimId  id         {};
-        SfxFileId  sound      {};
-        uint8_t    frameRate  {};
-        uint8_t    frameCount {};
-        uint8_t    frameDelay {};
-        GfxFrameId frames[8]  {};
+        GfxAnimId  id          {};
+        SfxFileId  sound       {};
+        uint8_t    frame_rate  {};
+        uint8_t    frame_count {};
+        uint8_t    frame_delay {};
+        GfxFrameId frames[8]   {};
 
         bool soundPlayed{};
     };
@@ -418,11 +418,11 @@ namespace data {
 
     struct TileType {
         static const DataType dtype = DAT_TYP_TILE_TYPE;
-        TileTypeId  id           {};
-        GfxAnimId   anim         {};
-        MaterialId  material     {};
-        TileFlags   flags        {};
-        uint8_t     autoTileMask {};
+        TileTypeId  id             {};
+        GfxAnimId   anim           {};
+        MaterialId  material       {};
+        TileFlags   flags          {};
+        uint8_t     auto_tile_mask {};
         //Color color;  // color for minimap/wang tile editor (top left pixel of tile)
     };
 
@@ -439,9 +439,9 @@ namespace data {
 
     struct Dialog {
         static const DataType dtype = DAT_TYP_DIALOG;
-        DialogId    id        {};
-        std::string msg       {};
-        DialogId    optionIds [SV_MAX_ENTITY_DIALOG_OPTIONS]{};
+        DialogId    id         {};
+        std::string msg        {};
+        DialogId    option_ids [SV_MAX_ENTITY_DIALOG_OPTIONS]{};
     };
 
     ////////////////////////////////////////////////////////////////////////////
@@ -459,96 +459,90 @@ namespace data {
 
     struct Entity {
         static const DataType dtype = DAT_TYP_ENTITY;
-        uint32_t   id          {};
-        uint32_t   mapId       {};
-        EntityType type        {};
-        double     spawnedAt   {};
-        double     despawnedAt {};
-        Vector2    position    {};
+
+        //// Entity ////
+        uint32_t   id           {};
+        uint32_t   mapId        {};
+        EntityType type         {};
+        double     spawned_at   {};
+        double     despawned_at {};
+        Vector2    position     {};
 
         // TODO: Separate this out into its own array?
         uint32_t freelist_next {};
-    };
 
-    struct AspectCollision {
+        //// Collision ////
         float radius    {};  // collision
         bool  colliding {};  // not sync'd, local flag for debugging colliders
-        bool  onWarp    {};  // currently colliding with a warp (used to prevent ping-ponging)
-    };
+        bool  on_warp   {};  // currently colliding with a warp (used to prevent ping-ponging)
 
-    struct AspectCombat {
-        double lastAttackedAt {};
-        double attackCooldown {};
-    };
+        //// Combat ////
+        double last_attacked_at {};
+        double attack_cooldown  {};
 
-    struct AspectDialog {
-        // Server-side
-        DialogId    dialogId  {};  // Root node of dialog tree
+        //// Dialog ////
+        // server-side
+        DialogId    dialog_id         {};  // Root node of dialog tree
 
-        // Client-side
-        double      spawnedAt {};  // time when dialog was spawned
-        std::string title     {};  // name of NPC, submenu, etc.
-        std::string message   {};  // what they're saying
-    };
+        // client-side
+        double      dialog_spawned_at {};  // time when dialog was spawned
+        std::string dialog_title      {};  // name of NPC, submenu, etc.
+        std::string dialog_message    {};  // what they're saying
 
-    struct AspectLife {
-        float maxHealth    {};
-        float health       {};
-        float healthSmooth {};  // client-only to smoothly interpolate health changes
+        //// Life ////
+        float hp_max    {};
+        float hp        {};
+        float hp_smooth {};  // client-only to smoothly interpolate health changes
 
         void TakeDamage(int damage) {
-            if (damage >= health) {
-                health = 0;
+            if (damage >= hp) {
+                hp = 0;
             } else {
-                health -= damage;
+                hp -= damage;
             }
         }
 
         bool Alive(void) {
-            return health > 0;
+            return hp > 0;
         }
 
         bool Dead(void) {
             return !Alive();
         }
-    };
 
-    struct AspectPathfind {
-        bool   active                {};  // if false, don't pathfind
-        int    pathId                {};
-        int    pathNodeLastArrivedAt {};
-        int    pathNodeTarget        {};
-        double pathNodeArrivedAt     {};
-    };
+        //// Pathfinding ////
+        bool   path_active            {};  // if false, don't pathfind
+        int    path_id                {};
+        int    path_node_last_reached {};
+        int    path_node_target       {};
+        double path_node_arrived_at   {};
 
-    struct AspectPhysics {
-        float   drag       {};
-        float   speed      {};
-        Vector2 forceAccum {};
-        Vector2 velocity   {};
+        //// Physics ////
+        float   drag        {};
+        float   speed       {};
+        Vector2 force_accum {};
+        Vector2 velocity    {};
 
         void ApplyForce(Vector2 force) {
-            forceAccum.x += force.x;
-            forceAccum.y += force.y;
+            force_accum.x += force.x;
+            force_accum.y += force.y;
         }
-    };
 
-    struct AspectSprite {
-        SpriteId  sprite    {};  // sprite resource
-        Direction direction {};  // current facing direction
-        uint8_t   animFrame {};  // current frame index
-        double    animAccum {};  // time since last update
-    };
+        //// Sprite ////
+        SpriteId  sprite     {};  // sprite resource
+        Direction direction  {};  // current facing direction
+        uint8_t   anim_frame {};  // current frame index
+        double    anim_accum {};  // time since last update
 
-    struct AspectWarp {
-        Rectangle collider {};
-        Vector2   destPos  {};
+        //// Warp ////
+        Rectangle warp_collider {};
+        Vector2   warp_dest_pos {};
 
         // You either need this
-        std::string destMap         {};  // regular map to warp to
+        std::string warp_dest_map         {};  // regular map to warp to
         // Or both of these
-        std::string templateMap     {};  // template map to make a copy of for procgen
-        std::string templateTileset {};  // wang tileset to use for procgen
+        std::string warp_template_map     {};  // template map to make a copy of for procgen
+        std::string warp_template_tileset {};  // wang tileset to use for procgen
     };
 
     ////////////////////////////////////////////////////////////////////////////
@@ -568,10 +562,10 @@ namespace data {
 
     // Inspired by https://twitter.com/angealbertini/status/1340712669247119360
     struct Pack {
-        std::string path      {};
-        int         magic     {};
-        int         version   {};
-        int         tocOffset {};
+        std::string path       {};
+        int         magic      {};
+        int         version    {};
+        int         toc_offset {};
 
         // static resources
         // - textures
@@ -580,15 +574,15 @@ namespace data {
         // - sprite defs
         // - tile defs
         // - object defs
-        std::vector<GfxFile>  gfxFiles  {};
-        std::vector<MusFile>  musFiles  {};
-        std::vector<SfxFile>  sfxFiles  {};
-        std::vector<GfxFrame> gfxFrames {};
-        std::vector<GfxAnim>  gfxAnims  {};
-        std::vector<Material> materials {};
-        std::vector<Sprite>   sprites   {};
-        std::vector<TileType> tileTypes {};
-        std::vector<Dialog>   dialogs   {};
+        std::vector<GfxFile>  gfx_files  {};
+        std::vector<MusFile>  mus_files  {};
+        std::vector<SfxFile>  sfx_files  {};
+        std::vector<GfxFrame> gfx_frames {};
+        std::vector<GfxAnim>  gfx_anims  {};
+        std::vector<Material> materials  {};
+        std::vector<Sprite>   sprites    {};
+        std::vector<TileType> tile_types {};
+        std::vector<Dialog>   dialogs    {};
 
         std::unordered_map<std::string, size_t> musFilesById{};
 
@@ -607,15 +601,7 @@ namespace data {
         // - fauna
         // - monsters
         // - particles? maybe?
-        std::vector<Entity>          entities  {SV_MAX_ENTITIES};
-        std::vector<AspectCombat>    combat    {SV_MAX_ENTITIES};
-        std::vector<AspectCollision> collision {SV_MAX_ENTITIES};
-        std::vector<AspectDialog>    dialog    {SV_MAX_ENTITIES};
-        std::vector<AspectLife>      life      {SV_MAX_ENTITIES};
-        std::vector<AspectPathfind>  pathfind  {SV_MAX_ENTITIES};
-        std::vector<AspectPhysics>   physics   {SV_MAX_ENTITIES};
-        std::vector<AspectSprite>    sprite    {SV_MAX_ENTITIES};
-        std::vector<AspectWarp>      warp      {SV_MAX_ENTITIES};
+        std::vector<Entity> entities {SV_MAX_ENTITIES};
 
         PackToc toc {};
 
@@ -624,9 +610,9 @@ namespace data {
         MusFile &FindMusic(std::string id) {
             const auto &entry = musFilesById.find(id);
             if (entry == musFilesById.end()) {
-                return musFiles[0];
+                return mus_files[0];
             } else {
-                return musFiles[entry->second];
+                return mus_files[entry->second];
             }
         }
     };
@@ -672,9 +658,9 @@ namespace data {
     bool IsSoundPlaying(SfxFileId id);
     void StopSound(SfxFileId id);
 
-    const GfxFrame &GetSpriteFrame(const AspectSprite &eSprite);
-    void UpdateSprite(AspectSprite &eSprite, EntityType entityType, Vector2 velocity, double dt, bool newlySpawned);
-    void ResetSprite(AspectSprite &eSprite);
-    void DrawSprite(const AspectSprite &eSprite, Vector2 pos);
+    const GfxFrame &GetSpriteFrame(const Entity &entity);
+    void UpdateSprite(Entity &entity, Vector2 velocity, double dt, bool newlySpawned);
+    void ResetSprite(Entity &entity);
+    void DrawSprite(const Entity &entity, Vector2 pos);
 }
 ////////////////////////////////////////////////////////////////////////////

@@ -38,7 +38,7 @@ struct ClientWorld {
 
     void ApplySpawnEvent(const Msg_S_EntitySpawn &entitySpawn);
 
-    void ApplyStateInterpolated(EntityInterpolateTuple &data,
+    void ApplyStateInterpolated(data::Entity &entity,
         const GhostSnapshot &a, const GhostSnapshot &b, float alpha, float dt);
     void ApplyStateInterpolated(uint32_t entityId,
         const GhostSnapshot &a, const GhostSnapshot &b, float alpha, float dt);
@@ -50,6 +50,6 @@ private:
     void UpdateEntities(GameClient &client);
 
     void DrawEntitySnapshotShadows(uint32_t entityId, Controller &controller, double now, double dt);
-    void DrawDialog(GameClient &client, uint32_t entityId, data::AspectDialog &dialog, Vector2 bottomCenterScreen);
+    void DrawDialog(GameClient &client, data::Entity &entity, Vector2 bottomCenterScreen);
     void DrawDialogs(GameClient &client, Camera2D &camera);
 };

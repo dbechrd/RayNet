@@ -798,7 +798,7 @@ void GameServer::TickEntityProjectile(uint32_t entityId, double dt)
         }
     }
 }
-void GameServer::WarpEntity(Tilemap &map, uint32_t entityId, data::AspectWarp &warp)
+void GameServer::WarpEntity(Tilemap &map, uint32_t entityId, data::Entity &warp)
 {
     assert(entityId);
 

@@ -104,14 +104,8 @@ bool ClientWorld::CopyEntityData(uint32_t entityId, EntityData &data)
         return false;
     }
 
-    data.entity    = entityDb->entities[entityIndex];
-    data.collision = entityDb->collision[entityIndex];
-    data.dialog    = entityDb->dialog[entityIndex];
-    data.ghosts    = entityDb->ghosts[entityIndex];
-    data.life      = entityDb->life[entityIndex];
-    data.pathfind  = entityDb->pathfind[entityIndex];
-    data.physics   = entityDb->physics[entityIndex];
-    data.sprite    = entityDb->sprite[entityIndex];
+    data.entity = entityDb->entities[entityIndex];
+    data.ghosts = entityDb->ghosts[entityIndex];
     return true;
 }
 
@@ -123,91 +117,77 @@ void ClientWorld::ApplySpawnEvent(const Msg_S_EntitySpawn &entitySpawn)
         return;
     }
 
-    data::Entity          &entity     = entityDb->entities  [entityIndex];
-    data::AspectCollision &eCollision = entityDb->collision [entityIndex];
-    data::AspectPhysics   &ePhysics   = entityDb->physics   [entityIndex];
-    data::AspectLife      &eLife      = entityDb->life      [entityIndex];
-    data::AspectSprite    &eSprite    = entityDb->sprite    [entityIndex];
+    data::Entity &entity = entityDb->entities[entityIndex];
 
-    entity.type       = entitySpawn.type;
-    entity.mapId      = entitySpawn.mapId;
-    entity.position   = entitySpawn.position;
-    eCollision.radius = entitySpawn.radius;
-    ePhysics.drag     = entitySpawn.drag;
-    ePhysics.speed    = entitySpawn.speed;
-    ePhysics.velocity = entitySpawn.velocity;
-    eLife.maxHealth   = entitySpawn.maxHealth;
-    eLife.health      = entitySpawn.health;
+    entity.type     = entitySpawn.type;
+    entity.mapId    = entitySpawn.mapId;
+    entity.position = entitySpawn.position;
+    entity.radius   = entitySpawn.radius;
+    entity.drag     = entitySpawn.drag;
+    entity.speed    = entitySpawn.speed;
+    entity.velocity = entitySpawn.velocity;
+    entity.hp_max   = entitySpawn.maxHealth;
+    entity.hp       = entitySpawn.health;
 
     // TODO: Look it up from somewhere based on entity type?
     switch (entity.type) {
         case data::ENTITY_PLAYER: {
-            eSprite.sprite = data::SPRITE_CHR_MAGE;
-            //eSprite.direction = data::DIR_E;
+            entity.sprite = data::SPRITE_CHR_MAGE;
             break;
         }
         case data::ENTITY_NPC: {
-            eSprite.sprite = data::SPRITE_NPC_LILY;
-            //eSprite.direction = data::DIR_E;
+            entity.sprite = data::SPRITE_NPC_LILY;
             break;
         }
         case data::ENTITY_PROJECTILE: {
-            eSprite.sprite = data::SPRITE_PRJ_FIREBALL;
-            //eSprite.direction = data::DIR_N;
+            entity.sprite = data::SPRITE_PRJ_FIREBALL;
             break;
         };
     }
 }
 
-void ClientWorld::ApplyStateInterpolated(EntityInterpolateTuple &data,
+void ClientWorld::ApplyStateInterpolated(data::Entity &entity,
     const GhostSnapshot &a, const GhostSnapshot &b, float alpha, float dt)
 {
     if (b.mapId != a.mapId) {
         alpha = 1.0f;
     }
-    data.entity.mapId = b.mapId;
-    data.entity.position.x = LERP(a.position.x, b.position.x, alpha);
-    data.entity.position.y = LERP(a.position.y, b.position.y, alpha);
+    entity.mapId = b.mapId;
+    entity.position.x = LERP(a.position.x, b.position.x, alpha);
+    entity.position.y = LERP(a.position.y, b.position.y, alpha);
 
-    data.physics.velocity.x = LERP(a.velocity.x, b.velocity.x, alpha);
-    data.physics.velocity.y = LERP(a.velocity.y, b.velocity.y, alpha);
+    entity.velocity.x = LERP(a.velocity.x, b.velocity.x, alpha);
+    entity.velocity.y = LERP(a.velocity.y, b.velocity.y, alpha);
 
-    data.life.maxHealth = b.maxHealth;
-    data.life.health = b.health;
-    data.life.healthSmooth = LERP(data.life.healthSmooth, data.life.health, 1.0f - powf(1.0f - 0.999f, dt));
-    //data.life.healthSmooth += ((data.life.healthSmooth < data.life.health) ? 1 : -1) * dt * 20;
+    entity.hp_max    = b.maxHealth;
+    entity.hp        = b.health;
+    entity.hp_smooth = LERP(entity.hp_smooth, entity.hp, 1.0f - powf(1.0f - 0.999f, dt));
+    //entity.hp_smooth += ((entity.hp_smooth < entity.hp) ? 1 : -1) * dt * 20;
 }
 
 void ClientWorld::ApplyStateInterpolated(uint32_t entityId,
     const GhostSnapshot &a, const GhostSnapshot &b, float alpha, float dt)
 {
-    size_t entityIndex = entityDb->FindEntityIndex(entityId);
-    if (!entityIndex) {
+    data::Entity *entity = entityDb->FindEntity(entityId);
+    if (!entity) {
         printf("[client_world] Failed to interpolate entity. Entity id %u not found.\n", entityId);
         return;
     }
 
-    data::Entity        &entity  = entityDb->entities [entityIndex];
-    data::AspectPhysics &physics = entityDb->physics  [entityIndex];
-    data::AspectLife    &life    = entityDb->life     [entityIndex];
-    data::AspectSprite  &sprite  = entityDb->sprite   [entityIndex];
-
-    EntityInterpolateTuple data{ entity, physics, life, sprite };
-    ApplyStateInterpolated(data, a, b, alpha, dt);
+    ApplyStateInterpolated(*entity, a, b, alpha, dt);
 }
 
 Err ClientWorld::CreateDialog(uint32_t entityId, std::string message, double now)
 {
-    size_t entityIndex = entityDb->FindEntityIndex(entityId);
-    if (!entityIndex) {
+    data::Entity *entity = entityDb->FindEntity(entityId);
+    if (!entity) {
         printf("[client_world] Failed to create dialog. Could not find entity id %u.\n", entityId);
         return RN_OUT_OF_BOUNDS;
     }
 
-    data::AspectDialog &dialog = entityDb->dialog[entityIndex];
-    dialog.spawnedAt = now;
-    dialog.title = "Lily";
-    dialog.message = message;
+    entity->dialog_spawned_at = now;
+    entity->dialog_title = "Lily";
+    entity->dialog_message = message;
     return RN_SUCCESS;
 }
 
@@ -222,10 +202,7 @@ void ClientWorld::UpdateEntities(GameClient &client)
         }
 
         size_t entityIndex = entityDb->FindEntityIndex(entity.id);
-        data::AspectPhysics &ePhysics = entityDb->physics[entityIndex];
         AspectGhost &eGhost = entityDb->ghosts[entityIndex];
-        data::AspectSprite &eSprite = entityDb->sprite[entityIndex];
-        data::AspectDialog &eDialog = entityDb->dialog[entityIndex];
 
         // Local player
         if (entity.id == localPlayerEntityId) {
@@ -352,11 +329,11 @@ void ClientWorld::UpdateEntities(GameClient &client)
             }
         }
 
-        bool newlySpawned = entity.spawnedAt == client.now;
+        bool newlySpawned = entity.spawned_at == client.now;
         data::UpdateSprite(eSprite, entity.type, ePhysics.velocity, client.frameDt, newlySpawned);
 
         const double duration = CL_DIALOG_DURATION_MIN + CL_DIALOG_DURATION_PER_CHAR * eDialog.message.size();
-        if (eDialog.spawnedAt && client.now - eDialog.spawnedAt > duration) {
+        if (eDialog.spawned_at && client.now - eDialog.spawned_at > duration) {
             eDialog = {};
         }
     }
@@ -455,7 +432,7 @@ void ClientWorld::DrawEntitySnapshotShadows(uint32_t entityId, Controller &contr
 }
 
 // TODO(dlb): Where should this live? Probably not in ClientWorld?
-void ClientWorld::DrawDialog(GameClient &client, uint32_t entityId, data::AspectDialog &dialog, Vector2 bottomCenterScreen)
+void ClientWorld::DrawDialog(GameClient &client, data::Entity &entity, Vector2 bottomCenterScreen)
 {
     Font &font = fntMedium;
 
@@ -465,14 +442,14 @@ void ClientWorld::DrawDialog(GameClient &client, uint32_t entityId, data::Aspect
     const float marginBottom = 4.0f;
     const Vector2 bgPad{ 12, 8 };
 
-    //size_t nodeCount = dlb_FancyTextParse(dialog.message.c_str(), dialog.message.size());
+    //size_t nodeCount = dlb_FancyTextParse(entity.dialog_message.c_str(), entity.dialog_message.size());
 
     FancyTextTree tree{};
-    if (!dlb_FancyTextParse(tree, dialog.message.c_str())) {
+    if (!dlb_FancyTextParse(tree, entity.dialog_message.c_str())) {
         return;
     }
 
-    const Vector2 titleSize = MeasureTextEx(font, dialog.title.c_str(), font.baseSize, 1);
+    const Vector2 titleSize = MeasureTextEx(font, entity.dialog_title.c_str(), font.baseSize, 1);
 
     Vector2 msgOffset{};
     Vector2 msgSize{};
@@ -520,7 +497,7 @@ void ClientWorld::DrawDialog(GameClient &client, uint32_t entityId, data::Aspect
     }
 
     NPatchInfo nPatch{};
-    Texture &nPatchTex = data::pack1.gfxFiles[data::GFX_FILE_DLG_NPATCH].texture;
+    Texture &nPatchTex = data::pack1.gfx_files[data::GFX_FILE_DLG_NPATCH].texture;
     nPatch.source = { 0, 0, (float)nPatchTex.width, (float)nPatchTex.height };
     nPatch.left = 16;
     nPatch.top = 16;
@@ -530,7 +507,7 @@ void ClientWorld::DrawDialog(GameClient &client, uint32_t entityId, data::Aspect
     DrawTextureNPatch(nPatchTex, nPatch, bgRect, {}, 0, WHITE);
     //DrawRectangleRounded(msgBgRect, 0.2f, 6, Fade(BLACK, 0.5));
     //DrawRectangleRoundedLines(msgBgRect, 0.2f, 6, 1.0f, RAYWHITE);
-    dlb_DrawTextEx(font, dialog.title.c_str(), dialog.title.size(), titlePos, font.baseSize, 1.0f, GOLD);
+    DrawTextEx(font, entity.dialog_title.c_str(), titlePos, font.baseSize, 1.0f, GOLD);
 
     Vector2 cursor{};
     for (int i = 0; i < tree.nodes.size(); i++) {
@@ -551,7 +528,7 @@ void ClientWorld::DrawDialog(GameClient &client, uint32_t entityId, data::Aspect
         if (pressed) {
             switch (node.type) {
                 case FancyTextNode::DIALOG_OPTION: {
-                    client.SendEntityInteractDialogOption(entityId, node.optionId);
+                    client.SendEntityInteractDialogOption(entity.id, node.optionId);
                     break;
                 }
                 case FancyTextNode::HOVER_TIP: {
@@ -572,17 +549,16 @@ void ClientWorld::DrawDialogs(GameClient &client, Camera2D &camera)
     }
 
     for (data::Entity &entity : entityDb->entities) {
-        if (!entity.type || entity.despawnedAt || entity.mapId != map->id) {
+        if (!entity.type || entity.despawned_at || entity.mapId != map->id) {
             continue;
         }
         assert(entity.id);
 
         size_t entityIndex = entityDb->FindEntityIndex(entity.id);
-        data::AspectDialog &dialog = entityDb->dialog[entityIndex];
-        if (dialog.spawnedAt) {
+        if (entity.dialog_spawned_at) {
             const Vector2 topCenter = entityDb->EntityTopCenter(entity.id);
             const Vector2 topCenterScreen = GetWorldToScreen2D(topCenter, camera);
-            DrawDialog(client, entity.id, dialog, topCenterScreen);
+            DrawDialog(client, entity, topCenterScreen);
         }
     }
 
@@ -610,7 +586,7 @@ void ClientWorld::Draw(GameClient &client)
     // Draw the entities
     cursorWorldPos = GetScreenToWorld2D(GetMousePosition(), camera2d);
     for (data::Entity &entity : entityDb->entities) {
-        if (!entity.type || entity.despawnedAt || entity.mapId != map->id) {
+        if (!entity.type || entity.despawned_at || entity.mapId != map->id) {
             continue;
         }
         assert(entity.id);

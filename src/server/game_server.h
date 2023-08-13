@@ -138,7 +138,7 @@ private:
     void TickPlayer(Tilemap &map, uint32_t entityId, double dt);
     void TickBot(Tilemap &map, uint32_t entityId, double dt);
     void TickProjectile(Tilemap &map, uint32_t entityId, double dt);
-    void WarpEntity(Tilemap &map, uint32_t entityId, data::AspectWarp &warp);
+    void WarpEntity(Tilemap &map, uint32_t entityId, data::Entity &warp);
     void TickResolveEntityWarpCollisions(Tilemap &map, uint32_t entityId, double now);
     void Tick(void);
     void SerializeSnapshot(uint32_t entityId, Msg_S_EntitySnapshot &entitySnapshot);

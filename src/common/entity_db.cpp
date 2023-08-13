@@ -1,4 +1,5 @@
 #include "entity_db.h"
+#include <cassert>
 
 EntityDB *entityDb{};
 
@@ -30,7 +31,7 @@ data::Entity *EntityDB::FindEntity(uint32_t entityId, bool deadOrAlive)
         data::Entity &entity = entities[entityIndex];
         assert(entity.id == entityId);
         assert(entity.type);
-        if (deadOrAlive || !entity.despawnedAt) {
+        if (deadOrAlive || !entity.despawned_at) {
             return &entity;
         }
     }
@@ -56,7 +57,7 @@ bool EntityDB::SpawnEntity(uint32_t entityId, data::EntityType entityType, doubl
         e.freelist_next = 0;
         e.id = entityId;
         e.type = entityType;
-        e.spawnedAt = now;
+        e.spawned_at = now;
         entityIndexById[entityId] = entityIndex;
         return true;
     } else {
@@ -69,8 +70,8 @@ bool EntityDB::DespawnEntity(uint32_t entityId, double now)
     assert(entityId);
 
     data::Entity *entity = FindEntity(entityId);
-    if (entity && !entity->despawnedAt) {
-        entity->despawnedAt = now;
+    if (entity && !entity->despawned_at) {
+        entity->despawned_at = now;
         return true;
     } else {
         printf("[entity_db] Failed to despawn entity id %u. Entity id not found.\n", entityId);
@@ -88,16 +89,8 @@ void EntityDB::DestroyEntity(uint32_t entityId)
         assert(entity.type); // wtf happened man
 
         // Clear aspects
-        entities  [entityIndex] = {};
-        combat    [entityIndex] = {};
-        collision [entityIndex] = {};
-        dialog    [entityIndex] = {};
-        ghosts    [entityIndex] = {};
-        life      [entityIndex] = {};
-        pathfind  [entityIndex] = {};
-        physics   [entityIndex] = {};
-        sprite    [entityIndex] = {};
-        warp      [entityIndex] = {};
+        entities [entityIndex] = {};
+        ghosts   [entityIndex] = {};
 
         // Remove from map
         entityIndexById.erase(entityId);
@@ -111,12 +104,12 @@ void EntityDB::DestroyEntity(uint32_t entityId)
     }
 }
 
-Rectangle EntityDB::EntityRect(EntitySpriteTuple &data)
+Rectangle EntityDB::EntityRect(data::Entity &entity)
 {
-    const data::GfxFrame &frame = data::GetSpriteFrame(data.sprite);
+    const data::GfxFrame &frame = data::GetSpriteFrame(entity);
     const Rectangle rect{
-        data.entity.position.x - (float)(frame.w / 2),
-        data.entity.position.y - (float)frame.h,
+        entity.position.x - (float)(frame.w / 2),
+        entity.position.y - (float)frame.h,
         (float)frame.w,
         (float)frame.h
     };
@@ -127,12 +120,9 @@ Rectangle EntityDB::EntityRect(uint32_t entityId)
 {
     assert(entityId);
 
-    size_t entityIndex = FindEntityIndex(entityId);
-    if (entityIndex) {
-        data::Entity &entity = entities[entityIndex];
-        data::AspectSprite &eSprite = sprite[entityIndex];
-        EntitySpriteTuple data{ entity, eSprite };
-        return EntityRect(data);
+    data::Entity *entity = FindEntity(entityId);
+    if (entity) {
+        return EntityRect(*entity);
     }
     return {};
 }
@@ -147,14 +137,14 @@ Vector2 EntityDB::EntityTopCenter(uint32_t entityId)
     };
     return topCenter;
 }
-void EntityDB::EntityTick(EntityTickTuple &data, double dt)
+void EntityDB::EntityTick(data::Entity &entity, double dt)
 {
-    Vector2 &pos = data.entity.position;
-    Vector2 &vel = data.physics.velocity;
+    Vector2 &pos = entity.position;
+    Vector2 &vel = entity.velocity;
 
-    vel.x += data.physics.forceAccum.x * dt;
-    vel.y += data.physics.forceAccum.y * dt;
-    data.physics.forceAccum = {};
+    vel.x += entity.force_accum.x * dt;
+    vel.y += entity.force_accum.y * dt;
+    entity.force_accum = {};
 
 #if 0
     const float &drag = data.physics.drag * dt;
@@ -188,8 +178,8 @@ void EntityDB::EntityTick(EntityTickTuple &data, double dt)
     // Lerping: current = Mathf.Lerp(current, target, 1.0f - Mathf.Exp(-Sharpness * Time.deltaTime));
     // Damping: current *= Mathf.Exp(-Sharpness * Time.deltaTime);
 
-    vel.x *= exp2f(-10.0f * (data.physics.drag) * dt);
-    vel.y *= exp2f(-10.0f * (data.physics.drag) * dt);
+    vel.x *= exp2f(-10.0f * (entity.drag) * dt);
+    vel.y *= exp2f(-10.0f * (entity.drag) * dt);
 #endif
 
     pos.x += vel.x * dt;
@@ -199,42 +189,33 @@ void EntityDB::EntityTick(uint32_t entityId, double dt)
 {
     assert(entityId);
 
-    size_t entityIndex = FindEntityIndex(entityId);
-    if (!entityIndex) return;
-
-    data::Entity &entity = entities[entityIndex];
-    data::AspectLife &eLife = life[entityIndex];
-    data::AspectPhysics &ePhysics = physics[entityIndex];
-    data::AspectSprite &eSprite = sprite[entityIndex];
-
-    EntityTickTuple data{ entity, eLife, ePhysics, eSprite };
-    EntityTick(data, dt);
+    data::Entity *entity = FindEntity(entityId);
+    if (entity) {
+        EntityTick(*entity, dt);
+    }
 }
 
 void EntityDB::DrawEntityIds(uint32_t entityId, Camera2D &camera)
 {
     assert(entityId);
-    size_t entityIndex = FindEntityIndex(entityId);
-    if (!entityIndex) return;
-
-    data::Entity &entity = entities[entityIndex];
-    if (!entity.id || !entity.type) {
-        assert(!entity.id && !entity.type);
-        return;
+    data::Entity *entity = FindEntity(entityId);
+    if (entity) {
+        if (!entity->id || !entity->type) {
+            assert(!entity->id && !entity->type);
+            return;
+        }
     }
 
-    DrawTextEx(fntSmall, TextFormat("%u", entity.id), entity.position,
+    DrawTextEx(fntSmall, TextFormat("%u", entity->id), entity->position,
         fntSmall.baseSize / camera.zoom, 1 / camera.zoom, WHITE);
 }
 void EntityDB::DrawEntityHoverInfo(uint32_t entityId)
 {
     assert(entityId);
 
-    size_t entityIndex = FindEntityIndex(entityId);
-    if (!entityIndex) return;
-
-    data::AspectLife &life = this->life[entityIndex];
-    if (!life.maxHealth) return;
+    data::Entity *entity = FindEntity(entityId);
+    if (!entity) return;
+    if (!entity->hp_max) return;
 
     const float borderWidth = 1;
     const float pad = 1;
@@ -257,13 +238,13 @@ void EntityDB::DrawEntityHoverInfo(uint32_t entityId)
 
     DrawRectangleRec(hpBarBg, Fade(BLACK, 0.5));
 
-    if (fabsf(life.health - life.healthSmooth) < 1.0f) {
-        float pctHealth = CLAMP((float)life.healthSmooth / life.maxHealth, 0, 1);
+    if (fabsf(entity->hp - entity->hp_smooth) < 1.0f) {
+        float pctHealth = CLAMP((float)entity->hp_smooth / entity->hp_max, 0, 1);
         hpBar.width = CLAMP(ceilf(hpBarSize.x * pctHealth), 0, hpBarSize.x);
         DrawRectangleRec(hpBar, ColorBrightness(MAROON, -0.4));
     } else {
-        float pctHealth = CLAMP((float)life.health / life.maxHealth, 0, 1);
-        float pctHealthSmooth = CLAMP((float)life.healthSmooth / life.maxHealth, 0, 1);
+        float pctHealth = CLAMP((float)entity->hp / entity->hp_max, 0, 1);
+        float pctHealthSmooth = CLAMP((float)entity->hp_smooth / entity->hp_max, 0, 1);
         float pctWhite = MAX(pctHealth, pctHealthSmooth);
         float pctRed = MIN(pctHealth, pctHealthSmooth);
         hpBar.width = CLAMP(ceilf(hpBarSize.x * pctWhite), 0, hpBarSize.x);
@@ -281,12 +262,9 @@ void EntityDB::DrawEntityHoverInfo(uint32_t entityId)
 }
 void EntityDB::DrawEntity(uint32_t entityId)
 {
-    size_t entityIndex = FindEntityIndex(entityId);
-    if (entityIndex) {
-        data::Entity &entity = entities[entityIndex];
-        data::AspectSprite &eSprite = sprite[entityIndex];
-        EntitySpriteTuple data{ entity, eSprite };
-        const Rectangle rect = EntityRect(data);
-        data::DrawSprite(eSprite, { rect.x, rect.y });
+    data::Entity *entity = FindEntity(entityId);
+    if (entity) {
+        const Rectangle rect = EntityRect(*entity);
+        data::DrawSprite(*entity, { rect.x, rect.y });
     }
 }
