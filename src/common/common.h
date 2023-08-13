@@ -32,6 +32,8 @@
 //#define WINDOW_WIDTH 1920
 //#define WINDOW_HEIGHT 1016
 
+#define TEXT_LINE_SPACING 1.0f
+
 #define TILE_W 32
 
 #define TODO_LIST_PATH "resources/todo.txt"
@@ -125,13 +127,14 @@ extern int    shdPixelFixerScreenSizeUniformLoc;
 
 extern Font fntTiny;
 extern Font fntSmall;
+extern Font fntMedium;
 extern Font fntBig;
 
 Err InitCommon(void);
 void FreeCommon(void);
 Font dlb_LoadFontFromMemory(const char *fileType, const unsigned char *fileData, int dataSize, int fontSize, int *fontChars, int glyphCount, int type);
 Font dlb_LoadFontEx(const char *fileName, int fontSize, int *fontChars, int glyphCount, int type);
-void dlb_DrawTextEx(Font font, const char *text, Vector2 position, float fontSize, float spacing, Color tint);
+void dlb_DrawTextEx(Font font, const char *text, size_t textLen, Vector2 position, float fontSize, float spacing, Color tint, Vector2 *cursor = 0, bool *hovered = 0);
 
 float GetRandomFloatZeroToOne(void);
 float GetRandomFloatMinusOneToOne(void);
@@ -147,6 +150,40 @@ void dlb_DrawTextureRec(Texture2D texture, Rectangle source, Vector2 position, C
 void dlb_DrawTexturePro(Texture2D texture, Rectangle source, Rectangle dest, Vector2 origin, Color tint);
 
 bool StrFilter(const char *str, const char *filter);
+
+
+
+struct FancyTextNode {
+    enum Type {
+        TEXT,
+        HOVER_TIP,
+        DIALOG_OPTION,
+    };
+
+    // ALL
+    Type type;
+    const char *text;
+    size_t textLen;
+    Vector2 size;
+    Vector2 pos;
+    //Color color;
+
+    // HOVER_TIP
+    const char *tip;
+    size_t tipLen;
+
+    // DIALOG_OPTION
+    int optionId;
+};
+
+struct FancyTextTree {
+    std::vector<FancyTextNode> nodes;
+};
+
+bool dlb_FancyTextParse(FancyTextTree &tree, const char *text);
+Vector2 dlb_MeasureFancyTextNode(FancyTextNode &node, Font font, Vector2 &offset);
+
+void dlb_CommonTests(void);
 
 //     STB_TEXTEDIT_CHARTYPE             the character type
 #define STB_TEXTEDIT_CHARTYPE char

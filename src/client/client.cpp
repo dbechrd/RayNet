@@ -301,6 +301,10 @@ void draw_f3_menu(GameClient &client)
 int main(int argc, char *argv[])
 //int __stdcall WinMain(void *hInstance, void *hPrevInstance, char *pCmdLine, int nCmdShow)
 {
+#if _DEBUG
+    dlb_CommonTests();
+#endif
+
     Err err = RN_SUCCESS;
 
     //SetTraceLogLevel(LOG_WARNING);

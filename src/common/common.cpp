@@ -15,6 +15,7 @@ int    shdPixelFixerScreenSizeUniformLoc;
 
 Font fntTiny;
 Font fntSmall;
+Font fntMedium;
 Font fntBig;
 
 const char *ErrStr(Err err)
@@ -65,6 +66,9 @@ Err InitCommon(void)
     fntSmall = dlb_LoadFontEx(fontName, 18, 0, 0, FONT_DEFAULT);
     if (!fntSmall.baseSize) err = RN_RAYLIB_ERROR;
 
+    fntMedium = dlb_LoadFontEx(fontName, 24, 0, 0, FONT_DEFAULT);
+    if (!fntMedium.baseSize) err = RN_RAYLIB_ERROR;
+
     fntBig = dlb_LoadFontEx(fontName, 46, 0, 0, FONT_DEFAULT);
     if (!fntBig.baseSize) err = RN_RAYLIB_ERROR;
     //SetTextureFilter(fntBig.texture, TEXTURE_FILTER_BILINEAR);    // Required for SDF font
@@ -76,6 +80,7 @@ void FreeCommon(void)
 {
     UnloadShader(shdSdfText);
     UnloadFont(fntSmall);
+    UnloadFont(fntMedium);
     UnloadFont(fntBig);
     rnTextureCatalog.Free();
     data::Free();
@@ -144,48 +149,81 @@ Font dlb_LoadFontEx(const char *fileName, int fontSize, int *fontChars, int glyp
     return font;
 }
 
-void dlb_DrawTextEx(Font font, const char *text, Vector2 position, float fontSize, float spacing, Color tint)
+void dlb_DrawTextEx(Font font, const char *text, size_t textLen, Vector2 position, float fontSize, float spacing, Color tint, Vector2 *cursor, bool *hovered)
 {
-    if (font.texture.id == 0) font = GetFontDefault();  // Security check in case of not valid font
+    if (font.texture.id == 0) {
+        font = GetFontDefault();
+    }
 
-    int size = TextLength(text);    // Total size in bytes of the text, scanned by codepoints in loop
+    Vector2 cur{};
+    if (!cursor) {
+        cursor = &cur;
+    }
 
-    int textOffsetY = 0;            // Offset between lines (on linebreak '\n')
-    float textOffsetX = 0.0f;       // Offset X to next character to draw
+    float scaleFactor = fontSize / font.baseSize; // Character quad scaling factor
+    // TODO(dlb): No idea why Raylib casts this to int.. *shrugs*
+    const float charHeight = (int)((font.baseSize * TEXT_LINE_SPACING) * scaleFactor);
 
-    float scaleFactor = fontSize/font.baseSize;         // Character quad scaling factor
+    struct GlyphDrawCmd {
+        int codepoint;
+        Vector2 pos;
 
-    for (int i = 0; i < size;)
+        GlyphDrawCmd(int codepoint, Vector2 pos) : codepoint(codepoint), pos(pos) {}
+    };
+    std::vector<GlyphDrawCmd> glyphDrawCmds{};
+
+    bool hover = false;
+    for (int i = 0; i < textLen;)
     {
-        // Get next codepoint from byte string and glyph index in font
+        // Get codepointSize codepoint from byte string and glyph glyphIndex in font
         int codepointByteCount = 0;
         int codepoint = GetCodepointNext(&text[i], &codepointByteCount);
         int index = GetGlyphIndex(font, codepoint);
 
         // NOTE: Normally we exit the decoding sequence as soon as a bad byte is found (and return 0x3f)
         // but we need to draw all the bad bytes using the '?' symbol moving one byte
-        if (codepoint == 0x3f) codepointByteCount = 1;
-
-        if (codepoint == '\n')
-        {
-            // NOTE: Fixed line spacing of 1.5 line-height
-            // TODO: Support custom line spacing defined by user
-            textOffsetY += (int)(font.baseSize * scaleFactor);
-            textOffsetX = 0.0f;
+        if (codepoint == 0x3f) {
+            codepointByteCount = 1;
         }
-        else
-        {
-            if ((codepoint != ' ') && (codepoint != '\t'))
-            {
-                DrawTextCodepoint(font, codepoint, { position.x + textOffsetX, position.y + textOffsetY }, fontSize, tint);
+
+        if (codepoint == '\n') {
+            cursor->y += charHeight;
+            cursor->x = 0.0f;
+        } else {
+            const Vector2 glyphPos{ position.x + cursor->x, position.y + cursor->y };
+
+            float advanceX = font.glyphs[index].advanceX;
+            if (!advanceX) {
+                advanceX = font.recs[index].width;
             }
 
-            if (font.glyphs[index].advanceX == 0) textOffsetX += ((float)font.recs[index].width*scaleFactor + spacing);
-            else textOffsetX += ((float)font.glyphs[index].advanceX*scaleFactor + spacing);
+            const float advanceXWithSpacing = advanceX * scaleFactor + spacing;
+            cursor->x += advanceXWithSpacing;
+
+            const Rectangle glyphRec{
+                glyphPos.x, glyphPos.y,
+                advanceXWithSpacing, charHeight
+            };
+
+            if (dlb_CheckCollisionPointRec(GetMousePosition(), glyphRec)) {
+                hover = true;
+            }
+
+            if ((codepoint != ' ') && (codepoint != '\t')) {
+                glyphDrawCmds.emplace_back(codepoint, glyphPos);
+            }
+
         }
 
-        i += codepointByteCount;   // Move text bytes counter to next codepoint
+        i += codepointByteCount;   // Move text bytes counter to codepointSize codepoint
     }
+
+    Color col = hover ? WHITE : tint;
+    for (GlyphDrawCmd &cmd : glyphDrawCmds) {
+        DrawTextCodepoint(font, cmd.codepoint, cmd.pos, fontSize, col);
+    }
+
+    if (hovered) *hovered = hover;
 }
 
 float GetRandomFloatZeroToOne(void)
@@ -399,6 +437,177 @@ bool StrFilter(const char *str, const char *filter)
         }
     }
     return false;
+}
+
+bool dlb_FancyTextParse(FancyTextTree &tree, const char *text)
+{
+    if (!text) {
+        return true;
+    }
+
+    int dialogOptionIdx = 0;
+
+    FancyTextNode *node = 0;
+    const char *c = text;
+    while (*c) {
+        if (!node) {
+            node = &tree.nodes.emplace_back();
+        }
+        switch (*c) {
+            case '{': {
+                if (*(c + 1)) {
+                    c++;  // skip '{'
+                } else {
+                    printf("Expected string after '{' at %zu\n", (c + 1) - text);
+                    return false;
+                }
+
+                node->type = FancyTextNode::DIALOG_OPTION;
+                node->text = c;
+                node->optionId = dialogOptionIdx++;
+
+                while (*c && *c != '}') {
+                    node->textLen++;
+                    c++;
+                }
+
+                if (*c == '}') {
+                    c++;  // skip '}'
+                } else {
+                    printf("Expected '}' at %zu\n", c - text);
+                    return false;
+                }
+
+                node = NULL;
+                break;
+            }
+            default: {
+                node->type = FancyTextNode::TEXT;
+                node->text = c;
+
+                while (*c && *c != '{') {
+                    node->textLen++;
+                    c++;
+                };
+
+                node = NULL;
+                break;
+            }
+        }
+    }
+
+#if 0
+    for (FancyTextNode &node : tree.nodes) {
+        const char *nodeType = "";
+        switch (node.type) {
+            case FancyTextNode::TEXT:          nodeType = "TEXT";          break;
+            case FancyTextNode::DIALOG_OPTION: nodeType = "DIALOG_OPTION"; break;
+            case FancyTextNode::HOVER_TIP:     nodeType = "HOVER_TIP";     break;
+        }
+        printf("%s:%.*s\n", nodeType, (int)node.textLen, node.text);
+    }
+    printf("--------\n");
+#endif
+
+    return true;
+}
+
+Vector2 dlb_MeasureFancyTextNode(FancyTextNode &node, Font font, Vector2 &offset)
+{
+    Vector2 textSize{};
+
+    if ((font.texture.id == 0) || (node.text == NULL)) {
+        return textSize;
+    }
+
+    int lineCharsMax = 0;
+    int lineChars = 0;
+
+    float textWidth = 0.0f;
+    float textHeight = 0.0f;
+    const float charHeight = font.baseSize * TEXT_LINE_SPACING;  // including line spacing, for bbox
+
+    for (int i = 0; i < node.textLen; i++) {
+        lineChars++;
+
+        int codepointSize = 0;
+        int codepoint = GetCodepointNext(&node.text[i], &codepointSize);
+        int glyphIndex = GetGlyphIndex(font, codepoint);
+
+        // NOTE: normally we exit the decoding sequence as soon as a bad byte is found (and return 0x3f)
+        // but we need to draw all the bad bytes using the '?' symbol so to not skip any we set codepointSize = 1
+        if (codepoint == 0x3f) {
+            codepointSize = 1;
+        }
+        i += codepointSize - 1;
+
+        if (codepoint == '\n') {
+            textWidth = MAX(offset.x, textWidth);
+            lineChars = 0;
+            offset.x = 0;
+            offset.y += charHeight;
+            textHeight += charHeight;
+        } else {
+            float advanceX = font.glyphs[glyphIndex].advanceX;
+            if (!advanceX) {
+                advanceX = font.recs[glyphIndex].width + font.glyphs[glyphIndex].offsetX;
+            }
+            offset.x += advanceX;
+        }
+
+        lineCharsMax = MAX(lineChars, lineCharsMax);
+    }
+
+    textWidth = MAX(offset.x, textWidth);
+    textHeight += font.baseSize;
+
+    const float fontSize = font.baseSize;
+    const float spacing = 1.0f;
+
+    float scaleFactor = fontSize / font.baseSize;
+    textSize.x = textWidth * scaleFactor + ((lineCharsMax - 1) * spacing); // Adds chars spacing to measure
+    textSize.y = textHeight * scaleFactor;
+
+    return textSize;
+}
+
+void dlb_CommonTests(void)
+{
+    {
+        FancyTextTree tree{};
+        assert(dlb_FancyTextParse(tree, "hello friend!"));
+        assert(tree.nodes.size() == 1);
+    }
+    {
+        FancyTextTree tree{};
+        assert(dlb_FancyTextParse(tree, "hello {name}"));
+        assert(tree.nodes.size() == 2);
+    }
+    {
+        FancyTextTree tree{};
+        assert(dlb_FancyTextParse(tree, "hello {name}!"));
+        assert(tree.nodes.size() == 3);
+    }
+    {
+        FancyTextTree tree{};
+        assert(dlb_FancyTextParse(tree, "{name} is a cool name!"));
+        assert(tree.nodes.size() == 2);
+    }
+    {
+        FancyTextTree tree{};
+        assert(dlb_FancyTextParse(tree, "\"{name}\" is a cool name!"));
+        assert(tree.nodes.size() == 3);
+    }
+    {
+        FancyTextTree tree{};
+        assert(dlb_FancyTextParse(tree, "{first_name}{last_name} is a cool name!"));
+        assert(tree.nodes.size() == 3);
+    }
+    {
+        FancyTextTree tree{};
+        assert(dlb_FancyTextParse(tree, "Ouch! You hit me!\n\n{Sorry}\n{Haha, loser}"));
+        assert(tree.nodes.size() == 4);
+    }
 }
 
 #include "collision.cpp"

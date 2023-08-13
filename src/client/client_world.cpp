@@ -450,14 +450,31 @@ void ClientWorld::DrawEntitySnapshotShadows(uint32_t entityId, Controller &contr
 // TODO(dlb): Where should this live? Probably not in ClientWorld?
 void ClientWorld::DrawDialog(data::AspectDialog &dialog, Vector2 bottomCenterScreen)
 {
+    Font &font = fntMedium;
+
     bottomCenterScreen.x = roundf(bottomCenterScreen.x);
     bottomCenterScreen.y = roundf(bottomCenterScreen.y);
 
     const float marginBottom = 4.0f;
     const Vector2 bgPad{ 12, 8 };
 
-    const Vector2 titleSize = MeasureTextEx(fntSmall, dialog.title.c_str(), fntSmall.baseSize, 1);
-    const Vector2 msgSize = MeasureTextEx(fntSmall, dialog.message.c_str(), fntSmall.baseSize, 1);
+    //size_t nodeCount = dlb_FancyTextParse(dialog.message.c_str(), dialog.message.size());
+
+    FancyTextTree tree{};
+    if (!dlb_FancyTextParse(tree, dialog.message.c_str())) {
+        return;
+    }
+
+    const Vector2 titleSize = MeasureTextEx(font, dialog.title.c_str(), font.baseSize, 1);
+
+    Vector2 msgOffset{};
+    Vector2 msgSize{};
+    for (FancyTextNode node : tree.nodes) {
+        Vector2 nodeSize = dlb_MeasureFancyTextNode(node, font, msgOffset);
+        msgSize.x = MAX(msgSize.x, nodeSize.x);
+        msgSize.y = msgOffset.y + nodeSize.y;
+    }
+
     const float bgHeight =
         bgPad.y +
         titleSize.y +
@@ -502,12 +519,36 @@ void ClientWorld::DrawDialog(data::AspectDialog &dialog, Vector2 bottomCenterScr
     DrawTextureNPatch(nPatchTex, nPatch, bgRect, {}, 0, WHITE);
     //DrawRectangleRounded(msgBgRect, 0.2f, 6, Fade(BLACK, 0.5));
     //DrawRectangleRoundedLines(msgBgRect, 0.2f, 6, 1.0f, RAYWHITE);
-    dlb_DrawTextEx(fntSmall, dialog.title.c_str(), titlePos, fntSmall.baseSize, 1.0f, GOLD);
-    dlb_DrawTextEx(fntSmall, dialog.message.c_str(), msgPos, fntSmall.baseSize, 1.0f, RAYWHITE);
-    //DrawTextShadowEx(fntSmall, dialog.message, msgPos, FONT_SIZE, RAYWHITE);
+    dlb_DrawTextEx(font, dialog.title.c_str(), dialog.title.size(), titlePos, font.baseSize, 1.0f, GOLD);
+
+    Vector2 cursor{};
+    for (int i = 0; i < tree.nodes.size(); i++) {
+        FancyTextNode &node = tree.nodes[i];
+        Color col = RAYWHITE;
+        switch (node.type) {
+            case FancyTextNode::TEXT:          col = RAYWHITE; break;
+            case FancyTextNode::DIALOG_OPTION: col = SKYBLUE;  break;
+            case FancyTextNode::HOVER_TIP:     col = YELLOW;   break;
+        }
+        col = ColorFromHSV((float)i / tree.nodes.size() * 360.0f, 0.8f, 0.8f);
+        bool hovered = false;
+        dlb_DrawTextEx(font, node.text, node.textLen, msgPos, font.baseSize, 1.0f, col, &cursor, &hovered);
+
+        const bool pressed = hovered && io.MouseButtonPressed(MOUSE_BUTTON_LEFT);
+        if (pressed) {
+            switch (node.type) {
+                case FancyTextNode::DIALOG_OPTION: {
+                    printf("Player clicked dialog option %d\n", node.optionId);
+                    break;
+                }
+                case FancyTextNode::HOVER_TIP: {
+                    break;
+                }
+            }
+        }
+    }
 }
 
-// TODO: Entity should just draw it's own damn dialog
 void ClientWorld::DrawDialogs(Camera2D &camera)
 {
     Tilemap *map = LocalPlayerMap();

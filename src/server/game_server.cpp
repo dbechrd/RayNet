@@ -740,7 +740,7 @@ void GameServer::TickEntityProjectile(uint32_t entityId, double dt)
                 if (CheckCollisionRecs(projectileHitbox, targetHitbox)) {
                     life.TakeDamage(GetRandomValue(3, 8));
                     if (life.Alive()) {
-                        BroadcastEntitySay(target.id, TextFormat("Ouch! You hit me with\nprojectile #%u!", entity.id));
+                        BroadcastEntitySay(target.id, TextFormat("Ouch! You hit me with\nprojectile #%u!\n\n{Sorry}\n{Fuck you}", entity.id));
                     } else {
                         DespawnEntity(target.id);
                     }

@@ -1616,7 +1616,7 @@ void Editor::DrawUI_Debug(UI &uiActionBar, double now)
 {
     static UID uid = NextUID();
     uiActionBar.Text(TextFormat("%.*s", 20, uid.bytes));
-    if (true || uiActionBar.Button("NextUID").pressed) {
+    if (true) {// || uiActionBar.Button("NextUID").pressed) {
         uid = NextUID();
     }
 }
