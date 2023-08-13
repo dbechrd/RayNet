@@ -430,6 +430,20 @@ void GameServer::ProcessMessages(void)
                         }
                         break;
                     }
+                    case MSG_C_ENTITY_INTERACT_DIALOG_OPTION:
+                    {
+                        Msg_C_EntityInteractDialogOption *msg = (Msg_C_EntityInteractDialogOption *)yjMsg;
+
+                        // TODO: Check if player is allowed to actually interact with this
+                        // particular entity. E.g. are they even in the same map as them!?
+                        // Proximity, etc.
+                        data::Entity *entity = entityDb->FindEntity(msg->entityId);
+                        if (entity && entity->type == data::ENTITY_NPC) {
+                            const char *text = TextFormat("Thanks for picking option %u!", msg->optionId);
+                            SendEntitySay(clientIdx, entity->id, text);
+                        }
+                        break;
+                    }
                     case MSG_C_INPUT_COMMANDS:
                     {
                         Msg_C_InputCommands *msg = (Msg_C_InputCommands *)yjMsg;

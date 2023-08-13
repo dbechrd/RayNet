@@ -90,6 +90,23 @@ void GameClient::SendEntityInteract(uint32_t entityId)
     }
 }
 
+void GameClient::SendEntityInteractDialogOption(uint32_t entityId, uint32_t optionId)
+{
+    if (yj_client->CanSendMessage(MSG_C_ENTITY_INTERACT_DIALOG_OPTION)) {
+        Msg_C_EntityInteractDialogOption *msg = (Msg_C_EntityInteractDialogOption *)yj_client->CreateMessage(MSG_C_ENTITY_INTERACT_DIALOG_OPTION);
+        if (msg) {
+            msg->entityId = entityId;
+            msg->optionId = optionId;
+            yj_client->SendMessage(MSG_C_ENTITY_INTERACT_DIALOG_OPTION, msg);
+        } else {
+            printf("Failed to create ENTITY_INTERACT_DIALOG_OPTION message.\n");
+        }
+    } else {
+        printf("Outgoing ENTITY_INTERACT_DIALOG_OPTION channel message queue is full.\n");
+    }
+}
+
+
 void GameClient::SendTileInteract(uint32_t x, uint32_t y)
 {
     if (yj_client->CanSendMessage(MSG_C_TILE_INTERACT)) {

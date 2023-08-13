@@ -169,7 +169,7 @@ void draw_game(GameClient &client)
     };
     SetShaderValue(shdPixelFixer, shdPixelFixerScreenSizeUniformLoc, &screenSize, SHADER_UNIFORM_VEC2);
 
-    client.world->Draw(client.controller, client.now, client.frameDt);
+    client.world->Draw(client);
 
     //--------------------
     // Draw in-game menu

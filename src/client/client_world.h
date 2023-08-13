@@ -43,13 +43,13 @@ struct ClientWorld {
     void ApplyStateInterpolated(uint32_t entityId,
         const GhostSnapshot &a, const GhostSnapshot &b, float alpha, float dt);
     Err CreateDialog(uint32_t entityId, std::string message, double now);
-    void Update(GameClient &gameClient);
-    void Draw(Controller &controller, double now, double dt);
+    void Update(GameClient &client);
+    void Draw(GameClient &client);
 
 private:
-    void UpdateEntities(GameClient &gameClient);
+    void UpdateEntities(GameClient &client);
 
     void DrawEntitySnapshotShadows(uint32_t entityId, Controller &controller, double now, double dt);
-    void DrawDialog(data::AspectDialog &dialog, Vector2 bottomCenterScreen);
-    void DrawDialogs(Camera2D &camera);
+    void DrawDialog(GameClient &client, uint32_t entityId, data::AspectDialog &dialog, Vector2 bottomCenterScreen);
+    void DrawDialogs(GameClient &client, Camera2D &camera);
 };

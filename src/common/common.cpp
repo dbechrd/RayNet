@@ -172,7 +172,6 @@ void dlb_DrawTextEx(Font font, const char *text, size_t textLen, Vector2 positio
     };
     std::vector<GlyphDrawCmd> glyphDrawCmds{};
 
-    bool hover = false;
     for (int i = 0; i < textLen;)
     {
         // Get codepointSize codepoint from byte string and glyph glyphIndex in font
@@ -200,13 +199,15 @@ void dlb_DrawTextEx(Font font, const char *text, size_t textLen, Vector2 positio
             const float advanceXWithSpacing = advanceX * scaleFactor + spacing;
             cursor->x += advanceXWithSpacing;
 
-            const Rectangle glyphRec{
-                glyphPos.x, glyphPos.y,
-                advanceXWithSpacing, charHeight
-            };
+            if (hovered) {
+                const Rectangle glyphRec{
+                    glyphPos.x, glyphPos.y,
+                    advanceXWithSpacing, charHeight
+                };
 
-            if (dlb_CheckCollisionPointRec(GetMousePosition(), glyphRec)) {
-                hover = true;
+                if (dlb_CheckCollisionPointRec(GetMousePosition(), glyphRec)) {
+                    *hovered = true;
+                }
             }
 
             if ((codepoint != ' ') && (codepoint != '\t')) {
@@ -218,12 +219,10 @@ void dlb_DrawTextEx(Font font, const char *text, size_t textLen, Vector2 positio
         i += codepointByteCount;   // Move text bytes counter to codepointSize codepoint
     }
 
-    Color col = hover ? WHITE : tint;
+    Color col = (hovered && *hovered) ? WHITE : tint;
     for (GlyphDrawCmd &cmd : glyphDrawCmds) {
         DrawTextCodepoint(font, cmd.codepoint, cmd.pos, fontSize, col);
     }
-
-    if (hovered) *hovered = hover;
 }
 
 float GetRandomFloatZeroToOne(void)

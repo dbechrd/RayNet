@@ -357,9 +357,9 @@ void ClientWorld::UpdateEntities(GameClient &client)
     }
 }
 
-void ClientWorld::Update(GameClient &gameClient)
+void ClientWorld::Update(GameClient &client)
 {
-    UpdateEntities(gameClient);
+    UpdateEntities(client);
 }
 
 void ClientWorld::DrawEntitySnapshotShadows(uint32_t entityId, Controller &controller, double now, double dt)
@@ -448,7 +448,7 @@ void ClientWorld::DrawEntitySnapshotShadows(uint32_t entityId, Controller &contr
 }
 
 // TODO(dlb): Where should this live? Probably not in ClientWorld?
-void ClientWorld::DrawDialog(data::AspectDialog &dialog, Vector2 bottomCenterScreen)
+void ClientWorld::DrawDialog(GameClient &client, uint32_t entityId, data::AspectDialog &dialog, Vector2 bottomCenterScreen)
 {
     Font &font = fntMedium;
 
@@ -525,20 +525,22 @@ void ClientWorld::DrawDialog(data::AspectDialog &dialog, Vector2 bottomCenterScr
     for (int i = 0; i < tree.nodes.size(); i++) {
         FancyTextNode &node = tree.nodes[i];
         Color col = RAYWHITE;
+        bool hoverable = false;
         switch (node.type) {
             case FancyTextNode::TEXT:          col = RAYWHITE; break;
-            case FancyTextNode::DIALOG_OPTION: col = SKYBLUE;  break;
-            case FancyTextNode::HOVER_TIP:     col = YELLOW;   break;
+            case FancyTextNode::DIALOG_OPTION: col = SKYBLUE;  hoverable = true; break;
+            case FancyTextNode::HOVER_TIP:     col = YELLOW;   hoverable = true; break;
         }
-        col = ColorFromHSV((float)i / tree.nodes.size() * 360.0f, 0.8f, 0.8f);
+        //col = ColorFromHSV((float)i / tree.nodes.size() * 360.0f, 0.8f, 0.8f);
         bool hovered = false;
-        dlb_DrawTextEx(font, node.text, node.textLen, msgPos, font.baseSize, 1.0f, col, &cursor, &hovered);
+        bool *hoveredPtr = hoverable ? &hovered : 0;
+        dlb_DrawTextEx(font, node.text, node.textLen, msgPos, font.baseSize, 1.0f, col, &cursor, hoveredPtr);
 
         const bool pressed = hovered && io.MouseButtonPressed(MOUSE_BUTTON_LEFT);
         if (pressed) {
             switch (node.type) {
                 case FancyTextNode::DIALOG_OPTION: {
-                    printf("Player clicked dialog option %d\n", node.optionId);
+                    client.SendEntityInteractDialogOption(entityId, node.optionId);
                     break;
                 }
                 case FancyTextNode::HOVER_TIP: {
@@ -549,7 +551,7 @@ void ClientWorld::DrawDialog(data::AspectDialog &dialog, Vector2 bottomCenterScr
     }
 }
 
-void ClientWorld::DrawDialogs(Camera2D &camera)
+void ClientWorld::DrawDialogs(GameClient &client, Camera2D &camera)
 {
     Tilemap *map = LocalPlayerMap();
     if (!map) {
@@ -567,12 +569,12 @@ void ClientWorld::DrawDialogs(Camera2D &camera)
         if (dialog.spawnedAt) {
             const Vector2 topCenter = entityDb->EntityTopCenter(entity.id);
             const Vector2 topCenterScreen = GetWorldToScreen2D(topCenter, camera);
-            DrawDialog(dialog, topCenterScreen);
+            DrawDialog(client, entity.id, dialog, topCenterScreen);
         }
     }
 }
 
-void ClientWorld::Draw(Controller &controller, double now, double dt)
+void ClientWorld::Draw(GameClient &client)
 {
     Tilemap *map = LocalPlayerMap();
     if (!map) {
@@ -597,14 +599,14 @@ void ClientWorld::Draw(Controller &controller, double now, double dt)
             continue;
         }
         assert(entity.id);
-        DrawEntitySnapshotShadows(entity.id, controller, now, dt);
+        DrawEntitySnapshotShadows(entity.id, client.controller, client.now, client.frameDt);
         entityDb->DrawEntity(entity.id);
     }
     EndMode2D();
 
     //--------------------
     // Draw the dialogs
-    DrawDialogs(camera2d);
+    DrawDialogs(client, camera2d);
 
     //--------------------
     // Draw entity info

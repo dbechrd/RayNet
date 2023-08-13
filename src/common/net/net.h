@@ -1,6 +1,7 @@
 #pragma once
 #include "../common.h"
 #include "messages/msg_c_entity_interact.h"
+#include "messages/msg_c_entity_interact_dialog_option.h"
 #include "messages/msg_c_input_commands.h"
 #include "messages/msg_c_tile_interact.h"
 #include "messages/msg_s_clock_sync.h"
@@ -24,6 +25,7 @@ enum ChannelType {
 enum MsgType
 {
     MSG_C_ENTITY_INTERACT,
+    MSG_C_ENTITY_INTERACT_DIALOG_OPTION,
     MSG_C_INPUT_COMMANDS,
     MSG_C_TILE_INTERACT,
 
@@ -43,16 +45,17 @@ extern const char *MsgTypeStr(MsgType type);
 void InitClientServerConfig(yojimbo::ClientServerConfig &config);
 
 YOJIMBO_MESSAGE_FACTORY_START(MsgFactory, MSG_COUNT);
-YOJIMBO_DECLARE_MESSAGE_TYPE(MSG_C_ENTITY_INTERACT, Msg_C_EntityInteract);
-YOJIMBO_DECLARE_MESSAGE_TYPE(MSG_C_INPUT_COMMANDS,  Msg_C_InputCommands);
-YOJIMBO_DECLARE_MESSAGE_TYPE(MSG_C_TILE_INTERACT,   Msg_C_TileInteract);
-YOJIMBO_DECLARE_MESSAGE_TYPE(MSG_S_CLOCK_SYNC,      Msg_S_ClockSync);
-YOJIMBO_DECLARE_MESSAGE_TYPE(MSG_S_ENTITY_DESPAWN,  Msg_S_EntityDespawn);
-YOJIMBO_DECLARE_MESSAGE_TYPE(MSG_S_ENTITY_DESPAWN_TEST,  Msg_S_EntityDespawn);
-YOJIMBO_DECLARE_MESSAGE_TYPE(MSG_S_ENTITY_SAY,      Msg_S_EntitySay);
-YOJIMBO_DECLARE_MESSAGE_TYPE(MSG_S_ENTITY_SNAPSHOT, Msg_S_EntitySnapshot);
-YOJIMBO_DECLARE_MESSAGE_TYPE(MSG_S_ENTITY_SPAWN,    Msg_S_EntitySpawn);
-YOJIMBO_DECLARE_MESSAGE_TYPE(MSG_S_TILE_CHUNK,      Msg_S_TileChunk);
+YOJIMBO_DECLARE_MESSAGE_TYPE(MSG_C_ENTITY_INTERACT,               Msg_C_EntityInteract);
+YOJIMBO_DECLARE_MESSAGE_TYPE(MSG_C_ENTITY_INTERACT_DIALOG_OPTION, Msg_C_EntityInteractDialogOption);
+YOJIMBO_DECLARE_MESSAGE_TYPE(MSG_C_INPUT_COMMANDS,                Msg_C_InputCommands);
+YOJIMBO_DECLARE_MESSAGE_TYPE(MSG_C_TILE_INTERACT,                 Msg_C_TileInteract);
+YOJIMBO_DECLARE_MESSAGE_TYPE(MSG_S_CLOCK_SYNC,                    Msg_S_ClockSync);
+YOJIMBO_DECLARE_MESSAGE_TYPE(MSG_S_ENTITY_DESPAWN,                Msg_S_EntityDespawn);
+YOJIMBO_DECLARE_MESSAGE_TYPE(MSG_S_ENTITY_DESPAWN_TEST,           Msg_S_EntityDespawn);
+YOJIMBO_DECLARE_MESSAGE_TYPE(MSG_S_ENTITY_SAY,                    Msg_S_EntitySay);
+YOJIMBO_DECLARE_MESSAGE_TYPE(MSG_S_ENTITY_SNAPSHOT,               Msg_S_EntitySnapshot);
+YOJIMBO_DECLARE_MESSAGE_TYPE(MSG_S_ENTITY_SPAWN,                  Msg_S_EntitySpawn);
+YOJIMBO_DECLARE_MESSAGE_TYPE(MSG_S_TILE_CHUNK,                    Msg_S_TileChunk);
 YOJIMBO_MESSAGE_FACTORY_FINISH();
 
 class NetAdapter : public yojimbo::Adapter

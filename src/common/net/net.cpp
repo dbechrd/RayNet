@@ -3,18 +3,19 @@
 const char *MsgTypeStr(MsgType type)
 {
     switch (type) {
-        case MSG_C_ENTITY_INTERACT: return "MSG_C_ENTITY_INTERACT";
-        case MSG_C_INPUT_COMMANDS:  return "MSG_C_INPUT_COMMANDS";
-        case MSG_C_TILE_INTERACT:   return "MSG_C_TILE_INTERACT";
+        case MSG_C_ENTITY_INTERACT:               return "MSG_C_ENTITY_INTERACT";
+        case MSG_C_ENTITY_INTERACT_DIALOG_OPTION: return "MSG_C_ENTITY_INTERACT_DIALOG_OPTION";
+        case MSG_C_INPUT_COMMANDS:                return "MSG_C_INPUT_COMMANDS";
+        case MSG_C_TILE_INTERACT:                 return "MSG_C_TILE_INTERACT";
 
-        case MSG_S_CLOCK_SYNC:      return "MSG_S_CLOCK_SYNC";
-        case MSG_S_ENTITY_DESPAWN:  return "MSG_S_ENTITY_DESPAWN";
-        case MSG_S_ENTITY_SAY:      return "MSG_S_ENTITY_SAY";
-        case MSG_S_ENTITY_SNAPSHOT: return "MSG_S_ENTITY_SNAPSHOT";
-        case MSG_S_ENTITY_SPAWN:    return "MSG_S_ENTITY_SPAWN";
-        case MSG_S_TILE_CHUNK:      return "MSG_S_TILE_CHUNK";
+        case MSG_S_CLOCK_SYNC:                    return "MSG_S_CLOCK_SYNC";
+        case MSG_S_ENTITY_DESPAWN:                return "MSG_S_ENTITY_DESPAWN";
+        case MSG_S_ENTITY_SAY:                    return "MSG_S_ENTITY_SAY";
+        case MSG_S_ENTITY_SNAPSHOT:               return "MSG_S_ENTITY_SNAPSHOT";
+        case MSG_S_ENTITY_SPAWN:                  return "MSG_S_ENTITY_SPAWN";
+        case MSG_S_TILE_CHUNK:                    return "MSG_S_TILE_CHUNK";
 
-        default:                    return "<UNKNOWN_MSG_TYPE>";
+        default:                                  return "<UNKNOWN_MSG_TYPE>";
     }
 }
 
