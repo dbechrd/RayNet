@@ -6,6 +6,7 @@ struct IO {
     enum Scope {
         IO_None,
         IO_Game,
+        IO_GameDialog,
         IO_GameHUD,
         IO_Editor,
         IO_EditorGroundOverlay,

@@ -508,6 +508,10 @@ void ClientWorld::DrawDialog(GameClient &client, uint32_t entityId, data::Aspect
     //msgBgRect.width = floorf(msgBgRect.width);
     //msgBgRect.height = floorf(msgBgRect.height);
 
+    if (dlb_CheckCollisionPointRec(GetMousePosition(), bgRect)) {
+        io.CaptureMouse();
+    }
+
     NPatchInfo nPatch{};
     Texture &nPatchTex = data::pack1.gfxFiles[data::GFX_FILE_DLG_NPATCH].texture;
     nPatch.source = { 0, 0, (float)nPatchTex.width, (float)nPatchTex.height };
@@ -553,6 +557,8 @@ void ClientWorld::DrawDialog(GameClient &client, uint32_t entityId, data::Aspect
 
 void ClientWorld::DrawDialogs(GameClient &client, Camera2D &camera)
 {
+    io.PushScope(IO::IO_GameDialog);
+
     Tilemap *map = LocalPlayerMap();
     if (!map) {
         return;
@@ -572,6 +578,8 @@ void ClientWorld::DrawDialogs(GameClient &client, Camera2D &camera)
             DrawDialog(client, entity.id, dialog, topCenterScreen);
         }
     }
+
+    io.PopScope();
 }
 
 void ClientWorld::Draw(GameClient &client)
