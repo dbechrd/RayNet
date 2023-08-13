@@ -45,6 +45,12 @@ struct ServerPlayer {
     RingBuffer<InputCmd, CL_SEND_INPUT_COUNT> inputQueue{};
     // TODO(dlb): Also send tile chunks whenever a client enters the render distance of it
     RingBuffer<TileChunkRecord, CL_RENDER_DISTANCE*CL_RENDER_DISTANCE> chunkList{};
+
+    // TODO: Check if player is allowed to actually interact with this
+    // particular entity. E.g. are they even in the same map as them!?
+    // Proximity, etc. If they leave proximity, send EntityInteractCancel
+    uint32_t entityInteractId {};
+    uint32_t entityInteractDialogId {};
 };
 
 class GameServerNetAdapter : public NetAdapter

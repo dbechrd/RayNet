@@ -419,28 +419,57 @@ void GameServer::ProcessMessages(void)
                     case MSG_C_ENTITY_INTERACT:
                     {
                         Msg_C_EntityInteract *msg = (Msg_C_EntityInteract *)yjMsg;
+                        ServerPlayer &player = players[clientIdx];
 
                         // TODO: Check if player is allowed to actually interact with this
                         // particular entity. E.g. are they even in the same map as them!?
                         // Proximity, etc.
                         data::Entity *entity = entityDb->FindEntity(msg->entityId);
                         if (entity && entity->type == data::ENTITY_NPC) {
-                            const char *text = "Hello, traveler!\n\n{Hi.}\n{That's not my name!}\n{Goodbye.}";
-                            SendEntitySay(clientIdx, entity->id, text);
+                            uint32_t entityIndex = entityDb->FindEntityIndex(entity->id);
+                            data::AspectDialog &eDialog = entityDb->dialog[entityIndex];
+                            data::Dialog &dialog = data::pack1.dialogs[eDialog.dialogId];
+
+                            SendEntitySay(clientIdx, entity->id, dialog.msg);
+                            player.entityInteractId = entity->id;
+                            player.entityInteractDialogId = dialog.id;
                         }
                         break;
                     }
                     case MSG_C_ENTITY_INTERACT_DIALOG_OPTION:
                     {
                         Msg_C_EntityInteractDialogOption *msg = (Msg_C_EntityInteractDialogOption *)yjMsg;
+                        ServerPlayer &player = players[clientIdx];
 
-                        // TODO: Check if player is allowed to actually interact with this
-                        // particular entity. E.g. are they even in the same map as them!?
-                        // Proximity, etc.
-                        data::Entity *entity = entityDb->FindEntity(msg->entityId);
-                        if (entity && entity->type == data::ENTITY_NPC) {
-                            const char *text = TextFormat("Thanks for picking option %u!", msg->optionId);
-                            SendEntitySay(clientIdx, entity->id, text);
+                        if (msg->optionId >= SV_MAX_ENTITY_DIALOG_OPTIONS) {
+                            // Client being stupid?
+                            assert(!"invalid dialog option id");
+                            break;
+                        }
+
+                        if (msg->entityId == player.entityInteractId) {
+                            assert(player.entityInteractDialogId);
+
+                            data::Entity *entity = entityDb->FindEntity(msg->entityId);
+                            if (entity && entity->type == data::ENTITY_NPC) {
+                                uint32_t entityIndex = entityDb->FindEntityIndex(entity->id);
+
+                                data::Dialog &prevDialog = data::pack1.dialogs[player.entityInteractDialogId];
+                                uint32_t nextDialogId = prevDialog.optionIds[msg->optionId];
+                                if (!nextDialogId) {
+                                    // Client being stupid? (or bug in data where msg string has more options than options id array)
+                                    assert(!"missing dialog option id?");
+                                    break;
+                                }
+
+                                data::Dialog &nextDialog = data::pack1.dialogs[nextDialogId];
+                                SendEntitySay(clientIdx, entity->id, nextDialog.msg);
+                                player.entityInteractDialogId = nextDialog.id;
+                            } else {
+                                player.entityInteractId = 0;
+                            }
+                        } else {
+                            player.entityInteractId = 0;
                         }
                         break;
                     }
@@ -571,6 +600,7 @@ void GameServer::TickSpawnTownNPCs(uint32_t mapId)
                 size_t entityIndex = entityDb->FindEntityIndex(entityId);
                 data::Entity &entity = entityDb->entities[entityIndex];
                 data::AspectCollision &eCollision = entityDb->collision [entityIndex];
+                data::AspectDialog    &eDialog    = entityDb->dialog    [entityIndex];
                 data::AspectLife      &eLife      = entityDb->life      [entityIndex];
                 data::AspectPathfind  &ePathfind  = entityDb->pathfind  [entityIndex];
                 data::AspectPhysics   &ePhysics   = entityDb->physics   [entityIndex];
@@ -581,6 +611,8 @@ void GameServer::TickSpawnTownNPCs(uint32_t mapId)
                 entity.position = { 0, 0 };
 
                 eCollision.radius = 10;
+
+                eDialog.dialogId = data::DIALOG_LILY_INTRO;
 
                 eLife.maxHealth = 100;
                 eLife.health = eLife.maxHealth;

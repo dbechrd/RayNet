@@ -20,7 +20,8 @@ namespace data {
         gen(DAT_TYP_MATERIAL,  "MATERIAL" ) \
         gen(DAT_TYP_TILE_TYPE, "TILE_TYPE") \
         gen(DAT_TYP_ENTITY,    "ENTITY"   ) \
-        gen(DAT_TYP_SPRITE,    "SPRITE"   )
+        gen(DAT_TYP_SPRITE,    "SPRITE"   ) \
+        gen(DAT_TYP_DIALOG,    "DIALOG"   )
 
     enum DataType : uint8_t {
         DATA_TYPES(ENUM_GEN_VALUE_DESC)
@@ -425,6 +426,24 @@ namespace data {
         //Color color;  // color for minimap/wang tile editor (top left pixel of tile)
     };
 
+#define DIALOG_IDS(gen)          \
+    gen(DIALOG_NONE)             \
+    gen(DIALOG_CANCEL)           \
+    gen(DIALOG_LILY_INTRO)       \
+    gen(DIALOG_LILY_HI)          \
+    gen(DIALOG_LILY_NOT_MY_NAME)
+
+    enum DialogId : uint16_t {
+        DIALOG_IDS(ENUM_GEN_VALUE)
+    };
+
+    struct Dialog {
+        static const DataType dtype = DAT_TYP_DIALOG;
+        DialogId    id        {};
+        std::string msg       {};
+        DialogId    optionIds [SV_MAX_ENTITY_DIALOG_OPTIONS]{};
+    };
+
     ////////////////////////////////////////////////////////////////////////////
 
     // Best rap song: "i added it outta habit" by dandymcgee
@@ -463,6 +482,10 @@ namespace data {
     };
 
     struct AspectDialog {
+        // Server-side
+        DialogId    dialogId  {};  // Root node of dialog tree
+
+        // Client-side
         double      spawnedAt {};  // time when dialog was spawned
         std::string title     {};  // name of NPC, submenu, etc.
         std::string message   {};  // what they're saying
@@ -565,6 +588,7 @@ namespace data {
         std::vector<Material> materials {};
         std::vector<Sprite>   sprites   {};
         std::vector<TileType> tileTypes {};
+        std::vector<Dialog>   dialogs   {};
 
         std::unordered_map<std::string, size_t> musFilesById{};
 

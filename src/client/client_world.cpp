@@ -338,7 +338,11 @@ void ClientWorld::UpdateEntities(GameClient &client)
                 const Vector2 cursorWorldPos = GetScreenToWorld2D(GetMousePosition(), camera2d);
                 bool hover = dlb_CheckCollisionPointRec(cursorWorldPos, entityDb->EntityRect(entity.id));
                 if (hover) {
-                    io.CaptureMouse();
+                    if (entity.type == data::ENTITY_NPC) {
+                        // TODO: This might need to be ENTITY_TOWNFOLK or entity.attackable
+                        // or something more specific. Otherwise you can't shoot da enemies!
+                        io.CaptureMouse();
+                    }
                     bool down = io.MouseButtonPressed(MOUSE_BUTTON_LEFT);
                     if (down) {
                         client.SendEntityInteract(entity.id);

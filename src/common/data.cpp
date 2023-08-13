@@ -251,7 +251,7 @@ namespace data {
 
         TileType tileTypes[] = {
             { TILE_NONE },
-            //id               gfx/anim                 material        auto_mask   flags
+            // id              gfx/anim                 material        auto_mask   flags
             { TILE_GRASS,      GFX_ANIM_TIL_GRASS,      MATERIAL_GRASS, 0b00000000, TILE_FLAG_WALK },
             { TILE_STONE_PATH, GFX_ANIM_TIL_STONE_PATH, MATERIAL_STONE, 0b00000000, TILE_FLAG_WALK },
             { TILE_WATER,      GFX_ANIM_TIL_WATER,      MATERIAL_WATER, 0b00000000, TILE_FLAG_SWIM },
@@ -318,6 +318,18 @@ namespace data {
             { TILE_AUTO_GRASS_47, GFX_ANIM_TIL_AUTO_GRASS_47, MATERIAL_GRASS, 0b11010000, TILE_FLAG_WALK },
         };
 
+        Dialog dialogs[] = {
+            { DIALOG_NONE },
+            // id                      msg
+            { DIALOG_CANCEL,           "Cya!" },
+            { DIALOG_LILY_INTRO,       "Hello, traveler!\n\n{Hi.}\n{That's not my name!}\n{Goodbye.}",
+                                       { DIALOG_LILY_HI, DIALOG_LILY_NOT_MY_NAME, DIALOG_CANCEL }},
+            { DIALOG_LILY_HI,          "Uh.. hi.\n{Back}",
+                                       { DIALOG_LILY_INTRO }},
+            { DIALOG_LILY_NOT_MY_NAME, "Oh, sorry 'bout that!\n{Back}",
+                                       { DIALOG_LILY_INTRO }},
+        };
+
         // Ensure every array element is initialized and in contiguous order by id
         #define ID_CHECK(type, name, arr) \
             for (type name : arr) { \
@@ -333,22 +345,24 @@ namespace data {
         ID_CHECK(Material &, material, materials);
         ID_CHECK(Sprite   &, sprite,   sprites);
         ID_CHECK(TileType &, tileType, tileTypes);
+        ID_CHECK(Dialog   &, dialog,   dialogs);
         #undef ID_CHECK
 
-        Pack packHardcode{ "dat/test.dat" };
-        for (auto &i : gfxFiles)  packHardcode.gfxFiles.push_back(i);
-        for (auto &i : musFiles)  packHardcode.musFiles.push_back(i);
-        for (auto &i : sfxFiles)  packHardcode.sfxFiles.push_back(i);
-        for (auto &i : gfxFrames) packHardcode.gfxFrames.push_back(i);
-        for (auto &i : gfxAnims)  packHardcode.gfxAnims.push_back(i);
-        for (auto &i : materials) packHardcode.materials.push_back(i);
-        for (auto &i : sprites)   packHardcode.sprites.push_back(i);
-        for (auto &i : tileTypes) packHardcode.tileTypes.push_back(i);
+        Pack packHardcoded{ "dat/test.dat" };
+        for (auto &i : gfxFiles)  packHardcoded.gfxFiles.push_back(i);
+        for (auto &i : musFiles)  packHardcoded.musFiles.push_back(i);
+        for (auto &i : sfxFiles)  packHardcoded.sfxFiles.push_back(i);
+        for (auto &i : gfxFrames) packHardcoded.gfxFrames.push_back(i);
+        for (auto &i : gfxAnims)  packHardcoded.gfxAnims.push_back(i);
+        for (auto &i : materials) packHardcoded.materials.push_back(i);
+        for (auto &i : sprites)   packHardcoded.sprites.push_back(i);
+        for (auto &i : tileTypes) packHardcoded.tileTypes.push_back(i);
+        for (auto &i : dialogs)   packHardcoded.dialogs.push_back(i);
 
-        LoadResources(packHardcode);
+        LoadResources(packHardcoded);
 
         Err err = RN_SUCCESS;
-        err = SavePack(packHardcode);
+        err = SavePack(packHardcoded);
         if (err) {
             assert(!err);
             TraceLog(LOG_ERROR, "Failed to save data file.\n");
@@ -486,6 +500,16 @@ namespace data {
         PROC(tileType.autoTileMask);
     }
 
+
+    void Process(PackStream &stream, Dialog &dialog)
+    {
+        PROC(dialog.id);
+        Process(stream, dialog.msg);
+        for (int i = 0; i < ARRAY_SIZE(dialog.optionIds); i++) {
+            PROC(dialog.optionIds[i]);
+        }
+    }
+
     void Process(PackStream &stream, AspectCombat &combat) {
     }
 
@@ -493,6 +517,7 @@ namespace data {
     }
 
     void Process(PackStream &stream, AspectDialog &dialog) {
+        // This is a no-op, we don't need to save the active dialog context
     }
 
     void Process(PackStream &stream, AspectLife &life) {
@@ -613,6 +638,7 @@ namespace data {
             WRITE_ARRAY(pack.materials);
             WRITE_ARRAY(pack.sprites);
             WRITE_ARRAY(pack.tileTypes);
+            WRITE_ARRAY(pack.dialogs);
             WRITE_ARRAY(pack.entities);
 
 #undef WRITE_ARRAY
@@ -648,6 +674,7 @@ namespace data {
             pack.materials.resize(typeCounts[DAT_TYP_MATERIAL]);
             pack.sprites  .resize(typeCounts[DAT_TYP_SPRITE]);
             pack.tileTypes.resize(typeCounts[DAT_TYP_TILE_TYPE]);
+            pack.dialogs  .resize(typeCounts[DAT_TYP_DIALOG]);
 
             assert(typeCounts[DAT_TYP_ENTITY] == SV_MAX_ENTITIES);
             pack.entities .resize(typeCounts[DAT_TYP_ENTITY]);
@@ -675,6 +702,7 @@ namespace data {
                     case DAT_TYP_MATERIAL:  Process(stream, pack.materials[nextIndex]); break;
                     case DAT_TYP_SPRITE:    Process(stream, pack.sprites  [nextIndex]); break;
                     case DAT_TYP_TILE_TYPE: Process(stream, pack.tileTypes[nextIndex]); break;
+                    case DAT_TYP_DIALOG:    Process(stream, pack.dialogs  [nextIndex]); break;
                     case DAT_TYP_ENTITY:    Process(stream, pack.entities [nextIndex]); break;
                 }
                 nextIndex++;
