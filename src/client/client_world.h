@@ -47,6 +47,15 @@ struct ClientWorld {
     void Draw(GameClient &client);
 
 private:
+    struct HistoData {
+        uint32_t latestSnapInputSeq;
+        double cmdAccumDt;
+        Vector2 cmdAccumForce;
+    };
+
+    void UpdateLocalPlayerHisto(GameClient &client, data::Entity &entity, HistoData &histoData);
+    void UpdateLocalPlayer(GameClient &client, data::Entity &entity, AspectGhost &ghost);
+    void UpdateLocalGhost(GameClient &client, data::Entity &entity, AspectGhost &ghost, Tilemap *localPlayerMap);
     void UpdateEntities(GameClient &client);
 
     void DrawEntitySnapshotShadows(uint32_t entityId, Controller &controller, double now, double dt);

@@ -192,6 +192,140 @@ Err ClientWorld::CreateDialog(uint32_t entityId, uint32_t dialogId, std::string 
     return RN_SUCCESS;
 }
 
+void ClientWorld::UpdateLocalPlayerHisto(GameClient &client, data::Entity &entity, HistoData &histoData)
+{
+    if (Histogram::paused) {
+        return;
+    }
+
+    static Color colors[] = { BEIGE, BROWN };
+    static int colorIdx = 0;
+    if (histoData.latestSnapInputSeq != histoInput.buffer[histoInput.buffer.size() - 2].value) {
+        colorIdx = ((size_t)colorIdx + 1) % ARRAY_SIZE(colors);
+    }
+    Histogram::Entry &entryInput = histoInput.buffer.newest();
+    entryInput.value = histoData.latestSnapInputSeq;
+    entryInput.color = colors[colorIdx];
+    entryInput.metadata = TextFormat("latestSnapInputSeq: %u", histoData.latestSnapInputSeq);
+
+    static float prevX = 0;
+    Histogram::Entry &entryDx = histoDx.buffer.newest();
+    entryDx.value = entity.position.x - prevX;
+    prevX = entity.position.x;
+    entryDx.metadata = TextFormat(
+        "plr_x     %.3f\n"
+        "plr_vx    %.3f\n"
+        "plr_move  %.3f, %.3f\n"
+        "svr_now   %.3f\n"
+        "cmd_accum %.3f",
+        entity.position.x,
+        entity.velocity.x,
+        histoData.cmdAccumDt > 0 ? histoData.cmdAccumForce.x : 0,
+        histoData.cmdAccumDt > 0 ? histoData.cmdAccumForce.y : 0,
+        client.ServerNow(),
+        histoData.cmdAccumDt
+    );
+}
+
+void ClientWorld::UpdateLocalPlayer(GameClient &client, data::Entity &entity, AspectGhost &ghost)
+{
+    uint32_t latestSnapInputSeq = 0;
+
+    // Apply latest snapshot
+    const GhostSnapshot &latestSnapshot = ghost.newest();
+    if (latestSnapshot.serverTime) {
+        ApplyStateInterpolated(entity.id, ghost.newest(), ghost.newest(), 0, client.frameDt);
+        latestSnapInputSeq = latestSnapshot.lastProcessedInputCmd;
+    }
+
+#if CL_CLIENT_SIDE_PREDICT
+    double cmdAccumDt{};
+    Vector2 cmdAccumForce{};
+    Tilemap *map = FindOrLoadMap(entity.map_id);
+    if (map) {
+        // Apply unacked input
+        for (size_t cmdIndex = 0; cmdIndex < client.controller.cmdQueue.size(); cmdIndex++) {
+            InputCmd &inputCmd = client.controller.cmdQueue[cmdIndex];
+            if (inputCmd.seq > latestSnapInputSeq) {
+                entity.ApplyForce(inputCmd.GenerateMoveForce(entity.speed));
+                entityDb->EntityTick(entity.id, SV_TICK_DT);
+                map->ResolveEntityTerrainCollisions(entity.id);
+            }
+        }
+
+        cmdAccumDt = client.now - client.controller.lastInputSampleAt;
+        if (cmdAccumDt > 0) {
+            Vector2 posBefore = entity.position;
+            cmdAccumForce = client.controller.cmdAccum.GenerateMoveForce(entity.speed);
+            entity.ApplyForce(cmdAccumForce);
+            entityDb->EntityTick(entity.id, SV_TICK_DT);
+            map->ResolveEntityTerrainCollisions(entity.id);
+            entity.position.x = LERP(posBefore.x, entity.position.x, cmdAccumDt / SV_TICK_DT);
+            entity.position.y = LERP(posBefore.y, entity.position.y, cmdAccumDt / SV_TICK_DT);
+        }
+    }
+#endif
+
+    // Check for ignored input packets
+    uint32_t oldestInput = client.controller.cmdQueue.oldest().seq;
+    if (oldestInput > latestSnapInputSeq + 1) {
+        printf(" localPlayer: %d inputs dropped\n", oldestInput - latestSnapInputSeq - 1);
+    }
+
+    HistoData histoData{};
+    histoData.latestSnapInputSeq = latestSnapInputSeq;
+    histoData.cmdAccumDt = cmdAccumDt;
+    histoData.cmdAccumForce = cmdAccumForce;
+    UpdateLocalPlayerHisto(client, entity, histoData);
+}
+
+void ClientWorld::UpdateLocalGhost(GameClient &client, data::Entity &entity, AspectGhost &ghost, Tilemap *localPlayerMap)
+{
+    // TODO(dlb): Find snapshots nearest to (GetTime() - clientTimeDeltaVsServer)
+    const double renderAt = client.ServerNow() - SV_TICK_DT;
+
+    size_t snapshotBIdx = 0;
+    while (snapshotBIdx < ghost.size()
+        && ghost[snapshotBIdx].serverTime <= renderAt)
+    {
+        snapshotBIdx++;
+    }
+
+    const GhostSnapshot *snapshotA = 0;
+    const GhostSnapshot *snapshotB = 0;
+
+    if (snapshotBIdx <= 0) {
+        snapshotA = &ghost.oldest();
+        snapshotB = &ghost.oldest();
+    } else if (snapshotBIdx >= CL_SNAPSHOT_COUNT) {
+        snapshotA = &ghost.newest();
+        snapshotB = &ghost.newest();
+    } else {
+        snapshotA = &ghost[snapshotBIdx - 1];
+        snapshotB = &ghost[snapshotBIdx];
+    }
+
+    float alpha = 0;
+    if (snapshotB != snapshotA) {
+        alpha = (renderAt - snapshotA->serverTime) / (snapshotB->serverTime - snapshotA->serverTime);
+    }
+
+    ApplyStateInterpolated(entity.id, *snapshotA, *snapshotB, alpha, client.frameDt);
+
+    if (localPlayerMap && entity.map_id == localPlayerMap->id) {
+        const Vector2 cursorWorldPos = GetScreenToWorld2D(GetMousePosition(), camera2d);
+        bool hover = dlb_CheckCollisionPointRec(cursorWorldPos, entityDb->EntityRect(entity.id));
+        if (hover) {
+            if (entity.type == data::ENTITY_NPC) {
+                // TODO: This might need to be ENTITY_TOWNFOLK or entity.attackable
+                // or something more specific. Otherwise you can't shoot da enemies!
+                io.CaptureMouse();
+                hoveredEntityId = entity.id;
+            }
+        }
+    }
+}
+
 void ClientWorld::UpdateEntities(GameClient &client)
 {
     hoveredEntityId = 0;
@@ -203,131 +337,13 @@ void ClientWorld::UpdateEntities(GameClient &client)
         }
 
         uint32_t entityIndex = entityDb->FindEntityIndex(entity.id);
-        AspectGhost &eGhost = entityDb->ghosts[entityIndex];
+        AspectGhost &ghost = entityDb->ghosts[entityIndex];
 
         // Local player
         if (entity.id == localPlayerEntityId) {
-            uint32_t latestSnapInputSeq = 0;
-
-            // Apply latest snapshot
-            const GhostSnapshot &latestSnapshot = eGhost.newest();
-            if (latestSnapshot.serverTime) {
-                ApplyStateInterpolated(entity.id, eGhost.newest(), eGhost.newest(), 0, client.frameDt);
-                latestSnapInputSeq = latestSnapshot.lastProcessedInputCmd;
-            }
-
-#if CL_CLIENT_SIDE_PREDICT
-            double cmdAccumDt{};
-            Vector2 cmdAccumForce{};
-            Tilemap *map = FindOrLoadMap(entity.map_id);
-            if (map) {
-                // Apply unacked input
-                for (size_t cmdIndex = 0; cmdIndex < client.controller.cmdQueue.size(); cmdIndex++) {
-                    InputCmd &inputCmd = client.controller.cmdQueue[cmdIndex];
-                    if (inputCmd.seq > latestSnapInputSeq) {
-                        entity.ApplyForce(inputCmd.GenerateMoveForce(entity.speed));
-                        entityDb->EntityTick(entity.id, SV_TICK_DT);
-                        map->ResolveEntityTerrainCollisions(entity.id);
-                    }
-                }
-
-                cmdAccumDt = client.now - client.controller.lastInputSampleAt;
-                if (cmdAccumDt > 0) {
-                    Vector2 posBefore = entity.position;
-                    cmdAccumForce = client.controller.cmdAccum.GenerateMoveForce(entity.speed);
-                    entity.ApplyForce(cmdAccumForce);
-                    entityDb->EntityTick(entity.id, SV_TICK_DT);
-                    map->ResolveEntityTerrainCollisions(entity.id);
-                    entity.position.x = LERP(posBefore.x, entity.position.x, cmdAccumDt / SV_TICK_DT);
-                    entity.position.y = LERP(posBefore.y, entity.position.y, cmdAccumDt / SV_TICK_DT);
-                }
-            }
-#endif
-
-            // Check for ignored input packets
-            uint32_t oldestInput = client.controller.cmdQueue.oldest().seq;
-            if (oldestInput > latestSnapInputSeq + 1) {
-                printf(" localPlayer: %d inputs dropped\n", oldestInput - latestSnapInputSeq - 1);
-            }
-
-            if (!Histogram::paused) {
-                static Color colors[] = { BEIGE, BROWN };
-                static int colorIdx = 0;
-                if (latestSnapInputSeq != histoInput.buffer[histoInput.buffer.size() - 2].value) {
-                    colorIdx = ((size_t)colorIdx + 1) % ARRAY_SIZE(colors);
-                }
-                Histogram::Entry &entryInput = histoInput.buffer.newest();
-                entryInput.value = latestSnapInputSeq;
-                entryInput.color = colors[colorIdx];
-                entryInput.metadata = TextFormat("latestSnapInputSeq: %u", latestSnapInputSeq);
-
-                static float prevX = 0;
-                Histogram::Entry &entryDx = histoDx.buffer.newest();
-                entryDx.value = entity.position.x - prevX;
-                prevX = entity.position.x;
-                entryDx.metadata = TextFormat(
-                    "plr_x     %.3f\n"
-                    "plr_vx    %.3f\n"
-                    "plr_move  %.3f, %.3f\n"
-                    "svr_now   %.3f\n"
-                    "cmd_accum %.3f",
-                    entity.position.x,
-                    entity.velocity.x,
-                    cmdAccumDt > 0 ? cmdAccumForce.x : 0,
-                    cmdAccumDt > 0 ? cmdAccumForce.y : 0,
-                    client.ServerNow(),
-                    cmdAccumDt
-                );
-            }
+            UpdateLocalPlayer(client, entity, ghost);
         } else {
-            // TODO(dlb): Find snapshots nearest to (GetTime() - clientTimeDeltaVsServer)
-            const double renderAt = client.ServerNow() - SV_TICK_DT;
-
-            size_t snapshotBIdx = 0;
-            while (snapshotBIdx < eGhost.size()
-                && eGhost[snapshotBIdx].serverTime <= renderAt)
-            {
-                snapshotBIdx++;
-            }
-
-            const GhostSnapshot *snapshotA = 0;
-            const GhostSnapshot *snapshotB = 0;
-
-            if (snapshotBIdx <= 0) {
-                snapshotA = &eGhost.oldest();
-                snapshotB = &eGhost.oldest();
-            } else if (snapshotBIdx >= CL_SNAPSHOT_COUNT) {
-                snapshotA = &eGhost.newest();
-                snapshotB = &eGhost.newest();
-            } else {
-                snapshotA = &eGhost[snapshotBIdx - 1];
-                snapshotB = &eGhost[snapshotBIdx];
-            }
-
-            float alpha = 0;
-            if (snapshotB != snapshotA) {
-                alpha = (renderAt - snapshotA->serverTime) /
-                    (snapshotB->serverTime - snapshotA->serverTime);
-            }
-
-            ApplyStateInterpolated(entity.id, *snapshotA, *snapshotB, alpha, client.frameDt);
-
-            if (localPlayerMap && entity.map_id == localPlayerMap->id) {
-                const Vector2 cursorWorldPos = GetScreenToWorld2D(GetMousePosition(), camera2d);
-                bool hover = dlb_CheckCollisionPointRec(cursorWorldPos, entityDb->EntityRect(entity.id));
-                if (hover) {
-                    if (entity.type == data::ENTITY_NPC) {
-                        // TODO: This might need to be ENTITY_TOWNFOLK or entity.attackable
-                        // or something more specific. Otherwise you can't shoot da enemies!
-                        io.CaptureMouse();
-                    }
-                    bool down = io.MouseButtonPressed(MOUSE_BUTTON_LEFT);
-                    if (down) {
-                        client.SendEntityInteract(entity.id);
-                    }
-                    hoveredEntityId = entity.id;
-                }
-            }
+            UpdateLocalGhost(client, entity, ghost, localPlayerMap);
         }
 
         bool newlySpawned = entity.spawned_at == client.now;
@@ -336,6 +352,13 @@ void ClientWorld::UpdateEntities(GameClient &client)
         const double duration = CL_DIALOG_DURATION_MIN + CL_DIALOG_DURATION_PER_CHAR * entity.dialog_message.size();
         if (entity.dialog_spawned_at && client.now - entity.dialog_spawned_at > duration) {
             entity.ClearDialog();
+        }
+    }
+
+    if (hoveredEntityId) {
+        bool pressed = io.MouseButtonPressed(MOUSE_BUTTON_LEFT);
+        if (pressed) {
+            client.SendEntityInteract(hoveredEntityId);
         }
     }
 }

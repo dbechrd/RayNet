@@ -411,8 +411,8 @@ void GameServer::ProcessMessages(void)
                         data::Entity *entity = entityDb->FindEntity(msg->entityId, data::ENTITY_NPC);
                         if (entity) {
                             data::Dialog &dialog = data::pack1.dialogs[entity->dialog_root_id];
-
                             SendEntitySay(clientIdx, entity->id, dialog.id, dialog.msg);
+                            entity->dialog_spawned_at = now;
                         }
                         break;
                     }
@@ -450,6 +450,7 @@ void GameServer::ProcessMessages(void)
 
                             data::Dialog &nextDialog = data::pack1.dialogs[nextDialogId];
                             SendEntitySay(clientIdx, entity->id, nextDialog.id, nextDialog.msg);
+                            entity->dialog_spawned_at = now;
                         }
                         break;
                     }
@@ -568,7 +569,7 @@ void GameServer::TickSpawnTownNPCs(uint32_t mapId)
 
             Tilemap *map = FindMap(mapId);
             if (map) {
-                entity->path_active = false;
+                entity->path_active = true;
                 entity->path_id = 0;
                 AiPathNode *aiPathNode = map->GetPathNode(entity->path_id, 0);
                 if (aiPathNode) {
@@ -623,8 +624,12 @@ void GameServer::TickEntityBot(uint32_t entityId, double dt)
     Tilemap *map = FindMap(entity->map_id);
     if (!map) return;
 
+    if (now - entity->dialog_spawned_at > SV_ENTITY_DIALOG_INTERESTED_DURATION) {
+        entity->dialog_spawned_at = 0;
+    }
+
     // TODO: tick_pathfind?
-    if (entity->path_active) {
+    if (entity->path_active && !entity->dialog_spawned_at) {
         AiPathNode *ai_path_node = map->GetPathNode(entity->path_id, entity->path_node_target);
         if (ai_path_node) {
             Vector2 target = ai_path_node->pos;
@@ -708,7 +713,9 @@ void GameServer::TickEntityProjectile(uint32_t entityId, double dt)
             if (CheckCollisionRecs(projectileHitbox, targetHitbox)) {
                 victim.TakeDamage(GetRandomValue(3, 8));
                 if (victim.Alive()) {
-                    BroadcastEntitySay(victim.id, TextFormat("Ouch! You hit me with\nprojectile #%u!", projectile->id));
+                    if (!victim.dialog_spawned_at) {
+                        BroadcastEntitySay(victim.id, TextFormat("Ouch! You hit me with\nprojectile #%u!", projectile->id));
+                    }
                 } else {
                     DespawnEntity(victim.id);
                 }

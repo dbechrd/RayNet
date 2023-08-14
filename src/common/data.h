@@ -465,6 +465,7 @@ namespace data {
         uint32_t   id           {};
         uint32_t   map_id       {};
         EntityType type         {};
+        uint32_t   caused_by    {};
         double     spawned_at   {};
         double     despawned_at {};
         Vector2    position     {};

@@ -604,7 +604,7 @@ void dlb_CommonTests(void)
     }
     {
         FancyTextTree tree{};
-        assert(dlb_FancyTextParse(tree, "Ouch! You hit me!\n\n{Sorry}\n{Haha, loser}"));
+        assert(dlb_FancyTextParse(tree, "Ow! You hit me!\n\n{Sorry}\n{Haha, loser}"));
         assert(tree.nodes.size() == 4);
     }
 }
