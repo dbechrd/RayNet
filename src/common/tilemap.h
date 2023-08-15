@@ -58,10 +58,12 @@ struct Tilemap {
     // v4: tileDefCount and tileDef.x/y are now implicit based on texture size
     // v5: added warps
     // v6: added auto-tile mask to tileDef
-    static const uint32_t VERSION = 6;
+    // v7: tileDefCount no longer based on texture size, in case texture is moved/deleted
+    static const uint32_t VERSION = 7;
 
     uint32_t    id        {};
     std::string name      {};  // technically a filename? usually?
+    uint32_t    version   {};  // version on disk
     StringId    textureId {};  // generated upon load, used to look up in rnTextureCatalog
     uint32_t    width     {};  // width of map in tiles
     uint32_t    height    {};  // height of map in tiles

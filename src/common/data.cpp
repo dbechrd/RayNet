@@ -50,30 +50,30 @@ namespace data {
         GfxFile gfx_files[] = {
             { GFX_FILE_NONE },
             // id                       texture path
-            { GFX_FILE_DLG_NPATCH,     "resources/npatch.png" },
-            { GFX_FILE_CHR_MAGE,       "resources/mage.png" },
-            { GFX_FILE_NPC_LILY,       "resources/lily.png" },
-            { GFX_FILE_OBJ_CAMPFIRE,   "resources/campfire.png" },
-            { GFX_FILE_PRJ_FIREBALL,   "resources/fireball.png" },
-            { GFX_FILE_TIL_OVERWORLD,  "resources/tiles32.png" },
-            { GFX_FILE_TIL_AUTO_GRASS, "resources/autotile_3x3_min.png" },
+            { GFX_FILE_DLG_NPATCH,     "resources/texture/npatch.png" },
+            { GFX_FILE_CHR_MAGE,       "resources/texture/mage.png" },
+            { GFX_FILE_NPC_LILY,       "resources/texture/lily.png" },
+            { GFX_FILE_OBJ_CAMPFIRE,   "resources/texture/campfire.png" },
+            { GFX_FILE_PRJ_FIREBALL,   "resources/texture/fireball.png" },
+            { GFX_FILE_TIL_OVERWORLD,  "resources/texture/tiles32.png" },
+            { GFX_FILE_TIL_AUTO_GRASS, "resources/texture/autotile_3x3_min.png" },
         };
 
         MusFile mus_files[] = {
             { "NONE" },
             // id                  music file path
-            { "AMBIENT_OUTDOORS", "resources/copyright/345470__philip_goddard__branscombe-landslip-birds-and-sea-echoes-ese-from-cave-track.ogg" },
-            { "AMBIENT_CAVE",     "resources/copyright/69391__zixem__cave_amb.wav" },
+            { "AMBIENT_OUTDOORS", "resources/music/copyright/345470__philip_goddard__branscombe-landslip-birds-and-sea-echoes-ese-from-cave-track.ogg" },
+            { "AMBIENT_CAVE",     "resources/music/copyright/69391__zixem__cave_amb.wav" },
         };
 
         SfxFile sfx_files[] = {
             { SFX_FILE_NONE },
             // id                       sound file path                pitch variance  multi
-            { SFX_FILE_SOFT_TICK,      "resources/soft_tick.wav"     , 0.03f,          true },
-            { SFX_FILE_CAMPFIRE,       "resources/campfire.wav"      , 0.00f,          false },
-            { SFX_FILE_FOOTSTEP_GRASS, "resources/footstep_grass.wav", 0.00f,          true },
-            { SFX_FILE_FOOTSTEP_STONE, "resources/footstep_stone.wav", 0.00f,          true },
-            { SFX_FILE_FIREBALL,       "resources/fireball.wav",       0.05f,          true },
+            { SFX_FILE_SOFT_TICK,      "resources/sound/soft_tick.wav"     , 0.03f,          true },
+            { SFX_FILE_CAMPFIRE,       "resources/sound/campfire.wav"      , 0.00f,          false },
+            { SFX_FILE_FOOTSTEP_GRASS, "resources/sound/footstep_grass.wav", 0.00f,          true },
+            { SFX_FILE_FOOTSTEP_STONE, "resources/sound/footstep_stone.wav", 0.00f,          true },
+            { SFX_FILE_FIREBALL,       "resources/sound/fireball.wav",       0.05f,          true },
         };
 
         GfxFrame gfx_frames[] = {

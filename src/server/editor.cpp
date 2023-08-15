@@ -19,6 +19,7 @@ const char *EditModeStr(EditMode mode)
         case EditMode_Wang:      return "Wang";
         case EditMode_Paths:     return "Paths";
         case EditMode_Warps:     return "Warps";
+        case EditMode_Dialog:    return "Dialog";
         case EditMode_Entities:  return "Entities";
         case EditMode_SfxFiles:  return "Sfx";
         case EditMode_PackFiles: return "Pack";
@@ -326,6 +327,79 @@ void Editor::DrawEntityOverlay_Collision(Camera2D &camera, double now)
     }
 }
 
+struct ScrollPanel {
+    Rectangle panelRect        {};
+    float scrollOffsetMax      {};
+    float scrollOffset         {};
+    float scrollOffsetTarget   {};
+    float scrollVelocity       {};
+    float scrollAccel          {};
+    float panelHeightLastFrame {};
+};
+
+void BeginScrollPanel(UI &ui, ScrollPanel &scrollPanel, float width)
+{
+    const Vector2 panelTopLeft = ui.CursorScreen();
+    scrollPanel.panelRect = { panelTopLeft.x, panelTopLeft.y, width, GetRenderHeight() - panelTopLeft.y };
+
+    scrollPanel.scrollOffsetMax = MAX(0, scrollPanel.panelHeightLastFrame - scrollPanel.panelRect.height + 8);
+
+    float &scrollOffset = scrollPanel.scrollOffset;
+    float &scrollOffsetTarget = scrollPanel.scrollOffsetTarget;
+    float &scrollVelocity = scrollPanel.scrollVelocity;
+    scrollPanel.scrollAccel = 0;
+    if (dlb_CheckCollisionPointRec(GetMousePosition(), scrollPanel.panelRect)) {
+        const float mouseWheel = io.MouseWheelMove();
+        if (mouseWheel) {
+            scrollPanel.scrollAccel += fabsf(mouseWheel);
+            float impulse = 4 * scrollPanel.scrollAccel;
+            if (mouseWheel < 0) impulse *= -1;
+            scrollVelocity += impulse;
+            //printf("wheel: %f, target: %f\n", mouseWheel, scrollOffsetTarget);
+        } else {
+            scrollPanel.scrollAccel = 0;
+        }
+    }
+
+    if (scrollVelocity) {
+        scrollOffsetTarget -= scrollVelocity;
+        scrollVelocity *= 0.95f;
+    }
+
+    scrollOffsetTarget = CLAMP(scrollOffsetTarget, 0, scrollPanel.scrollOffsetMax);
+    scrollOffset = LERP(scrollOffset, scrollOffsetTarget, 0.1);
+    scrollOffset = CLAMP(scrollOffset, 0, scrollPanel.scrollOffsetMax);
+
+    ui.Space({ 0, -scrollOffset });
+    BeginScissorMode(
+        scrollPanel.panelRect.x,
+        scrollPanel.panelRect.y,
+        scrollPanel.panelRect.width,
+        scrollPanel.panelRect.height
+    );
+}
+void EndScrollPanel(UI &ui, ScrollPanel &scrollPanel)
+{
+    EndScissorMode();
+    ui.Space({ 0, scrollPanel.scrollOffset });
+    const float contentEndY = ui.CursorScreen().y;
+    scrollPanel.panelHeightLastFrame = contentEndY - scrollPanel.panelRect.y;
+
+    const float scrollRatio = scrollPanel.panelRect.height / scrollPanel.panelHeightLastFrame;
+    const float scrollbarWidth = 8;
+    const float scrollbarHeight = scrollPanel.panelRect.height * scrollRatio;
+    const float scrollbarSpace = scrollPanel.panelRect.height * (1 - scrollRatio);
+    const float scrollPct = scrollPanel.scrollOffset / scrollPanel.scrollOffsetMax;
+    Rectangle scrollbar{
+        scrollPanel.panelRect.width - 2 - scrollbarWidth,
+        scrollPanel.panelRect.y + scrollbarSpace * scrollPct,
+        scrollbarWidth,
+        scrollbarHeight
+    };
+    DrawRectangleRec(scrollbar, LIGHTGRAY);
+    DrawRectangleLinesEx(scrollPanel.panelRect, 2, BLACK);
+}
+
 UIState Editor::DrawUI(Vector2 position, GameServer &server, double now)
 {
     io.PushScope(IO::IO_EditorUI);
@@ -449,6 +523,7 @@ UIState Editor::DrawUI_ActionBar(Vector2 position, GameServer &server, double no
     if (mapPath.released) {
         system("explorer maps");
     }
+    uiActionBar.Text(TextFormat("(v%d)", map->version));
     uiActionBar.Newline();
 
     uiActionBar.Text("Show:");
@@ -499,6 +574,10 @@ UIState Editor::DrawUI_ActionBar(Vector2 position, GameServer &server, double no
         }
         case EditMode_Warps: {
             DrawUI_WarpActions(uiActionBar, now);
+            break;
+        }
+        case EditMode_Dialog: {
+            DrawUI_DialogActions(uiActionBar, now);
             break;
         }
         case EditMode_Entities: {
@@ -1025,6 +1104,63 @@ void Editor::DrawUI_WarpActions(UI &uiActionBar, double now)
 
     uiActionBar.PopStyle();
 }
+void Editor::DrawUI_DialogActions(UI &uiActionBar, double now)
+{
+    //if (uiActionBar.Button("Add", DARKGREEN).pressed) {
+    //    //map->warps.push_back({});
+    //}
+    //uiActionBar.Newline();
+
+    UIStyle searchStyle = uiActionBar.GetStyle();
+    searchStyle.size.x = 400;
+    searchStyle.pad = UIPad(8, 2);
+    searchStyle.margin = UIMargin(0, 0, 0, 6);
+    uiActionBar.PushStyle(searchStyle);
+
+    static STB_TexteditState txtSearch{};
+    static std::string filter{};
+    uiActionBar.Textbox(txtSearch, filter);
+    uiActionBar.Newline();
+
+    for (data::Dialog &dialog : data::pack1.dialogs) {
+        if (!dialog.id) {
+            continue;
+        }
+
+        Color bgColor = dialog.id == state.dialog.dialogId ? SKYBLUE : BLUE;
+        const char *msg = dialog.msg.c_str();
+        if (!StrFilter(msg, filter.c_str())) {
+            continue;
+        }
+
+        if (uiActionBar.Text(msg, WHITE, bgColor).down) {
+            state.dialog.dialogId = dialog.id;
+        }
+        uiActionBar.Newline();
+    }
+
+    if (state.dialog.dialogId) {
+        data::Dialog &dialog = data::pack1.dialogs[state.dialog.dialogId];
+
+        uiActionBar.Text("message");
+        uiActionBar.Newline();
+        static STB_TexteditState txtMessage{};
+        uiActionBar.Textbox(txtMessage, dialog.msg);
+        uiActionBar.Newline();
+
+        static STB_TexteditState txtOptionId[SV_MAX_ENTITY_DIALOG_OPTIONS]{};
+        for (int i = 0; i < SV_MAX_ENTITY_DIALOG_OPTIONS; i++) {
+            uiActionBar.Text(TextFormat("option %d", i));
+            uiActionBar.Newline();
+            float id = dialog.option_ids[i];
+            uiActionBar.TextboxFloat(txtOptionId[i], id, 0, "%.f");
+            dialog.option_ids[i] = (data::DialogId)CLAMP(id, 0, data::pack1.dialogs.size() - 1);
+            uiActionBar.Newline();
+        }
+    }
+
+    uiActionBar.PopStyle();
+}
 void Editor::DrawUI_EntityActions(UI &uiActionBar, double now)
 {
     if (uiActionBar.Button("Despawn all", ColorBrightness(MAROON, -0.3f)).pressed) {
@@ -1218,81 +1354,6 @@ void Editor::DrawUI_SfxFiles(UI &uiActionBar, double now)
         uiActionBar.Newline();
     }
 }
-
-struct ScrollPanel {
-    Rectangle panelRect        {};
-    float scrollOffsetMax      {};
-    float scrollOffset         {};
-    float scrollOffsetTarget   {};
-    float scrollVelocity       {};
-    float scrollAccel          {};
-    float panelHeightLastFrame {};
-};
-
-void BeginScrollPanel(UI &ui, ScrollPanel &scrollPanel, float width)
-{
-    const Vector2 panelTopLeft = ui.CursorScreen();
-    scrollPanel.panelRect = { panelTopLeft.x, panelTopLeft.y, width, GetRenderHeight() - panelTopLeft.y };
-
-    scrollPanel.scrollOffsetMax = MAX(0, scrollPanel.panelHeightLastFrame - scrollPanel.panelRect.height + 8);
-
-    float &scrollOffset = scrollPanel.scrollOffset;
-    float &scrollOffsetTarget = scrollPanel.scrollOffsetTarget;
-    float &scrollVelocity = scrollPanel.scrollVelocity;
-    scrollPanel.scrollAccel = 0;
-    if (dlb_CheckCollisionPointRec(GetMousePosition(), scrollPanel.panelRect)) {
-        const float mouseWheel = io.MouseWheelMove();
-        if (mouseWheel) {
-            scrollPanel.scrollAccel += fabsf(mouseWheel);
-            float impulse = 4 * scrollPanel.scrollAccel;
-            if (mouseWheel < 0) impulse *= -1;
-            scrollVelocity += impulse;
-            //printf("wheel: %f, target: %f\n", mouseWheel, scrollOffsetTarget);
-        } else {
-            scrollPanel.scrollAccel = 0;
-        }
-    }
-
-    if (scrollVelocity) {
-        scrollOffsetTarget -= scrollVelocity;
-        scrollVelocity *= 0.95f;
-    }
-
-    scrollOffsetTarget = CLAMP(scrollOffsetTarget, 0, scrollPanel.scrollOffsetMax);
-    scrollOffset = LERP(scrollOffset, scrollOffsetTarget, 0.1);
-    scrollOffset = CLAMP(scrollOffset, 0, scrollPanel.scrollOffsetMax);
-
-    ui.Space({ 0, -scrollOffset });
-    BeginScissorMode(
-        scrollPanel.panelRect.x,
-        scrollPanel.panelRect.y,
-        scrollPanel.panelRect.width,
-        scrollPanel.panelRect.height
-    );
-}
-
-void EndScrollPanel(UI &ui, ScrollPanel &scrollPanel)
-{
-    EndScissorMode();
-    ui.Space({ 0, scrollPanel.scrollOffset });
-    const float contentEndY = ui.CursorScreen().y;
-    scrollPanel.panelHeightLastFrame = contentEndY - scrollPanel.panelRect.y;
-
-    const float scrollRatio = scrollPanel.panelRect.height / scrollPanel.panelHeightLastFrame;
-    const float scrollbarWidth = 8;
-    const float scrollbarHeight = scrollPanel.panelRect.height * scrollRatio;
-    const float scrollbarSpace = scrollPanel.panelRect.height * (1 - scrollRatio);
-    const float scrollPct = scrollPanel.scrollOffset / scrollPanel.scrollOffsetMax;
-    Rectangle scrollbar{
-        scrollPanel.panelRect.width - 2 - scrollbarWidth,
-        scrollPanel.panelRect.y + scrollbarSpace * scrollPct,
-        scrollbarWidth,
-        scrollbarHeight
-    };
-    DrawRectangleRec(scrollbar, LIGHTGRAY);
-    DrawRectangleLinesEx(scrollPanel.panelRect, 2, BLACK);
-}
-
 void Editor::DrawUI_PackFiles(UI &uiActionBar, double now)
 {
     UIStyle searchStyle = uiActionBar.GetStyle();
@@ -1609,7 +1670,6 @@ void Editor::DrawUI_PackFiles(UI &uiActionBar, double now)
         EndScrollPanel(uiActionBar, scrollPanel);
     }
 }
-
 void Editor::DrawUI_Debug(UI &uiActionBar, double now)
 {
     static UID uid = NextUID();

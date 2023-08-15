@@ -12,6 +12,7 @@ enum EditMode {
     EditMode_Wang,
     EditMode_Paths,
     EditMode_Warps,
+    EditMode_Dialog,
     EditMode_Entities,
     EditMode_SfxFiles,
     EditMode_PackFiles,
@@ -50,6 +51,10 @@ struct EditModePathNodes {
     } cursor;
 };
 
+struct EditModeDialog {
+    uint32_t dialogId{};
+};
+
 struct EditModeEntities {
     int testId{};
     uint32_t selectedId{};
@@ -75,6 +80,7 @@ struct EditModeState {
 
     EditModeTiles     tiles     {};
     EditModeWang      wang      {};
+    EditModeDialog    dialog    {};
     EditModeEntities  entities  {};
     EditModePathNodes pathNodes {};
     EditModeSfxFiles  sfxFiles  {};
@@ -113,6 +119,7 @@ private:
     void DrawUI_Wang(UI &uiActionBar, double now);
     void DrawUI_PathActions(UI &uiActionBar, double now);
     void DrawUI_WarpActions(UI &uiActionBar, double now);
+    void DrawUI_DialogActions(UI &uiActionBar, double now);
     void DrawUI_EntityActions(UI &uiActionBar, double now);
     void DrawUI_SfxFiles(UI &uiActionBar, double now);
     void DrawUI_PackFiles(UI &uiActionBar, double now);

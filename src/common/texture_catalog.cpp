@@ -30,7 +30,7 @@ void TextureCatalog::Free(void)
     }
 }
 
-void TextureCatalog::Load(StringId id)
+bool TextureCatalog::Load(StringId id)
 {
     const auto &entry = entriesById.find(id);
     if (entry == entriesById.end()) {
@@ -43,12 +43,14 @@ void TextureCatalog::Load(StringId id)
                 size_t entryIdx = entries.size();
                 entries.push_back(entry);
                 entriesById[id] = entryIdx;
+                return true;
             }
         } else {
             // Not really necessary, but seems weird to have a image when texture load fails?
             UnloadImage(image);
         }
     }
+    return false;
 }
 
 const TextureCatalog::Entry &TextureCatalog::GetEntry(StringId id)

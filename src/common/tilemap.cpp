@@ -61,6 +61,13 @@ Err Tilemap::Save(std::string path)
         fwrite(&MAGIC, sizeof(MAGIC), 1, file);
         fwrite(&VERSION, sizeof(VERSION), 1, file);
 
+        //// NOTE(dlb): We need to store this explicitly in case the texture file
+        //// goes missing, so that we can calculate tileDefs.size() and read the
+        //// rest of the file successfully.
+        //const TextureCatalog::Entry &texEntry = rnTextureCatalog.GetEntry(textureId);
+        //fwrite(&texEntry.image.width, sizeof(texEntry.image.width), 1, file);
+        //fwrite(&texEntry.image.height, sizeof(texEntry.image.height), 1, file);
+
         const std::string texturePath = rnStringCatalog.GetString(textureId);
         const int texturePathLen = texturePath.size();
         fwrite(&texturePathLen, sizeof(texturePathLen), 1, file);
@@ -68,9 +75,11 @@ Err Tilemap::Save(std::string path)
         fwrite(&width, sizeof(width), 1, file);
         fwrite(&height, sizeof(height), 1, file);
 
+        uint32_t tileDefCount = tileDefs.size();
         uint32_t pathNodeCount = pathNodes.size();
         uint32_t pathNodeIndexCount = pathNodeIndices.size();
         uint32_t pathCount = paths.size();
+        fwrite(&tileDefCount, sizeof(tileDefCount), 1, file);
         fwrite(&pathNodeCount, sizeof(pathNodeCount), 1, file);
         fwrite(&pathNodeIndexCount, sizeof(pathNodeIndexCount), 1, file);
         fwrite(&pathCount, sizeof(pathCount), 1, file);
@@ -131,8 +140,14 @@ Err Tilemap::Load(std::string path)
             err = RN_BAD_MAGIC; break;
         }
 
-        uint32_t version = 0;
         fread(&version, sizeof(version), 1, file);
+
+        /*uint32_t texWidth = 0;
+        uint32_t texHeight = 0;
+        if (version >= 7) {
+            fread(&texWidth, sizeof(texWidth), 1, file);
+            fread(&texHeight, sizeof(texHeight), 1, file);
+        }*/
 
         int texturePathLen = 0;
         fread(&texturePathLen, sizeof(texturePathLen), 1, file);
@@ -145,7 +160,18 @@ Err Tilemap::Load(std::string path)
 
         std::string texturePath{ texturePathBuf };
         textureId = rnStringCatalog.AddString(texturePath);
-        rnTextureCatalog.Load(textureId);
+        bool texLoaded = rnTextureCatalog.Load(textureId);
+
+        if (version < 7 && !texLoaded) {
+            const char *filename = GetFileName(texturePath.c_str());
+            texturePath = "resources/texture/" + std::string(filename);
+            textureId = rnStringCatalog.AddString(texturePath);
+            texLoaded = rnTextureCatalog.Load(textureId);
+            if (!texLoaded) {
+                err = RN_BAD_FILE_READ; break;
+            }
+        }
+
         const TextureCatalog::Entry &texEntry = rnTextureCatalog.GetEntry(textureId);
         if (!texEntry.image.width) {
             err = RN_BAD_FILE_READ; break;
@@ -153,6 +179,7 @@ Err Tilemap::Load(std::string path)
         if (texEntry.texture.width % TILE_W != 0 || texEntry.texture.height % TILE_W != 0) {
             err = RN_INVALID_SIZE; break;
         }
+
         //SetTextureWrap(texEntry.texture, TEXTURE_WRAP_CLAMP);
 
         fread(&width, sizeof(width), 1, file);
@@ -161,20 +188,26 @@ Err Tilemap::Load(std::string path)
             err = RN_INVALID_SIZE; break;
         }
 
+        uint32_t tileDefCount = 0;
         uint32_t pathNodeCount = 0;
         uint32_t pathNodeIndexCount = 0;
         uint32_t pathCount = 0;
         uint32_t warpCount = 0;
+        if (version >= 7) {
+            fread(&tileDefCount, sizeof(tileDefCount), 1, file);
+        } else {
+            // TODO(dlb): This is broken.. if texture is missing, then we can't load it
+            // which means we don't know the width/height and also cannot read the
+            // rest of this file, which requires having an accurate tileDefCount
+            // for the fread()s.
+            tileDefCount = ((size_t)texEntry.texture.width / TILE_W) * (texEntry.texture.height / TILE_W);
+
+        }
         fread(&pathNodeCount, sizeof(pathNodeCount), 1, file);
         fread(&pathNodeIndexCount, sizeof(pathNodeIndexCount), 1, file);
         fread(&pathCount, sizeof(pathCount), 1, file);
         fread(&warpCount, sizeof(warpCount), 1, file);
 
-        // TODO(dlb): This is broken.. if texture is missing, then we can't load it
-        // which means we don't know the width/height and also cannot read the
-        // rest of this file, which requires having an accurate tileDefCount
-        // for the fread()s.
-        size_t tileDefCount = ((size_t)texEntry.texture.width / TILE_W) * (texEntry.texture.height / TILE_W);
         tileDefs.resize(tileDefCount);
         tiles.resize((size_t)width * height);
         pathNodes.resize(pathNodeCount);

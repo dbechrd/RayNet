@@ -46,18 +46,18 @@ Err InitCommon(void)
     rnTextureCatalog.Init();
 
     // LoadPack SDF required shader (we use default vertex shader)
-    shdSdfText = LoadShader(0, "resources/shaders/sdf.fs");
+    shdSdfText = LoadShader(0, "resources/shader/sdf.fs");
 
-    shdPixelFixer                     = LoadShader("resources/shaders/pixelfixer.vs", "resources/shaders/pixelfixer.fs");
+    shdPixelFixer                     = LoadShader("resources/shader/pixelfixer.vs", "resources/shader/pixelfixer.fs");
     shdPixelFixerScreenSizeUniformLoc = GetShaderLocation(shdPixelFixer, "screenSize");
 
 #if 0
     const char *fontName = "C:/Windows/Fonts/consolab.ttf";
     if (!FileExists(fontName)) {
-        fontName = "resources/KarminaBold.otf";
+        fontName = "resources/font/KarminaBold.otf";
     }
 #else
-    const char *fontName = "resources/KarminaBold.otf";
+    const char *fontName = "resources/font/KarminaBold.otf";
 #endif
 
     fntTiny = dlb_LoadFontEx(fontName, 14, 0, 0, FONT_DEFAULT);

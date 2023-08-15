@@ -1,0 +1,15 @@
+spritesheet {
+    version         1
+    texture_path    "resources/bullet.png"
+    frame_width     8
+    frame_height    8
+    animations [
+        animation {
+            name            "bullet"
+            frame_start     0
+            frame_count     1
+            frame_duration  0.1
+            loop            true
+        }
+    ]
+}

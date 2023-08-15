@@ -39,9 +39,9 @@
 #define TODO_LIST_PATH "resources/todo.txt"
 
 #define PATH_LEN_MAX 1024
-#define LEVEL_001  "maps/level1.dat"
-#define LEVEL_002  "maps/level2.dat"
-#define LEVEL_CAVE "maps/cave.dat"
+#define LEVEL_001  "resources/map/level1.dat"
+#define LEVEL_002  "resources/map/level2.dat"
+#define LEVEL_CAVE "resources/map/cave.dat"
 
 // Helper macros
 

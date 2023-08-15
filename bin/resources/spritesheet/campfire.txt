@@ -1,0 +1,15 @@
+spritesheet {
+    version         1
+    texture_path    "resources/campfire.png"
+    frame_width     256
+    frame_height    256
+    animations [
+        animation {
+            name            "campfire_lit"
+            frame_start     0
+            frame_count     8
+            frame_duration  0.1
+            loop            true
+        }
+    ]
+}
