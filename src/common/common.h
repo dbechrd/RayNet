@@ -58,6 +58,7 @@
 // Custom colors
 
 #define ASESPRITE_BEIGE CLITERAL(Color){ 210, 203, 190, 255 } // Asesprite Beige
+#define FANCY_TIP_YELLOW CLITERAL(Color){ 210, 197, 124, 255 } // Fancy Tip light yellow
 #define GRAYISH_BLUE CLITERAL(Color){ 29, 58, 61, 255 } // Some kinda gray-ish blue
 #define BLUE_DESAT CLITERAL(Color){ 77, 116, 137, 255 }
 #define GREEN_DESAT CLITERAL(Color){ 90, 127, 110, 255 }
@@ -82,7 +83,7 @@
 // this is serialized to pack file, cannot be changed without updating pack version number
 #define SV_MAX_ENTITY_DIALOG_OPTIONS         8
 // how long this entity stays interested in a conversation before returning to pathfinding
-#define SV_ENTITY_DIALOG_INTERESTED_DURATION 10
+#define SV_ENTITY_DIALOG_INTERESTED_DURATION 30
 #define SV_TILE_CHUNK_WIDTH                  64
 
 //#define CL_PORT                 30000
@@ -152,6 +153,7 @@ Rectangle RectConstrainToScreen(const Rectangle &rect);
 
 void dlb_DrawTextureRec(Texture2D texture, Rectangle source, Vector2 position, Color tint);
 void dlb_DrawTexturePro(Texture2D texture, Rectangle source, Rectangle dest, Vector2 origin, Color tint);
+void dlb_DrawNPatch(Rectangle rec);
 
 bool StrFilter(const char *str, const char *filter);
 
@@ -178,6 +180,13 @@ struct FancyTextNode {
 
     // DIALOG_OPTION
     int optionId;
+};
+
+// These are drawn deferred so we need to store info for later when hovered
+struct FancyTextTip {
+    Font *font;
+    const char *tip;
+    size_t tipLen;
 };
 
 struct FancyTextTree {

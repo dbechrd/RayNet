@@ -59,6 +59,7 @@ private:
     void UpdateEntities(GameClient &client);
 
     void DrawEntitySnapshotShadows(uint32_t entityId, Controller &controller, double now, double dt);
-    void DrawDialog(GameClient &client, data::Entity &entity, Vector2 bottomCenterScreen);
+    void DrawDialogTips(std::vector<FancyTextTip> tips);
+    void DrawDialog(GameClient &client, data::Entity &entity, Vector2 bottomCenterScreen, std::vector<FancyTextTip> &tips);
     void DrawDialogs(GameClient &client, Camera2D &camera);
 };

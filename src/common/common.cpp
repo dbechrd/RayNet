@@ -412,6 +412,19 @@ void dlb_DrawTexturePro(Texture2D texture, Rectangle source, Rectangle dest, Vec
     }
 }
 
+void dlb_DrawNPatch(Rectangle rec)
+{
+    NPatchInfo nPatch{};
+    Texture &nPatchTex = data::pack1.gfx_files[data::GFX_FILE_DLG_NPATCH].texture;
+    nPatch.source = { 0, 0, (float)nPatchTex.width, (float)nPatchTex.height };
+    nPatch.left = 16;
+    nPatch.top = 16;
+    nPatch.right = 16;
+    nPatch.bottom = 16;
+    nPatch.layout = NPATCH_NINE_PATCH;
+    DrawTextureNPatch(nPatchTex, nPatch, rec, {}, 0, WHITE);
+}
+
 bool StrFilter(const char *str, const char *filter)
 {
     if (!filter || !*filter) {
@@ -480,11 +493,51 @@ bool dlb_FancyTextParse(FancyTextTree &tree, const char *text)
                 node = NULL;
                 break;
             }
+            case '[': {
+                if (*(c + 1)) {
+                    c++;  // skip '['
+                } else {
+                    printf("Expected string after '[' at %zu\n", (c + 1) - text);
+                    return false;
+                }
+
+                node->type = FancyTextNode::HOVER_TIP;
+                node->text = c;
+
+                while (*c && *c != '|') {
+                    node->textLen++;
+                    c++;
+                }
+
+                if (*c == '|') {
+                    c++;  // skip '|'
+                } else {
+                    printf("Expected '|' at %zu\n", c - text);
+                    return false;
+                }
+
+                node->tip = c;
+
+                while (*c && *c != ']') {
+                    node->tipLen++;
+                    c++;
+                }
+
+                if (*c == ']') {
+                    c++;  // skip ']'
+                } else {
+                    printf("Expected ']' at %zu\n", c - text);
+                    return false;
+                }
+
+                node = NULL;
+                break;
+            }
             default: {
                 node->type = FancyTextNode::TEXT;
                 node->text = c;
 
-                while (*c && *c != '{') {
+                while (*c && *c != '{' && *c != '[') {
                     node->textLen++;
                     c++;
                 };

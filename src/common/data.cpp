@@ -320,14 +320,50 @@ namespace data {
 
         Dialog dialogs[] = {
             { DIALOG_NONE },
-            // id                      msg
-            { DIALOG_CANCEL,           "Cya!" },
-            { DIALOG_LILY_INTRO,       "Hello, traveler!\n\n{Hi.}\n{That's not my name!}\n{Goodbye.}",
-                                       { DIALOG_LILY_HI, DIALOG_LILY_NOT_MY_NAME, DIALOG_CANCEL }},
-            { DIALOG_LILY_HI,          "Uh.. hi.\n{Back}",
-                                       { DIALOG_LILY_INTRO }},
-            { DIALOG_LILY_NOT_MY_NAME, "Oh, sorry 'bout that!\n{Back}",
-                                       { DIALOG_LILY_INTRO }},
+            {
+                DIALOG_CANCEL,
+                "Cya!"
+            },
+            {
+                DIALOG_LILY_INTRO,
+                "Hello, traveler!\n\n"
+                "{Hi.}\n"
+                "{That's not my name!}\n"
+                "{Tell me about the Sorcerer's Stone.}\n"
+                "{Goodbye.}",
+                {
+                    DIALOG_LILY_HI,
+                    DIALOG_LILY_NOT_MY_NAME,
+                    DIALOG_LILY_SORCERER_STONE,
+                    DIALOG_CANCEL
+                }
+            },
+            {
+                DIALOG_LILY_HI,
+                "Uh.. hi.\n\n"
+                "{Back}",
+                {
+                    DIALOG_LILY_INTRO
+                }
+            },
+            {
+                DIALOG_LILY_NOT_MY_NAME,
+                "Oh, sorry 'bout that!\n\n"
+                "{Back}",
+                {
+                    DIALOG_LILY_INTRO
+                }
+            },
+            {
+                DIALOG_LILY_SORCERER_STONE,
+                "The [Sorcerer's Stone|A blue, glowing magical stone] is a legendary artifact of centuries\n"
+                "past. You must find it to the cure the old wizard of her\n"
+                "magic-borne illness.\n\n"
+                "{Cool story ma'am.}",
+                {
+                    DIALOG_LILY_INTRO
+                }
+            },
         };
 
         // Ensure every array element is initialized and in contiguous order by id

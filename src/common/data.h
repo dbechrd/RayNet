@@ -426,12 +426,13 @@ namespace data {
         //Color color;  // color for minimap/wang tile editor (top left pixel of tile)
     };
 
-#define DIALOG_IDS(gen)          \
-    gen(DIALOG_NONE)             \
-    gen(DIALOG_CANCEL)           \
-    gen(DIALOG_LILY_INTRO)       \
-    gen(DIALOG_LILY_HI)          \
-    gen(DIALOG_LILY_NOT_MY_NAME)
+#define DIALOG_IDS(gen)             \
+    gen(DIALOG_NONE)                \
+    gen(DIALOG_CANCEL)              \
+    gen(DIALOG_LILY_INTRO)          \
+    gen(DIALOG_LILY_HI)             \
+    gen(DIALOG_LILY_NOT_MY_NAME)    \
+    gen(DIALOG_LILY_SORCERER_STONE)
 
     enum DialogId : uint16_t {
         DIALOG_IDS(ENUM_GEN_VALUE)

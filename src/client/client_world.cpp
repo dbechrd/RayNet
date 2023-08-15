@@ -450,8 +450,25 @@ void ClientWorld::DrawEntitySnapshotShadows(uint32_t entityId, Controller &contr
     }
 }
 
+void ClientWorld::DrawDialogTips(std::vector<FancyTextTip> tips)
+{
+    // Render tooltips last
+    for (const FancyTextTip &tip : tips) {
+        const char *tipText = TextFormat("%.*s", tip.tipLen, tip.tip);
+        Vector2 tipPos = Vector2Add(GetMousePosition(), { 0, 20 });
+        Vector2 tipSize = MeasureTextEx(*tip.font, tipText, tip.font->baseSize, 1);
+        Rectangle tipRec{
+            tipPos.x, tipPos.y,
+            tipSize.x, tipSize.y
+        };
+        tipRec = RectGrow(tipRec, 8);
+        dlb_DrawNPatch(tipRec);
+        dlb_DrawTextEx(*tip.font, tip.tip, tip.tipLen, tipPos, tip.font->baseSize, 1, RAYWHITE);
+    }
+}
+
 // TODO(dlb): Where should this live? Probably not in ClientWorld?
-void ClientWorld::DrawDialog(GameClient &client, data::Entity &entity, Vector2 bottomCenterScreen)
+void ClientWorld::DrawDialog(GameClient &client, data::Entity &entity, Vector2 bottomCenterScreen, std::vector<FancyTextTip> &tips)
 {
     Font &font = fntMedium;
 
@@ -460,8 +477,6 @@ void ClientWorld::DrawDialog(GameClient &client, data::Entity &entity, Vector2 b
 
     const float marginBottom = 4.0f;
     const Vector2 bgPad{ 12, 8 };
-
-    //size_t nodeCount = dlb_FancyTextParse(entity.dialog_message.c_str(), entity.dialog_message.size());
 
     FancyTextTree tree{};
     if (!dlb_FancyTextParse(tree, entity.dialog_message.c_str())) {
@@ -515,44 +530,42 @@ void ClientWorld::DrawDialog(GameClient &client, data::Entity &entity, Vector2 b
         io.CaptureMouse();
     }
 
-    NPatchInfo nPatch{};
-    Texture &nPatchTex = data::pack1.gfx_files[data::GFX_FILE_DLG_NPATCH].texture;
-    nPatch.source = { 0, 0, (float)nPatchTex.width, (float)nPatchTex.height };
-    nPatch.left = 16;
-    nPatch.top = 16;
-    nPatch.right = 16;
-    nPatch.bottom = 16;
-    nPatch.layout = NPATCH_NINE_PATCH;
-    DrawTextureNPatch(nPatchTex, nPatch, bgRect, {}, 0, WHITE);
+    dlb_DrawNPatch(bgRect);
     //DrawRectangleRounded(msgBgRect, 0.2f, 6, Fade(BLACK, 0.5));
     //DrawRectangleRoundedLines(msgBgRect, 0.2f, 6, 1.0f, RAYWHITE);
     DrawTextEx(font, entity.dialog_title.c_str(), titlePos, font.baseSize, 1.0f, GOLD);
 
     Vector2 cursor{};
-    for (int i = 0; i < tree.nodes.size(); i++) {
-        FancyTextNode &node = tree.nodes[i];
+    for (const FancyTextNode &node : tree.nodes) {
         Color col = RAYWHITE;
         bool hoverable = false;
         switch (node.type) {
             case FancyTextNode::TEXT:          col = RAYWHITE; break;
-            case FancyTextNode::DIALOG_OPTION: col = SKYBLUE;         hoverable = true; break;
-            case FancyTextNode::HOVER_TIP:     col = ASESPRITE_BEIGE; hoverable = true; break;
+            case FancyTextNode::DIALOG_OPTION: col = SKYBLUE;          hoverable = true; break;
+            case FancyTextNode::HOVER_TIP:     col = FANCY_TIP_YELLOW; hoverable = true; break;
         }
         //col = ColorFromHSV((float)i / tree.nodes.size() * 360.0f, 0.8f, 0.8f);
         bool hovered = false;
         bool *hoveredPtr = hoverable ? &hovered : 0;
         dlb_DrawTextEx(font, node.text, node.textLen, msgPos, font.baseSize, 1.0f, col, &cursor, hoveredPtr);
 
-        const bool pressed = hovered && io.MouseButtonPressed(MOUSE_BUTTON_LEFT);
-        if (pressed) {
-            switch (node.type) {
-                case FancyTextNode::DIALOG_OPTION: {
+        switch (node.type) {
+            case FancyTextNode::DIALOG_OPTION: {
+                const bool pressed = hovered && io.MouseButtonPressed(MOUSE_BUTTON_LEFT);
+                if (pressed) {
                     client.SendEntityInteractDialogOption(entity, node.optionId);
-                    break;
                 }
-                case FancyTextNode::HOVER_TIP: {
-                    break;
+                break;
+            }
+            case FancyTextNode::HOVER_TIP: {
+                if (hovered) {
+                    FancyTextTip tip{};
+                    tip.font = &font;
+                    tip.tip = node.tip;
+                    tip.tipLen = node.tipLen;
+                    tips.push_back(tip);
                 }
+                break;
             }
         }
     }
@@ -567,6 +580,8 @@ void ClientWorld::DrawDialogs(GameClient &client, Camera2D &camera)
         return;
     }
 
+    std::vector<FancyTextTip> tips{};
+
     for (data::Entity &entity : entityDb->entities) {
         if (!entity.type || entity.despawned_at || entity.map_id != map->id) {
             continue;
@@ -577,9 +592,11 @@ void ClientWorld::DrawDialogs(GameClient &client, Camera2D &camera)
         if (entity.dialog_spawned_at) {
             const Vector2 topCenter = entityDb->EntityTopCenter(entity.id);
             const Vector2 topCenterScreen = GetWorldToScreen2D(topCenter, camera);
-            DrawDialog(client, entity, topCenterScreen);
+            DrawDialog(client, entity, topCenterScreen, tips);
         }
     }
+
+    DrawDialogTips(tips);
 
     io.PopScope();
 }
