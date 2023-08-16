@@ -663,6 +663,7 @@ void dlb_CommonTests(void)
 }
 
 #include "collision.cpp"
+#include "dlg.cpp"
 #include "data.cpp"
 #include "file_utils.cpp"
 #include "entity_db.cpp"

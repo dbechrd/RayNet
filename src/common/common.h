@@ -22,6 +22,7 @@
 #include <sstream>
 #include <stack>
 #include <string>
+#include <string_view>
 #include <thread>
 #include <unordered_map>
 #include <unordered_set>
@@ -156,8 +157,6 @@ void dlb_DrawTexturePro(Texture2D texture, Rectangle source, Rectangle dest, Vec
 void dlb_DrawNPatch(Rectangle rec);
 
 bool StrFilter(const char *str, const char *filter);
-
-
 
 struct FancyTextNode {
     enum Type {

@@ -15,23 +15,22 @@ struct Msg_S_EntitySay : public yojimbo::Message
 
     template <typename Stream> bool Serialize(Stream &stream)
     {
-        uint32_t messageLen = MIN(message.size(), SV_MAX_ENTITY_SAY_MSG_LEN);
-        char messageBuf[SV_MAX_ENTITY_SAY_MSG_LEN]{};
-
+        uint32_t message_len = MIN(message.size(), SV_MAX_ENTITY_SAY_MSG_LEN);
+        char message_buf[SV_MAX_ENTITY_SAY_MSG_LEN]{};
         if (Stream::IsWriting) {
-            strncpy(messageBuf, message.c_str(), SV_MAX_ENTITY_SAY_MSG_LEN - 1);
+            strncpy(message_buf, message.c_str(), SV_MAX_ENTITY_SAY_MSG_LEN - 1);
         }
 
         serialize_uint32(stream, entity_id);
         serialize_uint32(stream, dialog_id);
-        serialize_uint32(stream, messageLen);
-        if (messageLen > SV_MAX_ENTITY_SAY_MSG_LEN) {
+        serialize_uint32(stream, message_len);
+
+        if (message_len > SV_MAX_ENTITY_SAY_MSG_LEN) {
             return false;
         }
-        serialize_bytes(stream, (uint8_t *)messageBuf, messageLen);
-
+        serialize_bytes(stream, (uint8_t *)message_buf, message_len);
         if (Stream::IsReading) {
-            message = std::string{messageBuf, messageLen};
+            message = std::string{ message_buf, message_len };
         }
         return true;
     }

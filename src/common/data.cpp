@@ -30,6 +30,8 @@ namespace data {
         &pack1
     };
 
+    DialogLibrary dialog_library{};
+
     void ReadFileIntoDataBuffer(std::string filename, DatBuffer &datBuffer)
     {
         uint32_t bytesRead = 0;
@@ -318,53 +320,7 @@ namespace data {
             { TILE_AUTO_GRASS_47, GFX_ANIM_TIL_AUTO_GRASS_47, MATERIAL_GRASS, 0b11010000, TILE_FLAG_WALK },
         };
 
-        Dialog dialogs[] = {
-            { DIALOG_NONE },
-            {
-                DIALOG_CANCEL,
-                "Cya!"
-            },
-            {
-                DIALOG_LILY_INTRO,
-                "Hello, traveler!\n\n"
-                "{Hi.}\n"
-                "{That's not my name!}\n"
-                "{Tell me about the Sorcerer's Stone.}\n"
-                "{Goodbye.}",
-                {
-                    DIALOG_LILY_HI,
-                    DIALOG_LILY_NOT_MY_NAME,
-                    DIALOG_LILY_SORCERER_STONE,
-                    DIALOG_CANCEL
-                }
-            },
-            {
-                DIALOG_LILY_HI,
-                "Uh.. hi.\n\n"
-                "{Back}",
-                {
-                    DIALOG_LILY_INTRO
-                }
-            },
-            {
-                DIALOG_LILY_NOT_MY_NAME,
-                "Oh, sorry 'bout that!\n\n"
-                "{Back}",
-                {
-                    DIALOG_LILY_INTRO
-                }
-            },
-            {
-                DIALOG_LILY_SORCERER_STONE,
-                "The [Sorcerer's Stone|A blue, glowing magical stone] is a legendary artifact of centuries\n"
-                "past. You must find it to the cure the old wizard of her\n"
-                "magic-borne illness.\n\n"
-                "{Cool story ma'am.}",
-                {
-                    DIALOG_LILY_INTRO
-                }
-            },
-        };
+        LoadDialogFile("resources/dialog/lily.txt");
 
         // Ensure every array element is initialized and in contiguous order by id
         #define ID_CHECK(type, name, arr) \
@@ -381,7 +337,6 @@ namespace data {
         ID_CHECK(Material &, material,  materials);
         ID_CHECK(Sprite   &, sprite,    sprites);
         ID_CHECK(TileType &, tile_type, tile_types);
-        ID_CHECK(Dialog   &, dialog,    dialogs);
         #undef ID_CHECK
 
         Pack packHardcoded{ "dat/test.dat" };
@@ -393,7 +348,6 @@ namespace data {
         for (auto &i : materials)  packHardcoded.materials.push_back(i);
         for (auto &i : sprites)    packHardcoded.sprites.push_back(i);
         for (auto &i : tile_types) packHardcoded.tile_types.push_back(i);
-        for (auto &i : dialogs)    packHardcoded.dialogs.push_back(i);
 
         LoadResources(packHardcoded);
 
@@ -430,6 +384,9 @@ namespace data {
     void Free(void)
     {
         UnloadPack(pack1);
+        for (auto &fileText : dialog_library.dialog_files) {
+            UnloadFileText((char *)fileText);
+        }
     }
 
 #define PROC(v) stream.process(&v, sizeof(v), 1, stream.f);
@@ -536,16 +493,6 @@ namespace data {
         PROC(tile_type.auto_tile_mask);
     }
 
-
-    void Process(PackStream &stream, Dialog &dialog)
-    {
-        PROC(dialog.id);
-        Process(stream, dialog.msg);
-        for (int i = 0; i < ARRAY_SIZE(dialog.option_ids); i++) {
-            PROC(dialog.option_ids[i]);
-        }
-    }
-
     void Process(PackStream &stream, Entity &entity)
     {
         bool alive = entity.id && !entity.despawned_at && entity.type;
@@ -569,7 +516,7 @@ namespace data {
         //PROC(entity.last_attacked_at);
         //PROC(entity.attack_cooldown);
 
-        PROC(entity.dialog_root_id);
+        Process(stream, entity.dialog_root_key);
         //PROC(entity.dialog_spawned_at);
         //PROC(entity.dialog_id);
         //PROC(entity.dialog_title);
@@ -580,6 +527,7 @@ namespace data {
         //PROC(entity.hp_smooth);
 
         PROC(entity.path_active);
+        PROC(entity.path_id);
         if (entity.path_id) {
             PROC(entity.path_node_last_reached);
             PROC(entity.path_node_target);
@@ -674,7 +622,6 @@ namespace data {
             WRITE_ARRAY(pack.materials);
             WRITE_ARRAY(pack.sprites);
             WRITE_ARRAY(pack.tile_types);
-            WRITE_ARRAY(pack.dialogs);
             WRITE_ARRAY(pack.entities);
 
 #undef WRITE_ARRAY
@@ -710,7 +657,6 @@ namespace data {
             pack.materials .resize(typeCounts[DAT_TYP_MATERIAL]);
             pack.sprites   .resize(typeCounts[DAT_TYP_SPRITE]);
             pack.tile_types.resize(typeCounts[DAT_TYP_TILE_TYPE]);
-            pack.dialogs   .resize(typeCounts[DAT_TYP_DIALOG]);
 
             assert(typeCounts[DAT_TYP_ENTITY] == SV_MAX_ENTITIES);
             pack.entities.resize(typeCounts[DAT_TYP_ENTITY]);
@@ -730,7 +676,6 @@ namespace data {
                     case DAT_TYP_MATERIAL:  Process(stream, pack.materials [nextIndex]); break;
                     case DAT_TYP_SPRITE:    Process(stream, pack.sprites   [nextIndex]); break;
                     case DAT_TYP_TILE_TYPE: Process(stream, pack.tile_types[nextIndex]); break;
-                    case DAT_TYP_DIALOG:    Process(stream, pack.dialogs   [nextIndex]); break;
                     case DAT_TYP_ENTITY:    Process(stream, pack.entities  [nextIndex]); break;
                 }
                 nextIndex++;

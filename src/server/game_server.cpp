@@ -410,9 +410,11 @@ void GameServer::ProcessMessages(void)
                         // Proximity, etc.
                         data::Entity *entity = entityDb->FindEntity(msg->entityId, data::ENTITY_NPC);
                         if (entity) {
-                            data::Dialog &dialog = data::pack1.dialogs[entity->dialog_root_id];
-                            SendEntitySay(clientIdx, entity->id, dialog.id, dialog.msg);
-                            entity->dialog_spawned_at = now;
+                            Dialog *dialog = dialog_library.FindByKey(entity->dialog_root_key);
+                            if (dialog) {
+                                SendEntitySay(clientIdx, entity->id, dialog->id, std::string(dialog->msg));
+                                entity->dialog_spawned_at = now;
+                            }
                         }
                         break;
                     }
@@ -421,7 +423,8 @@ void GameServer::ProcessMessages(void)
                         Msg_C_EntityInteractDialogOption *msg = (Msg_C_EntityInteractDialogOption *)yjMsg;
                         ServerPlayer &player = players[clientIdx];
 
-                        if (msg->dialog_id >= data::pack1.dialogs.size()) {
+                        Dialog *prevDialog = dialog_library.FindById(msg->dialog_id);
+                        if (!prevDialog) {
                             // Client being stupid?
                             assert(!"invalid dialog id");
                             break;
@@ -440,16 +443,15 @@ void GameServer::ProcessMessages(void)
                         if (entity) {
                             uint32_t entityIndex = entityDb->FindEntityIndex(entity->id);
 
-                            data::Dialog &prevDialog = data::pack1.dialogs[msg->dialog_id];
-                            uint32_t nextDialogId = prevDialog.option_ids[msg->option_id];
-                            if (!nextDialogId) {
+                            std::string_view nextDialogKey = prevDialog->option_keys[msg->option_id];
+                            Dialog *nextDialog = dialog_library.FindByKey(nextDialogKey);
+                            if (!nextDialog) {
                                 // Client being stupid? (or bug in data where msg string has more options than options id array)
                                 assert(!"missing dialog option id?");
                                 break;
                             }
 
-                            data::Dialog &nextDialog = data::pack1.dialogs[nextDialogId];
-                            SendEntitySay(clientIdx, entity->id, nextDialog.id, nextDialog.msg);
+                            SendEntitySay(clientIdx, entity->id, nextDialog->id, std::string(nextDialog->msg));
                             entity->dialog_spawned_at = now;
                         }
                         break;
@@ -562,7 +564,7 @@ void GameServer::TickSpawnTownNPCs(uint32_t mapId)
 
             entity->radius = 10;
 
-            entity->dialog_root_id = data::DIALOG_LILY_INTRO;
+            entity->dialog_root_key = "DIALOG_LILY_INTRO";
 
             entity->hp_max = 100;
             entity->hp = entity->hp_max;

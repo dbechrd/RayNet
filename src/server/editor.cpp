@@ -1106,6 +1106,7 @@ void Editor::DrawUI_WarpActions(UI &uiActionBar, double now)
 }
 void Editor::DrawUI_DialogActions(UI &uiActionBar, double now)
 {
+#if 0
     //if (uiActionBar.Button("Add", DARKGREEN).pressed) {
     //    //map->warps.push_back({});
     //}
@@ -1122,44 +1123,48 @@ void Editor::DrawUI_DialogActions(UI &uiActionBar, double now)
     uiActionBar.Textbox(txtSearch, filter);
     uiActionBar.Newline();
 
-    for (data::Dialog &dialog : data::pack1.dialogs) {
+    for (Dialog &dialog : dialog_library.dialogs) {
         if (!dialog.id) {
             continue;
         }
 
         Color bgColor = dialog.id == state.dialog.dialogId ? SKYBLUE : BLUE;
-        const char *msg = dialog.msg.c_str();
-        if (!StrFilter(msg, filter.c_str())) {
+        std::string msg{ dialog.msg };
+        if (!StrFilter(msg.c_str(), filter.c_str())) {
             continue;
         }
 
-        if (uiActionBar.Text(msg, WHITE, bgColor).down) {
+        if (uiActionBar.Text(msg.c_str(), WHITE, bgColor).down) {
             state.dialog.dialogId = dialog.id;
         }
         uiActionBar.Newline();
     }
 
     if (state.dialog.dialogId) {
-        data::Dialog &dialog = data::pack1.dialogs[state.dialog.dialogId];
-
-        uiActionBar.Text("message");
-        uiActionBar.Newline();
-        static STB_TexteditState txtMessage{};
-        uiActionBar.Textbox(txtMessage, dialog.msg);
-        uiActionBar.Newline();
-
-        static STB_TexteditState txtOptionId[SV_MAX_ENTITY_DIALOG_OPTIONS]{};
-        for (int i = 0; i < SV_MAX_ENTITY_DIALOG_OPTIONS; i++) {
-            uiActionBar.Text(TextFormat("option %d", i));
+        Dialog *dialog = dialog_library.FindById(state.dialog.dialogId);
+        if (dialog) {
+            uiActionBar.Text("message");
             uiActionBar.Newline();
-            float id = dialog.option_ids[i];
-            uiActionBar.TextboxFloat(txtOptionId[i], id, 0, "%.f");
-            dialog.option_ids[i] = (data::DialogId)CLAMP(id, 0, data::pack1.dialogs.size() - 1);
+            static STB_TexteditState txtMessage{};
+            uiActionBar.Textbox(txtMessage, dialog.msg);
             uiActionBar.Newline();
+
+            static STB_TexteditState txtOptionId[SV_MAX_ENTITY_DIALOG_OPTIONS]{};
+            for (int i = 0; i < SV_MAX_ENTITY_DIALOG_OPTIONS; i++) {
+                uiActionBar.Text(TextFormat("option %d", i));
+                uiActionBar.Newline();
+                float id = dialog.option_ids[i];
+                uiActionBar.TextboxFloat(txtOptionId[i], id, 0, "%.f");
+                dialog.option_ids[i] = (data::DialogId)CLAMP(id, 0, data::pack1.dialogs.size() - 1);
+                uiActionBar.Newline();
+            }
+        } else {
+            state.dialog.dialogId = 0;
         }
     }
 
     uiActionBar.PopStyle();
+#endif
 }
 void Editor::DrawUI_EntityActions(UI &uiActionBar, double now)
 {

@@ -142,13 +142,6 @@ Err Tilemap::Load(std::string path)
 
         fread(&version, sizeof(version), 1, file);
 
-        /*uint32_t texWidth = 0;
-        uint32_t texHeight = 0;
-        if (version >= 7) {
-            fread(&texWidth, sizeof(texWidth), 1, file);
-            fread(&texHeight, sizeof(texHeight), 1, file);
-        }*/
-
         int texturePathLen = 0;
         fread(&texturePathLen, sizeof(texturePathLen), 1, file);
         if (!texturePathLen || texturePathLen > PATH_LEN_MAX) {
