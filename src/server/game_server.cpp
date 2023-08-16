@@ -424,13 +424,14 @@ void GameServer::ProcessMessages(void)
                         ServerPlayer &player = players[clientIdx];
 
                         Dialog *prevDialog = dialog_library.FindById(msg->dialog_id);
+
                         if (!prevDialog) {
                             // Client being stupid?
                             assert(!"invalid dialog id");
                             break;
                         }
 
-                        if (msg->option_id >= SV_MAX_DIALOG_TAGS) {
+                        if (msg->option_id >= prevDialog->nodes.size()) {
                             // Client being stupid?
                             assert(!"invalid dialog option id (out of bounds)");
                             break;
@@ -443,8 +444,9 @@ void GameServer::ProcessMessages(void)
                         if (entity) {
                             uint32_t entityIndex = entityDb->FindEntityIndex(entity->id);
 
-                            DialogTag &optionTag = prevDialog->tags[msg->option_id];
-                            if (optionTag.type != DIALOG_TAG_LINK) {
+                            DialogNode &optionTag = prevDialog->nodes[msg->option_id];
+
+                            if (optionTag.type != DIALOG_NODE_LINK) {
                                 // Client being stupid?
                                 assert(!"invalid dialog option id (not a link)");
                                 break;

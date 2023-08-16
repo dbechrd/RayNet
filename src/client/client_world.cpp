@@ -1,6 +1,7 @@
 #include "client_world.h"
 #include "game_client.h"
 #include "../common/collision.h"
+#include "../common//dlg.h"
 #include "../common/entity.h"
 #include "../common/entity_db.h"
 #include "../common/io.h"
@@ -463,7 +464,7 @@ void ClientWorld::DrawDialogTips(std::vector<FancyTextTip> tips)
         };
         tipRec = RectGrow(tipRec, 8);
         dlb_DrawNPatch(tipRec);
-        dlb_DrawTextEx(*tip.font, tip.tip, tip.tipLen, tipPos, tip.font->baseSize, 1, RAYWHITE);
+        dlb_DrawTextEx(*tip.font, tip.tip, tip.tipLen, tipPos, RAYWHITE);
     }
 }
 
@@ -478,19 +479,21 @@ void ClientWorld::DrawDialog(GameClient &client, data::Entity &entity, Vector2 b
     const float marginBottom = 4.0f;
     const Vector2 bgPad{ 12, 8 };
 
-    FancyTextTree tree{};
-    if (!dlb_FancyTextParse(tree, entity.dialog_message.c_str())) {
+    const Vector2 titleSize = MeasureTextEx(font, entity.dialog_title.c_str(), font.baseSize, 1);
+
+    DialogNodeList msgNodes{};
+    char *msgBuf = (char *)entity.dialog_message.c_str();
+    Err err = ParseMessage(msgBuf, msgNodes);
+    if (err) {
         return;
     }
 
-    const Vector2 titleSize = MeasureTextEx(font, entity.dialog_title.c_str(), font.baseSize, 1);
-
-    Vector2 msgOffset{};
+    Vector2 msgCursor{};
     Vector2 msgSize{};
-    for (FancyTextNode node : tree.nodes) {
-        Vector2 nodeSize = dlb_MeasureFancyTextNode(node, font, msgOffset);
+    for (DialogNode &node : msgNodes) {
+        Vector2 nodeSize = dlb_MeasureTextEx(font, node.text.data(), node.text.size(), &msgCursor);
         msgSize.x = MAX(msgSize.x, nodeSize.x);
-        msgSize.y = msgOffset.y + nodeSize.y;
+        msgSize.y = msgCursor.y + nodeSize.y;
     }
 
     const float bgHeight =
@@ -535,39 +538,41 @@ void ClientWorld::DrawDialog(GameClient &client, data::Entity &entity, Vector2 b
     //DrawRectangleRoundedLines(msgBgRect, 0.2f, 6, 1.0f, RAYWHITE);
     DrawTextEx(font, entity.dialog_title.c_str(), titlePos, font.baseSize, 1.0f, GOLD);
 
-    Vector2 cursor{};
-    for (const FancyTextNode &node : tree.nodes) {
+    Vector2 nodeCursor{};
+    uint32_t nodeIdx = 0;
+    for (DialogNode &node : msgNodes) {
         Color col = RAYWHITE;
         bool hoverable = false;
         switch (node.type) {
-            case FancyTextNode::TEXT:          col = RAYWHITE; break;
-            case FancyTextNode::DIALOG_OPTION: col = SKYBLUE;          hoverable = true; break;
-            case FancyTextNode::HOVER_TIP:     col = FANCY_TIP_YELLOW; hoverable = true; break;
+            case DIALOG_NODE_TEXT:      col = RAYWHITE;         break;
+            case DIALOG_NODE_LINK:      col = SKYBLUE;          hoverable = true; break;
+            case DIALOG_NODE_HOVER_TIP: col = FANCY_TIP_YELLOW; hoverable = true; break;
         }
         //col = ColorFromHSV((float)i / tree.nodes.size() * 360.0f, 0.8f, 0.8f);
         bool hovered = false;
         bool *hoveredPtr = hoverable ? &hovered : 0;
-        dlb_DrawTextEx(font, node.text, node.textLen, msgPos, font.baseSize, 1.0f, col, &cursor, hoveredPtr);
+        dlb_DrawTextEx(font, node.text.data(), node.text.size(), msgPos, col, &nodeCursor, hoveredPtr);
 
         switch (node.type) {
-            case FancyTextNode::DIALOG_OPTION: {
+            case DIALOG_NODE_LINK: {
                 const bool pressed = hovered && io.MouseButtonPressed(MOUSE_BUTTON_LEFT);
                 if (pressed) {
-                    client.SendEntityInteractDialogOption(entity, node.optionId);
+                    client.SendEntityInteractDialogOption(entity, nodeIdx);
                 }
                 break;
             }
-            case FancyTextNode::HOVER_TIP: {
+            case DIALOG_NODE_HOVER_TIP: {
                 if (hovered) {
                     FancyTextTip tip{};
                     tip.font = &font;
-                    tip.tip = node.tip;
-                    tip.tipLen = node.tipLen;
+                    tip.tip = node.data.data();
+                    tip.tipLen = node.data.size();
                     tips.push_back(tip);
                 }
                 break;
             }
         }
+        nodeIdx++;
     }
 }
 

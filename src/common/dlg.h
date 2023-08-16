@@ -1,17 +1,18 @@
 #pragma once
 #include "common.h"
 
-enum DialogTagType {
-    DIALOG_TAG_NONE,
-    DIALOG_TAG_HOVER_TIP,
-    DIALOG_TAG_LINK,
+enum DialogNodeType {
+    DIALOG_NODE_NONE,
+    DIALOG_NODE_TEXT,
+    DIALOG_NODE_HOVER_TIP,
+    DIALOG_NODE_LINK,
 };
 
-struct DialogTag {
-    DialogTagType type;
+struct DialogNode {
+    DialogNodeType type{};
 
-    // the full tag (useful for skipping while rendering client-side)
-    std::string_view view{};
+    //// the full tag (useful for skipping while rendering client-side)
+    //std::string_view view{};
 
     // the part that's always visible and does something when you hover/click
     std::string_view text{};
@@ -21,11 +22,13 @@ struct DialogTag {
     std::string_view data{};
 };
 
+typedef std::vector<DialogNode> DialogNodeList;
+
 struct Dialog {
-    uint32_t         id   {};
-    std::string_view key  {};
-    std::string_view msg  {};
-    DialogTag        tags [SV_MAX_DIALOG_TAGS]{};
+    uint32_t         id    {};
+    std::string_view key   {};
+    std::string_view msg   {};
+    DialogNodeList   nodes {};
 };
 
 struct DialogLibrary {
@@ -67,4 +70,5 @@ struct DialogLibrary {
 
 extern DialogLibrary dialog_library;
 
+Err ParseMessage(char *&buf, DialogNodeList &nodes);
 Err LoadDialogFile(std::string path);

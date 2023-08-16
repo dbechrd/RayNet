@@ -81,8 +81,6 @@
 #define SV_MAX_PLAYERS                       8
 #define SV_MAX_ENTITIES                      256
 #define SV_MAX_ENTITY_SAY_MSG_LEN            1024
-// this is serialized to pack file, cannot be changed without updating pack version number
-#define SV_MAX_DIALOG_TAGS                   8
 // how long this entity stays interested in a conversation before returning to pathfinding
 #define SV_ENTITY_DIALOG_INTERESTED_DURATION 30
 #define SV_TILE_CHUNK_WIDTH                  64
@@ -140,7 +138,8 @@ Err InitCommon(void);
 void FreeCommon(void);
 Font dlb_LoadFontFromMemory(const char *fileType, const unsigned char *fileData, int dataSize, int fontSize, int *fontChars, int glyphCount, int type);
 Font dlb_LoadFontEx(const char *fileName, int fontSize, int *fontChars, int glyphCount, int type);
-void dlb_DrawTextEx(Font font, const char *text, size_t textLen, Vector2 position, float fontSize, float spacing, Color tint, Vector2 *cursor = 0, bool *hovered = 0);
+Vector2 dlb_MeasureTextEx(Font font, const char *text, size_t textLen, Vector2 *cursor = 0);
+void dlb_DrawTextEx(Font font, const char *text, size_t textLen, Vector2 position, Color tint, Vector2 *cursor = 0, bool *hovered = 0);
 
 float GetRandomFloatZeroToOne(void);
 float GetRandomFloatMinusOneToOne(void);
@@ -158,6 +157,14 @@ void dlb_DrawNPatch(Rectangle rec);
 
 bool StrFilter(const char *str, const char *filter);
 
+// These are drawn deferred so we need to store info for later when hovered
+struct FancyTextTip {
+    Font *font;
+    const char *tip;
+    size_t tipLen;
+};
+
+#if 0
 struct FancyTextNode {
     enum Type {
         TEXT,
@@ -181,19 +188,12 @@ struct FancyTextNode {
     int optionId;
 };
 
-// These are drawn deferred so we need to store info for later when hovered
-struct FancyTextTip {
-    Font *font;
-    const char *tip;
-    size_t tipLen;
-};
-
 struct FancyTextTree {
     std::vector<FancyTextNode> nodes;
 };
 
 bool dlb_FancyTextParse(FancyTextTree &tree, const char *text);
-Vector2 dlb_MeasureFancyTextNode(FancyTextNode &node, Font font, Vector2 &offset);
+#endif
 
 void dlb_CommonTests(void);
 

@@ -149,11 +149,79 @@ Font dlb_LoadFontEx(const char *fileName, int fontSize, int *fontChars, int glyp
     return font;
 }
 
-void dlb_DrawTextEx(Font font, const char *text, size_t textLen, Vector2 position, float fontSize, float spacing, Color tint, Vector2 *cursor, bool *hovered)
+Vector2 dlb_MeasureTextEx(Font font, const char *text, size_t textLen, Vector2 *cursor)
+{
+    Vector2 textSize{};
+
+    if ((font.texture.id == 0) || (text == NULL)) {
+        return textSize;
+    }
+
+    Vector2 cur{};
+    if (!cursor) {
+        cursor = &cur;
+    }
+
+    int lineCharsMax = 0;
+    int lineChars = 0;
+
+    float textWidth = 0.0f;
+    float textHeight = 0.0f;
+    const float charHeight = font.baseSize * TEXT_LINE_SPACING;  // including line spacing, for bbox
+
+    for (int i = 0; i < textLen; i++) {
+        int codepointSize = 0;
+        int codepoint = GetCodepointNext(&text[i], &codepointSize);
+        int glyphIndex = GetGlyphIndex(font, codepoint);
+
+        // NOTE: normally we exit the decoding sequence as soon as a bad byte is found (and return 0x3f)
+        // but we need to draw all the bad bytes using the '?' symbol so to not skip any we set codepointSize = 1
+        if (codepoint == 0x3f) {
+            codepointSize = 1;
+        }
+        i += codepointSize - 1;
+
+        if (codepoint == '\\') {
+            // don't measure
+        } else if (codepoint == '\n') {
+            textWidth = MAX(cursor->x, textWidth);
+            lineChars = 0;
+            cursor->x = 0;
+            cursor->y += charHeight;
+            textHeight += charHeight;
+        } else {
+            float advanceX = font.glyphs[glyphIndex].advanceX;
+            if (!advanceX) {
+                advanceX = font.recs[glyphIndex].width + font.glyphs[glyphIndex].offsetX;
+            }
+            cursor->x += advanceX;
+            lineChars++;
+        }
+
+        lineCharsMax = MAX(lineChars, lineCharsMax);
+    }
+
+    textWidth = MAX(cursor->x, textWidth);
+    textHeight += font.baseSize;
+
+    const float fontSize = font.baseSize;
+    const float spacing = 1.0f;
+
+    float scaleFactor = fontSize / font.baseSize;
+    textSize.x = textWidth * scaleFactor + ((lineCharsMax - 1) * spacing); // Adds chars spacing to measure
+    textSize.y = textHeight * scaleFactor;
+
+    return textSize;
+}
+
+void dlb_DrawTextEx(Font font, const char *text, size_t textLen, Vector2 position, Color tint, Vector2 *cursor, bool *hovered)
 {
     if (font.texture.id == 0) {
         font = GetFontDefault();
     }
+
+    const float fontSize = font.baseSize;
+    const float spacing = 1.0f;
 
     Vector2 cur{};
     if (!cursor) {
@@ -185,7 +253,9 @@ void dlb_DrawTextEx(Font font, const char *text, size_t textLen, Vector2 positio
             codepointByteCount = 1;
         }
 
-        if (codepoint == '\n') {
+        if (codepoint == '\\') {
+            // don't draw
+        } else if (codepoint == '\n') {
             cursor->y += charHeight;
             cursor->x = 0.0f;
         } else {
@@ -451,6 +521,7 @@ bool StrFilter(const char *str, const char *filter)
     return false;
 }
 
+#if 0
 bool dlb_FancyTextParse(FancyTextTree &tree, const char *text)
 {
     if (!text) {
@@ -563,68 +634,11 @@ bool dlb_FancyTextParse(FancyTextTree &tree, const char *text)
 
     return true;
 }
-
-Vector2 dlb_MeasureFancyTextNode(FancyTextNode &node, Font font, Vector2 &offset)
-{
-    Vector2 textSize{};
-
-    if ((font.texture.id == 0) || (node.text == NULL)) {
-        return textSize;
-    }
-
-    int lineCharsMax = 0;
-    int lineChars = 0;
-
-    float textWidth = 0.0f;
-    float textHeight = 0.0f;
-    const float charHeight = font.baseSize * TEXT_LINE_SPACING;  // including line spacing, for bbox
-
-    for (int i = 0; i < node.textLen; i++) {
-        lineChars++;
-
-        int codepointSize = 0;
-        int codepoint = GetCodepointNext(&node.text[i], &codepointSize);
-        int glyphIndex = GetGlyphIndex(font, codepoint);
-
-        // NOTE: normally we exit the decoding sequence as soon as a bad byte is found (and return 0x3f)
-        // but we need to draw all the bad bytes using the '?' symbol so to not skip any we set codepointSize = 1
-        if (codepoint == 0x3f) {
-            codepointSize = 1;
-        }
-        i += codepointSize - 1;
-
-        if (codepoint == '\n') {
-            textWidth = MAX(offset.x, textWidth);
-            lineChars = 0;
-            offset.x = 0;
-            offset.y += charHeight;
-            textHeight += charHeight;
-        } else {
-            float advanceX = font.glyphs[glyphIndex].advanceX;
-            if (!advanceX) {
-                advanceX = font.recs[glyphIndex].width + font.glyphs[glyphIndex].offsetX;
-            }
-            offset.x += advanceX;
-        }
-
-        lineCharsMax = MAX(lineChars, lineCharsMax);
-    }
-
-    textWidth = MAX(offset.x, textWidth);
-    textHeight += font.baseSize;
-
-    const float fontSize = font.baseSize;
-    const float spacing = 1.0f;
-
-    float scaleFactor = fontSize / font.baseSize;
-    textSize.x = textWidth * scaleFactor + ((lineCharsMax - 1) * spacing); // Adds chars spacing to measure
-    textSize.y = textHeight * scaleFactor;
-
-    return textSize;
-}
+#endif
 
 void dlb_CommonTests(void)
 {
+#if 0
     {
         FancyTextTree tree{};
         assert(dlb_FancyTextParse(tree, "hello friend!"));
@@ -660,6 +674,7 @@ void dlb_CommonTests(void)
         assert(dlb_FancyTextParse(tree, "Ow! You hit me!\n\n{Sorry}\n{Haha, loser}"));
         assert(tree.nodes.size() == 4);
     }
+#endif
 }
 
 #include "collision.cpp"
