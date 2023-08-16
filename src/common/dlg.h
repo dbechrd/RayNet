@@ -1,11 +1,31 @@
 #pragma once
 #include "common.h"
 
+enum DialogTagType {
+    DIALOG_TAG_NONE,
+    DIALOG_TAG_HOVER_TIP,
+    DIALOG_TAG_LINK,
+};
+
+struct DialogTag {
+    DialogTagType type;
+
+    // the full tag (useful for skipping while rendering client-side)
+    std::string_view view{};
+
+    // the part that's always visible and does something when you hover/click
+    std::string_view text{};
+
+    // HOVER_TIP: the text to display in the pop-up
+    // LINK:      dialog_key of the dialog to go to
+    std::string_view data{};
+};
+
 struct Dialog {
-    uint32_t         id          {};
-    std::string_view key         {};
-    std::string_view msg         {};
-    std::string_view option_keys [SV_MAX_ENTITY_DIALOG_OPTIONS]{};
+    uint32_t         id   {};
+    std::string_view key  {};
+    std::string_view msg  {};
+    DialogTag        tags [SV_MAX_DIALOG_TAGS]{};
 };
 
 struct DialogLibrary {

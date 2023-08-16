@@ -430,9 +430,9 @@ void GameServer::ProcessMessages(void)
                             break;
                         }
 
-                        if (msg->option_id >= SV_MAX_ENTITY_DIALOG_OPTIONS) {
+                        if (msg->option_id >= SV_MAX_DIALOG_TAGS) {
                             // Client being stupid?
-                            assert(!"invalid dialog option id");
+                            assert(!"invalid dialog option id (out of bounds)");
                             break;
                         }
 
@@ -443,7 +443,14 @@ void GameServer::ProcessMessages(void)
                         if (entity) {
                             uint32_t entityIndex = entityDb->FindEntityIndex(entity->id);
 
-                            std::string_view nextDialogKey = prevDialog->option_keys[msg->option_id];
+                            DialogTag &optionTag = prevDialog->tags[msg->option_id];
+                            if (optionTag.type != DIALOG_TAG_LINK) {
+                                // Client being stupid?
+                                assert(!"invalid dialog option id (not a link)");
+                                break;
+                            }
+
+                            std::string_view nextDialogKey = optionTag.data;
                             Dialog *nextDialog = dialog_library.FindByKey(nextDialogKey);
                             if (!nextDialog) {
                                 // Client being stupid? (or bug in data where msg string has more options than options id array)

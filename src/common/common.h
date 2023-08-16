@@ -82,7 +82,7 @@
 #define SV_MAX_ENTITIES                      256
 #define SV_MAX_ENTITY_SAY_MSG_LEN            1024
 // this is serialized to pack file, cannot be changed without updating pack version number
-#define SV_MAX_ENTITY_DIALOG_OPTIONS         8
+#define SV_MAX_DIALOG_TAGS                   8
 // how long this entity stays interested in a conversation before returning to pathfinding
 #define SV_ENTITY_DIALOG_INTERESTED_DURATION 30
 #define SV_TILE_CHUNK_WIDTH                  64
