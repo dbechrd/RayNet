@@ -241,16 +241,19 @@ void GameServer::SerializeSpawn(uint32_t entityId, Msg_S_EntitySpawn &entitySpaw
     entitySpawn.position  = entity->position;
 
     // Collision
-    entitySpawn.radius   = entity->radius;
-
-    // Physics
-    entitySpawn.drag     = entity->drag;
-    entitySpawn.speed    = entity->speed;
-    entitySpawn.velocity = entity->velocity;
+    entitySpawn.radius    = entity->radius;
 
     // Life
-    entitySpawn.hp_max   = entity->hp_max;
-    entitySpawn.hp       = entity->hp;
+    entitySpawn.hp_max    = entity->hp_max;
+    entitySpawn.hp        = entity->hp;
+
+    // Physics
+    entitySpawn.drag      = entity->drag;
+    entitySpawn.speed     = entity->speed;
+    entitySpawn.velocity  = entity->velocity;
+
+    // Sprite
+    entitySpawn.sprite    = entity->sprite;
 }
 void GameServer::SendEntitySpawn(int clientIdx, uint32_t entityId)
 {
@@ -559,43 +562,91 @@ void GameServer::UpdateServerPlayers(void)
         }
     }
 }
+
+data::Entity *SpawnEntityProto(GameServer &server, uint32_t mapId, Vector2 position, data::EntityProto &proto)
+{
+    Tilemap *map = server.FindMap(mapId);
+    if (!map) return 0;
+
+    data::Entity *entity = server.SpawnEntity(data::ENTITY_NPC);
+    if (!entity) return 0;
+
+    entity->map_id = mapId;
+    entity->position = position;
+    entity->radius = proto.radius;
+    entity->dialog_root_key = proto.dialog_root_key;
+    entity->hp_max = proto.hp_max;
+    entity->hp = entity->hp_max;
+    // TODO: Give the path a name, e.g. entity->path = "PATH_TOWN_LILY"
+    entity->path_id = proto.path_id;
+    AiPathNode *aiPathNode = map->GetPathNode(entity->path_id, 0);
+    if (aiPathNode) {
+        entity->position = aiPathNode->pos;
+    }
+    entity->drag = proto.drag;
+    entity->speed = GetRandomValue(proto.speed_min, proto.speed_max);
+    entity->sprite = proto.sprite;
+
+    return entity;
+}
 void GameServer::TickSpawnTownNPCs(uint32_t mapId)
 {
-    static uint32_t eid_bots[3];
+    static uint32_t eid_bots[4];
+    static data::EntityProto protos[4];
+    if (!protos[0].type) {
+        data::EntityProto &lily = protos[0];
+        lily.type = data::ENTITY_NPC;
+        lily.radius = 10;
+        lily.dialog_root_key = "DIALOG_LILY_INTRO";
+        lily.hp_max = 777;
+        lily.path_id = 0;
+        lily.speed_min = 300;
+        lily.speed_max = 600;
+        lily.drag = 1.0f;
+        lily.sprite = data::SPRITE_NPC_LILY;
+
+        data::EntityProto &freye = protos[1];
+        freye.type = data::ENTITY_NPC;
+        freye.radius = 10;
+        freye.dialog_root_key = "DIALOG_FREYE_INTRO";
+        freye.hp_max = 200;
+        freye.path_id = 0;
+        freye.speed_min = 300;
+        freye.speed_max = 600;
+        freye.drag = 1.0f;
+        freye.sprite = data::SPRITE_NPC_FREYE;
+
+        data::EntityProto &nessa = protos[2];
+        nessa.type = data::ENTITY_NPC;
+        nessa.radius = 10;
+        nessa.dialog_root_key = "DIALOG_NESSA_INTRO";
+        nessa.hp_max = 150;
+        nessa.path_id = 0;
+        nessa.speed_min = 300;
+        nessa.speed_max = 600;
+        nessa.drag = 1.0f;
+        nessa.sprite = data::SPRITE_NPC_NESSA;
+
+        data::EntityProto &elane = protos[3];
+        elane.type = data::ENTITY_NPC;
+        elane.radius = 10;
+        elane.dialog_root_key = "DIALOG_ELANE_INTRO";
+        elane.hp_max = 100;
+        elane.path_id = 0;
+        elane.speed_min = 300;
+        elane.speed_max = 600;
+        elane.drag = 1.0f;
+        elane.sprite = data::SPRITE_NPC_ELANE;
+    }
+
     for (int i = 0; i < ARRAY_SIZE(eid_bots); i++) {
         data::Entity *entity = entityDb->FindEntity(eid_bots[i], data::ENTITY_NPC);
         if (!entity && ((int)tick % 100 == i * 10)) {
-            entity = SpawnEntity(data::ENTITY_NPC);
-            if (!entity) continue;
-
-            entity->map_id = mapId;
-            entity->position = { 0, 0 };
-
-            entity->radius = 10;
-
-            entity->dialog_root_key = "DIALOG_LILY_INTRO";
-
-            entity->hp_max = 100;
-            entity->hp = entity->hp_max;
-
-            Tilemap *map = FindMap(mapId);
-            if (map) {
-                entity->path_active = true;
-                entity->path_id = 0;
-                AiPathNode *aiPathNode = map->GetPathNode(entity->path_id, 0);
-                if (aiPathNode) {
-                    entity->position = aiPathNode->pos;
-                }
+            entity = SpawnEntityProto(*this, mapId, { 0, 0 }, protos[i]);
+            if (entity) {
+                BroadcastEntitySpawn(entity->id);
+                eid_bots[i] = entity->id;
             }
-
-            entity->speed = GetRandomValue(300, 600);
-            entity->drag = 1.0f;
-
-            entity->sprite = data::SPRITE_NPC_LILY;
-            //eSprite.direction = data::DIR_E;
-
-            BroadcastEntitySpawn(entity->id);
-            eid_bots[i] = entity->id;
         }
     }
 }
@@ -640,7 +691,7 @@ void GameServer::TickEntityBot(uint32_t entityId, double dt)
     }
 
     // TODO: tick_pathfind?
-    if (entity->path_active && !entity->dialog_spawned_at) {
+    if (!entity->dialog_spawned_at) {
         AiPathNode *ai_path_node = map->GetPathNode(entity->path_id, entity->path_node_target);
         if (ai_path_node) {
             Vector2 target = ai_path_node->pos;

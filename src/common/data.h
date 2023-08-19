@@ -54,6 +54,9 @@ namespace data {
     gen(GFX_FILE_DLG_NPATCH)     \
     gen(GFX_FILE_CHR_MAGE)       \
     gen(GFX_FILE_NPC_LILY)       \
+    gen(GFX_FILE_NPC_FREYE)      \
+    gen(GFX_FILE_NPC_NESSA)      \
+    gen(GFX_FILE_NPC_ELANE)      \
     gen(GFX_FILE_OBJ_CAMPFIRE)   \
     gen(GFX_FILE_PRJ_FIREBALL)   \
     gen(GFX_FILE_TIL_OVERWORLD)  \
@@ -148,6 +151,12 @@ namespace data {
     gen(GFX_FRAME_CHR_MAGE_W_0)      \
     gen(GFX_FRAME_NPC_LILY_E_0)      \
     gen(GFX_FRAME_NPC_LILY_W_0)      \
+    gen(GFX_FRAME_NPC_FREYE_E_0)     \
+    gen(GFX_FRAME_NPC_FREYE_W_0)     \
+    gen(GFX_FRAME_NPC_NESSA_E_0)     \
+    gen(GFX_FRAME_NPC_NESSA_W_0)     \
+    gen(GFX_FRAME_NPC_ELANE_E_0)     \
+    gen(GFX_FRAME_NPC_ELANE_W_0)     \
     gen(GFX_FRAME_OBJ_CAMPFIRE_0)    \
     gen(GFX_FRAME_OBJ_CAMPFIRE_1)    \
     gen(GFX_FRAME_OBJ_CAMPFIRE_2)    \
@@ -233,6 +242,12 @@ namespace data {
     gen(GFX_ANIM_CHR_MAGE_W)         \
     gen(GFX_ANIM_NPC_LILY_E)         \
     gen(GFX_ANIM_NPC_LILY_W)         \
+    gen(GFX_ANIM_NPC_FREYE_E)        \
+    gen(GFX_ANIM_NPC_FREYE_W)        \
+    gen(GFX_ANIM_NPC_NESSA_E)        \
+    gen(GFX_ANIM_NPC_NESSA_W)        \
+    gen(GFX_ANIM_NPC_ELANE_E)        \
+    gen(GFX_ANIM_NPC_ELANE_W)        \
     gen(GFX_ANIM_OBJ_CAMPFIRE)       \
     gen(GFX_ANIM_PRJ_FIREBALL)       \
     /* gen(GFX_ANIM_FLAG) */         \
@@ -324,6 +339,9 @@ namespace data {
     gen(SPRITE_NONE)           \
     gen(SPRITE_CHR_MAGE)       \
     gen(SPRITE_NPC_LILY)       \
+    gen(SPRITE_NPC_FREYE)      \
+    gen(SPRITE_NPC_NESSA)      \
+    gen(SPRITE_NPC_ELANE)      \
     gen(SPRITE_OBJ_CAMPFIRE)   \
     gen(SPRITE_PRJ_FIREBALL)
 
@@ -439,6 +457,18 @@ namespace data {
         ENTITY_TYPES(ENUM_GEN_VALUE)
     };
 
+    struct EntityProto {
+        EntityType  type            {};
+        float       radius          {};
+        std::string dialog_root_key {};
+        float       hp_max          {};
+        int         path_id         {};  // if non-zero, set path_active = true
+        float       speed_min       {};
+        float       speed_max       {};
+        float       drag            {};
+        SpriteId    sprite          {};
+    };
+
     struct Entity {
         static const DataType dtype = DAT_TYP_ENTITY;
 
@@ -467,6 +497,7 @@ namespace data {
         // server-side
         std::string dialog_root_key   {};  // Root node of dialog tree
 
+        // TODO: replace with a pointer to a pool of active dialogs (or just 1??)
         // client-side
         double      dialog_spawned_at {};  // time when dialog was spawned
         uint32_t    dialog_id         {};  // which dialog is active
@@ -501,7 +532,6 @@ namespace data {
         }
 
         //// Pathfinding ////
-        bool   path_active            {};  // if false, don't pathfind
         int    path_id                {};
         int    path_node_last_reached {};
         int    path_node_target       {};

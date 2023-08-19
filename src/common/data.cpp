@@ -55,6 +55,9 @@ namespace data {
             { GFX_FILE_DLG_NPATCH,     "resources/texture/npatch.png" },
             { GFX_FILE_CHR_MAGE,       "resources/texture/mage.png" },
             { GFX_FILE_NPC_LILY,       "resources/texture/lily.png" },
+            { GFX_FILE_NPC_FREYE,      "resources/texture/freye.png" },
+            { GFX_FILE_NPC_NESSA,      "resources/texture/nessa.png" },
+            { GFX_FILE_NPC_ELANE,      "resources/texture/elane.png" },
             { GFX_FILE_OBJ_CAMPFIRE,   "resources/texture/campfire.png" },
             { GFX_FILE_PRJ_FIREBALL,   "resources/texture/fireball.png" },
             { GFX_FILE_TIL_OVERWORLD,  "resources/texture/tiles32.png" },
@@ -89,6 +92,12 @@ namespace data {
             // npcs
             { GFX_FRAME_NPC_LILY_E_0,   GFX_FILE_NPC_LILY,        0,  0,  32,  64 },
             { GFX_FRAME_NPC_LILY_W_0,   GFX_FILE_NPC_LILY,       32,  0,  32,  64 },
+            { GFX_FRAME_NPC_FREYE_E_0,  GFX_FILE_NPC_FREYE,       0,  0,  32,  64 },
+            { GFX_FRAME_NPC_FREYE_W_0,  GFX_FILE_NPC_FREYE,      32,  0,  32,  64 },
+            { GFX_FRAME_NPC_NESSA_E_0,  GFX_FILE_NPC_NESSA,       0,  0,  32,  64 },
+            { GFX_FRAME_NPC_NESSA_W_0,  GFX_FILE_NPC_NESSA,      32,  0,  32,  64 },
+            { GFX_FRAME_NPC_ELANE_E_0,  GFX_FILE_NPC_ELANE,       0,  0,  32,  64 },
+            { GFX_FRAME_NPC_ELANE_W_0,  GFX_FILE_NPC_ELANE,      32,  0,  32,  64 },
 
             // objects
             { GFX_FRAME_OBJ_CAMPFIRE_0, GFX_FILE_OBJ_CAMPFIRE,    0,  0, 256, 256 },
@@ -170,6 +179,12 @@ namespace data {
             // npcs
             { GFX_ANIM_NPC_LILY_E,        SFX_FILE_NONE,          60,        1,        0, { GFX_FRAME_NPC_LILY_E_0 }},
             { GFX_ANIM_NPC_LILY_W,        SFX_FILE_NONE,          60,        1,        0, { GFX_FRAME_NPC_LILY_W_0 }},
+            { GFX_ANIM_NPC_FREYE_E,       SFX_FILE_NONE,          60,        1,        0, { GFX_FRAME_NPC_FREYE_E_0 }},
+            { GFX_ANIM_NPC_FREYE_W,       SFX_FILE_NONE,          60,        1,        0, { GFX_FRAME_NPC_FREYE_W_0 }},
+            { GFX_ANIM_NPC_NESSA_E,       SFX_FILE_NONE,          60,        1,        0, { GFX_FRAME_NPC_NESSA_E_0 }},
+            { GFX_ANIM_NPC_NESSA_W,       SFX_FILE_NONE,          60,        1,        0, { GFX_FRAME_NPC_NESSA_W_0 }},
+            { GFX_ANIM_NPC_ELANE_E,       SFX_FILE_NONE,          60,        1,        0, { GFX_FRAME_NPC_ELANE_E_0 }},
+            { GFX_ANIM_NPC_ELANE_W,       SFX_FILE_NONE,          60,        1,        0, { GFX_FRAME_NPC_ELANE_W_0 }},
 
             // objects
             { GFX_ANIM_OBJ_CAMPFIRE,      SFX_FILE_CAMPFIRE,      60,        8,        4, { GFX_FRAME_OBJ_CAMPFIRE_0, GFX_FRAME_OBJ_CAMPFIRE_1, GFX_FRAME_OBJ_CAMPFIRE_2, GFX_FRAME_OBJ_CAMPFIRE_3, GFX_FRAME_OBJ_CAMPFIRE_4, GFX_FRAME_OBJ_CAMPFIRE_5, GFX_FRAME_OBJ_CAMPFIRE_6, GFX_FRAME_OBJ_CAMPFIRE_7 }},
@@ -244,11 +259,14 @@ namespace data {
         Sprite sprites[] = {
             { SPRITE_NONE },
             // id                    anims
-            //                       N                      E                    S              W                    NE             SE             SW             NW
-            { SPRITE_CHR_MAGE,     { GFX_ANIM_NONE,         GFX_ANIM_CHR_MAGE_E, GFX_ANIM_NONE, GFX_ANIM_CHR_MAGE_W, GFX_ANIM_NONE, GFX_ANIM_NONE, GFX_ANIM_NONE, GFX_ANIM_NONE } },
-            { SPRITE_NPC_LILY,     { GFX_ANIM_NONE,         GFX_ANIM_NPC_LILY_E, GFX_ANIM_NONE, GFX_ANIM_NPC_LILY_W, GFX_ANIM_NONE, GFX_ANIM_NONE, GFX_ANIM_NONE, GFX_ANIM_NONE } },
-            { SPRITE_OBJ_CAMPFIRE, { GFX_ANIM_OBJ_CAMPFIRE, GFX_ANIM_NONE,       GFX_ANIM_NONE, GFX_ANIM_NONE,       GFX_ANIM_NONE, GFX_ANIM_NONE, GFX_ANIM_NONE, GFX_ANIM_NONE } },
-            { SPRITE_PRJ_FIREBALL, { GFX_ANIM_PRJ_FIREBALL, GFX_ANIM_NONE,       GFX_ANIM_NONE, GFX_ANIM_NONE,       GFX_ANIM_NONE, GFX_ANIM_NONE, GFX_ANIM_NONE, GFX_ANIM_NONE } },
+            //                       N                      E                     S              W                     NE             SE             SW             NW
+            { SPRITE_CHR_MAGE,     { GFX_ANIM_NONE,         GFX_ANIM_CHR_MAGE_E,  GFX_ANIM_NONE, GFX_ANIM_CHR_MAGE_W,  GFX_ANIM_NONE, GFX_ANIM_NONE, GFX_ANIM_NONE, GFX_ANIM_NONE } },
+            { SPRITE_NPC_LILY,     { GFX_ANIM_NONE,         GFX_ANIM_NPC_LILY_E,  GFX_ANIM_NONE, GFX_ANIM_NPC_LILY_W,  GFX_ANIM_NONE, GFX_ANIM_NONE, GFX_ANIM_NONE, GFX_ANIM_NONE } },
+            { SPRITE_NPC_FREYE,    { GFX_ANIM_NONE,         GFX_ANIM_NPC_FREYE_E, GFX_ANIM_NONE, GFX_ANIM_NPC_FREYE_W, GFX_ANIM_NONE, GFX_ANIM_NONE, GFX_ANIM_NONE, GFX_ANIM_NONE } },
+            { SPRITE_NPC_NESSA,    { GFX_ANIM_NONE,         GFX_ANIM_NPC_NESSA_E, GFX_ANIM_NONE, GFX_ANIM_NPC_NESSA_W, GFX_ANIM_NONE, GFX_ANIM_NONE, GFX_ANIM_NONE, GFX_ANIM_NONE } },
+            { SPRITE_NPC_ELANE,    { GFX_ANIM_NONE,         GFX_ANIM_NPC_ELANE_E, GFX_ANIM_NONE, GFX_ANIM_NPC_ELANE_W, GFX_ANIM_NONE, GFX_ANIM_NONE, GFX_ANIM_NONE, GFX_ANIM_NONE } },
+            { SPRITE_OBJ_CAMPFIRE, { GFX_ANIM_OBJ_CAMPFIRE, GFX_ANIM_NONE,        GFX_ANIM_NONE, GFX_ANIM_NONE,        GFX_ANIM_NONE, GFX_ANIM_NONE, GFX_ANIM_NONE, GFX_ANIM_NONE } },
+            { SPRITE_PRJ_FIREBALL, { GFX_ANIM_PRJ_FIREBALL, GFX_ANIM_NONE,        GFX_ANIM_NONE, GFX_ANIM_NONE,        GFX_ANIM_NONE, GFX_ANIM_NONE, GFX_ANIM_NONE, GFX_ANIM_NONE } },
         };
 
         TileType tile_types[] = {
@@ -320,7 +338,10 @@ namespace data {
             { TILE_AUTO_GRASS_47, GFX_ANIM_TIL_AUTO_GRASS_47, MATERIAL_GRASS, 0b11010000, TILE_FLAG_WALK },
         };
 
-        LoadDialogFile("resources/dialog/lily.txt");
+        LoadDialogFile("resources/dialog/lily.md");
+        LoadDialogFile("resources/dialog/freye.md");
+        LoadDialogFile("resources/dialog/nessa.md");
+        LoadDialogFile("resources/dialog/elane.md");
 
         // Ensure every array element is initialized and in contiguous order by id
         #define ID_CHECK(type, name, arr) \
@@ -526,7 +547,6 @@ namespace data {
         PROC(entity.hp);
         //PROC(entity.hp_smooth);
 
-        PROC(entity.path_active);
         PROC(entity.path_id);
         if (entity.path_id) {
             PROC(entity.path_node_last_reached);

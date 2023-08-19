@@ -129,22 +129,7 @@ void ClientWorld::ApplySpawnEvent(const Msg_S_EntitySpawn &entitySpawn)
     entity.velocity = entitySpawn.velocity;
     entity.hp_max   = entitySpawn.hp_max;
     entity.hp       = entitySpawn.hp;
-
-    // TODO: Look it up from somewhere based on entity type?
-    switch (entity.type) {
-        case data::ENTITY_PLAYER: {
-            entity.sprite = data::SPRITE_CHR_MAGE;
-            break;
-        }
-        case data::ENTITY_NPC: {
-            entity.sprite = data::SPRITE_NPC_LILY;
-            break;
-        }
-        case data::ENTITY_PROJECTILE: {
-            entity.sprite = data::SPRITE_PRJ_FIREBALL;
-            break;
-        };
-    }
+    entity.sprite   = entitySpawn.sprite;
 }
 
 void ClientWorld::ApplyStateInterpolated(data::Entity &entity,
@@ -188,7 +173,14 @@ Err ClientWorld::CreateDialog(uint32_t entityId, uint32_t dialogId, std::string 
 
     entity->dialog_spawned_at = now;
     entity->dialog_id = dialogId;
-    entity->dialog_title = "Lily";
+    // TODO: Send dialog title or entity name over the wire
+    switch (entity->sprite) {
+        case data::SPRITE_NPC_LILY: entity->dialog_title = "Lily"; break;
+        case data::SPRITE_NPC_FREYE: entity->dialog_title = "Freye"; break;
+        case data::SPRITE_NPC_NESSA: entity->dialog_title = "Nessa"; break;
+        case data::SPRITE_NPC_ELANE: entity->dialog_title = "Elane"; break;
+        default: entity->dialog_title = "Townfolk";
+    }
     entity->dialog_message = message;
     return RN_SUCCESS;
 }

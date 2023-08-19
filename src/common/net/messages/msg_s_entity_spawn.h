@@ -10,18 +10,17 @@ struct Msg_S_EntitySpawn : public yojimbo::Message
     data::EntityType  type       {};
     uint32_t          map_id     {};
     Vector2           position   {};
-
     // Collision
-    float       radius   {};
-
-    // Physics
-    float       drag     {};  // TODO: EntityType should imply this.. client should have prototypes
-    float       speed    {};
-    Vector2     velocity {};
-
+    float             radius     {};
     // Life
-    int         hp_max   {};
-    int         hp       {};
+    int               hp_max     {};
+    int               hp         {};
+    // Physics
+    float             drag       {};  // TODO: EntityType should imply this.. client should have prototypes
+    float             speed      {};
+    Vector2           velocity   {};
+    // Sprite
+    data::SpriteId    sprite     {};
 
     template <typename Stream> bool Serialize(Stream &stream)
     {
@@ -45,6 +44,17 @@ struct Msg_S_EntitySpawn : public yojimbo::Message
             }
         }
 
+        // Life
+        switch (type) {
+            case data::ENTITY_NPC:
+            case data::ENTITY_PLAYER:
+            {
+                serialize_varint32(stream, hp_max);
+                serialize_varint32(stream, hp);
+                break;
+            }
+        }
+
         // Physics
         switch (type) {
             case data::ENTITY_NPC:
@@ -58,20 +68,17 @@ struct Msg_S_EntitySpawn : public yojimbo::Message
             }
         }
 
-        // Life
+        // Sprite
         switch (type) {
             case data::ENTITY_NPC:
             case data::ENTITY_PLAYER:
+            case data::ENTITY_PROJECTILE:
             {
-                serialize_varint32(stream, hp_max);
-                serialize_varint32(stream, hp);
-                break;
+                uint32_t spriteId = sprite;
+                serialize_uint32(stream, spriteId);
+                sprite = (data::SpriteId)spriteId;
             }
         }
-
-
-        // TODO: Client should know this implicitly based on entity.type
-        //serialize_uint32(stream, spritesheetId);
 
         return true;
     }
