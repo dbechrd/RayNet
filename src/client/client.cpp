@@ -457,9 +457,9 @@ int main(int argc, char *argv[])
                 client->controller.cmdAccum.facing = facing;
 
                 client->controller.cmdAccum.north |= io.KeyDown(KEY_W);
-                client->controller.cmdAccum.west |= io.KeyDown(KEY_A);
+                client->controller.cmdAccum.west  |= io.KeyDown(KEY_A);
                 client->controller.cmdAccum.south |= io.KeyDown(KEY_S);
-                client->controller.cmdAccum.east |= io.KeyDown(KEY_D);
+                client->controller.cmdAccum.east  |= io.KeyDown(KEY_D);
 
                 // TODO: Actually check hand
                 bool holdingWeapon = true;

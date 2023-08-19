@@ -31,6 +31,9 @@ struct Dialog {
     DialogNodeList   nodes {};
 };
 
+// returns true if dialog valid, false if it wants us to cancel the dialog
+typedef bool (*DialogListener)(uint32_t source_id, uint32_t target_id, uint32_t dialog_id);
+
 struct DialogLibrary {
     uint32_t nextId = 1;
 
@@ -38,6 +41,7 @@ struct DialogLibrary {
     std::vector<Dialog> dialogs{};
     std::unordered_map<uint32_t, size_t> dialog_idx_by_id{};
     std::unordered_map<std::string_view, size_t> dialog_idx_by_key{};
+    std::unordered_map<std::string_view, DialogListener> dialog_listener_by_key{};
 
     Dialog &Alloc(std::string_view key) {
         Dialog &dialog = dialogs.emplace_back();
@@ -63,6 +67,14 @@ struct DialogLibrary {
         const auto &kv = dialog_idx_by_key.find(key);
         if (kv != dialog_idx_by_key.end()) {
             return &dialogs[kv->second];
+        }
+        return 0;
+    }
+
+    DialogListener FindListenerByKey(std::string_view key) {
+        const auto &kv = dialog_listener_by_key.find(key);
+        if (kv != dialog_listener_by_key.end()) {
+            return kv->second;
         }
         return 0;
     }

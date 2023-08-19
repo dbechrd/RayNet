@@ -208,14 +208,11 @@ void EntityDB::DrawEntityIds(uint32_t entityId, Camera2D &camera)
     assert(entityId);
     data::Entity *entity = FindEntity(entityId);
     if (entity) {
-        if (!entity->id || !entity->type) {
-            assert(!entity->id && !entity->type);
-            return;
-        }
+        assert(entity->id == entityId);
+        assert(entity->type);
+        DrawTextEx(fntSmall, TextFormat("%u", entity->id), entity->position,
+            fntSmall.baseSize / camera.zoom, 1 / camera.zoom, WHITE);
     }
-
-    DrawTextEx(fntSmall, TextFormat("%u", entity->id), entity->position,
-        fntSmall.baseSize / camera.zoom, 1 / camera.zoom, WHITE);
 }
 void EntityDB::DrawEntityHoverInfo(uint32_t entityId)
 {

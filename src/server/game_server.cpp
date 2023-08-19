@@ -392,6 +392,22 @@ void GameServer::BroadcastTileChunk(Tilemap &map, uint32_t x, uint32_t y)
     }
 }
 
+void GameServer::RequestDialog(int clientIdx, data::Entity &entity, Dialog &dialog)
+{
+    bool valid = true;
+
+    DialogListener listener = dialog_library.FindListenerByKey(dialog.key);
+    if (listener) {
+        ServerPlayer &player = players[clientIdx];
+        valid = listener(player.entityId, entity.id, dialog.id);
+    }
+
+    if (valid) {
+        SendEntitySay(clientIdx, entity.id, dialog.id, std::string(dialog.msg));
+        entity.dialog_spawned_at = now;
+    }
+}
+
 void GameServer::ProcessMessages(void)
 {
     for (int clientIdx = 0; clientIdx < SV_MAX_PLAYERS; clientIdx++) {
@@ -415,8 +431,7 @@ void GameServer::ProcessMessages(void)
                         if (entity) {
                             Dialog *dialog = dialog_library.FindByKey(entity->dialog_root_key);
                             if (dialog) {
-                                SendEntitySay(clientIdx, entity->id, dialog->id, std::string(dialog->msg));
-                                entity->dialog_spawned_at = now;
+                                RequestDialog(clientIdx, *entity, *dialog);
                             }
                         }
                         break;
@@ -427,7 +442,6 @@ void GameServer::ProcessMessages(void)
                         ServerPlayer &player = players[clientIdx];
 
                         Dialog *prevDialog = dialog_library.FindById(msg->dialog_id);
-
                         if (!prevDialog) {
                             // Client being stupid?
                             assert(!"invalid dialog id");
@@ -445,8 +459,6 @@ void GameServer::ProcessMessages(void)
                         // Proximity, etc. If they leave proximity, send EntityInteractCancel
                         data::Entity *entity = entityDb->FindEntity(msg->entity_id, data::ENTITY_NPC);
                         if (entity) {
-                            uint32_t entityIndex = entityDb->FindEntityIndex(entity->id);
-
                             DialogNode &optionTag = prevDialog->nodes[msg->option_id];
 
                             if (optionTag.type != DIALOG_NODE_LINK) {
@@ -463,8 +475,7 @@ void GameServer::ProcessMessages(void)
                                 break;
                             }
 
-                            SendEntitySay(clientIdx, entity->id, nextDialog->id, std::string(nextDialog->msg));
-                            entity->dialog_spawned_at = now;
+                            RequestDialog(clientIdx, *entity, *nextDialog);
                         }
                         break;
                     }

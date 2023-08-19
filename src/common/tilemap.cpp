@@ -153,15 +153,16 @@ Err Tilemap::Load(std::string path)
 
         std::string texturePath{ texturePathBuf };
         textureId = rnStringCatalog.AddString(texturePath);
-        bool texLoaded = rnTextureCatalog.Load(textureId);
-
-        if (version < 7 && !texLoaded) {
-            const char *filename = GetFileName(texturePath.c_str());
-            texturePath = "resources/texture/" + std::string(filename);
-            textureId = rnStringCatalog.AddString(texturePath);
-            texLoaded = rnTextureCatalog.Load(textureId);
-            if (!texLoaded) {
-                err = RN_BAD_FILE_READ; break;
+        err = rnTextureCatalog.Load(textureId);
+        if (err) {
+            if (version < 7) {
+                const char *filename = GetFileName(texturePath.c_str());
+                texturePath = "resources/texture/" + std::string(filename);
+                textureId = rnStringCatalog.AddString(texturePath);
+                err = rnTextureCatalog.Load(textureId);
+                if (err) {
+                    break;
+                }
             }
         }
 
@@ -273,7 +274,9 @@ Err Tilemap::ChangeTileset(Tilemap &map, StringId newTextureId, double now)
     Tilemap &newMap = *newMapPtr;
     do {
         newMap.textureId = newTextureId;
-        rnTextureCatalog.Load(newMap.textureId);
+        err = rnTextureCatalog.Load(newMap.textureId);
+        if (err) break;
+
         const TextureCatalog::Entry &newTexEntry = rnTextureCatalog.GetEntry(newMap.textureId);
         if (newTexEntry.texture.width % TILE_W != 0 || newTexEntry.texture.height % TILE_W != 0) {
             err = RN_INVALID_SIZE; break;

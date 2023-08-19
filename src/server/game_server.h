@@ -1,4 +1,5 @@
 #pragma once
+#include "../common/dlg.h"
 #include "../common/entity_db.h"
 #include "../common/input_command.h"
 #include "../common/tilemap.h"
@@ -121,6 +122,7 @@ private:
     void BroadcastTileChunk(Tilemap &map, uint32_t x, uint32_t y);
 
     // All part of Update()
+    void RequestDialog(int clientIdx, data::Entity &entity, Dialog &dialog);
     void ProcessMessages(void);
     data::Entity *SpawnProjectile(uint32_t mapId, Vector2 position, Vector2 direction);
     void UpdateServerPlayers(void);

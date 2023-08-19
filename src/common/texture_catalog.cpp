@@ -30,27 +30,35 @@ void TextureCatalog::Free(void)
     }
 }
 
-bool TextureCatalog::Load(StringId id)
+Err TextureCatalog::Load(StringId id)
 {
+    Err err = RN_SUCCESS;
+
     const auto &entry = entriesById.find(id);
-    if (entry == entriesById.end()) {
+    do {
+        if (entry != entriesById.end()) {
+            break;  // already loaded
+        }
+
         std::string path = rnStringCatalog.GetString(id);
         Image image = LoadImage(path.c_str());
-        if (image.width) {
-            Texture texture = LoadTextureFromImage(image);
-            if (texture.width) {
-                Entry entry{ image, texture };
-                size_t entryIdx = entries.size();
-                entries.push_back(entry);
-                entriesById[id] = entryIdx;
-                return true;
-            }
-        } else {
-            // Not really necessary, but seems weird to have a image when texture load fails?
+        if (!image.width) {
             UnloadImage(image);
+            err = RN_BAD_FILE_READ; break;
         }
-    }
-    return false;
+
+        Texture texture = LoadTextureFromImage(image);
+        if (!texture.width) {
+            err = RN_BAD_ALLOC; break;
+        }
+
+        Entry entry{ image, texture };
+        size_t entryIdx = entries.size();
+        entries.push_back(entry);
+        entriesById[id] = entryIdx;
+    } while (0);
+
+    return err;
 }
 
 const TextureCatalog::Entry &TextureCatalog::GetEntry(StringId id)
@@ -67,7 +75,7 @@ const TextureCatalog::Entry &TextureCatalog::GetEntry(StringId id)
 
 const Texture &TextureCatalog::GetTexture(StringId id)
 {
-    Load(id);
+    Load(id);  // we don't care if this is successful because GetEntry returns placeholder if it fails
     const auto &entry = GetEntry(id);
     return entry.texture;
 }

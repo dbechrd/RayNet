@@ -13,7 +13,7 @@ struct TextureCatalog {
 
     void Init(void);
     void Free(void);
-    bool Load(StringId id);
+    Err Load(StringId id);
     const Entry &GetEntry(StringId id);
     const Texture &GetTexture(StringId id);
     void Unload(StringId id);

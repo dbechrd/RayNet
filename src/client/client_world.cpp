@@ -67,7 +67,7 @@ Tilemap *ClientWorld::FindOrLoadMap(uint32_t map_id)
             case 1: mapName = LEVEL_001; break;
             case 2: mapName = LEVEL_CAVE; break;
         }
-        // TODO: LoadPack map and add to maps/mapdsById
+        // TODO: LoadPack map and add to maps/mapsById
 
         map = new Tilemap();
         if (map) {

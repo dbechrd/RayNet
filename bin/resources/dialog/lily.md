@@ -17,6 +17,7 @@ dreams a reality.
 Here is a quick selection of tests.
 
 [Sorcerer's Stone (tooltip test)](#DIALOG_LILY_TOOLTIP_TEST)\
+[Spawn a creature](#DIALOG_LILY_SPAWN_CREATURE)\
 
 [Back](#DIALOG_LILY_INTRO)
 
@@ -26,6 +27,42 @@ past. You must find it to the cure the old sorceress of her\
 magic-borne illness.
 
 [Thanks for the tip.](#DIALOG_LILY_TESTS)
+
+# DIALOG_LILY_SPAWN_CREATURE
+What kind of creature?
+
+[A frog.](#DIALOG_LILY_SPAWN_FROG)\
+[A bird.](#DIALOG_LILY_SPAWN_BIRD)\
+[A hen.](#DIALOG_LILY_SPAWN_HEN)\
+
+[Nevermind.](#DIALOG_LILY_TESTS)
+
+# DIALOG_LILY_SPAWN_FROG
+```
+spawn frog
+```
+
+Enjoy your new pet frog! Don't kiss it!
+
+[Thanks!](#DIALOG_LILY_TESTS)
+
+# DIALOG_LILY_SPAWN_BIRD
+```
+spawn bird
+```
+
+Oo a bird. How lovely!
+
+[Thanks!](#DIALOG_LILY_TESTS)
+
+# DIALOG_LILY_SPAWN_HEN
+```
+spawn hen
+```
+
+A reliable source of omelettes, clever.
+
+[Thanks!](#DIALOG_LILY_TESTS)
 
 # DIALOG_LILY_CANCEL
 Cya, traveler!
