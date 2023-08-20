@@ -182,6 +182,7 @@ namespace data {
     {
         Err err = RN_SUCCESS;
 
+#if 1
         GfxFile gfx_files[] = {
             { GFX_FILE_NONE },
             // id                       texture path
@@ -471,13 +472,6 @@ namespace data {
             { TILE_AUTO_GRASS_47, GFX_ANIM_TIL_AUTO_GRASS_47, MATERIAL_GRASS, 0b11010000, TILE_FLAG_WALK },
         };
 
-        LoadDialogFile("resources/dialog/lily.md");
-        LoadDialogFile("resources/dialog/freye.md");
-        LoadDialogFile("resources/dialog/nessa.md");
-        LoadDialogFile("resources/dialog/elane.md");
-
-        dialog_library.RegisterListener("DIALOG_FREYE_INTRO", FreyeIntroListener);
-
         std::vector<MusFile> mus_files{};
         err = LoadMusicIndex("resources/music/index.txt", mus_files);
         if (err) {
@@ -526,6 +520,7 @@ namespace data {
             assert(!err);
             TraceLog(LOG_ERROR, "Failed to save data file.\n");
         }
+#endif
 
         Pack *pack1 = new Pack{ "pack/pack1.dat" };
         packs.push_back(pack1);
@@ -552,6 +547,14 @@ namespace data {
         MemFree(compressed.bytes);
         MemFree(compressMe.bytes);
 #endif
+
+        // TODO: Pack these too
+        LoadDialogFile("resources/dialog/lily.md");
+        LoadDialogFile("resources/dialog/freye.md");
+        LoadDialogFile("resources/dialog/nessa.md");
+        LoadDialogFile("resources/dialog/elane.md");
+
+        dialog_library.RegisterListener("DIALOG_FREYE_INTRO", FreyeIntroListener);
     }
 
     void Free(void)
@@ -571,7 +574,7 @@ namespace data {
 #endif
     }
 
-#define PROC(v) stream.process(&v, sizeof(v), 1, stream.f);
+#define PROC(v) { static_assert(!std::is_same_v<decltype(v), std::string>); stream.process(&v, sizeof(v), 1, stream.f); }
 
     void Process(PackStream &stream, std::string &str)
     {
@@ -650,7 +653,7 @@ namespace data {
     void Process(PackStream &stream, GfxAnim &gfx_anim, int index)
     {
         PROC(gfx_anim.id);
-        PROC(gfx_anim.sound);
+        Process(stream, gfx_anim.sound);
         PROC(gfx_anim.frame_rate);
         PROC(gfx_anim.frame_count);
         PROC(gfx_anim.frame_delay);
@@ -663,7 +666,7 @@ namespace data {
     void Process(PackStream &stream, Material &material, int index)
     {
         PROC(material.id);
-        PROC(material.footstep_sound);
+        Process(stream, material.footstep_sound);
     }
 
     void Process(PackStream &stream, Sprite &sprite, int index) {
