@@ -509,7 +509,7 @@ namespace data {
         ID_CHECK(TileType &, tile_type, tile_types);
         #undef ID_CHECK
 
-        Pack packHardcoded{ "dat/test.dat" };
+        Pack packHardcoded{ "pack/pack1.dat" };
         for (auto &i : gfx_files)  packHardcoded.gfx_files.push_back(i);
         for (auto &i : mus_files)  packHardcoded.mus_files.push_back(i);
         for (auto &i : sfx_files)  packHardcoded.sfx_files.push_back(i);
@@ -527,7 +527,7 @@ namespace data {
             TraceLog(LOG_ERROR, "Failed to save data file.\n");
         }
 
-        Pack *pack1 = new Pack{ "dat/test.dat" };
+        Pack *pack1 = new Pack{ "pack/pack1.dat" };
         packs.push_back(pack1);
 
         err = LoadPack(*pack1);
@@ -539,7 +539,7 @@ namespace data {
 #if 0
         DatBuffer compressMe{};
         uint32_t bytesRead = 0;
-        compressMe.bytes = LoadFileData("dat/test.dat", &bytesRead);
+        compressMe.bytes = LoadFileData("pack/pack1.dat", &bytesRead);
         compressMe.length = bytesRead;
 
         DatBuffer compressed{};
@@ -547,7 +547,7 @@ namespace data {
         compressed.bytes = CompressData(compressMe.bytes, compressMe.length, &compressedSize);
         compressed.length = compressedSize;
 
-        SaveFileData("dat/test.smol", compressed.bytes, compressed.length);
+        SaveFileData("pack/pack1.smol", compressed.bytes, compressed.length);
 
         MemFree(compressed.bytes);
         MemFree(compressMe.bytes);
@@ -623,7 +623,7 @@ namespace data {
 
     void Process(PackStream &stream, SfxFile &sfx_file, int index)
     {
-        PROC(sfx_file.id);
+        Process(stream, sfx_file.id);
         Process(stream, sfx_file.path);
         Process(stream, sfx_file.data_buffer);
         PROC(sfx_file.pitch_variance);
