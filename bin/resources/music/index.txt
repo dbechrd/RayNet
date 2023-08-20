@@ -1,3 +1,3 @@
-# key               path
-AMBIENT_OUTDOORS    "resources/music/copyright/345470__philip_goddard__branscombe-landslip-birds-and-sea-echoes-ese-from-cave-track.ogg"
-AMBIENT_CAVE        "resources/music/copyright/69391__zixem__cave_amb.wav"
+# id                  path
+mus_ambient_outdoors "resources/music/copyright/345470__philip_goddard__branscombe-landslip-birds-and-sea-echoes-ese-from-cave-track.ogg"
+mus_ambient_cave     "resources/music/copyright/69391__zixem__cave_amb.wav"

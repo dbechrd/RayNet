@@ -240,7 +240,7 @@ void Editor::DrawGroundOverlay_Paths(Camera2D &camera, double now)
 }
 void Editor::DrawGroundOverlay_Warps(Camera2D &camera, double now)
 {
-    for (const data::Entity &entity : data::pack1.entities) {
+    for (const data::Entity &entity : data::packs[0]->entities) {
         if (entity.type == data::ENTITY_WARP) {
             DrawRectangleRec(entity.warp_collider, Fade(SKYBLUE, 0.7f));
         }
@@ -1028,7 +1028,7 @@ void Editor::DrawUI_WarpActions(UI &uiActionBar, double now)
     uiActionBar.Textbox(txtSearch, filter);
     uiActionBar.Newline();
 
-    //for (data::AspectWarp &warp : data::pack1.warp) {
+    //for (data::AspectWarp &warp : data::packs[0]->warp) {
     //    //if (!warp.id) {
     //    //    continue;
     //    //}
@@ -1045,7 +1045,7 @@ void Editor::DrawUI_WarpActions(UI &uiActionBar, double now)
     //    uiActionBar.Newline();
     //}
 
-    for (data::Entity &entity : data::pack1.entities) {
+    for (data::Entity &entity : data::packs[0]->entities) {
         if (entity.type != data::ENTITY_WARP) {
             continue;
         }
@@ -1155,7 +1155,7 @@ void Editor::DrawUI_DialogActions(UI &uiActionBar, double now)
                 uiActionBar.Newline();
                 float id = dialog.option_ids[i];
                 uiActionBar.TextboxFloat(txtOptionId[i], id, 0, "%.f");
-                dialog.option_ids[i] = (data::DialogId)CLAMP(id, 0, data::pack1.dialogs.size() - 1);
+                dialog.option_ids[i] = (data::DialogId)CLAMP(id, 0, data::packs[0]->dialogs.size() - 1);
                 uiActionBar.Newline();
             }
         } else {
@@ -1321,8 +1321,8 @@ void Editor::DrawUI_SfxFiles(UI &uiActionBar, double now)
     uiActionBar.Textbox(txtSearch, filter);
     uiActionBar.Newline();
 
-    for (data::SfxFile &sfxFile : data::pack1.sfx_files) {
-        if (!sfxFile.id) {
+    for (data::SfxFile &sfxFile : data::packs[0]->sfx_files) {
+        if (sfxFile.id.empty()) {
             continue;
         }
 
@@ -1340,22 +1340,25 @@ void Editor::DrawUI_SfxFiles(UI &uiActionBar, double now)
 
     uiActionBar.PopStyle();
 
-    if (state.sfxFiles.selectedSfx) {
+    if (!state.sfxFiles.selectedSfx.empty()) {
         const int labelWidth = 100;
-        data::SfxFile &sfxFile = data::pack1.sfx_files[state.sfxFiles.selectedSfx];
+        data::SfxFile *sfx_file = data::packs[0]->FindSound(state.sfxFiles.selectedSfx);
+        if (!sfx_file) {
+            state.sfxFiles.selectedSfx.clear();
+        }
 
         uiActionBar.Label("id", labelWidth);
-        uiActionBar.Text(TextFormat("%d", sfxFile.id));
+        uiActionBar.Text(TextFormat("%d", sfx_file->id));
         uiActionBar.Newline();
 
         uiActionBar.Label("path", labelWidth);
         static STB_TexteditState txtPath{};
-        uiActionBar.Textbox(txtPath, sfxFile.path);
+        uiActionBar.Textbox(txtPath, sfx_file->path);
         uiActionBar.Newline();
 
         uiActionBar.Label("pitch variance", labelWidth);
         static STB_TexteditState txtPitchVariance{};
-        uiActionBar.TextboxFloat(txtPitchVariance, sfxFile.pitch_variance);
+        uiActionBar.TextboxFloat(txtPitchVariance, sfx_file->pitch_variance);
         uiActionBar.Newline();
     }
 }
@@ -1479,7 +1482,7 @@ void Editor::DrawUI_PackFiles(UI &uiActionBar, double now)
                 case data::DAT_TYP_SFX_FILE:
                 {
                     data::SfxFile &sfxFile = pack.sfx_files[entry.index];
-                    desc = data::SfxFileIdStr(sfxFile.id);
+                    desc = sfxFile.id.c_str();
                     break;
                 }
                 case data::DAT_TYP_GFX_FRAME:

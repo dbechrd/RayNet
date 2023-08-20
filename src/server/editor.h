@@ -61,7 +61,7 @@ struct EditModeEntities {
 };
 
 struct EditModeSfxFiles {
-    int selectedSfx{};
+    std::string selectedSfx{};  // yuck :(
 };
 
 struct EditModePackFiles {

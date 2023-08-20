@@ -1,0 +1,6 @@
+# id                path                                pitch variance  multi
+sfx_soft_tick      "resources/sound/soft_tick.wav"      0.03            true
+sfx_campfire       "resources/sound/campfire.wav"       0.00            false
+sfx_footstep_grass "resources/sound/footstep_grass.wav" 0.00            true
+sfx_footstep_stone "resources/sound/footstep_stone.wav" 0.00            true
+sfx_fireball       "resources/sound/fireball.wav"       0.05            true

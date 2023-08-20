@@ -122,27 +122,23 @@ namespace data {
         std::string path        {};
         DatBuffer   data_buffer {};
         ::Music     music       {};
+
+        MusFile(void) = default;
+        MusFile(std::string id, std::string path) : id(id), path(path) {}
     };
 
-#define SFX_FILE_IDS(gen)        \
-    gen(SFX_FILE_NONE)           \
-    gen(SFX_FILE_SOFT_TICK)      \
-    gen(SFX_FILE_CAMPFIRE)       \
-    gen(SFX_FILE_FOOTSTEP_GRASS) \
-    gen(SFX_FILE_FOOTSTEP_STONE) \
-    gen(SFX_FILE_FIREBALL)
-
-    enum SfxFileId : uint16_t {
-        SFX_FILE_IDS(ENUM_GEN_VALUE)
-    };
     struct SfxFile {
         static const DataType dtype = DAT_TYP_SFX_FILE;
-        SfxFileId   id             {};
+        std::string id             {};
         std::string path           {};
         float       pitch_variance {};
         bool        multi          {};
         DatBuffer   data_buffer    {};
         ::Sound     sound          {};
+
+        SfxFile(void) = default;
+        SfxFile(std::string id, std::string path, float pitch_variance, bool multi)
+            : id(id), path(path), pitch_variance(pitch_variance), multi(multi) {}
     };
 
 #define GFX_FRAME_IDS(gen)           \
@@ -309,12 +305,12 @@ namespace data {
     };
     struct GfxAnim {
         static const DataType dtype = DAT_TYP_GFX_ANIM;
-        GfxAnimId  id          {};
-        SfxFileId  sound       {};
-        uint8_t    frame_rate  {};
-        uint8_t    frame_count {};
-        uint8_t    frame_delay {};
-        GfxFrameId frames[8]   {};
+        GfxAnimId   id          {};
+        std::string sound       {};
+        uint8_t     frame_rate  {};
+        uint8_t     frame_count {};
+        uint8_t     frame_delay {};
+        GfxFrameId  frames[8]   {};
 
         bool soundPlayed{};
     };
@@ -331,8 +327,8 @@ namespace data {
 
     struct Material {
         static const DataType dtype = DAT_TYP_MATERIAL;
-        MaterialId id          {};
-        SfxFileId  footstepSnd {};
+        MaterialId  id             {};
+        std::string footstep_sound {};
     };
 
 #define SPRITE_IDS(gen)        \
@@ -605,7 +601,8 @@ namespace data {
         std::vector<Sprite>   sprites    {};
         std::vector<TileType> tile_types {};
 
-        std::unordered_map<std::string, size_t> musFilesById{};
+        std::unordered_map<std::string, size_t> mus_files_by_id{};
+        std::unordered_map<std::string, size_t> sfx_files_by_id{};
 
         // static entities? (objects?)
         // - doors
@@ -628,13 +625,28 @@ namespace data {
 
         Pack(std::string path) : path(path) {}
 
-        MusFile &FindMusic(std::string id) {
-            const auto &entry = musFilesById.find(id);
-            if (entry == musFilesById.end()) {
-                return mus_files[0];
+        MusFile *FindMusic(std::string id) {
+            if (id.empty()) return 0;
+            const auto &entry = mus_files_by_id.find(id);
+            if (entry != mus_files_by_id.end()) {
+                return &mus_files[entry->second];
             } else {
-                return mus_files[entry->second];
+                TraceLog(LOG_WARNING, "Missing music: %s", id.c_str());
+                assert(!"woops");
             }
+            return 0;
+        }
+
+        SfxFile *FindSound(std::string id) {
+            if (id.empty()) return 0;
+            const auto &entry = sfx_files_by_id.find(id);
+            if (entry != sfx_files_by_id.end()) {
+                return &sfx_files[entry->second];
+            } else {
+                TraceLog(LOG_WARNING, "Missing sound: %s", id.c_str());
+                assert(!"woops");
+            }
+            return 0;
         }
     };
 
@@ -655,15 +667,14 @@ namespace data {
     const char *DataTypeStr(DataType type);
     const char *GfxFileIdStr(GfxFileId id);
     //const char *MusFileIdStr(MusFileId id);
-    const char *SfxFileIdStr(SfxFileId id);
+    //const char *SfxFileIdStr(SfxFileId id);
     const char *GfxFrameIdStr(GfxFrameId id);
     const char *GfxAnimIdStr(GfxAnimId id);
     const char *MaterialIdStr(MaterialId id);
     const char *TileTypeIdStr(TileTypeId id);
     const char *EntityTypeStr(EntityType type);
 
-    extern Pack pack1;
-    extern Pack *packs[1];
+    extern std::vector<Pack *> packs;
 
     void ReadFileIntoDataBuffer(std::string filename, DatBuffer &datBuffer);
     void FreeDataBuffer(DatBuffer &datBuffer);
@@ -675,9 +686,9 @@ namespace data {
     Err LoadPack(Pack &pack);
     void UnloadPack(Pack &pack);
 
-    void PlaySound(SfxFileId id, float pitchVariance = 0.0f);
-    bool IsSoundPlaying(SfxFileId id);
-    void StopSound(SfxFileId id);
+    void PlaySound(std::string id, float pitchVariance = 0.0f);
+    bool IsSoundPlaying(std::string id);
+    void StopSound(std::string id);
 
     const GfxFrame &GetSpriteFrame(const Entity &entity);
     void UpdateSprite(Entity &entity, double dt, bool newlySpawned);

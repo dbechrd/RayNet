@@ -1,4 +1,6 @@
 #include "data.h"
+#include <sstream>
+#include <iomanip>
 
 namespace data {
     Err LoadResources(Pack &pack);
@@ -14,7 +16,7 @@ namespace data {
     ENUM_STR_GENERATOR(DataType,   DATA_TYPES   , ENUM_GEN_CASE_RETURN_DESC);
     ENUM_STR_GENERATOR(GfxFileId,  GFX_FILE_IDS , ENUM_GEN_CASE_RETURN_STR);
     //ENUM_STR_GENERATOR(MusFileId,  MUS_FILE_IDS , ENUM_GEN_CASE_RETURN_STR);
-    ENUM_STR_GENERATOR(SfxFileId,  SFX_FILE_IDS , ENUM_GEN_CASE_RETURN_STR);
+    //ENUM_STR_GENERATOR(SfxFileId,  SFX_FILE_IDS , ENUM_GEN_CASE_RETURN_STR);
     ENUM_STR_GENERATOR(GfxFrameId, GFX_FRAME_IDS, ENUM_GEN_CASE_RETURN_STR);
     ENUM_STR_GENERATOR(GfxAnimId,  GFX_ANIM_IDS , ENUM_GEN_CASE_RETURN_STR);
     ENUM_STR_GENERATOR(MaterialId, MATERIAL_IDS , ENUM_GEN_CASE_RETURN_STR);
@@ -24,11 +26,7 @@ namespace data {
 
 #undef ENUM_STR_GENERATOR
 
-    Pack pack1{ "dat/test.dat" };
-
-    Pack *packs[1] = {
-        &pack1
-    };
+    std::vector<Pack *> packs{};
 
     struct GameState {
         bool freye_introduced;
@@ -65,14 +63,18 @@ namespace data {
         }
     }
 
+#if 0
 #define LINE_MAX 1024
 #define KEY_MAX  64
 #define PATH_MAX 512
-    Err LoadMusicIndex(std::string path, std::vector<MusFile> &mus_files)
+    Err LoadMusicIndexOrig(std::string path, std::vector<MusFile> &mus_files)
     {
+        double start = GetTime();
         Err err = RN_SUCCESS;
 
         char *buf = LoadFileText(path.c_str());
+        printf("C loaded file text in %f seconds\n", GetTime() - start);
+
         if (buf) {
             char buf_line[LINE_MAX + 1];
             char buf_key[KEY_MAX + 1];
@@ -106,11 +108,75 @@ namespace data {
             err = RN_BAD_FILE_READ;
         }
 
+        printf("C loaded %zu records in %f seconds\n", mus_files.size(), GetTime() - start);
         return err;
     }
 #undef LINE_MAX
 #undef KEY_MAX
 #undef PATH_MAX
+#endif
+
+    Err LoadMusicIndex(std::string path, std::vector<MusFile> &mus_files)
+    {
+        Err err = RN_SUCCESS;
+
+        std::ifstream inputFile(path);
+        if (inputFile.is_open()) {
+            std::string line;
+
+            while (std::getline(inputFile, line)) {
+                std::istringstream iss(line);
+
+                MusFile mus_file{};
+                if (iss
+                    >> mus_file.id
+                    >> std::quoted(mus_file.path)
+                    && mus_file.id[0] != '#'
+                ) {
+                    mus_files.push_back(mus_file);
+                }
+            }
+
+            inputFile.close();
+        } else {
+            assert(!"failed to read file");
+            err = RN_BAD_FILE_READ;
+        }
+
+        return err;
+    }
+
+    Err LoadSoundIndex(std::string path, std::vector<SfxFile> &sfx_files)
+    {
+        Err err = RN_SUCCESS;
+
+        std::ifstream inputFile(path);
+        if (inputFile.is_open()) {
+            std::string line;
+
+            while (std::getline(inputFile, line)) {
+                std::istringstream iss(line);
+
+                SfxFile sfx_file{};
+                if (iss
+                    >> sfx_file.id
+                    >> std::quoted(sfx_file.path)
+                    >> sfx_file.pitch_variance
+                    >> std::boolalpha >> sfx_file.multi
+                    && sfx_file.id[0] != '#'
+                ) {
+                    sfx_files.push_back(sfx_file);
+                }
+            }
+
+            inputFile.close();
+        } else {
+            assert(!"failed to read file");
+            err = RN_BAD_FILE_READ;
+        }
+
+        return err;
+    }
 
     void Init(void)
     {
@@ -138,15 +204,15 @@ namespace data {
         //    { "AMBIENT_CAVE",     "resources/music/copyright/69391__zixem__cave_amb.wav" },
         //};
 
-        SfxFile sfx_files[] = {
-            { SFX_FILE_NONE },
-            // id                       sound file path                      pitch variance  multi
-            { SFX_FILE_SOFT_TICK,      "resources/sound/soft_tick.wav"     , 0.03f,          true },
-            { SFX_FILE_CAMPFIRE,       "resources/sound/campfire.wav"      , 0.00f,          false },
-            { SFX_FILE_FOOTSTEP_GRASS, "resources/sound/footstep_grass.wav", 0.00f,          true },
-            { SFX_FILE_FOOTSTEP_STONE, "resources/sound/footstep_stone.wav", 0.00f,          true },
-            { SFX_FILE_FIREBALL,       "resources/sound/fireball.wav",       0.05f,          true },
-        };
+        //SfxFile sfx_files[] = {
+        //    { SFX_FILE_NONE },
+        //    // id                       sound file path                      pitch variance  multi
+        //    { SFX_FILE_SOFT_TICK,      "resources/sound/soft_tick.wav"     , 0.03f,          true },
+        //    { SFX_FILE_CAMPFIRE,       "resources/sound/campfire.wav"      , 0.00f,          false },
+        //    { SFX_FILE_FOOTSTEP_GRASS, "resources/sound/footstep_grass.wav", 0.00f,          true },
+        //    { SFX_FILE_FOOTSTEP_STONE, "resources/sound/footstep_stone.wav", 0.00f,          true },
+        //    { SFX_FILE_FIREBALL,       "resources/sound/fireball.wav",       0.05f,          true },
+        //};
 
         GfxFrame gfx_frames[] = {
             // id                       image file                x   y    w    h
@@ -236,91 +302,91 @@ namespace data {
         };
 
         GfxAnim gfx_anims[] = {
-            // id                         sound effect       frmRate  frmCount  frmDelay  frames
+            // id                       sound effect  frmRate  frmCount  frmDelay  frames
             { GFX_ANIM_NONE },
 
             // playable characters
-            { GFX_ANIM_CHR_MAGE_E,        SFX_FILE_NONE,          60,        1,        0, { GFX_FRAME_CHR_MAGE_E_0 }},
-            { GFX_ANIM_CHR_MAGE_W,        SFX_FILE_NONE,          60,        1,        0, { GFX_FRAME_CHR_MAGE_W_0 }},
+            { GFX_ANIM_CHR_MAGE_E,                "", 60, 1,        0, { GFX_FRAME_CHR_MAGE_E_0 }},
+            { GFX_ANIM_CHR_MAGE_W,                "", 60, 1,        0, { GFX_FRAME_CHR_MAGE_W_0 }},
 
             // npcs
-            { GFX_ANIM_NPC_LILY_E,        SFX_FILE_NONE,          60,        1,        0, { GFX_FRAME_NPC_LILY_E_0 }},
-            { GFX_ANIM_NPC_LILY_W,        SFX_FILE_NONE,          60,        1,        0, { GFX_FRAME_NPC_LILY_W_0 }},
-            { GFX_ANIM_NPC_FREYE_E,       SFX_FILE_NONE,          60,        1,        0, { GFX_FRAME_NPC_FREYE_E_0 }},
-            { GFX_ANIM_NPC_FREYE_W,       SFX_FILE_NONE,          60,        1,        0, { GFX_FRAME_NPC_FREYE_W_0 }},
-            { GFX_ANIM_NPC_NESSA_E,       SFX_FILE_NONE,          60,        1,        0, { GFX_FRAME_NPC_NESSA_E_0 }},
-            { GFX_ANIM_NPC_NESSA_W,       SFX_FILE_NONE,          60,        1,        0, { GFX_FRAME_NPC_NESSA_W_0 }},
-            { GFX_ANIM_NPC_ELANE_E,       SFX_FILE_NONE,          60,        1,        0, { GFX_FRAME_NPC_ELANE_E_0 }},
-            { GFX_ANIM_NPC_ELANE_W,       SFX_FILE_NONE,          60,        1,        0, { GFX_FRAME_NPC_ELANE_W_0 }},
+            { GFX_ANIM_NPC_LILY_E,                "", 60, 1,        0, { GFX_FRAME_NPC_LILY_E_0 }},
+            { GFX_ANIM_NPC_LILY_W,                "", 60, 1,        0, { GFX_FRAME_NPC_LILY_W_0 }},
+            { GFX_ANIM_NPC_FREYE_E,               "", 60, 1,        0, { GFX_FRAME_NPC_FREYE_E_0 }},
+            { GFX_ANIM_NPC_FREYE_W,               "", 60, 1,        0, { GFX_FRAME_NPC_FREYE_W_0 }},
+            { GFX_ANIM_NPC_NESSA_E,               "", 60, 1,        0, { GFX_FRAME_NPC_NESSA_E_0 }},
+            { GFX_ANIM_NPC_NESSA_W,               "", 60, 1,        0, { GFX_FRAME_NPC_NESSA_W_0 }},
+            { GFX_ANIM_NPC_ELANE_E,               "", 60, 1,        0, { GFX_FRAME_NPC_ELANE_E_0 }},
+            { GFX_ANIM_NPC_ELANE_W,               "", 60, 1,        0, { GFX_FRAME_NPC_ELANE_W_0 }},
 
             // objects
-            { GFX_ANIM_OBJ_CAMPFIRE,      SFX_FILE_CAMPFIRE,      60,        8,        4, { GFX_FRAME_OBJ_CAMPFIRE_0, GFX_FRAME_OBJ_CAMPFIRE_1, GFX_FRAME_OBJ_CAMPFIRE_2, GFX_FRAME_OBJ_CAMPFIRE_3, GFX_FRAME_OBJ_CAMPFIRE_4, GFX_FRAME_OBJ_CAMPFIRE_5, GFX_FRAME_OBJ_CAMPFIRE_6, GFX_FRAME_OBJ_CAMPFIRE_7 }},
+            { GFX_ANIM_OBJ_CAMPFIRE,  "sfx_campfire", 60, 8,        4, { GFX_FRAME_OBJ_CAMPFIRE_0, GFX_FRAME_OBJ_CAMPFIRE_1, GFX_FRAME_OBJ_CAMPFIRE_2, GFX_FRAME_OBJ_CAMPFIRE_3, GFX_FRAME_OBJ_CAMPFIRE_4, GFX_FRAME_OBJ_CAMPFIRE_5, GFX_FRAME_OBJ_CAMPFIRE_6, GFX_FRAME_OBJ_CAMPFIRE_7 }},
 
             // projectiles
-            { GFX_ANIM_PRJ_FIREBALL,      SFX_FILE_FIREBALL,      60,        1,        0, { GFX_FRAME_PRJ_FIREBALL_0 }},
+            { GFX_ANIM_PRJ_FIREBALL,  "sfx_fireball", 60, 1,        0, { GFX_FRAME_PRJ_FIREBALL_0 }},
 
             // tiles
-            { GFX_ANIM_TIL_GRASS,         SFX_FILE_NONE,          60,        1,        0, { GFX_FRAME_TIL_GRASS }},
-            { GFX_ANIM_TIL_STONE_PATH,    SFX_FILE_NONE,          60,        1,        0, { GFX_FRAME_TIL_STONE_PATH }},
-            { GFX_ANIM_TIL_WALL,          SFX_FILE_NONE,          60,        1,        0, { GFX_FRAME_TIL_WALL }},
-            { GFX_ANIM_TIL_WATER,         SFX_FILE_NONE,          60,        1,        0, { GFX_FRAME_TIL_WATER_0 }},
+            { GFX_ANIM_TIL_GRASS,                 "", 60, 1,        0, { GFX_FRAME_TIL_GRASS }},
+            { GFX_ANIM_TIL_STONE_PATH,            "", 60, 1,        0, { GFX_FRAME_TIL_STONE_PATH }},
+            { GFX_ANIM_TIL_WALL,                  "", 60, 1,        0, { GFX_FRAME_TIL_WALL }},
+            { GFX_ANIM_TIL_WATER,                 "", 60, 1,        0, { GFX_FRAME_TIL_WATER_0 }},
 
-            { GFX_ANIM_TIL_AUTO_GRASS_00, SFX_FILE_NONE,          60,        1,        0, { GFX_FRAME_TIL_AUTO_GRASS_00 }},
-            { GFX_ANIM_TIL_AUTO_GRASS_01, SFX_FILE_NONE,          60,        1,        0, { GFX_FRAME_TIL_AUTO_GRASS_01 }},
-            { GFX_ANIM_TIL_AUTO_GRASS_02, SFX_FILE_NONE,          60,        1,        0, { GFX_FRAME_TIL_AUTO_GRASS_02 }},
-            { GFX_ANIM_TIL_AUTO_GRASS_03, SFX_FILE_NONE,          60,        1,        0, { GFX_FRAME_TIL_AUTO_GRASS_03 }},
-            { GFX_ANIM_TIL_AUTO_GRASS_04, SFX_FILE_NONE,          60,        1,        0, { GFX_FRAME_TIL_AUTO_GRASS_04 }},
-            { GFX_ANIM_TIL_AUTO_GRASS_05, SFX_FILE_NONE,          60,        1,        0, { GFX_FRAME_TIL_AUTO_GRASS_05 }},
-            { GFX_ANIM_TIL_AUTO_GRASS_06, SFX_FILE_NONE,          60,        1,        0, { GFX_FRAME_TIL_AUTO_GRASS_06 }},
-            { GFX_ANIM_TIL_AUTO_GRASS_07, SFX_FILE_NONE,          60,        1,        0, { GFX_FRAME_TIL_AUTO_GRASS_07 }},
-            { GFX_ANIM_TIL_AUTO_GRASS_08, SFX_FILE_NONE,          60,        1,        0, { GFX_FRAME_TIL_AUTO_GRASS_08 }},
-            { GFX_ANIM_TIL_AUTO_GRASS_09, SFX_FILE_NONE,          60,        1,        0, { GFX_FRAME_TIL_AUTO_GRASS_09 }},
-            { GFX_ANIM_TIL_AUTO_GRASS_10, SFX_FILE_NONE,          60,        1,        0, { GFX_FRAME_TIL_AUTO_GRASS_10 }},
-            { GFX_ANIM_TIL_AUTO_GRASS_11, SFX_FILE_NONE,          60,        1,        0, { GFX_FRAME_TIL_AUTO_GRASS_11 }},
-            { GFX_ANIM_TIL_AUTO_GRASS_12, SFX_FILE_NONE,          60,        1,        0, { GFX_FRAME_TIL_AUTO_GRASS_12 }},
-            { GFX_ANIM_TIL_AUTO_GRASS_13, SFX_FILE_NONE,          60,        1,        0, { GFX_FRAME_TIL_AUTO_GRASS_13 }},
-            { GFX_ANIM_TIL_AUTO_GRASS_14, SFX_FILE_NONE,          60,        1,        0, { GFX_FRAME_TIL_AUTO_GRASS_14 }},
-            { GFX_ANIM_TIL_AUTO_GRASS_15, SFX_FILE_NONE,          60,        1,        0, { GFX_FRAME_TIL_AUTO_GRASS_15 }},
-            { GFX_ANIM_TIL_AUTO_GRASS_16, SFX_FILE_NONE,          60,        1,        0, { GFX_FRAME_TIL_AUTO_GRASS_16 }},
-            { GFX_ANIM_TIL_AUTO_GRASS_17, SFX_FILE_NONE,          60,        1,        0, { GFX_FRAME_TIL_AUTO_GRASS_17 }},
-            { GFX_ANIM_TIL_AUTO_GRASS_18, SFX_FILE_NONE,          60,        1,        0, { GFX_FRAME_TIL_AUTO_GRASS_18 }},
-            { GFX_ANIM_TIL_AUTO_GRASS_19, SFX_FILE_NONE,          60,        1,        0, { GFX_FRAME_TIL_AUTO_GRASS_19 }},
-            { GFX_ANIM_TIL_AUTO_GRASS_20, SFX_FILE_NONE,          60,        1,        0, { GFX_FRAME_TIL_AUTO_GRASS_20 }},
-            { GFX_ANIM_TIL_AUTO_GRASS_21, SFX_FILE_NONE,          60,        1,        0, { GFX_FRAME_TIL_AUTO_GRASS_21 }},
-            { GFX_ANIM_TIL_AUTO_GRASS_22, SFX_FILE_NONE,          60,        1,        0, { GFX_FRAME_TIL_AUTO_GRASS_22 }},
-            { GFX_ANIM_TIL_AUTO_GRASS_23, SFX_FILE_NONE,          60,        1,        0, { GFX_FRAME_TIL_AUTO_GRASS_23 }},
-            { GFX_ANIM_TIL_AUTO_GRASS_24, SFX_FILE_NONE,          60,        1,        0, { GFX_FRAME_TIL_AUTO_GRASS_24 }},
-            { GFX_ANIM_TIL_AUTO_GRASS_25, SFX_FILE_NONE,          60,        1,        0, { GFX_FRAME_TIL_AUTO_GRASS_25 }},
-            { GFX_ANIM_TIL_AUTO_GRASS_26, SFX_FILE_NONE,          60,        1,        0, { GFX_FRAME_TIL_AUTO_GRASS_26 }},
-            { GFX_ANIM_TIL_AUTO_GRASS_27, SFX_FILE_NONE,          60,        1,        0, { GFX_FRAME_TIL_AUTO_GRASS_27 }},
-            { GFX_ANIM_TIL_AUTO_GRASS_28, SFX_FILE_NONE,          60,        1,        0, { GFX_FRAME_TIL_AUTO_GRASS_28 }},
-            { GFX_ANIM_TIL_AUTO_GRASS_29, SFX_FILE_NONE,          60,        1,        0, { GFX_FRAME_TIL_AUTO_GRASS_29 }},
-            { GFX_ANIM_TIL_AUTO_GRASS_30, SFX_FILE_NONE,          60,        1,        0, { GFX_FRAME_TIL_AUTO_GRASS_30 }},
-            { GFX_ANIM_TIL_AUTO_GRASS_31, SFX_FILE_NONE,          60,        1,        0, { GFX_FRAME_TIL_AUTO_GRASS_31 }},
-            { GFX_ANIM_TIL_AUTO_GRASS_32, SFX_FILE_NONE,          60,        1,        0, { GFX_FRAME_TIL_AUTO_GRASS_32 }},
-            { GFX_ANIM_TIL_AUTO_GRASS_33, SFX_FILE_NONE,          60,        1,        0, { GFX_FRAME_TIL_AUTO_GRASS_33 }},
-            { GFX_ANIM_TIL_AUTO_GRASS_34, SFX_FILE_NONE,          60,        1,        0, { GFX_FRAME_TIL_AUTO_GRASS_34 }},
-            { GFX_ANIM_TIL_AUTO_GRASS_35, SFX_FILE_NONE,          60,        1,        0, { GFX_FRAME_TIL_AUTO_GRASS_35 }},
-            { GFX_ANIM_TIL_AUTO_GRASS_36, SFX_FILE_NONE,          60,        1,        0, { GFX_FRAME_TIL_AUTO_GRASS_36 }},
-            { GFX_ANIM_TIL_AUTO_GRASS_37, SFX_FILE_NONE,          60,        1,        0, { GFX_FRAME_TIL_AUTO_GRASS_37 }},
-            { GFX_ANIM_TIL_AUTO_GRASS_38, SFX_FILE_NONE,          60,        1,        0, { GFX_FRAME_TIL_AUTO_GRASS_38 }},
-            { GFX_ANIM_TIL_AUTO_GRASS_39, SFX_FILE_NONE,          60,        1,        0, { GFX_FRAME_TIL_AUTO_GRASS_39 }},
-            { GFX_ANIM_TIL_AUTO_GRASS_40, SFX_FILE_NONE,          60,        1,        0, { GFX_FRAME_TIL_AUTO_GRASS_40 }},
-            { GFX_ANIM_TIL_AUTO_GRASS_41, SFX_FILE_NONE,          60,        1,        0, { GFX_FRAME_TIL_AUTO_GRASS_41 }},
-            { GFX_ANIM_TIL_AUTO_GRASS_42, SFX_FILE_NONE,          60,        1,        0, { GFX_FRAME_TIL_AUTO_GRASS_42 }},
-            { GFX_ANIM_TIL_AUTO_GRASS_43, SFX_FILE_NONE,          60,        1,        0, { GFX_FRAME_TIL_AUTO_GRASS_43 }},
-            { GFX_ANIM_TIL_AUTO_GRASS_44, SFX_FILE_NONE,          60,        1,        0, { GFX_FRAME_TIL_AUTO_GRASS_44 }},
-            { GFX_ANIM_TIL_AUTO_GRASS_45, SFX_FILE_NONE,          60,        1,        0, { GFX_FRAME_TIL_AUTO_GRASS_45 }},
-            { GFX_ANIM_TIL_AUTO_GRASS_46, SFX_FILE_NONE,          60,        1,        0, { GFX_FRAME_TIL_AUTO_GRASS_46 }},
-            { GFX_ANIM_TIL_AUTO_GRASS_47, SFX_FILE_NONE,          60,        1,        0, { GFX_FRAME_TIL_AUTO_GRASS_47 }},
+            { GFX_ANIM_TIL_AUTO_GRASS_00,         "", 60, 1,        0, { GFX_FRAME_TIL_AUTO_GRASS_00 }},
+            { GFX_ANIM_TIL_AUTO_GRASS_01,         "", 60, 1,        0, { GFX_FRAME_TIL_AUTO_GRASS_01 }},
+            { GFX_ANIM_TIL_AUTO_GRASS_02,         "", 60, 1,        0, { GFX_FRAME_TIL_AUTO_GRASS_02 }},
+            { GFX_ANIM_TIL_AUTO_GRASS_03,         "", 60, 1,        0, { GFX_FRAME_TIL_AUTO_GRASS_03 }},
+            { GFX_ANIM_TIL_AUTO_GRASS_04,         "", 60, 1,        0, { GFX_FRAME_TIL_AUTO_GRASS_04 }},
+            { GFX_ANIM_TIL_AUTO_GRASS_05,         "", 60, 1,        0, { GFX_FRAME_TIL_AUTO_GRASS_05 }},
+            { GFX_ANIM_TIL_AUTO_GRASS_06,         "", 60, 1,        0, { GFX_FRAME_TIL_AUTO_GRASS_06 }},
+            { GFX_ANIM_TIL_AUTO_GRASS_07,         "", 60, 1,        0, { GFX_FRAME_TIL_AUTO_GRASS_07 }},
+            { GFX_ANIM_TIL_AUTO_GRASS_08,         "", 60, 1,        0, { GFX_FRAME_TIL_AUTO_GRASS_08 }},
+            { GFX_ANIM_TIL_AUTO_GRASS_09,         "", 60, 1,        0, { GFX_FRAME_TIL_AUTO_GRASS_09 }},
+            { GFX_ANIM_TIL_AUTO_GRASS_10,         "", 60, 1,        0, { GFX_FRAME_TIL_AUTO_GRASS_10 }},
+            { GFX_ANIM_TIL_AUTO_GRASS_11,         "", 60, 1,        0, { GFX_FRAME_TIL_AUTO_GRASS_11 }},
+            { GFX_ANIM_TIL_AUTO_GRASS_12,         "", 60, 1,        0, { GFX_FRAME_TIL_AUTO_GRASS_12 }},
+            { GFX_ANIM_TIL_AUTO_GRASS_13,         "", 60, 1,        0, { GFX_FRAME_TIL_AUTO_GRASS_13 }},
+            { GFX_ANIM_TIL_AUTO_GRASS_14,         "", 60, 1,        0, { GFX_FRAME_TIL_AUTO_GRASS_14 }},
+            { GFX_ANIM_TIL_AUTO_GRASS_15,         "", 60, 1,        0, { GFX_FRAME_TIL_AUTO_GRASS_15 }},
+            { GFX_ANIM_TIL_AUTO_GRASS_16,         "", 60, 1,        0, { GFX_FRAME_TIL_AUTO_GRASS_16 }},
+            { GFX_ANIM_TIL_AUTO_GRASS_17,         "", 60, 1,        0, { GFX_FRAME_TIL_AUTO_GRASS_17 }},
+            { GFX_ANIM_TIL_AUTO_GRASS_18,         "", 60, 1,        0, { GFX_FRAME_TIL_AUTO_GRASS_18 }},
+            { GFX_ANIM_TIL_AUTO_GRASS_19,         "", 60, 1,        0, { GFX_FRAME_TIL_AUTO_GRASS_19 }},
+            { GFX_ANIM_TIL_AUTO_GRASS_20,         "", 60, 1,        0, { GFX_FRAME_TIL_AUTO_GRASS_20 }},
+            { GFX_ANIM_TIL_AUTO_GRASS_21,         "", 60, 1,        0, { GFX_FRAME_TIL_AUTO_GRASS_21 }},
+            { GFX_ANIM_TIL_AUTO_GRASS_22,         "", 60, 1,        0, { GFX_FRAME_TIL_AUTO_GRASS_22 }},
+            { GFX_ANIM_TIL_AUTO_GRASS_23,         "", 60, 1,        0, { GFX_FRAME_TIL_AUTO_GRASS_23 }},
+            { GFX_ANIM_TIL_AUTO_GRASS_24,         "", 60, 1,        0, { GFX_FRAME_TIL_AUTO_GRASS_24 }},
+            { GFX_ANIM_TIL_AUTO_GRASS_25,         "", 60, 1,        0, { GFX_FRAME_TIL_AUTO_GRASS_25 }},
+            { GFX_ANIM_TIL_AUTO_GRASS_26,         "", 60, 1,        0, { GFX_FRAME_TIL_AUTO_GRASS_26 }},
+            { GFX_ANIM_TIL_AUTO_GRASS_27,         "", 60, 1,        0, { GFX_FRAME_TIL_AUTO_GRASS_27 }},
+            { GFX_ANIM_TIL_AUTO_GRASS_28,         "", 60, 1,        0, { GFX_FRAME_TIL_AUTO_GRASS_28 }},
+            { GFX_ANIM_TIL_AUTO_GRASS_29,         "", 60, 1,        0, { GFX_FRAME_TIL_AUTO_GRASS_29 }},
+            { GFX_ANIM_TIL_AUTO_GRASS_30,         "", 60, 1,        0, { GFX_FRAME_TIL_AUTO_GRASS_30 }},
+            { GFX_ANIM_TIL_AUTO_GRASS_31,         "", 60, 1,        0, { GFX_FRAME_TIL_AUTO_GRASS_31 }},
+            { GFX_ANIM_TIL_AUTO_GRASS_32,         "", 60, 1,        0, { GFX_FRAME_TIL_AUTO_GRASS_32 }},
+            { GFX_ANIM_TIL_AUTO_GRASS_33,         "", 60, 1,        0, { GFX_FRAME_TIL_AUTO_GRASS_33 }},
+            { GFX_ANIM_TIL_AUTO_GRASS_34,         "", 60, 1,        0, { GFX_FRAME_TIL_AUTO_GRASS_34 }},
+            { GFX_ANIM_TIL_AUTO_GRASS_35,         "", 60, 1,        0, { GFX_FRAME_TIL_AUTO_GRASS_35 }},
+            { GFX_ANIM_TIL_AUTO_GRASS_36,         "", 60, 1,        0, { GFX_FRAME_TIL_AUTO_GRASS_36 }},
+            { GFX_ANIM_TIL_AUTO_GRASS_37,         "", 60, 1,        0, { GFX_FRAME_TIL_AUTO_GRASS_37 }},
+            { GFX_ANIM_TIL_AUTO_GRASS_38,         "", 60, 1,        0, { GFX_FRAME_TIL_AUTO_GRASS_38 }},
+            { GFX_ANIM_TIL_AUTO_GRASS_39,         "", 60, 1,        0, { GFX_FRAME_TIL_AUTO_GRASS_39 }},
+            { GFX_ANIM_TIL_AUTO_GRASS_40,         "", 60, 1,        0, { GFX_FRAME_TIL_AUTO_GRASS_40 }},
+            { GFX_ANIM_TIL_AUTO_GRASS_41,         "", 60, 1,        0, { GFX_FRAME_TIL_AUTO_GRASS_41 }},
+            { GFX_ANIM_TIL_AUTO_GRASS_42,         "", 60, 1,        0, { GFX_FRAME_TIL_AUTO_GRASS_42 }},
+            { GFX_ANIM_TIL_AUTO_GRASS_43,         "", 60, 1,        0, { GFX_FRAME_TIL_AUTO_GRASS_43 }},
+            { GFX_ANIM_TIL_AUTO_GRASS_44,         "", 60, 1,        0, { GFX_FRAME_TIL_AUTO_GRASS_44 }},
+            { GFX_ANIM_TIL_AUTO_GRASS_45,         "", 60, 1,        0, { GFX_FRAME_TIL_AUTO_GRASS_45 }},
+            { GFX_ANIM_TIL_AUTO_GRASS_46,         "", 60, 1,        0, { GFX_FRAME_TIL_AUTO_GRASS_46 }},
+            { GFX_ANIM_TIL_AUTO_GRASS_47,         "", 60, 1,        0, { GFX_FRAME_TIL_AUTO_GRASS_47 }},
         };
 
         Material materials[] = {
-            { MATERIAL_NONE },
-            // id             footstep sound
-            { MATERIAL_GRASS, SFX_FILE_FOOTSTEP_GRASS },
-            { MATERIAL_STONE, SFX_FILE_FOOTSTEP_STONE },
-            { MATERIAL_WATER, SFX_FILE_FOOTSTEP_GRASS },
+            // id              footstep sound
+            { MATERIAL_NONE , "sfx_none" },
+            { MATERIAL_GRASS, "sfx_footstep_grass" },
+            { MATERIAL_STONE, "sfx_footstep_stone" },
+            { MATERIAL_WATER, "sfx_footstep_grass" },
         };
 
         Sprite sprites[] = {
@@ -419,6 +485,13 @@ namespace data {
             TraceLog(LOG_ERROR, "Failed to load music index.\n");
         }
 
+        std::vector<SfxFile> sfx_files{};
+        err = LoadSoundIndex("resources/sound/index.txt", sfx_files);
+        if (err) {
+            assert(!err);
+            TraceLog(LOG_ERROR, "Failed to load sound index.\n");
+        }
+
         // Ensure every array element is initialized and in contiguous order by id
         #define ID_CHECK(type, name, arr) \
             for (type name : arr) { \
@@ -428,7 +501,7 @@ namespace data {
 
         ID_CHECK(GfxFile  &, gfx_file,  gfx_files);
         //ID_CHECK(MusFile  &, mus_file,   mus_files);
-        ID_CHECK(SfxFile  &, sfx_file,  sfx_files);
+        //ID_CHECK(SfxFile  &, sfx_file,  sfx_files);
         ID_CHECK(GfxFrame &, gfx_frame, gfx_frames);
         ID_CHECK(GfxAnim  &, gfx_anim,  gfx_anims);
         ID_CHECK(Material &, material,  materials);
@@ -453,7 +526,11 @@ namespace data {
             assert(!err);
             TraceLog(LOG_ERROR, "Failed to save data file.\n");
         }
-        err = LoadPack(pack1);
+
+        Pack *pack1 = new Pack{ "dat/test.dat" };
+        packs.push_back(pack1);
+
+        err = LoadPack(*pack1);
         if (err) {
             assert(!err);
             TraceLog(LOG_ERROR, "Failed to load data file.\n");
@@ -479,10 +556,19 @@ namespace data {
 
     void Free(void)
     {
-        UnloadPack(pack1);
+        // NOTE(dlb): ~Material is crashing for unknown reason. double free or trying to free string constant??
+        // NOTE(dlb): delete pack takes *forever*. Who cares. Let OS figure it out.
+#ifndef FAST_EXIT_SKIP_FREE
+        for (auto pack : packs) {
+            UnloadPack(*pack);
+            delete pack;
+        }
+        packs.clear();
+
         for (auto &fileText : dialog_library.dialog_files) {
             UnloadFileText((char *)fileText);
         }
+#endif
     }
 
 #define PROC(v) stream.process(&v, sizeof(v), 1, stream.f);
@@ -531,7 +617,7 @@ namespace data {
         //}
 
         if (stream.mode == PACK_MODE_READ) {
-            stream.pack->musFilesById[mus_file.id] = index;
+            stream.pack->mus_files_by_id[mus_file.id] = index;
         }
     }
 
@@ -544,6 +630,10 @@ namespace data {
         PROC(sfx_file.multi);
         if (stream.mode == PACK_MODE_READ && !sfx_file.data_buffer.length && !sfx_file.path.empty()) {
             ReadFileIntoDataBuffer(sfx_file.path.c_str(), sfx_file.data_buffer);
+        }
+
+        if (stream.mode == PACK_MODE_READ) {
+            stream.pack->sfx_files_by_id[sfx_file.id] = index;
         }
     }
 
@@ -573,7 +663,7 @@ namespace data {
     void Process(PackStream &stream, Material &material, int index)
     {
         PROC(material.id);
-        PROC(material.footstepSnd);
+        PROC(material.footstep_sound);
     }
 
     void Process(PackStream &stream, Sprite &sprite, int index) {
@@ -821,11 +911,11 @@ namespace data {
 
         ID_CHECK(GfxFile  &, gfx_file,  pack.gfx_files);
         //ID_CHECK(MusFile  &, mus_file,  pack.mus_files);
-        ID_CHECK(SfxFile  &, sfx_file, pack.sfx_files);
+        //ID_CHECK(SfxFile  &, sfx_file,  pack.sfx_files);
         ID_CHECK(GfxFrame &, gfx_frame, pack.gfx_frames);
         ID_CHECK(GfxAnim  &, gfx_anim,  pack.gfx_anims);
-        ID_CHECK(Material &, material, pack.materials);
-        ID_CHECK(Sprite   &, sprite,   pack.sprites);
+        ID_CHECK(Material &, material,  pack.materials);
+        ID_CHECK(Sprite   &, sprite,    pack.sprites);
         ID_CHECK(TileType &, tile_type, pack.tile_types);
 #undef ID_CHECK
 
@@ -940,47 +1030,49 @@ namespace data {
         }
     }
 
-    void PlaySound(SfxFileId id, float pitchVariance)
+    void PlaySound(std::string id, float pitchVariance)
     {
-        SfxFile &sfxFile = pack1.sfx_files[id];
-        float variance = pitchVariance ? pitchVariance : sfxFile.pitch_variance;
-        SetSoundPitch(sfxFile.sound, 1.0f + GetRandomFloatVariance(variance));
+        SfxFile *sfx_file = packs[0]->FindSound(id);
+        if (!sfx_file) return;
 
-        if (sfxFile.multi) {
-            PlaySoundMulti(sfxFile.sound);
-        } else if (!IsSoundPlaying(sfxFile.sound)) {
-            PlaySound(sfxFile.sound);
+        float variance = pitchVariance ? pitchVariance : sfx_file->pitch_variance;
+        SetSoundPitch(sfx_file->sound, 1.0f + GetRandomFloatVariance(variance));
+
+        if (sfx_file->multi) {
+            PlaySoundMulti(sfx_file->sound);
+        } else if (!IsSoundPlaying(sfx_file->sound)) {
+            PlaySound(sfx_file->sound);
         }
     }
 
-    bool IsSoundPlaying(SfxFileId id)
+    bool IsSoundPlaying(std::string id)
     {
-        SfxFile &sfx_file = pack1.sfx_files[id];
-        return IsSoundPlaying(sfx_file.sound);
+        bool playing = false;
+
+        SfxFile *sfx_file = packs[0]->FindSound(id);
+        if (sfx_file) {
+            playing = IsSoundPlaying(sfx_file->sound);
+        }
+        return playing;
     }
 
-    void StopSound(SfxFileId id)
+    void StopSound(std::string id)
     {
-        SfxFile &sfxFile = pack1.sfx_files[id];
-
-        StopSound(sfxFile.sound);
-
-        //if (sfx_file.multi) {
-        //    StopSoundMulti();
-        //} else {
-        //    StopSound(sfx_file.sound);
-        //}
+        SfxFile *sfx_file = packs[0]->FindSound(id);
+        if (sfx_file) {
+            StopSound(sfx_file->sound);
+        }
     }
 
     const GfxFrame &GetSpriteFrame(const Entity &entity)
     {
-        const Sprite sprite = pack1.sprites[entity.sprite];
+        const Sprite sprite = packs[0]->sprites[entity.sprite];
 
         const GfxAnimId anim_id = sprite.anims[entity.direction];
-        const GfxAnim &anim = pack1.gfx_anims[anim_id];
+        const GfxAnim &anim = packs[0]->gfx_anims[anim_id];
 
         const GfxFrameId frame_id = anim.frames[entity.anim_frame];
-        const GfxFrame &frame = pack1.gfx_frames[frame_id];
+        const GfxFrame &frame = packs[0]->gfx_frames[frame_id];
 
         return frame;
     }
@@ -1000,9 +1092,9 @@ namespace data {
             }
         }
 
-        const Sprite sprite = pack1.sprites[entity.sprite];
+        const Sprite sprite = packs[0]->sprites[entity.sprite];
         const GfxAnimId anim_id = sprite.anims[entity.direction];
-        const GfxAnim &anim = pack1.gfx_anims[anim_id];
+        const GfxAnim &anim = packs[0]->gfx_anims[anim_id];
         const double anim_frame_time = (1.0 / anim.frame_rate) * anim.frame_delay;
         if (entity.anim_accum >= anim_frame_time) {
             entity.anim_frame++;
@@ -1012,20 +1104,22 @@ namespace data {
             entity.anim_accum -= anim_frame_time;
         }
 
-        if (newlySpawned && anim.sound) {
-            PlaySound(anim.sound);
+        if (newlySpawned) {
+            SfxFile *sfx_file = packs[0]->FindSound(anim.sound);
+            if (sfx_file) {
+                PlaySound(sfx_file->sound);
+            }
         }
     }
     void ResetSprite(Entity &entity)
     {
-        const Sprite sprite = pack1.sprites[entity.sprite];
+        const Sprite sprite = packs[0]->sprites[entity.sprite];
         const GfxAnimId anim_id = sprite.anims[entity.direction];
-        const GfxAnim &anim = pack1.gfx_anims[anim_id];
-        if (anim.sound) {
-            const SfxFile &sfx_file = pack1.sfx_files[anim.sound];
-            if (IsSoundPlaying(sfx_file.sound)) {
-                StopSound(sfx_file.sound);
-            }
+        const GfxAnim &anim = packs[0]->gfx_anims[anim_id];
+
+        const SfxFile *sfx_file = packs[0]->FindSound(anim.sound);
+        if (sfx_file && IsSoundPlaying(sfx_file->sound)) {
+            StopSound(sfx_file->sound);
         }
 
         entity.anim_frame = 0;
@@ -1034,7 +1128,7 @@ namespace data {
     void DrawSprite(const Entity &entity, Vector2 pos)
     {
         const GfxFrame &frame = GetSpriteFrame(entity);
-        const GfxFile &file = pack1.gfx_files[frame.gfx];
+        const GfxFile &file = packs[0]->gfx_files[frame.gfx];
         const Rectangle frame_rec{ (float)frame.x, (float)frame.y, (float)frame.w, (float)frame.h };
         //pos.x = floor(pos.x);
         //pos.y = floor(pos.y);

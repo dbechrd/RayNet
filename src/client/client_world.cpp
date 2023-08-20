@@ -88,9 +88,9 @@ Tilemap *ClientWorld::FindOrLoadMap(uint32_t map_id)
 
     if (map) {
         switch (map->id) {
-            case 1: musBackgroundMusic = "AMBIENT_OUTDOORS"; break;
-            case 2: musBackgroundMusic = "AMBIENT_CAVE"; break;
-            default: musBackgroundMusic = "NONE"; break;
+            case 1: musBackgroundMusic = "mus_ambient_outdoors"; break;
+            case 2: musBackgroundMusic = "mus_ambient_cave"; break;
+            default: musBackgroundMusic = "mus_none"; break;
         }
     }
 

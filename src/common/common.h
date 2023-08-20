@@ -79,6 +79,8 @@
 #define CL_YJ_LOG_LEVEL             YOJIMBO_LOG_LEVEL_INFO
 #endif
 
+#define FAST_EXIT_SKIP_FREE 1
+
 #define SV_PORT                              4040 //40000
 #define SV_TICK_DT                           (1.0/30.0)
 #define SV_MAX_PLAYERS                       8
