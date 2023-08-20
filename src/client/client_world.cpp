@@ -641,14 +641,34 @@ void ClientWorld::Draw(GameClient &client)
     //--------------------
     // Draw the entities
     cursorWorldPos = GetScreenToWorld2D(GetMousePosition(), camera2d);
+
+    // Using a custom function object to compare elements.
+    struct EntityDrawCmd {
+        uint32_t entity_id{};
+        float y_pos{};
+
+        EntityDrawCmd(uint32_t entity_id, float y_pos) : entity_id(entity_id), y_pos(y_pos) {}
+        bool operator<(const EntityDrawCmd& rhs) const {
+            return y_pos > rhs.y_pos;  // backwards on purpose cus who cares. it works.
+        }
+    };
+    std::priority_queue<EntityDrawCmd> sortedEntityIds{};
+
     for (data::Entity &entity : entityDb->entities) {
         if (!entity.type || entity.despawned_at || entity.map_id != map->id) {
             continue;
         }
         assert(entity.id);
-        DrawEntitySnapshotShadows(entity.id, client.controller, client.now, client.frameDt);
-        entityDb->DrawEntity(entity.id);
+        sortedEntityIds.emplace(entity.id, entity.position.y);
     }
+
+    while (!sortedEntityIds.empty()) {
+        const EntityDrawCmd &drawCmd = sortedEntityIds.top();
+        DrawEntitySnapshotShadows(drawCmd.entity_id, client.controller, client.now, client.frameDt);
+        entityDb->DrawEntity(drawCmd.entity_id);
+        sortedEntityIds.pop();
+    }
+
     EndMode2D();
 
     //--------------------
