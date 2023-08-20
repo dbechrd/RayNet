@@ -25,7 +25,7 @@ struct EntityDB {
     void EntityTick(data::Entity &entity, double dt);
     void EntityTick(uint32_t entityId, double dt);
 
-    void DrawEntityIds(uint32_t mapId, Camera2D &camera);
+    void DrawEntityIds(uint32_t map_id, Camera2D &camera);
     void DrawEntityHoverInfo(uint32_t entityId);
     void DrawEntity(uint32_t entityId);
 };

@@ -459,6 +459,7 @@ namespace data {
 
     struct EntityProto {
         EntityType  type            {};
+        std::string name            {};
         float       radius          {};
         std::string dialog_root_key {};
         float       hp_max          {};
@@ -473,13 +474,14 @@ namespace data {
         static const DataType dtype = DAT_TYP_ENTITY;
 
         //// Entity ////
-        uint32_t   id           {};
-        uint32_t   map_id       {};
-        EntityType type         {};
-        uint32_t   caused_by    {};
-        double     spawned_at   {};
-        double     despawned_at {};
-        Vector2    position     {};
+        uint32_t    id           {};
+        uint32_t    map_id       {};
+        EntityType  type         {};
+        std::string name         {};
+        uint32_t    caused_by    {};
+        double      spawned_at   {};
+        double      despawned_at {};
+        Vector2     position     {};
 
         // TODO: Separate this out into its own array?
         uint32_t freelist_next {};

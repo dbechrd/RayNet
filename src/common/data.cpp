@@ -65,8 +65,57 @@ namespace data {
         }
     }
 
+#define LINE_MAX 1024
+#define KEY_MAX  64
+#define PATH_MAX 512
+    Err LoadMusicIndex(std::string path, std::vector<MusFile> &mus_files)
+    {
+        Err err = RN_SUCCESS;
+
+        char *buf = LoadFileText(path.c_str());
+        if (buf) {
+            char buf_line[LINE_MAX + 1];
+            char buf_key[KEY_MAX + 1];
+            char buf_path[PATH_MAX + 1];
+
+            char *cur = buf;
+            int bytes_read = 0;
+
+            while (sscanf(cur, "%" STRSTR(LINE_MAX) "[^\n]\n%n", buf_line, &bytes_read) == 1) {
+                cur += bytes_read;
+                bytes_read = 0;
+
+                char closing_quote = 0;
+                int arg_count = sscanf(buf_line,
+                    "%" STRSTR(KEY_MAX) "[A-Za-z0-9_] \"%" STRSTR(PATH_MAX) "[^\"]%c",
+                    buf_key, buf_path, &closing_quote);
+
+                if (arg_count != 3 || closing_quote != '\"') {
+                    continue;
+                }
+
+                MusFile mus_file{};
+                mus_file.id = buf_key;
+                mus_file.path = buf_path;
+                mus_files.push_back(mus_file);
+            }
+
+            UnloadFileText(buf);
+        } else {
+            assert(!"failed to read file");
+            err = RN_BAD_FILE_READ;
+        }
+
+        return err;
+    }
+#undef LINE_MAX
+#undef KEY_MAX
+#undef PATH_MAX
+
     void Init(void)
     {
+        Err err = RN_SUCCESS;
+
         GfxFile gfx_files[] = {
             { GFX_FILE_NONE },
             // id                       texture path
@@ -82,16 +131,16 @@ namespace data {
             { GFX_FILE_TIL_AUTO_GRASS, "resources/texture/autotile_3x3_min.png" },
         };
 
-        MusFile mus_files[] = {
-            { "NONE" },
-            // id                  music file path
-            { "AMBIENT_OUTDOORS", "resources/music/copyright/345470__philip_goddard__branscombe-landslip-birds-and-sea-echoes-ese-from-cave-track.ogg" },
-            { "AMBIENT_CAVE",     "resources/music/copyright/69391__zixem__cave_amb.wav" },
-        };
+        //MusFile mus_files[] = {
+        //    { "NONE" },
+        //    // id                  music file path
+        //    { "AMBIENT_OUTDOORS", "resources/music/copyright/345470__philip_goddard__branscombe-landslip-birds-and-sea-echoes-ese-from-cave-track.ogg" },
+        //    { "AMBIENT_CAVE",     "resources/music/copyright/69391__zixem__cave_amb.wav" },
+        //};
 
         SfxFile sfx_files[] = {
             { SFX_FILE_NONE },
-            // id                       sound file path                pitch variance  multi
+            // id                       sound file path                      pitch variance  multi
             { SFX_FILE_SOFT_TICK,      "resources/sound/soft_tick.wav"     , 0.03f,          true },
             { SFX_FILE_CAMPFIRE,       "resources/sound/campfire.wav"      , 0.00f,          false },
             { SFX_FILE_FOOTSTEP_GRASS, "resources/sound/footstep_grass.wav", 0.00f,          true },
@@ -363,6 +412,13 @@ namespace data {
 
         dialog_library.RegisterListener("DIALOG_FREYE_INTRO", FreyeIntroListener);
 
+        std::vector<MusFile> mus_files{};
+        err = LoadMusicIndex("resources/music/index.txt", mus_files);
+        if (err) {
+            assert(!err);
+            TraceLog(LOG_ERROR, "Failed to load music index.\n");
+        }
+
         // Ensure every array element is initialized and in contiguous order by id
         #define ID_CHECK(type, name, arr) \
             for (type name : arr) { \
@@ -392,7 +448,6 @@ namespace data {
 
         LoadResources(packHardcoded);
 
-        Err err = RN_SUCCESS;
         err = SavePack(packHardcoded);
         if (err) {
             assert(!err);
@@ -452,7 +507,7 @@ namespace data {
         }
     }
 
-    void Process(PackStream &stream, GfxFile &gfx_file)
+    void Process(PackStream &stream, GfxFile &gfx_file, int index)
     {
         PROC(gfx_file.id);
         Process(stream, gfx_file.path);
@@ -462,7 +517,7 @@ namespace data {
         }
     }
 
-    void Process(PackStream &stream, MusFile &mus_file)
+    void Process(PackStream &stream, MusFile &mus_file, int index)
     {
         Process(stream, mus_file.id);
         Process(stream, mus_file.path);
@@ -474,9 +529,13 @@ namespace data {
         //if (stream.mode == PACK_MODE_READ && !mus_file.data_buffer.length && !mus_file.path.empty()) {
         //    ReadFileIntoDataBuffer(mus_file.path.c_str(), mus_file.data_buffer);
         //}
+
+        if (stream.mode == PACK_MODE_READ) {
+            stream.pack->musFilesById[mus_file.id] = index;
+        }
     }
 
-    void Process(PackStream &stream, SfxFile &sfx_file)
+    void Process(PackStream &stream, SfxFile &sfx_file, int index)
     {
         PROC(sfx_file.id);
         Process(stream, sfx_file.path);
@@ -488,7 +547,7 @@ namespace data {
         }
     }
 
-    void Process(PackStream &stream, GfxFrame &gfx_frame)
+    void Process(PackStream &stream, GfxFrame &gfx_frame, int index)
     {
         PROC(gfx_frame.id);
         PROC(gfx_frame.gfx);
@@ -498,7 +557,7 @@ namespace data {
         PROC(gfx_frame.h);
     }
 
-    void Process(PackStream &stream, GfxAnim &gfx_anim)
+    void Process(PackStream &stream, GfxAnim &gfx_anim, int index)
     {
         PROC(gfx_anim.id);
         PROC(gfx_anim.sound);
@@ -511,13 +570,13 @@ namespace data {
         }
     }
 
-    void Process(PackStream &stream, Material &material)
+    void Process(PackStream &stream, Material &material, int index)
     {
         PROC(material.id);
         PROC(material.footstepSnd);
     }
 
-    void Process(PackStream &stream, Sprite &sprite) {
+    void Process(PackStream &stream, Sprite &sprite, int index) {
         PROC(sprite.id);
         assert(ARRAY_SIZE(sprite.anims) == 8); // if this changes, version must increment
         for (int i = 0; i < 8; i++) {
@@ -525,7 +584,7 @@ namespace data {
         }
     }
 
-    void Process(PackStream &stream, TileType &tile_type)
+    void Process(PackStream &stream, TileType &tile_type, int index)
     {
         PROC(tile_type.id);
         PROC(tile_type.anim);
@@ -534,7 +593,7 @@ namespace data {
         PROC(tile_type.auto_tile_mask);
     }
 
-    void Process(PackStream &stream, Entity &entity)
+    void Process(PackStream &stream, Entity &entity, int index)
     {
         bool alive = entity.id && !entity.despawned_at && entity.type;
         PROC(alive);
@@ -645,12 +704,11 @@ namespace data {
         PROC(pack.toc_offset);
 
         if (stream.mode == PACK_MODE_WRITE) {
-
-#define WRITE_ARRAY(arr) \
-    for (auto &i : arr) { \
-        pack.toc.entries.push_back(PackTocEntry(i.dtype, ftell(stream.f))); \
-        Process(stream, i); \
-    }
+            #define WRITE_ARRAY(arr) \
+                for (auto &i : arr) { \
+                    pack.toc.entries.push_back(PackTocEntry(i.dtype, ftell(stream.f))); \
+                    Process(stream, i, 0); \
+                }
 
             // TODO: These should all be pack.blah after we've removed the
             // static data and switched to pack editing
@@ -664,7 +722,7 @@ namespace data {
             WRITE_ARRAY(pack.tile_types);
             WRITE_ARRAY(pack.entities);
 
-#undef WRITE_ARRAY
+            #undef WRITE_ARRAY
 
             int tocOffset = ftell(stream.f);
             int entryCount = (int)pack.toc.entries.size();
@@ -708,15 +766,15 @@ namespace data {
                 int &nextIndex = typeNextIndex[tocEntry.dtype];
                 tocEntry.index = nextIndex;
                 switch (tocEntry.dtype) {
-                    case DAT_TYP_GFX_FILE:  Process(stream, pack.gfx_files [nextIndex]); break;
-                    case DAT_TYP_MUS_FILE:  Process(stream, pack.mus_files [nextIndex]); break;
-                    case DAT_TYP_SFX_FILE:  Process(stream, pack.sfx_files [nextIndex]); break;
-                    case DAT_TYP_GFX_FRAME: Process(stream, pack.gfx_frames[nextIndex]); break;
-                    case DAT_TYP_GFX_ANIM:  Process(stream, pack.gfx_anims [nextIndex]); break;
-                    case DAT_TYP_MATERIAL:  Process(stream, pack.materials [nextIndex]); break;
-                    case DAT_TYP_SPRITE:    Process(stream, pack.sprites   [nextIndex]); break;
-                    case DAT_TYP_TILE_TYPE: Process(stream, pack.tile_types[nextIndex]); break;
-                    case DAT_TYP_ENTITY:    Process(stream, pack.entities  [nextIndex]); break;
+                    case DAT_TYP_GFX_FILE:  Process(stream, pack.gfx_files [nextIndex], nextIndex); break;
+                    case DAT_TYP_MUS_FILE:  Process(stream, pack.mus_files [nextIndex], nextIndex); break;
+                    case DAT_TYP_SFX_FILE:  Process(stream, pack.sfx_files [nextIndex], nextIndex); break;
+                    case DAT_TYP_GFX_FRAME: Process(stream, pack.gfx_frames[nextIndex], nextIndex); break;
+                    case DAT_TYP_GFX_ANIM:  Process(stream, pack.gfx_anims [nextIndex], nextIndex); break;
+                    case DAT_TYP_MATERIAL:  Process(stream, pack.materials [nextIndex], nextIndex); break;
+                    case DAT_TYP_SPRITE:    Process(stream, pack.sprites   [nextIndex], nextIndex); break;
+                    case DAT_TYP_TILE_TYPE: Process(stream, pack.tile_types[nextIndex], nextIndex); break;
+                    case DAT_TYP_ENTITY:    Process(stream, pack.entities  [nextIndex], nextIndex); break;
                 }
                 nextIndex++;
             }

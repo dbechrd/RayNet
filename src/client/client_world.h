@@ -32,7 +32,7 @@ struct ClientWorld {
     data::Entity *LocalPlayer(void);
     Tilemap *LocalPlayerMap(void);
 
-    Tilemap *FindOrLoadMap(uint32_t mapId);
+    Tilemap *FindOrLoadMap(uint32_t map_id);
 
     bool CopyEntityData(uint32_t entityId, EntityData &data);
 

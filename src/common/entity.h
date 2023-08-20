@@ -5,22 +5,22 @@
 struct Msg_S_EntitySnapshot;
 
 struct GhostSnapshot {
-    double   serverTime {};
+    double   server_time {};
 
     // Entity
-    uint32_t map_id     {};
-    Vector2  position   {};
+    uint32_t map_id      {};
+    Vector2  position    {};
 
     // Physics
-    float    speed      {};
-    Vector2  velocity   {};
+    float    speed       {};
+    Vector2  velocity    {};
 
     // Life
-    int      hp_max     {};
-    int      hp         {};
+    int      hp_max      {};
+    int      hp          {};
 
     // TODO: Wtf do I do with this shit?
-    uint32_t lastProcessedInputCmd {};
+    uint32_t last_processed_input_cmd {};
 
     GhostSnapshot(void) {}
     GhostSnapshot(Msg_S_EntitySnapshot &msg);

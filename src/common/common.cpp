@@ -66,7 +66,7 @@ Err InitCommon(void)
     fntSmall = dlb_LoadFontEx(fontName, 18, 0, 0, FONT_DEFAULT);
     if (!fntSmall.baseSize) err = RN_RAYLIB_ERROR;
 
-    fntMedium = dlb_LoadFontEx(fontName, 24, 0, 0, FONT_DEFAULT);
+    fntMedium = dlb_LoadFontEx(fontName, 20, 0, 0, FONT_DEFAULT);
     if (!fntMedium.baseSize) err = RN_RAYLIB_ERROR;
 
     fntBig = dlb_LoadFontEx(fontName, 46, 0, 0, FONT_DEFAULT);

@@ -3,13 +3,13 @@
 
 struct Msg_C_TileInteract : public yojimbo::Message
 {
-    uint32_t mapId{};
+    uint32_t map_id{};
     uint32_t x{};
     uint32_t y{};
 
     template <typename Stream> bool Serialize(Stream &stream)
     {
-        serialize_uint32(stream, mapId);
+        serialize_uint32(stream, map_id);
         serialize_uint32(stream, x);
         serialize_uint32(stream, y);
         return true;

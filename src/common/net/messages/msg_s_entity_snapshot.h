@@ -4,39 +4,39 @@
 
 struct Msg_S_EntitySnapshot : public yojimbo::Message
 {
-    double      serverTime {};
+    double            server_time {};
 
     // Entity
-    uint32_t          entityId   {};
+    uint32_t          entity_id  {};
     data::EntityType  type       {};  // doesn't change, but needed for switch statements in deserializer
-    uint32_t          mapId      {};
+    uint32_t          map_id     {};
     Vector2           position   {};
 
     // Collision
     //float       radius     {};  // when would this ever change? doesn't.. for now.
 
+    // Life
+    int         hp_max  {};
+    int         hp      {};
+
     // Physics
     float       speed      {};
     Vector2     velocity   {};
 
-    // Life
-    int         maxHealth  {};
-    int         health     {};
-
     // Only for Entity_Player
     // TODO: Only send this to the player who actually owns this player entity,
     //       otherwise we're leaking info about other players' connections.
-    int         clientIdx  {};  // TODO: Populate this for lastprocessinputcmd
-    uint32_t    lastProcessedInputCmd {};
+    int         client_idx  {};  // TODO: Populate this for lastprocessinputcmd
+    uint32_t    last_processed_input_cmd {};
 
     template <typename Stream> bool Serialize(Stream &stream)
     {
-        serialize_double(stream, serverTime);
+        serialize_double(stream, server_time);
 
         // Entity
-        serialize_uint32(stream, entityId);
+        serialize_uint32(stream, entity_id);
         serialize_uint32(stream, (uint32_t &)type);
-        serialize_uint32(stream, mapId);
+        serialize_uint32(stream, map_id);
         serialize_float(stream, position.x);
         serialize_float(stream, position.y);
 
@@ -56,8 +56,8 @@ struct Msg_S_EntitySnapshot : public yojimbo::Message
             case data::ENTITY_NPC:
             case data::ENTITY_PLAYER:
             {
-                serialize_varint32(stream, maxHealth);
-                serialize_varint32(stream, health);
+                serialize_varint32(stream, hp_max);
+                serialize_varint32(stream, hp);
                 break;
             }
         }
@@ -65,7 +65,7 @@ struct Msg_S_EntitySnapshot : public yojimbo::Message
         // TODO: Also check if player is the clientIdx player. I.e. don't leak
         //       input info to all other players.
         if (type == data::ENTITY_PLAYER) {
-            serialize_uint32(stream, lastProcessedInputCmd);
+            serialize_uint32(stream, last_processed_input_cmd);
         }
 
         return true;

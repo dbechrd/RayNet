@@ -258,12 +258,12 @@ void EntityDB::DrawEntityHoverInfo(uint32_t entityId)
         DrawRectangleRec(hpBar, ColorBrightness(MAROON, -0.4));
     }
 
-    Vector2 labelSize = MeasureTextEx(fntSmall, "Lily", fntSmall.baseSize, 1);
+    Vector2 labelSize = MeasureTextEx(fntMedium, entity->name.c_str(), fntMedium.baseSize, 1);
     Vector2 labelPos{
         floorf(hpBarBg.x + hpBarBg.width / 2 - labelSize.x / 2),
         floorf(hpBarBg.y + hpBarBg.height / 2 - labelSize.y / 2)
     };
-    DrawTextShadowEx(fntSmall, "Lily", labelPos, WHITE);
+    DrawTextShadowEx(fntMedium, entity->name.c_str(), labelPos, WHITE);
 }
 void EntityDB::DrawEntity(uint32_t entityId)
 {

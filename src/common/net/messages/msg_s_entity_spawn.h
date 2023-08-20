@@ -8,6 +8,7 @@ struct Msg_S_EntitySpawn : public yojimbo::Message
     // Entity
     uint32_t          entity_id  {};
     data::EntityType  type       {};
+    char              name       [SV_MAX_ENTITY_NAME_LEN + 1]{};
     uint32_t          map_id     {};
     Vector2           position   {};
     // Collision
@@ -29,6 +30,7 @@ struct Msg_S_EntitySpawn : public yojimbo::Message
         // Entity
         serialize_uint32(stream, entity_id);
         serialize_uint32(stream, (uint32_t&)type);
+        serialize_string(stream, name, sizeof(name));
         serialize_uint32(stream, map_id);
         serialize_float(stream, position.x);
         serialize_float(stream, position.y);

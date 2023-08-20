@@ -162,7 +162,7 @@ void GameClient::ProcessMessages(void)
                 case MSG_S_ENTITY_SNAPSHOT:
                 {
                     Msg_S_EntitySnapshot *msg = (Msg_S_EntitySnapshot *)yjMsg;
-                    size_t entityIndex = entityDb->FindEntityIndex(msg->entityId);
+                    size_t entityIndex = entityDb->FindEntityIndex(msg->entity_id);
                     if (entityIndex) {
                         AspectGhost &ghost = entityDb->ghosts[entityIndex];
                         GhostSnapshot ghostSnapshot{ *msg };

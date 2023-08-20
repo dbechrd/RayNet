@@ -10,11 +10,11 @@
 
 GhostSnapshot::GhostSnapshot(Msg_S_EntitySnapshot &msg)
 {
-    serverTime            = msg.serverTime;
-    lastProcessedInputCmd = msg.lastProcessedInputCmd;
+    server_time              = msg.server_time;
+    last_processed_input_cmd = msg.last_processed_input_cmd;
 
     // Entity
-    map_id   = msg.mapId;
+    map_id   = msg.map_id;
     position = msg.position;
 
     // Physics
@@ -22,8 +22,8 @@ GhostSnapshot::GhostSnapshot(Msg_S_EntitySnapshot &msg)
     velocity = msg.velocity;
 
     // Life
-    hp_max   = msg.maxHealth;
-    hp       = msg.health;
+    hp_max   = msg.hp_max;
+    hp       = msg.hp;
 }
 
 ClientWorld::~ClientWorld(void)
@@ -121,6 +121,7 @@ void ClientWorld::ApplySpawnEvent(const Msg_S_EntitySpawn &entitySpawn)
     data::Entity &entity = entityDb->entities[entityIndex];
 
     entity.type     = entitySpawn.type;
+    entity.name     = entitySpawn.name;
     entity.map_id   = entitySpawn.map_id;
     entity.position = entitySpawn.position;
     entity.radius   = entitySpawn.radius;
@@ -173,14 +174,7 @@ Err ClientWorld::CreateDialog(uint32_t entityId, uint32_t dialogId, std::string 
 
     entity->dialog_spawned_at = now;
     entity->dialog_id = dialogId;
-    // TODO: Send dialog title or entity name over the wire
-    switch (entity->sprite) {
-        case data::SPRITE_NPC_LILY: entity->dialog_title = "Lily"; break;
-        case data::SPRITE_NPC_FREYE: entity->dialog_title = "Freye"; break;
-        case data::SPRITE_NPC_NESSA: entity->dialog_title = "Nessa"; break;
-        case data::SPRITE_NPC_ELANE: entity->dialog_title = "Elane"; break;
-        default: entity->dialog_title = "Townfolk";
-    }
+    entity->dialog_title = entity->name.size() ? entity->name : "???";
     entity->dialog_message = message;
     return RN_SUCCESS;
 }
@@ -226,9 +220,9 @@ void ClientWorld::UpdateLocalPlayer(GameClient &client, data::Entity &entity, As
 
     // Apply latest snapshot
     const GhostSnapshot &latestSnapshot = ghost.newest();
-    if (latestSnapshot.serverTime) {
+    if (latestSnapshot.server_time) {
         ApplyStateInterpolated(entity.id, ghost.newest(), ghost.newest(), 0, client.frameDt);
-        latestSnapInputSeq = latestSnapshot.lastProcessedInputCmd;
+        latestSnapInputSeq = latestSnapshot.last_processed_input_cmd;
     }
 
 #if CL_CLIENT_SIDE_PREDICT
@@ -279,7 +273,7 @@ void ClientWorld::UpdateLocalGhost(GameClient &client, data::Entity &entity, Asp
 
     size_t snapshotBIdx = 0;
     while (snapshotBIdx < ghost.size()
-        && ghost[snapshotBIdx].serverTime <= renderAt)
+        && ghost[snapshotBIdx].server_time <= renderAt)
     {
         snapshotBIdx++;
     }
@@ -300,7 +294,7 @@ void ClientWorld::UpdateLocalGhost(GameClient &client, data::Entity &entity, Asp
 
     float alpha = 0;
     if (snapshotB != snapshotA) {
-        alpha = (renderAt - snapshotA->serverTime) / (snapshotB->serverTime - snapshotA->serverTime);
+        alpha = (renderAt - snapshotA->server_time) / (snapshotB->server_time - snapshotA->server_time);
     }
 
     ApplyStateInterpolated(entity.id, *snapshotA, *snapshotB, alpha, client.frameDt);
@@ -383,7 +377,7 @@ void ClientWorld::DrawEntitySnapshotShadows(uint32_t entityId, Controller &contr
         ghostData.entity.id = 0;
 
         for (int i = 0; i < ghost.size(); i++) {
-            if (!ghost[i].serverTime) {
+            if (!ghost[i].server_time) {
                 continue;
             }
             ApplyStateInterpolated(ghostData.entity, ghost[i], ghost[i], 0, dt);
@@ -402,9 +396,9 @@ void ClientWorld::DrawEntitySnapshotShadows(uint32_t entityId, Controller &contr
             if (map) {
                 uint32_t lastProcessedInputCmd = 0;
                 const GhostSnapshot &latestSnapshot = ghost.newest();
-                if (latestSnapshot.serverTime) {
+                if (latestSnapshot.server_time) {
                     ApplyStateInterpolated(ghostData.entity, latestSnapshot, latestSnapshot, 0, dt);
-                    lastProcessedInputCmd = latestSnapshot.lastProcessedInputCmd;
+                    lastProcessedInputCmd = latestSnapshot.last_processed_input_cmd;
                 }
 
                 for (size_t cmdIndex = 0; cmdIndex < controller.cmdQueue.size(); cmdIndex++) {
@@ -642,14 +636,13 @@ void ClientWorld::Draw(GameClient &client)
     // Draw the entities
     cursorWorldPos = GetScreenToWorld2D(GetMousePosition(), camera2d);
 
-    // Using a custom function object to compare elements.
     struct EntityDrawCmd {
-        uint32_t entity_id{};
-        float y_pos{};
+        uint32_t entity_id {};
+        float    y_pos     {};
 
         EntityDrawCmd(uint32_t entity_id, float y_pos) : entity_id(entity_id), y_pos(y_pos) {}
         bool operator<(const EntityDrawCmd& rhs) const {
-            return y_pos > rhs.y_pos;  // backwards on purpose cus who cares. it works.
+            return y_pos > rhs.y_pos;  // backwards on purpose cus y is inverted
         }
     };
     std::priority_queue<EntityDrawCmd> sortedEntityIds{};

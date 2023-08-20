@@ -237,6 +237,7 @@ void GameServer::SerializeSpawn(uint32_t entityId, Msg_S_EntitySpawn &entitySpaw
     // Entity
     entitySpawn.entity_id = entity->id;
     entitySpawn.type      = entity->type;
+    strncpy(entitySpawn.name, entity->name.c_str(), SV_MAX_ENTITY_NAME_LEN);
     entitySpawn.map_id    = entity->map_id;
     entitySpawn.position  = entity->position;
 
@@ -355,7 +356,7 @@ void GameServer::SendEntitySay(int clientIdx, uint32_t entityId, uint32_t dialog
         if (msg) {
             msg->entity_id = entityId;
             msg->dialog_id = dialogId;
-            msg->message = message.substr(0, SV_MAX_ENTITY_SAY_MSG_LEN);
+            strncpy(msg->message, message.c_str(), SV_MAX_ENTITY_SAY_MSG_LEN);
             yj_server->SendMessage(clientIdx, CHANNEL_R_ENTITY_EVENT, msg);
         }
     }
@@ -505,7 +506,7 @@ void GameServer::ProcessMessages(void)
                         // TODO: Check if sv_player is allowed to actually interact with this
                         // particular tile. E.g. are they even in the same map as it!?
                         // Holding the right tool, proximity, etc.
-                        Tilemap *map = FindMap(msg->mapId);
+                        Tilemap *map = FindMap(msg->map_id);
                         Tile tile{};
                         if (map && map->AtTry(msg->x, msg->y, tile)) {
                             //map.Set(msg->x, msg->y, 0);
@@ -596,6 +597,7 @@ data::Entity *SpawnEntityProto(GameServer &server, uint32_t mapId, Vector2 posit
     if (!entity) return 0;
 
     entity->map_id = mapId;
+    entity->name = proto.name;
     entity->position = position;
     entity->radius = proto.radius;
     entity->dialog_root_key = proto.dialog_root_key;
@@ -620,6 +622,7 @@ void GameServer::TickSpawnTownNPCs(uint32_t mapId)
     if (!protos[0].type) {
         data::EntityProto &lily = protos[0];
         lily.type = data::ENTITY_NPC;
+        lily.name = "Lily";
         lily.radius = 10;
         lily.dialog_root_key = "DIALOG_LILY_INTRO";
         lily.hp_max = 777;
@@ -631,6 +634,7 @@ void GameServer::TickSpawnTownNPCs(uint32_t mapId)
 
         data::EntityProto &freye = protos[1];
         freye.type = data::ENTITY_NPC;
+        freye.name = "Freye";
         freye.radius = 10;
         freye.dialog_root_key = "DIALOG_FREYE_INTRO";
         freye.hp_max = 200;
@@ -642,6 +646,7 @@ void GameServer::TickSpawnTownNPCs(uint32_t mapId)
 
         data::EntityProto &nessa = protos[2];
         nessa.type = data::ENTITY_NPC;
+        nessa.name = "Nessa";
         nessa.radius = 10;
         nessa.dialog_root_key = "DIALOG_NESSA_INTRO";
         nessa.hp_max = 150;
@@ -653,6 +658,7 @@ void GameServer::TickSpawnTownNPCs(uint32_t mapId)
 
         data::EntityProto &elane = protos[3];
         elane.type = data::ENTITY_NPC;
+        elane.name = "Elane";
         elane.radius = 10;
         elane.dialog_root_key = "DIALOG_ELANE_INTRO";
         elane.hp_max = 100;
@@ -682,6 +688,8 @@ void GameServer::TickSpawnCaveNPCs(uint32_t mapId)
         if (!entity && ((int)tick % 100 == i * 10)) {
             entity = SpawnEntity(data::ENTITY_NPC);
             if (!entity) continue;
+
+            entity->name = "Cave Lily";
 
             entity->map_id = mapId;
             entity->position = { 1620, 450 };
@@ -952,13 +960,13 @@ void GameServer::SerializeSnapshot(uint32_t entityId, Msg_S_EntitySnapshot &enti
     assert(entity);
     if (!entity) return;
 
-    entitySnapshot.serverTime = lastTickedAt;
+    entitySnapshot.server_time = lastTickedAt;
 
     // Entity
-    entitySnapshot.entityId = entity->id;
-    entitySnapshot.type     = entity->type;
-    entitySnapshot.mapId    = entity->map_id;
-    entitySnapshot.position = entity->position;
+    entitySnapshot.entity_id = entity->id;
+    entitySnapshot.type      = entity->type;
+    entitySnapshot.map_id    = entity->map_id;
+    entitySnapshot.position  = entity->position;
 
     // Collision
     //entitySnapshot.radius = projectile->radius;
@@ -969,8 +977,8 @@ void GameServer::SerializeSnapshot(uint32_t entityId, Msg_S_EntitySnapshot &enti
     entitySnapshot.velocity = entity->velocity;
 
     // Life
-    entitySnapshot.maxHealth = entity->hp_max;
-    entitySnapshot.health    = entity->hp;
+    entitySnapshot.hp_max = entity->hp_max;
+    entitySnapshot.hp     = entity->hp;
 }
 void GameServer::SendClientSnapshots(void)
 {
@@ -1033,7 +1041,7 @@ void GameServer::SendClientSnapshots(void)
                     if (msg) {
                         SerializeSnapshot(entity.id, *msg);
                         // TODO: We only need this for the sv_player victim, not EVERY victim. Make it suck less.
-                        msg->lastProcessedInputCmd = serverPlayer.lastInputSeq;
+                        msg->last_processed_input_cmd = serverPlayer.lastInputSeq;
                         yj_server->SendMessage(clientIdx, CHANNEL_U_ENTITY_SNAPSHOT, msg);
                     }
                 }

@@ -51,6 +51,8 @@
 #define MAX(a, b) ((a) > (b) ? (a) : (b))
 #define CLAMP(x, min, max) (MIN(MAX((x), (min)), (max)))
 #define ARRAY_SIZE(arr) (sizeof(arr)/sizeof(arr[0]))
+#define STR(x) #x
+#define STRSTR(x) STR(x)
 #define ENUM_GEN_VALUE(e) e,
 #define ENUM_GEN_VALUE_DESC(e, d) e,
 #define ENUM_GEN_CASE_RETURN_STR(e) case e: return #e;
@@ -81,7 +83,8 @@
 #define SV_TICK_DT                           (1.0/30.0)
 #define SV_MAX_PLAYERS                       8
 #define SV_MAX_ENTITIES                      256
-#define SV_MAX_ENTITY_SAY_MSG_LEN            1024
+#define SV_MAX_ENTITY_SAY_MSG_LEN            1023
+#define SV_MAX_ENTITY_NAME_LEN               63 // "Goranza The Arch-Nemesis Defiler of Doom" was the longest name I could think of when I wrote this
 // how long this entity stays interested in a conversation before returning to pathfinding
 #define SV_ENTITY_DIALOG_INTERESTED_DURATION 30
 #define SV_TILE_CHUNK_WIDTH                  64
