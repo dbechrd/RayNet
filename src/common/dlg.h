@@ -31,8 +31,8 @@ struct Dialog {
     DialogNodeList   nodes {};
 };
 
-// returns true if dialog valid, false if it wants us to cancel the dialog
-typedef bool (*DialogListener)(uint32_t source_id, uint32_t target_id, uint32_t dialog_id);
+// returns dialog id to display (could be different if redirected), or 0 to cancel
+typedef uint32_t (*DialogListener)(uint32_t source_id, uint32_t target_id, uint32_t dialog_id);
 
 struct DialogLibrary {
     uint32_t nextId = 1;
@@ -53,6 +53,12 @@ struct DialogLibrary {
         dialog_idx_by_key[dialog.key] = dialogIdx;
 
         return dialog;
+    }
+
+    void RegisterListener(std::string_view key, DialogListener listener)
+    {
+        // NOTE(dlb): Only 1 per key atm, this will overwrite any previous listener
+        dialog_listener_by_key[key] = listener;
     }
 
     Dialog *FindById(uint32_t id) {

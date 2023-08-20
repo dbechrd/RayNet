@@ -394,16 +394,29 @@ void GameServer::BroadcastTileChunk(Tilemap &map, uint32_t x, uint32_t y)
 
 void GameServer::RequestDialog(int clientIdx, data::Entity &entity, Dialog &dialog)
 {
-    bool valid = true;
+    // Overridable by listeners
+    uint32_t final_dialog_id = dialog.id;
 
     DialogListener listener = dialog_library.FindListenerByKey(dialog.key);
     if (listener) {
         ServerPlayer &player = players[clientIdx];
-        valid = listener(player.entityId, entity.id, dialog.id);
+        final_dialog_id = listener(player.entityId, entity.id, dialog.id);
     }
 
-    if (valid) {
-        SendEntitySay(clientIdx, entity.id, dialog.id, std::string(dialog.msg));
+    if (final_dialog_id) {
+        std::string_view msg = dialog.msg;
+        if (final_dialog_id != dialog.id) {
+            Dialog *final_dialog = dialog_library.FindById(final_dialog_id);
+            if (final_dialog) {
+                msg = final_dialog->msg;
+            } else {
+                assert(!"wtf, listener redirected us to a bad dialog id?");
+                // something bad happened in listener, just show the original
+                // dialog i guess?
+                final_dialog_id = final_dialog->id;
+            }
+        }
+        SendEntitySay(clientIdx, entity.id, final_dialog_id, std::string(msg));
         entity.dialog_spawned_at = now;
     }
 }

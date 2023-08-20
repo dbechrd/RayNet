@@ -30,13 +30,31 @@ namespace data {
         &pack1
     };
 
-    DialogLibrary dialog_library{};
+    struct GameState {
+        bool freye_introduced;
+    };
+    GameState game_state{};
+
+    uint32_t FreyeIntroListener(uint32_t source_id, uint32_t target_id, uint32_t dialog_id) {
+        uint32_t final_dialog_id = dialog_id;
+        if (!game_state.freye_introduced) {
+            // Freye not yet introduced, redirect player to full introduction
+            Dialog *first_time_intro = dialog_library.FindByKey("DIALOG_FREYE_INTRO_FIRST_TIME");
+            if (first_time_intro) {
+                final_dialog_id = first_time_intro->id;
+            } else {
+                assert(!"probably this shouldn't fail bro, fix ur dialogs");
+            }
+            game_state.freye_introduced = true;
+        }
+        return final_dialog_id;
+    }
 
     void ReadFileIntoDataBuffer(std::string filename, DatBuffer &datBuffer)
     {
-        uint32_t bytesRead = 0;
-        datBuffer.bytes = LoadFileData(filename.c_str(), &bytesRead);
-        datBuffer.length = bytesRead;
+        uint32_t bytes_read = 0;
+        datBuffer.bytes = LoadFileData(filename.c_str(), &bytes_read);
+        datBuffer.length = bytes_read;
     }
 
     void FreeDataBuffer(DatBuffer &datBuffer)
@@ -342,6 +360,8 @@ namespace data {
         LoadDialogFile("resources/dialog/freye.md");
         LoadDialogFile("resources/dialog/nessa.md");
         LoadDialogFile("resources/dialog/elane.md");
+
+        dialog_library.RegisterListener("DIALOG_FREYE_INTRO", FreyeIntroListener);
 
         // Ensure every array element is initialized and in contiguous order by id
         #define ID_CHECK(type, name, arr) \

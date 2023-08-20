@@ -450,11 +450,17 @@ void ClientWorld::DrawDialogTips(std::vector<FancyTextTip> tips)
         const char *tipText = TextFormat("%.*s", tip.tipLen, tip.tip);
         Vector2 tipPos = Vector2Add(GetMousePosition(), { 0, 20 });
         Vector2 tipSize = MeasureTextEx(*tip.font, tipText, tip.font->baseSize, 1);
+
         Rectangle tipRec{
             tipPos.x, tipPos.y,
             tipSize.x, tipSize.y
         };
         tipRec = RectGrow(tipRec, 8);
+
+        Vector2 constrainedOffset{};
+        tipRec = RectConstrainToScreen(tipRec, &constrainedOffset);
+        tipPos = Vector2Add(tipPos, constrainedOffset);
+
         dlb_DrawNPatch(tipRec);
         dlb_DrawTextEx(*tip.font, tip.tip, tip.tipLen, tipPos, RAYWHITE);
     }
@@ -491,6 +497,7 @@ void ClientWorld::DrawDialog(GameClient &client, data::Entity &entity, Vector2 b
     const float bgHeight =
         bgPad.y +
         titleSize.y +
+        bgPad.y +
         msgSize.y +
         bgPad.y;
 
@@ -502,6 +509,7 @@ void ClientWorld::DrawDialog(GameClient &client, data::Entity &entity, Vector2 b
         cursorY
     };
     cursorY += titleSize.y;
+    cursorY += bgPad.y;
 
     Vector2 msgPos{
         roundf(bottomCenterScreen.x - msgSize.x / 2),
@@ -514,8 +522,14 @@ void ClientWorld::DrawDialog(GameClient &client, data::Entity &entity, Vector2 b
         MIN(titlePos.x, msgPos.x) - bgPad.x,
         bgTop,
         MAX(titleSize.x, msgSize.x) + bgPad.x * 2,
-        bgPad.y + titleSize.y + msgSize.y + bgPad.y
+        bgHeight
     };
+
+    Vector2 constrainedOffset{};
+    bgRect = RectConstrainToScreen(bgRect, &constrainedOffset);
+    titlePos = Vector2Add(titlePos, constrainedOffset);
+    msgPos = Vector2Add(msgPos, constrainedOffset);
+
     //msgBgRect.x = floorf(msgBgRect.x);
     //msgBgRect.y = floorf(msgBgRect.y);
     //msgBgRect.width = floorf(msgBgRect.width);
@@ -529,6 +543,15 @@ void ClientWorld::DrawDialog(GameClient &client, data::Entity &entity, Vector2 b
     //DrawRectangleRounded(msgBgRect, 0.2f, 6, Fade(BLACK, 0.5));
     //DrawRectangleRoundedLines(msgBgRect, 0.2f, 6, 1.0f, RAYWHITE);
     DrawTextEx(font, entity.dialog_title.c_str(), titlePos, font.baseSize, 1.0f, GOLD);
+
+    float separatorY = titlePos.y + titleSize.y + bgPad.y / 2;
+    DrawLine(
+        bgRect.x + bgPad.x - 2,
+        separatorY,
+        bgRect.x + bgRect.width - bgPad.x + 2,
+        separatorY + 1,
+        DIALOG_SEPARATOR_GOLD
+    );
 
     Vector2 nodeCursor{};
     uint32_t nodeIdx = 0;

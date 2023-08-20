@@ -169,6 +169,7 @@ Vector2 dlb_MeasureTextEx(Font font, const char *text, size_t textLen, Vector2 *
     float textHeight = 0.0f;
     const float charHeight = font.baseSize * TEXT_LINE_SPACING;  // including line spacing, for bbox
 
+    int prevCodepoint = 0;
     for (int i = 0; i < textLen; i++) {
         int codepointSize = 0;
         int codepoint = GetCodepointNext(&text[i], &codepointSize);
@@ -187,8 +188,13 @@ Vector2 dlb_MeasureTextEx(Font font, const char *text, size_t textLen, Vector2 *
             textWidth = MAX(cursor->x, textWidth);
             lineChars = 0;
             cursor->x = 0;
-            cursor->y += charHeight;
-            textHeight += charHeight;
+
+            float lineHeight = charHeight;
+            if (prevCodepoint == '\n') {
+                lineHeight /= 2;  // half space on double newlines
+            }
+            cursor->y += lineHeight;
+            textHeight += lineHeight;
         } else {
             float advanceX = font.glyphs[glyphIndex].advanceX;
             if (!advanceX) {
@@ -199,6 +205,9 @@ Vector2 dlb_MeasureTextEx(Font font, const char *text, size_t textLen, Vector2 *
         }
 
         lineCharsMax = MAX(lineChars, lineCharsMax);
+        if (codepoint != '\r') {
+            prevCodepoint = codepoint;
+        }
     }
 
     textWidth = MAX(cursor->x, textWidth);
@@ -240,6 +249,7 @@ void dlb_DrawTextEx(Font font, const char *text, size_t textLen, Vector2 positio
     };
     std::vector<GlyphDrawCmd> glyphDrawCmds{};
 
+    int prevCodepoint = 0;
     for (int i = 0; i < textLen;)
     {
         // Get codepointSize codepoint from byte string and glyph glyphIndex in font
@@ -256,7 +266,11 @@ void dlb_DrawTextEx(Font font, const char *text, size_t textLen, Vector2 positio
         if (codepoint == '\\') {
             // don't draw
         } else if (codepoint == '\n') {
-            cursor->y += charHeight;
+            float lineHeight = charHeight;
+            if (prevCodepoint == '\n') {
+                lineHeight /= 2;  // half space on double newlines
+            }
+            cursor->y += lineHeight;
             cursor->x = 0.0f;
         } else {
             const Vector2 glyphPos{ position.x + cursor->x, position.y + cursor->y };
@@ -283,10 +297,12 @@ void dlb_DrawTextEx(Font font, const char *text, size_t textLen, Vector2 positio
             if ((codepoint != ' ') && (codepoint != '\t')) {
                 glyphDrawCmds.emplace_back(codepoint, glyphPos);
             }
-
         }
 
         i += codepointByteCount;   // Move text bytes counter to codepointSize codepoint
+        if (codepoint != '\r') {
+            prevCodepoint = codepoint;
+        }
     }
 
     Color col = (hovered && *hovered) ? ColorBrightness(tint, 0.5f) : tint;
@@ -419,12 +435,15 @@ Rectangle RectGrow(const Rectangle &rect, float pixels)
     return grown;
 }
 
-Rectangle RectConstrainToScreen(const Rectangle &rect)
+Rectangle RectConstrainToScreen(const Rectangle &rect, Vector2 *resultOffset)
 {
     Vector2 screenSize{ (float)GetRenderWidth(), (float)GetRenderHeight() };
     Rectangle newRect = rect;
     newRect.x = CLAMP(rect.x, 0, screenSize.x - rect.width);
     newRect.y = CLAMP(rect.y, 0, screenSize.y - rect.height);
+    if (resultOffset) {
+        *resultOffset = { newRect.x - rect.x, newRect.y - rect.y };
+    }
     return newRect;
 }
 

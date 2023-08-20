@@ -63,6 +63,7 @@
 #define GRAYISH_BLUE CLITERAL(Color){ 29, 58, 61, 255 } // Some kinda gray-ish blue
 #define BLUE_DESAT CLITERAL(Color){ 77, 116, 137, 255 }
 #define GREEN_DESAT CLITERAL(Color){ 90, 127, 110, 255 }
+#define DIALOG_SEPARATOR_GOLD CLITERAL(Color){ 147, 121, 33, 255 } // Dialog separator color
 
 // Networking
 
@@ -149,7 +150,7 @@ void DrawTextShadowEx(Font font, const char *text, Vector2 pos, Color color);
 Rectangle GetScreenRectWorld(Camera2D &camera);
 Rectangle RectShrink(const Rectangle &rect, float pixels);
 Rectangle RectGrow(const Rectangle &rect, float pixels);
-Rectangle RectConstrainToScreen(const Rectangle &rect);
+Rectangle RectConstrainToScreen(const Rectangle &rect, Vector2 *resultOffset = 0);
 
 void dlb_DrawTextureRec(Texture2D texture, Rectangle source, Vector2 position, Color tint);
 void dlb_DrawTexturePro(Texture2D texture, Rectangle source, Rectangle dest, Vector2 origin, Color tint);
