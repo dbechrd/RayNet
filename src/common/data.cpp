@@ -1041,6 +1041,7 @@ namespace data {
         float variance = pitchVariance ? pitchVariance : sfx_file->pitch_variance;
         SetSoundPitch(sfx_file->sound, 1.0f + GetRandomFloatVariance(variance));
 
+        printf("updatesprite playsound %s (multi = %d)\n", sfx_file->path.c_str(), sfx_file->multi);
         if (sfx_file->multi) {
             PlaySoundMulti(sfx_file->sound);
         } else if (!IsSoundPlaying(sfx_file->sound)) {
@@ -1110,7 +1111,7 @@ namespace data {
         if (newlySpawned) {
             SfxFile *sfx_file = packs[0]->FindSound(anim.sound);
             if (sfx_file) {
-                PlaySound(sfx_file->sound);
+                PlaySound(sfx_file->id);
             }
         }
     }

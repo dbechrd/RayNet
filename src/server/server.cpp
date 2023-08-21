@@ -320,6 +320,7 @@ int main(int argc, char *argv[])
         SetExitKey(0);  // must be called after InitWindow()
 
         InitAudioDevice();
+        SetMasterVolume(0);
 
         // NOTE(dlb): yojimbo uses rand() for network simulator and random_int()/random_float()
         srand((unsigned int)GetTime());
