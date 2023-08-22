@@ -192,6 +192,7 @@ namespace data {
             { GFX_FILE_NPC_FREYE,      "resources/texture/freye.png" },
             { GFX_FILE_NPC_NESSA,      "resources/texture/nessa.png" },
             { GFX_FILE_NPC_ELANE,      "resources/texture/elane.png" },
+            { GFX_FILE_NPC_CHICKEN,    "resources/texture/chicken.png" },
             { GFX_FILE_OBJ_CAMPFIRE,   "resources/texture/campfire.png" },
             { GFX_FILE_PRJ_FIREBALL,   "resources/texture/fireball.png" },
             { GFX_FILE_TIL_OVERWORLD,  "resources/texture/tiles32.png" },
@@ -224,14 +225,16 @@ namespace data {
             { GFX_FRAME_CHR_MAGE_W_0,   GFX_FILE_CHR_MAGE,       32,  0,  32,  64 },
 
             // npcs
-            { GFX_FRAME_NPC_LILY_E_0,   GFX_FILE_NPC_LILY,        0,  0,  32,  64 },
-            { GFX_FRAME_NPC_LILY_W_0,   GFX_FILE_NPC_LILY,       32,  0,  32,  64 },
-            { GFX_FRAME_NPC_FREYE_E_0,  GFX_FILE_NPC_FREYE,       0,  0,  32,  64 },
-            { GFX_FRAME_NPC_FREYE_W_0,  GFX_FILE_NPC_FREYE,      32,  0,  32,  64 },
-            { GFX_FRAME_NPC_NESSA_E_0,  GFX_FILE_NPC_NESSA,       0,  0,  32,  64 },
-            { GFX_FRAME_NPC_NESSA_W_0,  GFX_FILE_NPC_NESSA,      32,  0,  32,  64 },
-            { GFX_FRAME_NPC_ELANE_E_0,  GFX_FILE_NPC_ELANE,       0,  0,  32,  64 },
-            { GFX_FRAME_NPC_ELANE_W_0,  GFX_FILE_NPC_ELANE,      32,  0,  32,  64 },
+            { GFX_FRAME_NPC_LILY_E_0,    GFX_FILE_NPC_LILY,        0,  0,  32,  64 },
+            { GFX_FRAME_NPC_LILY_W_0,    GFX_FILE_NPC_LILY,       32,  0,  32,  64 },
+            { GFX_FRAME_NPC_FREYE_E_0,   GFX_FILE_NPC_FREYE,       0,  0,  32,  64 },
+            { GFX_FRAME_NPC_FREYE_W_0,   GFX_FILE_NPC_FREYE,      32,  0,  32,  64 },
+            { GFX_FRAME_NPC_NESSA_E_0,   GFX_FILE_NPC_NESSA,       0,  0,  32,  64 },
+            { GFX_FRAME_NPC_NESSA_W_0,   GFX_FILE_NPC_NESSA,      32,  0,  32,  64 },
+            { GFX_FRAME_NPC_ELANE_E_0,   GFX_FILE_NPC_ELANE,       0,  0,  32,  64 },
+            { GFX_FRAME_NPC_ELANE_W_0,   GFX_FILE_NPC_ELANE,      32,  0,  32,  64 },
+            { GFX_FRAME_NPC_CHICKEN_E_0, GFX_FILE_NPC_CHICKEN,     0,  0,  32,  32 },
+            { GFX_FRAME_NPC_CHICKEN_W_0, GFX_FILE_NPC_CHICKEN,    32,  0,  32,  32 },
 
             // objects
             { GFX_FRAME_OBJ_CAMPFIRE_0, GFX_FILE_OBJ_CAMPFIRE,    0,  0, 256, 256 },
@@ -319,6 +322,8 @@ namespace data {
             { GFX_ANIM_NPC_NESSA_W,               "", 60, 1,        0, { GFX_FRAME_NPC_NESSA_W_0 }},
             { GFX_ANIM_NPC_ELANE_E,               "", 60, 1,        0, { GFX_FRAME_NPC_ELANE_E_0 }},
             { GFX_ANIM_NPC_ELANE_W,               "", 60, 1,        0, { GFX_FRAME_NPC_ELANE_W_0 }},
+            { GFX_ANIM_NPC_CHICKEN_E,             "", 60, 1,        0, { GFX_FRAME_NPC_CHICKEN_E_0 }},
+            { GFX_ANIM_NPC_CHICKEN_W,             "", 60, 1,        0, { GFX_FRAME_NPC_CHICKEN_W_0 }},
 
             // objects
             { GFX_ANIM_OBJ_CAMPFIRE,  "sfx_campfire", 60, 8,        4, { GFX_FRAME_OBJ_CAMPFIRE_0, GFX_FRAME_OBJ_CAMPFIRE_1, GFX_FRAME_OBJ_CAMPFIRE_2, GFX_FRAME_OBJ_CAMPFIRE_3, GFX_FRAME_OBJ_CAMPFIRE_4, GFX_FRAME_OBJ_CAMPFIRE_5, GFX_FRAME_OBJ_CAMPFIRE_6, GFX_FRAME_OBJ_CAMPFIRE_7 }},
@@ -393,14 +398,15 @@ namespace data {
         Sprite sprites[] = {
             { SPRITE_NONE },
             // id                    anims
-            //                       N                      E                     S              W                     NE             SE             SW             NW
-            { SPRITE_CHR_MAGE,     { GFX_ANIM_NONE,         GFX_ANIM_CHR_MAGE_E,  GFX_ANIM_NONE, GFX_ANIM_CHR_MAGE_W,  GFX_ANIM_NONE, GFX_ANIM_NONE, GFX_ANIM_NONE, GFX_ANIM_NONE } },
-            { SPRITE_NPC_LILY,     { GFX_ANIM_NONE,         GFX_ANIM_NPC_LILY_E,  GFX_ANIM_NONE, GFX_ANIM_NPC_LILY_W,  GFX_ANIM_NONE, GFX_ANIM_NONE, GFX_ANIM_NONE, GFX_ANIM_NONE } },
-            { SPRITE_NPC_FREYE,    { GFX_ANIM_NONE,         GFX_ANIM_NPC_FREYE_E, GFX_ANIM_NONE, GFX_ANIM_NPC_FREYE_W, GFX_ANIM_NONE, GFX_ANIM_NONE, GFX_ANIM_NONE, GFX_ANIM_NONE } },
-            { SPRITE_NPC_NESSA,    { GFX_ANIM_NONE,         GFX_ANIM_NPC_NESSA_E, GFX_ANIM_NONE, GFX_ANIM_NPC_NESSA_W, GFX_ANIM_NONE, GFX_ANIM_NONE, GFX_ANIM_NONE, GFX_ANIM_NONE } },
-            { SPRITE_NPC_ELANE,    { GFX_ANIM_NONE,         GFX_ANIM_NPC_ELANE_E, GFX_ANIM_NONE, GFX_ANIM_NPC_ELANE_W, GFX_ANIM_NONE, GFX_ANIM_NONE, GFX_ANIM_NONE, GFX_ANIM_NONE } },
-            { SPRITE_OBJ_CAMPFIRE, { GFX_ANIM_OBJ_CAMPFIRE, GFX_ANIM_NONE,        GFX_ANIM_NONE, GFX_ANIM_NONE,        GFX_ANIM_NONE, GFX_ANIM_NONE, GFX_ANIM_NONE, GFX_ANIM_NONE } },
-            { SPRITE_PRJ_FIREBALL, { GFX_ANIM_PRJ_FIREBALL, GFX_ANIM_NONE,        GFX_ANIM_NONE, GFX_ANIM_NONE,        GFX_ANIM_NONE, GFX_ANIM_NONE, GFX_ANIM_NONE, GFX_ANIM_NONE } },
+            //                       N                      E                       S              W                       NE             SE             SW             NW
+            { SPRITE_CHR_MAGE,     { GFX_ANIM_NONE,         GFX_ANIM_CHR_MAGE_E,    GFX_ANIM_NONE, GFX_ANIM_CHR_MAGE_W,    GFX_ANIM_NONE, GFX_ANIM_NONE, GFX_ANIM_NONE, GFX_ANIM_NONE }},
+            { SPRITE_NPC_LILY,     { GFX_ANIM_NONE,         GFX_ANIM_NPC_LILY_E,    GFX_ANIM_NONE, GFX_ANIM_NPC_LILY_W,    GFX_ANIM_NONE, GFX_ANIM_NONE, GFX_ANIM_NONE, GFX_ANIM_NONE }},
+            { SPRITE_NPC_FREYE,    { GFX_ANIM_NONE,         GFX_ANIM_NPC_FREYE_E,   GFX_ANIM_NONE, GFX_ANIM_NPC_FREYE_W,   GFX_ANIM_NONE, GFX_ANIM_NONE, GFX_ANIM_NONE, GFX_ANIM_NONE }},
+            { SPRITE_NPC_NESSA,    { GFX_ANIM_NONE,         GFX_ANIM_NPC_NESSA_E,   GFX_ANIM_NONE, GFX_ANIM_NPC_NESSA_W,   GFX_ANIM_NONE, GFX_ANIM_NONE, GFX_ANIM_NONE, GFX_ANIM_NONE }},
+            { SPRITE_NPC_ELANE,    { GFX_ANIM_NONE,         GFX_ANIM_NPC_ELANE_E,   GFX_ANIM_NONE, GFX_ANIM_NPC_ELANE_W,   GFX_ANIM_NONE, GFX_ANIM_NONE, GFX_ANIM_NONE, GFX_ANIM_NONE }},
+            { SPRITE_NPC_CHICKEN,  { GFX_ANIM_NONE,         GFX_ANIM_NPC_CHICKEN_E, GFX_ANIM_NONE, GFX_ANIM_NPC_CHICKEN_W, GFX_ANIM_NONE, GFX_ANIM_NONE, GFX_ANIM_NONE, GFX_ANIM_NONE }},
+            { SPRITE_OBJ_CAMPFIRE, { GFX_ANIM_OBJ_CAMPFIRE, GFX_ANIM_NONE,          GFX_ANIM_NONE, GFX_ANIM_NONE,          GFX_ANIM_NONE, GFX_ANIM_NONE, GFX_ANIM_NONE, GFX_ANIM_NONE }},
+            { SPRITE_PRJ_FIREBALL, { GFX_ANIM_PRJ_FIREBALL, GFX_ANIM_NONE,          GFX_ANIM_NONE, GFX_ANIM_NONE,          GFX_ANIM_NONE, GFX_ANIM_NONE, GFX_ANIM_NONE, GFX_ANIM_NONE }},
         };
 
         TileType tile_types[] = {

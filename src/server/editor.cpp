@@ -241,7 +241,7 @@ void Editor::DrawGroundOverlay_Paths(Camera2D &camera, double now)
 void Editor::DrawGroundOverlay_Warps(Camera2D &camera, double now)
 {
     for (const data::Entity &entity : data::packs[0]->entities) {
-        if (entity.type == data::ENTITY_WARP) {
+        if (entity.type == data::ENTITY_SPEC_OBJ_WARP) {
             DrawRectangleRec(entity.warp_collider, Fade(SKYBLUE, 0.7f));
         }
     }
@@ -1046,7 +1046,7 @@ void Editor::DrawUI_WarpActions(UI &uiActionBar, double now)
     //}
 
     for (data::Entity &entity : data::packs[0]->entities) {
-        if (entity.type != data::ENTITY_WARP) {
+        if (entity.spec != data::ENTITY_SPEC_OBJ_WARP) {
             continue;
         }
 
@@ -1343,23 +1343,23 @@ void Editor::DrawUI_SfxFiles(UI &uiActionBar, double now)
     if (!state.sfxFiles.selectedSfx.empty()) {
         const int labelWidth = 100;
         data::SfxFile *sfx_file = data::packs[0]->FindSound(state.sfxFiles.selectedSfx);
-        if (!sfx_file) {
+        if (sfx_file) {
+            uiActionBar.Label("id", labelWidth);
+            uiActionBar.Text(TextFormat("%d", sfx_file->id));
+            uiActionBar.Newline();
+
+            uiActionBar.Label("path", labelWidth);
+            static STB_TexteditState txtPath{};
+            uiActionBar.Textbox(txtPath, sfx_file->path);
+            uiActionBar.Newline();
+
+            uiActionBar.Label("pitch variance", labelWidth);
+            static STB_TexteditState txtPitchVariance{};
+            uiActionBar.TextboxFloat(txtPitchVariance, sfx_file->pitch_variance);
+            uiActionBar.Newline();
+        } else {
             state.sfxFiles.selectedSfx.clear();
         }
-
-        uiActionBar.Label("id", labelWidth);
-        uiActionBar.Text(TextFormat("%d", sfx_file->id));
-        uiActionBar.Newline();
-
-        uiActionBar.Label("path", labelWidth);
-        static STB_TexteditState txtPath{};
-        uiActionBar.Textbox(txtPath, sfx_file->path);
-        uiActionBar.Newline();
-
-        uiActionBar.Label("pitch variance", labelWidth);
-        static STB_TexteditState txtPitchVariance{};
-        uiActionBar.TextboxFloat(txtPitchVariance, sfx_file->pitch_variance);
-        uiActionBar.Newline();
     }
 }
 void Editor::DrawUI_PackFiles(UI &uiActionBar, double now)

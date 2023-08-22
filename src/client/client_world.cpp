@@ -17,13 +17,13 @@ GhostSnapshot::GhostSnapshot(Msg_S_EntitySnapshot &msg)
     map_id   = msg.map_id;
     position = msg.position;
 
-    // Physics
-    speed    = msg.speed;
-    velocity = msg.velocity;
-
     // Life
     hp_max   = msg.hp_max;
     hp       = msg.hp;
+
+    // Physics
+    //speed    = msg.speed;
+    velocity = msg.velocity;
 }
 
 ClientWorld::~ClientWorld(void)

@@ -596,6 +596,7 @@ data::Entity *SpawnEntityProto(GameServer &server, uint32_t mapId, Vector2 posit
     data::Entity *entity = server.SpawnEntity(data::ENTITY_NPC);
     if (!entity) return 0;
 
+    entity->spec = proto.spec;
     entity->map_id = mapId;
     entity->name = proto.name;
     entity->position = position;
@@ -617,11 +618,21 @@ data::Entity *SpawnEntityProto(GameServer &server, uint32_t mapId, Vector2 posit
 }
 void GameServer::TickSpawnTownNPCs(uint32_t mapId)
 {
-    static uint32_t eid_bots[4];
-    static data::EntityProto protos[4];
-    if (!protos[0].type) {
-        data::EntityProto &lily = protos[0];
+    static data::EntityProto lily;
+    static data::EntityProto freye;
+    static data::EntityProto nessa;
+    static data::EntityProto elane;
+    static data::EntityProto *townfolk[]{
+        &lily, &freye, &nessa, &elane
+    };
+    static uint32_t townfolk_ids[4];
+
+    static data::EntityProto chicken;
+    static uint32_t chicken_ids[10];
+
+    if (!lily.type) {
         lily.type = data::ENTITY_NPC;
+        lily.spec = data::ENTITY_SPEC_NPC_TOWNFOLK;
         lily.name = "Lily";
         lily.radius = 10;
         lily.dialog_root_key = "DIALOG_LILY_INTRO";
@@ -632,8 +643,8 @@ void GameServer::TickSpawnTownNPCs(uint32_t mapId)
         lily.drag = 1.0f;
         lily.sprite = data::SPRITE_NPC_LILY;
 
-        data::EntityProto &freye = protos[1];
         freye.type = data::ENTITY_NPC;
+        freye.spec = data::ENTITY_SPEC_NPC_TOWNFOLK;
         freye.name = "Freye";
         freye.radius = 10;
         freye.dialog_root_key = "DIALOG_FREYE_INTRO";
@@ -644,8 +655,8 @@ void GameServer::TickSpawnTownNPCs(uint32_t mapId)
         freye.drag = 1.0f;
         freye.sprite = data::SPRITE_NPC_FREYE;
 
-        data::EntityProto &nessa = protos[2];
         nessa.type = data::ENTITY_NPC;
+        nessa.spec = data::ENTITY_SPEC_NPC_TOWNFOLK;
         nessa.name = "Nessa";
         nessa.radius = 10;
         nessa.dialog_root_key = "DIALOG_NESSA_INTRO";
@@ -656,8 +667,8 @@ void GameServer::TickSpawnTownNPCs(uint32_t mapId)
         nessa.drag = 1.0f;
         nessa.sprite = data::SPRITE_NPC_NESSA;
 
-        data::EntityProto &elane = protos[3];
         elane.type = data::ENTITY_NPC;
+        elane.spec = data::ENTITY_SPEC_NPC_TOWNFOLK;
         elane.name = "Elane";
         elane.radius = 10;
         elane.dialog_root_key = "DIALOG_ELANE_INTRO";
@@ -667,15 +678,50 @@ void GameServer::TickSpawnTownNPCs(uint32_t mapId)
         elane.speed_max = 600;
         elane.drag = 1.0f;
         elane.sprite = data::SPRITE_NPC_ELANE;
+
+        chicken.type = data::ENTITY_NPC;
+        chicken.spec = data::ENTITY_SPEC_NPC_CHICKEN;
+        chicken.name = "Chicken";
+        chicken.radius = 5;
+        chicken.hp_max = 15;
+        chicken.speed_min = 50;
+        chicken.speed_max = 150;
+        chicken.drag = 1.0f;
+        chicken.sprite = data::SPRITE_NPC_CHICKEN;
     }
 
-    for (int i = 0; i < ARRAY_SIZE(eid_bots); i++) {
-        data::Entity *entity = entityDb->FindEntity(eid_bots[i], data::ENTITY_NPC);
-        if (!entity && ((int)tick % 100 == i * 10)) {
-            entity = SpawnEntityProto(*this, mapId, { 0, 0 }, protos[i]);
-            if (entity) {
-                BroadcastEntitySpawn(entity->id);
-                eid_bots[i] = entity->id;
+    assert(ARRAY_SIZE(townfolk) == ARRAY_SIZE(townfolk_ids));
+
+    const double townfolkSpawnRate = 2.0;
+    static double lastTownfolkSpawnedAt = 0;
+    if (now - lastTownfolkSpawnedAt >= townfolkSpawnRate) {
+        for (int i = 0; i < ARRAY_SIZE(townfolk_ids); i++) {
+            data::Entity *entity = entityDb->FindEntity(townfolk_ids[i], data::ENTITY_NPC);
+            if (!entity) {
+                entity = SpawnEntityProto(*this, mapId, { 0, 0 }, *townfolk[i]);
+                if (entity) {
+                    BroadcastEntitySpawn(entity->id);
+                    townfolk_ids[i] = entity->id;
+                    lastTownfolkSpawnedAt = now;
+                }
+                break;
+            }
+        }
+    }
+
+    const double chickenSpawnCooldown = 3.0;
+    static double lastChickenSpawnedAt = 0;
+    if (now - lastChickenSpawnedAt >= chickenSpawnCooldown) {
+        for (int i = 0; i < ARRAY_SIZE(chicken_ids); i++) {
+            data::Entity *entity = entityDb->FindEntity(chicken_ids[i], data::ENTITY_NPC);
+            if (!entity) {
+                entity = SpawnEntityProto(*this, mapId, { 0, 0 }, chicken);
+                if (entity) {
+                    BroadcastEntitySpawn(entity->id);
+                    chicken_ids[i] = entity->id;
+                    lastChickenSpawnedAt = now;
+                }
+                break;
             }
         }
     }
@@ -808,7 +854,16 @@ void GameServer::TickEntityProjectile(uint32_t entityId, double dt)
                 victim.TakeDamage(GetRandomValue(3, 8));
                 if (victim.Alive()) {
                     if (!victim.dialog_spawned_at) {
-                        BroadcastEntitySay(victim.id, TextFormat("Ouch! You hit me with\nprojectile #%u!", projectile->id));
+                        switch (victim.spec) {
+                            case data::ENTITY_SPEC_NPC_TOWNFOLK: {
+                                BroadcastEntitySay(victim.id, TextFormat("Ouch! You hit me with\nprojectile #%u!", projectile->id));
+                                break;
+                            }
+                            case data::ENTITY_SPEC_NPC_CHICKEN: {
+                                BroadcastEntitySay(victim.id, "*squawk*!");
+                                break;
+                            }
+                        }
                     }
                 } else {
                     DespawnEntity(victim.id);
@@ -900,12 +955,13 @@ void GameServer::TickResolveEntityWarpCollisions(Tilemap &map, uint32_t entityId
         return;
     }
 
-    for (data::Entity &warp : entityDb->entities) {
+    for (data::Entity &entity : entityDb->entities) {
         // TODO: Make a better way to find matching entities, e.g. FindEntity(map_id, type, alive)
-        if (warp.type != data::ENTITY_WARP || !warp.id || warp.despawned_at || warp.map_id != victim->map_id) {
+        if (entity.spec != data::ENTITY_SPEC_OBJ_WARP || !entity.id || entity.despawned_at || entity.map_id != victim->map_id) {
             continue;
         }
 
+        data::Entity &warp = entity;
         const bool on_warp = dlb_CheckCollisionCircleRec(victim->position, victim->radius, warp.warp_collider, 0);
         if (on_warp) {
             victim->on_warp = true;
@@ -971,14 +1027,14 @@ void GameServer::SerializeSnapshot(uint32_t entityId, Msg_S_EntitySnapshot &enti
     // Collision
     //entitySnapshot.radius = projectile->radius;
 
-    // Physics
-    //entitySnapshot.drag     = projectile->drag;
-    entitySnapshot.speed    = entity->speed;
-    entitySnapshot.velocity = entity->velocity;
-
     // Life
     entitySnapshot.hp_max = entity->hp_max;
     entitySnapshot.hp     = entity->hp;
+
+    // Physics
+    //entitySnapshot.drag     = projectile->drag;
+    //entitySnapshot.speed    = entity->speed;
+    entitySnapshot.velocity = entity->velocity;
 }
 void GameServer::SendClientSnapshots(void)
 {

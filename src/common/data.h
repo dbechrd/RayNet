@@ -57,6 +57,7 @@ namespace data {
     gen(GFX_FILE_NPC_FREYE)      \
     gen(GFX_FILE_NPC_NESSA)      \
     gen(GFX_FILE_NPC_ELANE)      \
+    gen(GFX_FILE_NPC_CHICKEN)    \
     gen(GFX_FILE_OBJ_CAMPFIRE)   \
     gen(GFX_FILE_PRJ_FIREBALL)   \
     gen(GFX_FILE_TIL_OVERWORLD)  \
@@ -153,6 +154,8 @@ namespace data {
     gen(GFX_FRAME_NPC_NESSA_W_0)     \
     gen(GFX_FRAME_NPC_ELANE_E_0)     \
     gen(GFX_FRAME_NPC_ELANE_W_0)     \
+    gen(GFX_FRAME_NPC_CHICKEN_E_0)   \
+    gen(GFX_FRAME_NPC_CHICKEN_W_0)   \
     gen(GFX_FRAME_OBJ_CAMPFIRE_0)    \
     gen(GFX_FRAME_OBJ_CAMPFIRE_1)    \
     gen(GFX_FRAME_OBJ_CAMPFIRE_2)    \
@@ -244,6 +247,8 @@ namespace data {
     gen(GFX_ANIM_NPC_NESSA_W)        \
     gen(GFX_ANIM_NPC_ELANE_E)        \
     gen(GFX_ANIM_NPC_ELANE_W)        \
+    gen(GFX_ANIM_NPC_CHICKEN_E)      \
+    gen(GFX_ANIM_NPC_CHICKEN_W)      \
     gen(GFX_ANIM_OBJ_CAMPFIRE)       \
     gen(GFX_ANIM_PRJ_FIREBALL)       \
     /* gen(GFX_ANIM_FLAG) */         \
@@ -338,6 +343,7 @@ namespace data {
     gen(SPRITE_NPC_FREYE)      \
     gen(SPRITE_NPC_NESSA)      \
     gen(SPRITE_NPC_ELANE)      \
+    gen(SPRITE_NPC_CHICKEN)    \
     gen(SPRITE_OBJ_CAMPFIRE)   \
     gen(SPRITE_PRJ_FIREBALL)
 
@@ -446,38 +452,50 @@ namespace data {
     gen(ENTITY_NONE)       \
     gen(ENTITY_PLAYER)     \
     gen(ENTITY_NPC)        \
-    gen(ENTITY_PROJECTILE) \
-    gen(ENTITY_WARP)
+    gen(ENTITY_OBJECT)     \
+    gen(ENTITY_PROJECTILE)
 
     enum EntityType : uint8_t {
         ENTITY_TYPES(ENUM_GEN_VALUE)
     };
 
+#define ENTITY_SPECIES(gen)       \
+    gen(ENTITY_SPEC_NONE)         \
+    gen(ENTITY_SPEC_NPC_TOWNFOLK) \
+    gen(ENTITY_SPEC_NPC_CHICKEN)  \
+    gen(ENTITY_SPEC_OBJ_WARP)
+
+    enum EntitySpecies : uint8_t {
+        ENTITY_SPECIES(ENUM_GEN_VALUE)
+    };
+
     struct EntityProto {
-        EntityType  type            {};
-        std::string name            {};
-        float       radius          {};
-        std::string dialog_root_key {};
-        float       hp_max          {};
-        int         path_id         {};  // if non-zero, set path_active = true
-        float       speed_min       {};
-        float       speed_max       {};
-        float       drag            {};
-        SpriteId    sprite          {};
+        EntityType    type            {};
+        EntitySpecies spec            {};
+        std::string   name            {};
+        float         radius          {};
+        std::string   dialog_root_key {};
+        float         hp_max          {};
+        int           path_id         {};  // if non-zero, set path_active = true
+        float         speed_min       {};
+        float         speed_max       {};
+        float         drag            {};
+        SpriteId      sprite          {};
     };
 
     struct Entity {
         static const DataType dtype = DAT_TYP_ENTITY;
 
         //// Entity ////
-        uint32_t    id           {};
-        uint32_t    map_id       {};
-        EntityType  type         {};
-        std::string name         {};
-        uint32_t    caused_by    {};
-        double      spawned_at   {};
-        double      despawned_at {};
-        Vector2     position     {};
+        uint32_t      id           {};
+        uint32_t      map_id       {};
+        EntityType    type         {};
+        EntitySpecies spec         {};
+        std::string   name         {};
+        uint32_t      caused_by    {};
+        double        spawned_at   {};
+        double        despawned_at {};
+        Vector2       position     {};
 
         // TODO: Separate this out into its own array?
         uint32_t freelist_next {};
