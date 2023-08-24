@@ -121,6 +121,7 @@ void ClientWorld::ApplySpawnEvent(const Msg_S_EntitySpawn &entitySpawn)
     data::Entity &entity = entityDb->entities[entityIndex];
 
     entity.type     = entitySpawn.type;
+    entity.spec     = entitySpawn.spec;
     entity.name     = entitySpawn.name;
     entity.map_id   = entitySpawn.map_id;
     entity.position = entitySpawn.position;
@@ -303,12 +304,7 @@ void ClientWorld::UpdateLocalGhost(GameClient &client, data::Entity &entity, Asp
         const Vector2 cursorWorldPos = GetScreenToWorld2D(GetMousePosition(), camera2d);
         bool hover = dlb_CheckCollisionPointRec(cursorWorldPos, entityDb->EntityRect(entity.id));
         if (hover) {
-            if (entity.type == data::ENTITY_NPC) {
-                // TODO: This might need to be ENTITY_TOWNFOLK or entity.attackable
-                // or something more specific. Otherwise you can't shoot da enemies!
-                io.CaptureMouse();
-                hoveredEntityId = entity.id;
-            }
+            hoveredEntityId = entity.id;
         }
     }
 }
@@ -343,9 +339,18 @@ void ClientWorld::UpdateEntities(GameClient &client)
     }
 
     if (hoveredEntityId) {
-        bool pressed = io.MouseButtonPressed(MOUSE_BUTTON_LEFT);
-        if (pressed) {
-            client.SendEntityInteract(hoveredEntityId);
+        data::Entity *hoveredEntity = entityDb->FindEntity(hoveredEntityId);
+        // NOTE: This has to check for ENTITY_TOWNFOLK or entity.attackable, etc.,
+        // otherwise you can't shoot da enemies!
+        if (hoveredEntity) {
+            if (hoveredEntity->spec == data::ENTITY_SPEC_NPC_TOWNFOLK) {
+                io.CaptureMouse();
+            }
+
+            bool pressed = io.MouseButtonPressed(MOUSE_BUTTON_LEFT);
+            if (pressed) {
+                client.SendEntityInteract(hoveredEntityId);
+            }
         }
     }
 }

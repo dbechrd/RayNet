@@ -237,6 +237,7 @@ void GameServer::SerializeSpawn(uint32_t entityId, Msg_S_EntitySpawn &entitySpaw
     // Entity
     entitySpawn.entity_id = entity->id;
     entitySpawn.type      = entity->type;
+    entitySpawn.spec      = entity->spec;
     strncpy(entitySpawn.name, entity->name.c_str(), SV_MAX_ENTITY_NAME_LEN);
     entitySpawn.map_id    = entity->map_id;
     entitySpawn.position  = entity->position;
@@ -439,7 +440,7 @@ void GameServer::ProcessMessages(void)
                         ServerPlayer &player = players[clientIdx];
 
                         // TODO: Check if sv_player is allowed to actually interact with this
-                        // particular victim. E.g. are they even in the same map as them!?
+                        // particular entity. E.g. are they even in the same map as them!?
                         // Proximity, etc.
                         data::Entity *entity = entityDb->FindEntity(msg->entityId, data::ENTITY_NPC);
                         if (entity) {
@@ -1083,11 +1084,11 @@ void GameServer::SendClientSnapshots(void)
                         yj_server->SendMessage(clientIdx, CHANNEL_R_ENTITY_EVENT, msg);
                     }
                 }
-           /* } else if (victim.despawned_at == now) {
+           /* } else if (entity.despawned_at == now) {
                 if (yj_server->CanSendMessage(clientIdx, CHANNEL_R_ENTITY_EVENT)) {
                     Msg_S_EntityDespawn *msg = (Msg_S_EntityDespawn *)yj_server->CreateMessage(clientIdx, MSG_S_ENTITY_DESPAWN);
                     if (msg) {
-                        msg->entityId = victim.id;
+                        msg->entityId = entity.id;
                         yj_server->SendMessage(clientIdx, CHANNEL_R_ENTITY_EVENT, msg);
                     }
                 }*/
@@ -1096,7 +1097,7 @@ void GameServer::SendClientSnapshots(void)
                     Msg_S_EntitySnapshot *msg = (Msg_S_EntitySnapshot *)yj_server->CreateMessage(clientIdx, MSG_S_ENTITY_SNAPSHOT);
                     if (msg) {
                         SerializeSnapshot(entity.id, *msg);
-                        // TODO: We only need this for the sv_player victim, not EVERY victim. Make it suck less.
+                        // TODO: We only need this for the sv_player entity, not EVERY entity. Make it suck less.
                         msg->last_processed_input_cmd = serverPlayer.lastInputSeq;
                         yj_server->SendMessage(clientIdx, CHANNEL_U_ENTITY_SNAPSHOT, msg);
                     }

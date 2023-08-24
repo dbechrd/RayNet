@@ -488,13 +488,14 @@ namespace data {
 
         //// Entity ////
         uint32_t      id           {};
-        uint32_t      map_id       {};
         EntityType    type         {};
         EntitySpecies spec         {};
         std::string   name         {};
         uint32_t      caused_by    {};
         double        spawned_at   {};
         double        despawned_at {};
+
+        uint32_t      map_id       {};
         Vector2       position     {};
 
         // TODO: Separate this out into its own array?
