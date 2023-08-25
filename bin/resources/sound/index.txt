@@ -1,7 +1,13 @@
-# id                path                                    pitch variance  multi
-sfx_mic_test       "resources/sound/mic_test.wav"           0.00            false
-sfx_soft_tick      "resources/sound/soft_tick.wav"          0.03            true
-sfx_campfire       "resources/sound/campfire.wav"           0.00            false
-sfx_footstep_grass "resources/sound/footstep_grass.wav"     0.00            true
-sfx_footstep_stone "resources/sound/footstep_stone.wav"     0.00            true
-sfx_fireball       "resources/sound/copyright/fireball.wav" 0.10            true
+# id                path                                            pitch_variance  multi
+sfx_mic_test       "resources/sound/mic_test.wav"                             0.00  false
+sfx_soft_tick      "resources/sound/soft_tick.wav"                            0.03  true
+sfx_campfire       "resources/sound/campfire.wav"                             0.00  false
+sfx_footstep_grass "resources/sound/footstep_grass.wav"                       0.00  true
+sfx_footstep_stone "resources/sound/footstep_stone.wav"                       0.00  true
+sfx_fireball       "resources/sound/copyright/fireball.wav"                   0.10  true
+sfx_chicken_squawk "resources/sound/copyright/chicken_squawk.wav"             0.05  true
+sfx_chicken_cluck  "resources/sound/copyright/chicken_cluck_01.wav"           0.05  true
+sfx_chicken_cluck  "resources/sound/copyright/chicken_cluck_02.wav"           0.05  true
+sfx_chicken_cluck  "resources/sound/copyright/chicken_cluck_03.wav"           0.05  true
+sfx_chicken_cluck  "resources/sound/copyright/chicken_cluck_04.wav"           0.05  true
+sfx_chicken_cluck  "resources/sound/copyright/chicken_cluck_05.wav"           0.05  true

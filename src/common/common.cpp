@@ -57,8 +57,8 @@ Err InitCommon(void)
         fontName = "resources/font/KarminaBold.otf";
     }
 #else
-    //const char *fontName = "resources/font/KarminaBold.otf";
-    const char *fontName = "resources/font/PixelOperator-Bold.ttf";
+    const char *fontName = "resources/font/KarminaBold.otf";
+    //const char *fontName = "resources/font/PixelOperator-Bold.ttf";
     //const char *fontName = "resources/font/PixelOperatorMono-Bold.ttf";
 #endif
 

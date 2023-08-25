@@ -132,6 +132,7 @@ namespace data {
         static const DataType dtype = DAT_TYP_SFX_FILE;
         std::string id             {};
         std::string path           {};
+        int         variations     {};  // how many version of the file to look for with "_00" suffix
         float       pitch_variance {};
         bool        multi          {};
         DatBuffer   data_buffer    {};
@@ -470,17 +471,20 @@ namespace data {
     };
 
     struct EntityProto {
-        EntityType    type            {};
-        EntitySpecies spec            {};
-        std::string   name            {};
-        float         radius          {};
-        std::string   dialog_root_key {};
-        float         hp_max          {};
-        int           path_id         {};  // if non-zero, set path_active = true
-        float         speed_min       {};
-        float         speed_max       {};
-        float         drag            {};
-        SpriteId      sprite          {};
+        EntityType    type                 {};
+        EntitySpecies spec                 {};
+        std::string   name                 {};
+        std::string   ambient_fx           {};
+        double        ambient_fx_delay_min {};
+        double        ambient_fx_delay_max {};
+        float         radius               {};
+        std::string   dialog_root_key      {};
+        float         hp_max               {};
+        int           path_id              {};
+        float         speed_min            {};
+        float         speed_max            {};
+        float         drag                 {};
+        SpriteId      sprite               {};
     };
 
     struct Entity {
@@ -500,6 +504,11 @@ namespace data {
 
         // TODO: Separate this out into its own array?
         uint32_t freelist_next {};
+
+        //// Audio ////
+        std::string ambient_fx           {};  // some sound they play occasionally
+        double      ambient_fx_delay_min {};
+        double      ambient_fx_delay_max {};
 
         //// Collision ////
         float radius    {};  // collision
@@ -553,6 +562,10 @@ namespace data {
         int    path_node_last_reached {};
         int    path_node_target       {};
         double path_node_arrived_at   {};
+
+        Vector2 path_rand_direction  {};  // move this direction (if possible)
+        double  path_rand_duration   {};  // for this long
+        double  path_rand_started_at {};  // when we started moving this way
 
         //// Physics ////
         float   drag        {};
@@ -621,7 +634,7 @@ namespace data {
         std::vector<TileType> tile_types {};
 
         std::unordered_map<std::string, size_t> mus_files_by_id{};
-        std::unordered_map<std::string, size_t> sfx_files_by_id{};
+        std::unordered_map<std::string, std::vector<size_t>> sfx_files_by_id{};  // vector holds variants
 
         // static entities? (objects?)
         // - doors
@@ -660,7 +673,18 @@ namespace data {
             if (id.empty()) return 0;
             const auto &entry = sfx_files_by_id.find(id);
             if (entry != sfx_files_by_id.end()) {
-                return &sfx_files[entry->second];
+                const auto &variants = entry->second;
+                assert(!variants.empty());
+
+                size_t sfx_idx;
+                if (variants.size() > 1) {
+                    const size_t variant_idx = GetRandomValue(0, variants.size() - 1);
+                    sfx_idx = variants[variant_idx];
+                } else {
+                    sfx_idx = variants[0];
+                }
+
+                return &sfx_files[sfx_idx];
             } else {
                 TraceLog(LOG_WARNING, "Missing sound: %s", id.c_str());
                 assert(!"woops");

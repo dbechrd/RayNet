@@ -597,23 +597,26 @@ data::Entity *SpawnEntityProto(GameServer &server, uint32_t mapId, Vector2 posit
     data::Entity *entity = server.SpawnEntity(data::ENTITY_NPC);
     if (!entity) return 0;
 
-    entity->spec = proto.spec;
-    entity->map_id = mapId;
-    entity->name = proto.name;
-    entity->position = position;
-    entity->radius = proto.radius;
-    entity->dialog_root_key = proto.dialog_root_key;
-    entity->hp_max = proto.hp_max;
-    entity->hp = entity->hp_max;
-    // TODO: Give the path a name, e.g. entity->path = "PATH_TOWN_LILY"
-    entity->path_id = proto.path_id;
+    entity->spec                 = proto.spec;
+    entity->map_id               = mapId;
+    entity->name                 = proto.name;
+    entity->position             = position;
+    entity->ambient_fx           = proto.ambient_fx;
+    entity->ambient_fx_delay_min = proto.ambient_fx_delay_min;
+    entity->ambient_fx_delay_max = proto.ambient_fx_delay_max;
+    entity->radius               = proto.radius;
+    entity->dialog_root_key      = proto.dialog_root_key;
+    entity->hp_max               = proto.hp_max;
+    entity->hp                   = entity->hp_max;
+    entity->path_id              = proto.path_id;  // TODO: Give the path a name, e.g. "PATH_TOWN_LILY"
+    entity->drag                 = proto.drag;
+    entity->speed                = GetRandomValue(proto.speed_min, proto.speed_max);
+    entity->sprite               = proto.sprite;
+
     AiPathNode *aiPathNode = map->GetPathNode(entity->path_id, 0);
     if (aiPathNode) {
         entity->position = aiPathNode->pos;
     }
-    entity->drag = proto.drag;
-    entity->speed = GetRandomValue(proto.speed_min, proto.speed_max);
-    entity->sprite = proto.sprite;
 
     return entity;
 }
@@ -683,8 +686,12 @@ void GameServer::TickSpawnTownNPCs(uint32_t mapId)
         chicken.type = data::ENTITY_NPC;
         chicken.spec = data::ENTITY_SPEC_NPC_CHICKEN;
         chicken.name = "Chicken";
+        chicken.ambient_fx = "sfx_chicken_cluck";
+        chicken.ambient_fx_delay_min = 15;
+        chicken.ambient_fx_delay_max = 30;
         chicken.radius = 5;
         chicken.hp_max = 15;
+        chicken.path_id = -1;
         chicken.speed_min = 50;
         chicken.speed_max = 150;
         chicken.drag = 1.0f;
@@ -716,7 +723,12 @@ void GameServer::TickSpawnTownNPCs(uint32_t mapId)
         for (int i = 0; i < ARRAY_SIZE(chicken_ids); i++) {
             data::Entity *entity = entityDb->FindEntity(chicken_ids[i], data::ENTITY_NPC);
             if (!entity) {
-                entity = SpawnEntityProto(*this, mapId, { 0, 0 }, chicken);
+                Vector2 spawn{};
+                // TODO: If chicken spawns inside something, immediately despawn
+                //       it (or find better strat for this)
+                spawn.x = GetRandomValue(200, 1200);
+                spawn.y = GetRandomValue(1000, 1700);
+                entity = SpawnEntityProto(*this, mapId, spawn, chicken);
                 if (entity) {
                     BroadcastEntitySpawn(entity->id);
                     chicken_ids[i] = entity->id;
@@ -757,7 +769,7 @@ void GameServer::TickSpawnCaveNPCs(uint32_t mapId)
         }
     }
 }
-void GameServer::TickEntityBot(uint32_t entityId, double dt)
+void GameServer::TickEntityNPC(uint32_t entityId, double dt)
 {
     data::Entity *entity = entityDb->FindEntity(entityId);
     if (!entity) return;
@@ -770,7 +782,8 @@ void GameServer::TickEntityBot(uint32_t entityId, double dt)
     }
 
     // TODO: tick_pathfind?
-    if (!entity->dialog_spawned_at) {
+    // TODO: Instead of path_id -1 for "no path" change it to 0 like everything else. After tilemap refactor.
+    if (entity->path_id >= 0 && !entity->dialog_spawned_at) {
         AiPathNode *ai_path_node = map->GetPathNode(entity->path_id, entity->path_node_target);
         if (ai_path_node) {
             Vector2 target = ai_path_node->pos;
@@ -813,8 +826,32 @@ void GameServer::TickEntityBot(uint32_t entityId, double dt)
 
     #endif
         }
-    } else {
-        printf("");
+    }
+
+    // Chicken pathing AI (really bad)
+    if (entity->spec == data::ENTITY_SPEC_NPC_CHICKEN) {
+        if (entity->colliding) {
+            entity->path_rand_direction = {};
+        }
+
+        if (now - entity->path_rand_started_at >= entity->path_rand_duration) {
+            double duration = 0;
+            Vector2 dir{};
+            if (Vector2LengthSqr(entity->path_rand_direction) == 0) {
+                dir.x = GetRandomFloatMinusOneToOne();
+                dir.y = GetRandomFloatMinusOneToOne();
+                dir = Vector2Normalize(dir);
+                duration = GetRandomValue(2, 4);
+            } else {
+                dir = {};
+                duration = GetRandomValue(5, 10);
+            }
+            entity->path_rand_started_at = now;
+            entity->path_rand_direction = dir;
+            entity->path_rand_duration = duration;
+        }
+        Vector2 move = Vector2Scale(entity->path_rand_direction, entity->speed);
+        entity->ApplyForce(move);
     }
 
     entityDb->EntityTick(entityId, dt);
@@ -857,7 +894,8 @@ void GameServer::TickEntityProjectile(uint32_t entityId, double dt)
                     if (!victim.dialog_spawned_at) {
                         switch (victim.spec) {
                             case data::ENTITY_SPEC_NPC_TOWNFOLK: {
-                                BroadcastEntitySay(victim.id, TextFormat("Ouch! You hit me with\nprojectile #%u!", projectile->id));
+                                //BroadcastEntitySay(victim.id, TextFormat("Ouch! You hit me with\nprojectile #%u!", projectile->id));
+                                BroadcastEntitySay(victim.id, "Ouch!");
                                 break;
                             }
                             case data::ENTITY_SPEC_NPC_CHICKEN: {
@@ -990,7 +1028,7 @@ void GameServer::Tick(void)
         // TODO: if (map.sleeping) continue
 
         switch (entity.type) {
-            case data::ENTITY_NPC:        TickEntityBot        (entity.id, SV_TICK_DT); break;
+            case data::ENTITY_NPC:        TickEntityNPC        (entity.id, SV_TICK_DT); break;
             case data::ENTITY_PLAYER:     TickEntityPlayer     (entity.id, SV_TICK_DT); break;
             case data::ENTITY_PROJECTILE: TickEntityProjectile (entity.id, SV_TICK_DT); break;
         }

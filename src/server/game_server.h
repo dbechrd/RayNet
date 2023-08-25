@@ -128,12 +128,9 @@ private:
     void UpdateServerPlayers(void);
     void TickSpawnTownNPCs(uint32_t mapId);
     void TickSpawnCaveNPCs(uint32_t mapId);
-    void TickEntityBot(uint32_t entityIndex, double dt);
+    void TickEntityNPC(uint32_t entityIndex, double dt);
     void TickEntityPlayer(uint32_t entityIndex, double dt);
     void TickEntityProjectile(uint32_t entityIndex, double dt);
-    void TickPlayer(Tilemap &map, uint32_t entityId, double dt);
-    void TickBot(Tilemap &map, uint32_t entityId, double dt);
-    void TickProjectile(Tilemap &map, uint32_t entityId, double dt);
     void WarpEntity(Tilemap &map, uint32_t entityId, data::Entity &warp);
     void TickResolveEntityWarpCollisions(Tilemap &map, uint32_t entityId, double now);
     void Tick(void);

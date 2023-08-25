@@ -161,11 +161,25 @@ namespace data {
                 if (iss
                     >> sfx_file.id
                     >> std::quoted(sfx_file.path)
+                    >> sfx_file.variations
                     >> sfx_file.pitch_variance
                     >> std::boolalpha >> sfx_file.multi
                     && sfx_file.id[0] != '#'
                 ) {
-                    sfx_files.push_back(sfx_file);
+                    if (sfx_file.variations > 1) {
+                        const char *file_dir = GetDirectoryPath(sfx_file.path.c_str());
+                        const char *file_name = GetFileNameWithoutExt(sfx_file.path.c_str());
+                        const char *file_ext = GetFileExtension(sfx_file.path.c_str());
+                        for (int i = 0; i < sfx_file.variations; i++) {
+                            // Build variant path, e.g. chicken_cluck.wav -> chicken_cluck_01.wav
+                            const char *variant_path = TextFormat("%s/%s_%02d%s", file_dir, file_name, i + 1, file_ext);
+                            SfxFile sfx_variant = sfx_file;
+                            sfx_variant.path = variant_path;
+                            sfx_files.push_back(sfx_variant);
+                        }
+                    } else {
+                        sfx_files.push_back(sfx_file);
+                    }
                 }
             }
 
@@ -642,7 +656,8 @@ namespace data {
         }
 
         if (stream.mode == PACK_MODE_READ) {
-            stream.pack->sfx_files_by_id[sfx_file.id] = index;
+            auto &sfx_variants = stream.pack->sfx_files_by_id[sfx_file.id];
+            sfx_variants.push_back(index);
         }
     }
 

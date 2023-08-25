@@ -1685,4 +1685,101 @@ void Editor::DrawUI_Debug(UI &uiActionBar, double now)
     if (true) {// || uiActionBar.Button("NextUID").pressed) {
         uid = NextUID();
     }
+    uiActionBar.Newline();
+
+#if 0
+    uiActionBar.Text("^^^ ignore all this stuff ^^^");
+    uiActionBar.Space({ 0, 50 });
+    uiActionBar.Newline();
+
+    struct Element {
+        bool built;
+        bool selected;
+    };
+
+    const Element elements_default[]{
+        { true, false },
+        { true, false },
+        { false, false },
+        { false, false },
+    };
+
+    static Element elements []{
+        { true, false },
+        { true, false },
+        { false, false },
+        { false, false },
+    };
+
+    if (uiActionBar.Button("Reset").pressed) {
+        for (int i = 0; i < ARRAY_SIZE(elements); i++) {
+            elements[i] = elements_default[i];
+        }
+    }
+    uiActionBar.Newline();
+
+    const bool *built = 0;
+    bool multi = false;
+    int selected_count = 0;
+
+    uiActionBar.Text("_____________________________________________", GRAY);
+    uiActionBar.Newline();
+    uiActionBar.Text("Elements:", LIGHTGRAY);
+    uiActionBar.Newline();
+    for (int i = 0; i < ARRAY_SIZE(elements); i++) {
+        uiActionBar.Text(elements[i].selected ? "[x]" : "[   ]");
+        Color bgColor = elements[i].built ? DARKGRAY : LIGHTGRAY;
+        Color fgColor = elements[i].built ? WHITE : BLACK;
+        uiActionBar.PushFgColor(fgColor);
+        if (uiActionBar.Button(
+                TextFormat("Element #%d - %s", i, elements[i].built ? "Built" : "Not Built"),
+                elements[i].selected,
+                bgColor,
+                ColorBrightness(bgColor, -0.3f)
+            )
+            .pressed)
+        {
+            elements[i].selected = !elements[i].selected;
+        }
+        if (elements[i].selected) {
+            if (!built) {
+                built = &elements[i].built;
+            } else if (elements[i].built != *built) {
+                multi = true;
+            }
+            selected_count++;
+        }
+        uiActionBar.PopStyle();
+        uiActionBar.Newline();
+    }
+
+    if (multi) {
+        uiActionBar.Button("Various Statuses", true, PURPLE, PURPLE);
+    }
+    uiActionBar.Newline();
+
+    uiActionBar.Text("_____________________________________________", GRAY);
+    uiActionBar.Newline();
+    uiActionBar.Text("Element Inspector:", LIGHTGRAY);
+    uiActionBar.Newline();
+    if (selected_count) {
+        //uiActionBar.PushFgColor(BLACK);
+        if (uiActionBar.Button(multi ? "Mark all Not Built" : "Not Built", !multi && !*built, GRAY, ColorBrightness(ORANGE, -0.3f)).pressed) {
+            for (int i = 0; i < ARRAY_SIZE(elements); i++) {
+                if (elements[i].selected) elements[i].built = false;
+            }
+        }
+        //uiActionBar.PopStyle();
+        if (uiActionBar.Button(multi ? "Mark all Built" : "Built", !multi && *built, GRAY, ColorBrightness(ORANGE, -0.3f)).pressed) {
+            for (int i = 0; i < ARRAY_SIZE(elements); i++) {
+                if (elements[i].selected) elements[i].built = true;
+            }
+        }
+    } else {
+        uiActionBar.Text("Select some elements to see their status.");
+    }
+    uiActionBar.Newline();
+    uiActionBar.Text("_____________________________________________", GRAY);
+    uiActionBar.Newline();
+#endif
 }
