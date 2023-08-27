@@ -20,7 +20,8 @@ namespace data {
         gen(DAT_TYP_MATERIAL,  "MATERIAL" ) \
         gen(DAT_TYP_TILE_TYPE, "TILE_TYPE") \
         gen(DAT_TYP_ENTITY,    "ENTITY"   ) \
-        gen(DAT_TYP_SPRITE,    "SPRITE"   )
+        gen(DAT_TYP_SPRITE,    "SPRITE"   ) \
+        gen(DAT_TYP_TILE_MAP,  "TILE_MAP" )
 
     enum DataType : uint8_t {
         DATA_TYPES(ENUM_GEN_VALUE_DESC)
@@ -49,6 +50,7 @@ namespace data {
         uint8_t *bytes;
     };
 
+#if 0
 #define GFX_FILE_IDS(gen)        \
     gen(GFX_FILE_NONE)           \
     gen(GFX_FILE_DLG_NPATCH)     \
@@ -66,9 +68,11 @@ namespace data {
     enum GfxFileId : uint16_t {
         GFX_FILE_IDS(ENUM_GEN_VALUE)
     };
+#endif
+
     struct GfxFile {
         static const DataType dtype = DAT_TYP_GFX_FILE;
-        GfxFileId   id          {};
+        std::string id          {};
         std::string path        {};
         DatBuffer   data_buffer {};
         ::Texture   texture     {};
@@ -228,12 +232,12 @@ namespace data {
     };
     struct GfxFrame {
         static const DataType dtype = DAT_TYP_GFX_FRAME;
-        GfxFrameId id  {};
-        GfxFileId  gfx {};
-        uint16_t   x   {};
-        uint16_t   y   {};
-        uint16_t   w   {};
-        uint16_t   h   {};
+        GfxFrameId  id  {};
+        std::string gfx {};  // TODO: StringId
+        uint16_t    x   {};
+        uint16_t    y   {};
+        uint16_t    w   {};
+        uint16_t    h   {};
     };
 
 #define GFX_ANIM_IDS(gen)            \
@@ -446,6 +450,53 @@ namespace data {
         //Color color;  // color for minimap/wang tile editor (top left pixel of tile)
     };
 
+    struct AiPathNode {
+        Vector2 pos;
+        double waitFor;
+    };
+
+    struct AiPath {
+        uint32_t pathNodeIndexOffset;
+        uint32_t pathNodeIndexCount;
+    };
+
+    struct TileDef {
+        //uint16_t tileId;
+        //uint16_t sheetId;
+        //uint16_t materialId;
+        uint16_t x;
+        uint16_t y;
+        uint8_t w;
+        uint8_t h;
+        uint8_t collide;
+        uint8_t auto_tile_mask;
+
+        //------------------------
+        // Not serialized
+        Color color;  // color for minimap/wang tile editor (top left pixel of tile)
+    };
+
+    struct TileMapData {
+        static const DataType dtype = DAT_TYP_TILE_MAP;
+        uint32_t    version   {};  // version on disk
+        uint32_t    width     {};  // width of map in tiles
+        uint32_t    height    {};  // height of map in tiles
+        std::string name      {};  // name of map area
+        std::string texture   {};  // GfxFile key
+
+        // TODO(dlb): Move these to a global pool, each has its own textureId
+        std::vector<TileDef>    tileDefs        {};
+        std::vector<Tile>       tiles           {};
+        std::vector<AiPathNode> pathNodes       {};  // 94 19 56 22 57
+        std::vector<uint32_t>   pathNodeIndices {};  // 0 1 2 | 3 4 5
+        std::vector<AiPath>     paths           {};  // offset, length | 0, 3 | 3, 3
+
+        //------------------------
+        // Not serialized
+        uint32_t id                 {};  // for communicating efficiently w/ client about which map
+        double   chunkLastUpdatedAt {};  // used by server to know when chunks are dirty on clients
+    };
+
     ////////////////////////////////////////////////////////////////////////////
 
     // Best rap song: "i added it outta habit" by dandymcgee
@@ -624,15 +675,17 @@ namespace data {
         // - sprite defs
         // - tile defs
         // - object defs
-        std::vector<GfxFile>  gfx_files  {};
-        std::vector<MusFile>  mus_files  {};
-        std::vector<SfxFile>  sfx_files  {};
-        std::vector<GfxFrame> gfx_frames {};
-        std::vector<GfxAnim>  gfx_anims  {};
-        std::vector<Material> materials  {};
-        std::vector<Sprite>   sprites    {};
-        std::vector<TileType> tile_types {};
+        std::vector<GfxFile>     gfx_files  {};
+        std::vector<MusFile>     mus_files  {};
+        std::vector<SfxFile>     sfx_files  {};
+        std::vector<GfxFrame>    gfx_frames {};
+        std::vector<GfxAnim>     gfx_anims  {};
+        std::vector<Material>    materials  {};
+        std::vector<Sprite>      sprites    {};
+        std::vector<TileType>    tile_types {};
+        std::vector<TileMapData> tile_maps  {};
 
+        std::unordered_map<std::string, size_t> gfx_files_by_id{};
         std::unordered_map<std::string, size_t> mus_files_by_id{};
         std::unordered_map<std::string, std::vector<size_t>> sfx_files_by_id{};  // vector holds variants
 
@@ -655,7 +708,30 @@ namespace data {
 
         PackToc toc {};
 
-        Pack(std::string path) : path(path) {}
+        Pack(std::string path) : path(path) {
+            // Reserve slot 0 in all resource arrays for a placeholder asset
+            gfx_files.emplace_back();
+            mus_files.emplace_back();
+            sfx_files.emplace_back();
+            gfx_frames.emplace_back();
+            gfx_anims.emplace_back();
+            materials.emplace_back();
+            sprites.emplace_back();
+            tile_types.emplace_back();
+            tile_maps.emplace_back();
+        }
+
+        GfxFile *FindGraphic(std::string id) {
+            if (id.empty()) return 0;
+            const auto &entry = gfx_files_by_id.find(id);
+            if (entry != gfx_files_by_id.end()) {
+                return &gfx_files[entry->second];
+            } else {
+                TraceLog(LOG_WARNING, "Missing graphic: %s", id.c_str());
+                assert(!"woops");
+            }
+            return 0;
+        }
 
         MusFile *FindMusic(std::string id) {
             if (id.empty()) return 0;
@@ -708,7 +784,7 @@ namespace data {
     };
 
     const char *DataTypeStr(DataType type);
-    const char *GfxFileIdStr(GfxFileId id);
+    //const char *GfxFileIdStr(GfxFileId id);
     //const char *MusFileIdStr(MusFileId id);
     //const char *SfxFileIdStr(SfxFileId id);
     const char *GfxFrameIdStr(GfxFrameId id);

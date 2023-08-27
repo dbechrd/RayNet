@@ -360,6 +360,10 @@ void ClientWorld::Update(GameClient &client)
     io.PushScope(IO::IO_GameNPC);
     UpdateEntities(client);
     io.PopScope();
+
+    if ((int)fmod(client.now * 100, 100) == GetRandomValue(0, 9)) {
+        data::PlaySound("sfx_chicken_cluck");
+    }
 }
 
 void ClientWorld::DrawEntitySnapshotShadows(uint32_t entityId, Controller &controller, double now, double dt)
@@ -448,6 +452,8 @@ void ClientWorld::DrawDialogTips(std::vector<FancyTextTip> tips)
     for (const FancyTextTip &tip : tips) {
         const char *tipText = TextFormat("%.*s", tip.tipLen, tip.tip);
         Vector2 tipPos = Vector2Add(GetMousePosition(), { 0, 20 });
+        tipPos.x = floorf(tipPos.x);
+        tipPos.y = floorf(tipPos.y);
         Vector2 tipSize = MeasureTextEx(*tip.font, tipText, tip.font->baseSize, 1);
 
         Rectangle tipRec{
@@ -470,8 +476,8 @@ void ClientWorld::DrawDialog(GameClient &client, data::Entity &entity, Vector2 b
 {
     Font &font = fntMedium;
 
-    bottomCenterScreen.x = roundf(bottomCenterScreen.x);
-    bottomCenterScreen.y = roundf(bottomCenterScreen.y);
+    bottomCenterScreen.x = floorf(bottomCenterScreen.x);
+    bottomCenterScreen.y = floorf(bottomCenterScreen.y);
 
     const float marginBottom = 4.0f;
     const Vector2 bgPad{ 12, 8 };
@@ -504,14 +510,17 @@ void ClientWorld::DrawDialog(GameClient &client, data::Entity &entity, Vector2 b
     float cursorY = bgTop + bgPad.y;
 
     Vector2 titlePos{
-        roundf(bottomCenterScreen.x - titleSize.x / 2),
+        floorf(bottomCenterScreen.x - titleSize.x / 2),
         cursorY
     };
+    //titlePos.x = floorf(titlePos.x);
+    //titlePos.y = floorf(titlePos.y);
+
     cursorY += titleSize.y;
     cursorY += bgPad.y;
 
     Vector2 msgPos{
-        roundf(bottomCenterScreen.x - msgSize.x / 2),
+        floorf(bottomCenterScreen.x - msgSize.x / 2),
         cursorY
     };
     //msgPos.x = floorf(msgPos.x);
@@ -538,6 +547,7 @@ void ClientWorld::DrawDialog(GameClient &client, data::Entity &entity, Vector2 b
         io.CaptureMouse();
     }
 
+    printf("%.02f %.02f %.02f %.02f\n", bgRect.x, bgRect.y, bgRect.width, bgRect.height);
     dlb_DrawNPatch(bgRect);
     //DrawRectangleRounded(msgBgRect, 0.2f, 6, Fade(BLACK, 0.5));
     //DrawRectangleRoundedLines(msgBgRect, 0.2f, 6, 1.0f, RAYWHITE);

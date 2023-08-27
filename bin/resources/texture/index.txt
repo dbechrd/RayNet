@@ -1,0 +1,12 @@
+# id                path
+gfx_dlg_npatch     "resources/texture/npatch.png"
+gfx_chr_mage       "resources/texture/mage.png"
+gfx_npc_lily       "resources/texture/lily.png"
+gfx_npc_freye      "resources/texture/freye.png"
+gfx_npc_nessa      "resources/texture/nessa.png"
+gfx_npc_elane      "resources/texture/elane.png"
+gfx_npc_chicken    "resources/texture/chicken.png"
+gfx_obj_campfire   "resources/texture/campfire.png"
+gfx_prj_fireball   "resources/texture/fireball.png"
+gfx_til_overworld  "resources/texture/tiles32.png"
+gfx_til_auto_grass "resources/texture/autotile_3x3_min.png"

@@ -506,14 +506,19 @@ void dlb_DrawTexturePro(Texture2D texture, Rectangle source, Rectangle dest, Vec
 void dlb_DrawNPatch(Rectangle rec)
 {
     NPatchInfo nPatch{};
-    Texture &nPatchTex = data::packs[0]->gfx_files[data::GFX_FILE_DLG_NPATCH].texture;
-    nPatch.source = { 0, 0, (float)nPatchTex.width, (float)nPatchTex.height };
-    nPatch.left = 16;
-    nPatch.top = 16;
-    nPatch.right = 16;
+    const auto gfx_file = data::packs[0]->FindGraphic("gfx_dlg_npatch");
+    if (!gfx_file) {
+        return;
+    }
+
+    const Texture *nPatchTex = &gfx_file->texture;
+    nPatch.source = { 0, 0, (float)nPatchTex->width, (float)nPatchTex->height };
+    nPatch.left   = 16;
+    nPatch.top    = 16;
+    nPatch.right  = 16;
     nPatch.bottom = 16;
     nPatch.layout = NPATCH_NINE_PATCH;
-    DrawTextureNPatch(nPatchTex, nPatch, rec, {}, 0, WHITE);
+    DrawTextureNPatch(*nPatchTex, nPatch, rec, {}, 0, WHITE);
 }
 
 bool StrFilter(const char *str, const char *filter)

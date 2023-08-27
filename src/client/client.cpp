@@ -112,8 +112,8 @@ void reset_menu_connecting(void)
 void update_camera(Camera2D &camera, Tilemap *map, Vector2 target, float frameDt)
 {
     camera.offset = {
-        floorf(GetRenderWidth()/2.0f),
-        floorf(GetRenderHeight()/2.0f)
+        /*floorf(*/GetRenderWidth ()/2.0f/*)*/,
+        /*floorf(*/GetRenderHeight()/2.0f/*)*/
     };
 
     if (!io.KeyDown(KEY_SPACE)) {
@@ -125,8 +125,8 @@ void update_camera(Camera2D &camera, Tilemap *map, Vector2 target, float frameDt
         camera.target.y = LERP(camera.target.y, target.y, alpha);
 
 #else
-        camera.target.x = floorf(target.x);
-        camera.target.y = floorf(target.y);
+        camera.target.x = target.x;
+        camera.target.y = target.y;
 #endif
     }
 
@@ -159,6 +159,11 @@ void update_camera(Camera2D &camera, Tilemap *map, Vector2 target, float frameDt
     } else if (io.KeyPressed(KEY_KP_2)) {
         zoomTarget = 2;
     }
+
+    camera.target.x = floorf(camera.target.x);
+    camera.target.y = floorf(camera.target.y);
+    camera.offset.x = floorf(camera.offset.x);
+    camera.offset.y = floorf(camera.offset.y);
 }
 
 void draw_game(GameClient &client)

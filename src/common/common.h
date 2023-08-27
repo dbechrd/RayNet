@@ -28,6 +28,8 @@
 #include <unordered_set>
 #include <vector>
 
+#include "strings.h"
+
 // Stuff that probably shouldn't be here
 
 //#define WINDOW_WIDTH 1920
@@ -35,7 +37,8 @@
 
 #define TEXT_LINE_SPACING 1.0f
 
-#define TILE_W 32
+#define TILE_W 64
+typedef uint8_t Tile;
 
 #define TODO_LIST_PATH "resources/todo.txt"
 
@@ -98,7 +101,7 @@
 #define CL_SEND_INPUT_DT                SV_TICK_DT //(1.0/120.0)
 #define CL_SNAPSHOT_COUNT               16
 #define CL_RENDER_DISTANCE              1
-#define CL_CAMERA_LERP                  1
+#define CL_CAMERA_LERP                  0
 #define CL_CLIENT_SIDE_PREDICT          1
 #define CL_DIALOG_DURATION_MIN          1.0
 #define CL_DIALOG_DURATION_PER_CHAR     0.1

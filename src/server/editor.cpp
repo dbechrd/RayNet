@@ -126,9 +126,11 @@ void Editor::DrawGroundOverlay_Tiles(Camera2D &camera, double now)
             }
 
             Vector2 drawPos{ (float)coord.x * TILE_W, (float)coord.y * TILE_W };
-            const Texture tex = rnTextureCatalog.GetTexture(map->textureId);
-            map->DrawTile(tex, cursorTile, drawPos);
-            DrawRectangleLinesEx({ drawPos.x, drawPos.y, TILE_W, TILE_W }, 2, WHITE);
+            const data::GfxFile *gfx_file = data::packs[0]->FindGraphic(map->texture);
+            if (gfx_file) {
+                map->DrawTile(gfx_file->texture, cursorTile, drawPos);
+                DrawRectangleLinesEx({ drawPos.x, drawPos.y, TILE_W, TILE_W }, 2, WHITE);
+            }
         }
     }
 }
@@ -142,15 +144,15 @@ void Editor::DrawGroundOverlay_Paths(Camera2D &camera, double now)
 
     // Draw path edges
     for (uint32_t aiPathId = 0; aiPathId < map->paths.size(); aiPathId++) {
-        AiPath *aiPath = map->GetPath(aiPathId);
+        data::AiPath *aiPath = map->GetPath(aiPathId);
         if (!aiPath) {
             continue;
         }
 
         for (uint32_t aiPathNodeIndex = 0; aiPathNodeIndex < aiPath->pathNodeIndexCount; aiPathNodeIndex++) {
             uint32_t aiPathNodeNextIndex = map->GetNextPathNodeIndex(aiPathId, aiPathNodeIndex);
-            AiPathNode *aiPathNode = map->GetPathNode(aiPathId, aiPathNodeIndex);
-            AiPathNode *aiPathNodeNext = map->GetPathNode(aiPathId, aiPathNodeNextIndex);
+            data::AiPathNode *aiPathNode = map->GetPathNode(aiPathId, aiPathNodeIndex);
+            data::AiPathNode *aiPathNodeNext = map->GetPathNode(aiPathId, aiPathNodeNextIndex);
             assert(aiPathNode);
             assert(aiPathNodeNext);
             DrawLine(
@@ -164,13 +166,13 @@ void Editor::DrawGroundOverlay_Paths(Camera2D &camera, double now)
     // Draw path nodes
     const float pathRectRadius = 5;
     for (uint32_t aiPathId = 0; aiPathId < map->paths.size(); aiPathId++) {
-        AiPath *aiPath = map->GetPath(aiPathId);
+        data::AiPath *aiPath = map->GetPath(aiPathId);
         if (!aiPath) {
             continue;
         }
 
         for (uint32_t aiPathNodeIndex = 0; aiPathNodeIndex < aiPath->pathNodeIndexCount; aiPathNodeIndex++) {
-            AiPathNode *aiPathNode = map->GetPathNode(aiPathId, aiPathNodeIndex);
+            data::AiPathNode *aiPathNode = map->GetPathNode(aiPathId, aiPathNodeIndex);
             assert(aiPathNode);
 
             Rectangle nodeRect{
@@ -228,9 +230,9 @@ void Editor::DrawGroundOverlay_Paths(Camera2D &camera, double now)
             newNodePos.y = roundf(newNodePos.y / 8) * 8;
         }
         Vector2SubtractValue(newNodePos, pathRectRadius);
-        AiPath *aiPath = map->GetPath(cursor.dragPathId);
+        data::AiPath *aiPath = map->GetPath(cursor.dragPathId);
         if (aiPath) {
-            AiPathNode *aiPathNode = map->GetPathNode(cursor.dragPathId, cursor.dragPathNodeIndex);
+            data::AiPathNode *aiPathNode = map->GetPathNode(cursor.dragPathId, cursor.dragPathNodeIndex);
             assert(aiPathNode);
             aiPathNode->pos = newNodePos;
         }
@@ -614,6 +616,7 @@ void Editor::DrawUI_TileActions(UI &uiActionBar, double now)
     const char *mapFileFilter[1] = { "*.png" };
     static const char *openRequest = 0;
 
+#if 0
     std::string tilesetPath = rnStringCatalog.GetString(map->textureId);
     uiActionBar.Text(tilesetPath.c_str());
     if (uiActionBar.Button("Change tileset", ColorBrightness(ORANGE, -0.3f)).released) {
@@ -630,8 +633,7 @@ void Editor::DrawUI_TileActions(UI &uiActionBar, double now)
         openFileThread.detach();
     }
     if (openRequest) {
-        StringId newTextureId = rnStringCatalog.AddString(openRequest);
-        Err err = Tilemap::ChangeTileset(*map, newTextureId, now);
+        Err err = Tilemap::ChangeTileset(*map, openRequest, now);
         if (err) {
             std::thread errorThread([err]{
                 const char *msg = TextFormat("Failed to load file %s. %s\n", openRequest, ErrStr(err));
@@ -642,6 +644,7 @@ void Editor::DrawUI_TileActions(UI &uiActionBar, double now)
         openRequest = 0;
     }
     uiActionBar.Newline();
+#endif
 
     uiActionBar.Text("Flag");
 
@@ -676,12 +679,18 @@ void Editor::DrawUI_Tilesheet(UI &uiActionBar, double now)
 {
     // TODO: Support multi-select (big rectangle?), and figure out where this lives
 
-    Texture mapTex = rnTextureCatalog.GetTexture(map->textureId);
+    const data::GfxFile *gfx_file = data::packs[0]->FindGraphic(map->texture);
+    if (!gfx_file) {
+        assert(!"no texture :(");
+        return;
+    }
+
+    const Texture *mapTex = &gfx_file->texture;
 
     static Texture checkerboard{};
-    if (checkerboard.width != mapTex.width || checkerboard.height != mapTex.height) {
+    if (checkerboard.width != mapTex->width || checkerboard.height != mapTex->height) {
         checkerboard = LoadTextureFromImage(
-            GenImageChecked(mapTex.width, mapTex.height, 8, 8, GRAY, LIGHTGRAY)
+            GenImageChecked(mapTex->width, mapTex->height, 8, 8, GRAY, LIGHTGRAY)
         );
     }
 
@@ -692,7 +701,7 @@ void Editor::DrawUI_Tilesheet(UI &uiActionBar, double now)
     UIState sheet = uiActionBar.Image(checkerboard);
     Vector2 imgTL{ sheet.contentRect.x, sheet.contentRect.y };
 
-    DrawTextureEx(mapTex, imgTL, 0, 1, WHITE);
+    DrawTextureEx(*mapTex, imgTL, 0, 1, WHITE);
     uiActionBar.PopStyle();
 
     // Draw collision overlay on tilesheet if we're in collision editing mode
@@ -777,7 +786,7 @@ void Editor::DrawUI_Tilesheet(UI &uiActionBar, double now)
 
         // If mouse pressed, select tile, or change collision data, depending on mode
         if (sheet.pressed) {
-            const int tileIdx = tileY * (mapTex.width / TILE_W) + tileX;
+            const int tileIdx = tileY * (mapTex->width / TILE_W) + tileX;
             if (tileIdx >= 0 && tileIdx < map->tileDefs.size()) {
                 switch (state.tiles.tileEditMode) {
                     case TileEditMode_Select: {
@@ -785,7 +794,7 @@ void Editor::DrawUI_Tilesheet(UI &uiActionBar, double now)
                         break;
                     }
                     case TileEditMode_Collision: {
-                        TileDef &tileDef = map->tileDefs[tileIdx];
+                        data::TileDef &tileDef = map->tileDefs[tileIdx];
                         tileDef.collide = !tileDef.collide;
                         break;
                     }
@@ -802,7 +811,7 @@ void Editor::DrawUI_Tilesheet(UI &uiActionBar, double now)
 
                         const int tileSegment = tileYSegment * 3 + tileXSegment;
                         //printf("x: %d, y: %d, s: %d\n", tileXSegment, tileYSegment, tileSegment);
-                        TileDef &tileDef = map->tileDefs[tileIdx];
+                        data::TileDef &tileDef = map->tileDefs[tileIdx];
                         switch (tileSegment) {
                             case 0: tileDef.auto_tile_mask ^= 0b10000000; break;
                             case 1: tileDef.auto_tile_mask ^= 0b01000000; break;
@@ -949,9 +958,9 @@ void Editor::DrawUI_Wang(UI &uiActionBar, double now)
                     uint8_t *pixel = &imgData[templateOffset];
                     uint8_t tile = pixel[0] < map->tileDefs.size() ? pixel[0] : 0;
 
-                    Texture mapTex = rnTextureCatalog.GetTexture(map->textureId);
+                    data::GfxFile *gfx_file = data::packs[0]->FindGraphic(map->texture);
                     const Rectangle tileRect = map->TileDefRect(tile);
-                    if (uiWangTile.Image(mapTex, tileRect).down) {
+                    if (uiWangTile.Image(gfx_file->texture, tileRect).down) {
                         pixel[0] = selectedTile; //^ (selectedTile*55);
                         pixel[1] = selectedTile; //^ (selectedTile*55);
                         pixel[2] = selectedTile; //^ (selectedTile*55);
@@ -970,9 +979,9 @@ void Editor::DrawUI_Wang(UI &uiActionBar, double now)
                     uint8_t *pixel = &imgData[templateOffset];
                     uint8_t tile = pixel[0] < map->tileDefs.size() ? pixel[0] : 0;
 
-                    Texture mapTex = rnTextureCatalog.GetTexture(map->textureId);
+                    data::GfxFile *gfx_file = data::packs[0]->FindGraphic(map->texture);
                     const Rectangle tileRect = map->TileDefRect(tile);
-                    if (uiWangTile.Image(mapTex, tileRect).down) {
+                    if (uiWangTile.Image(gfx_file->texture, tileRect).down) {
                         pixel[0] = selectedTile; //^ (selectedTile*55);
                         pixel[1] = selectedTile; //^ (selectedTile*55);
                         pixel[2] = selectedTile; //^ (selectedTile*55);

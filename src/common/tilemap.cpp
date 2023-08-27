@@ -29,11 +29,6 @@ void Tilemap::CL_DeserializeChunk(Msg_S_TileChunk &tileChunk)
     }
 }
 
-Tilemap::~Tilemap(void)
-{
-    Unload();
-}
-
 Err Tilemap::Save(std::string path)
 {
     Err err = RN_SUCCESS;
@@ -43,6 +38,8 @@ Err Tilemap::Save(std::string path)
         if (err) return err;
     }
 
+#define WRITE_SENTINEL fwrite(&SENTINEL, sizeof(SENTINEL), 1, file);
+
     FILE *file = fopen(path.c_str(), "w");
     do {
         if (!file) {
@@ -51,15 +48,17 @@ Err Tilemap::Save(std::string path)
         // this isn't technically necessary, but it seems really bizarre to save
         // a tilemap that points to the placeholder texture. the user should
         // really pick a valid tileset image before saving the map
-        if (!textureId) {
+        if (!texture.size()) {
             err = RN_INVALID_PATH; break;
         }
         if (!width || !height) {
             err = RN_INVALID_SIZE; break;
         }
 
+
         fwrite(&MAGIC, sizeof(MAGIC), 1, file);
         fwrite(&VERSION, sizeof(VERSION), 1, file);
+        WRITE_SENTINEL
 
         //// NOTE(dlb): We need to store this explicitly in case the texture file
         //// goes missing, so that we can calculate tileDefs.size() and read the
@@ -68,12 +67,15 @@ Err Tilemap::Save(std::string path)
         //fwrite(&texEntry.image.width, sizeof(texEntry.image.width), 1, file);
         //fwrite(&texEntry.image.height, sizeof(texEntry.image.height), 1, file);
 
-        const std::string texturePath = rnStringCatalog.GetString(textureId);
+        const std::string texturePath = texture; //rnStringCatalog.GetString(textureId.c_str());
         const int texturePathLen = texturePath.size();
         fwrite(&texturePathLen, sizeof(texturePathLen), 1, file);
         fwrite(texturePath.c_str(), 1, texturePathLen, file);
+        WRITE_SENTINEL
+
         fwrite(&width, sizeof(width), 1, file);
         fwrite(&height, sizeof(height), 1, file);
+        WRITE_SENTINEL
 
         uint32_t tileDefCount = tileDefs.size();
         uint32_t pathNodeCount = pathNodes.size();
@@ -83,34 +85,45 @@ Err Tilemap::Save(std::string path)
         fwrite(&pathNodeCount, sizeof(pathNodeCount), 1, file);
         fwrite(&pathNodeIndexCount, sizeof(pathNodeIndexCount), 1, file);
         fwrite(&pathCount, sizeof(pathCount), 1, file);
+        WRITE_SENTINEL
 
-        for (const TileDef &tileDef : tileDefs) {
+        for (const data::TileDef &tileDef : tileDefs) {
             fwrite(&tileDef.collide, sizeof(tileDef.collide), 1, file);
             fwrite(&tileDef.auto_tile_mask, sizeof(tileDef.auto_tile_mask), 1, file);
         }
+        WRITE_SENTINEL
 
         if (tiles.size() != (size_t)width * height) {
             err = RN_INVALID_SIZE; break;
         }
+
         for (Tile &tile : tiles) {
             fwrite(&tile, sizeof(tile), 1, file);
         }
+        WRITE_SENTINEL
 
-        for (const AiPathNode &aiPathNode : pathNodes) {
-            fwrite(&aiPathNode.pos.x, sizeof(aiPathNode.pos.x), 1, file);
-            fwrite(&aiPathNode.pos.y, sizeof(aiPathNode.pos.y), 1, file);
+        for (const data::AiPathNode &aiPathNode : pathNodes) {
+            float x = aiPathNode.pos.x * 2;
+            float y = aiPathNode.pos.y * 2;
+            fwrite(&x, sizeof(aiPathNode.pos.x), 1, file);
+            fwrite(&y, sizeof(aiPathNode.pos.y), 1, file);
             fwrite(&aiPathNode.waitFor, sizeof(aiPathNode.waitFor), 1, file);
         }
+        WRITE_SENTINEL
 
         for (const uint32_t &aiPathNodeIndex : pathNodeIndices) {
             fwrite(&aiPathNodeIndex, sizeof(aiPathNodeIndex), 1, file);
         }
+        WRITE_SENTINEL
 
-        for (const AiPath &aiPath : paths) {
+        for (const data::AiPath &aiPath : paths) {
             fwrite(&aiPath.pathNodeIndexOffset, sizeof(aiPath.pathNodeIndexOffset), 1, file);
             fwrite(&aiPath.pathNodeIndexCount, sizeof(aiPath.pathNodeIndexCount), 1, file);
         }
+        WRITE_SENTINEL
     } while (0);
+
+#undef WRITE_SENTINEL
 
     if (file) fclose(file);
     if (!err) {
@@ -126,7 +139,14 @@ Err Tilemap::Load(std::string path)
 {
     Err err = RN_SUCCESS;
 
-    Unload();
+#define READ_SENTINEL\
+    if (version >= 8) { \
+        fread(&sentinel, sizeof(sentinel), 1, file); \
+        if (sentinel != SENTINEL) { \
+            assert(!"map file is corrupt"); \
+            err = RN_BAD_FILE_READ; break; \
+        } \
+    }
 
     FILE *file = fopen(path.c_str(), "r");
     do {
@@ -139,45 +159,49 @@ Err Tilemap::Load(std::string path)
         if (magic != MAGIC) {
             err = RN_BAD_MAGIC; break;
         }
-
         fread(&version, sizeof(version), 1, file);
+
+        uint32_t sentinel = 0;
+        READ_SENTINEL
 
         int texturePathLen = 0;
         fread(&texturePathLen, sizeof(texturePathLen), 1, file);
         if (!texturePathLen || texturePathLen > PATH_LEN_MAX) {
             err = RN_INVALID_PATH; break;
         }
-
         char texturePathBuf[PATH_LEN_MAX + 1]{};
         fread(texturePathBuf, 1, texturePathLen, file);
+        READ_SENTINEL
 
-        std::string texturePath{ texturePathBuf };
-        textureId = rnStringCatalog.AddString(texturePath);
-        err = rnTextureCatalog.Load(textureId);
-        if (err) {
-            if (version < 7) {
-                const char *filename = GetFileName(texturePath.c_str());
-                texturePath = "resources/texture/" + std::string(filename);
-                textureId = rnStringCatalog.AddString(texturePath);
-                err = rnTextureCatalog.Load(textureId);
-                if (err) {
-                    break;
-                }
-            }
-        }
-
-        const TextureCatalog::Entry &texEntry = rnTextureCatalog.GetEntry(textureId);
-        if (!texEntry.image.width) {
-            err = RN_BAD_FILE_READ; break;
-        }
-        if (texEntry.texture.width % TILE_W != 0 || texEntry.texture.height % TILE_W != 0) {
-            err = RN_INVALID_SIZE; break;
-        }
+        texture = "gfx_til_overworld"; //texturePathBuf;
+        //StringId textureId = rnStringCatalog.AddString(texture);
+        //err = rnTextureCatalog.Load(textureId);
+        //if (err) {
+        //    if (version < 7) {
+        //        const char *filename = GetFileName(texture.c_str());
+        //        texture = "resources/texture/" + std::string(filename);
+        //        textureId = rnStringCatalog.AddString(texture);
+        //        err = rnTextureCatalog.Load(textureId);
+        //        if (err) {
+        //            break;
+        //        }
+        //    }
+        //}
+        //
+        //const TextureCatalog::Entry &texEntry = rnTextureCatalog.GetEntry(textureId);
+        //if (!texEntry.image.width) {
+        //    err = RN_BAD_FILE_READ; break;
+        //}
+        //if (texEntry.texture.width % TILE_W != 0 || texEntry.texture.height % TILE_W != 0) {
+        //    err = RN_INVALID_SIZE; break;
+        //}
 
         //SetTextureWrap(texEntry.texture, TEXTURE_WRAP_CLAMP);
 
         fread(&width, sizeof(width), 1, file);
         fread(&height, sizeof(height), 1, file);
+        READ_SENTINEL
+
         if (!width || !height) {
             err = RN_INVALID_SIZE; break;
         }
@@ -194,13 +218,16 @@ Err Tilemap::Load(std::string path)
             // which means we don't know the width/height and also cannot read the
             // rest of this file, which requires having an accurate tileDefCount
             // for the fread()s.
-            tileDefCount = ((size_t)texEntry.texture.width / TILE_W) * (texEntry.texture.height / TILE_W);
+            tileDefCount = 25; //((size_t)texEntry.texture.width / TILE_W) * (texEntry.texture.height / TILE_W);
 
         }
         fread(&pathNodeCount, sizeof(pathNodeCount), 1, file);
         fread(&pathNodeIndexCount, sizeof(pathNodeIndexCount), 1, file);
         fread(&pathCount, sizeof(pathCount), 1, file);
-        fread(&warpCount, sizeof(warpCount), 1, file);
+        if (version < 8) {
+            fread(&warpCount, sizeof(warpCount), 1, file);
+        }
+        READ_SENTINEL
 
         tileDefs.resize(tileDefCount);
         tiles.resize((size_t)width * height);
@@ -209,8 +236,8 @@ Err Tilemap::Load(std::string path)
         paths.resize(pathCount);
 
         for (uint32_t i = 0; i < tileDefCount; i++) {
-            TileDef &tileDef = tileDefs[i];
-            int tilesPerRow = texEntry.texture.width / TILE_W;
+            data::TileDef &tileDef = tileDefs[i];
+            int tilesPerRow = 5; //texEntry.texture.width / TILE_W;
             tileDef.x = i % tilesPerRow * TILE_W;
             tileDef.y = i / tilesPerRow * TILE_W;
             fread(&tileDef.collide, sizeof(tileDef.collide), 1, file);
@@ -219,10 +246,11 @@ Err Tilemap::Load(std::string path)
                 fread(&tileDef.auto_tile_mask, sizeof(tileDef.auto_tile_mask), 1, file);
             }
 
-            assert(tileDef.x < texEntry.image.width);
-            assert(tileDef.y < texEntry.image.height);
-            tileDef.color = GetImageColor(texEntry.image, tileDef.x, tileDef.y);
+            //assert(tileDef.x < texEntry.image.width);
+            //assert(tileDef.y < texEntry.image.height);
+            //tileDef.color = GetImageColor(texEntry.image, tileDef.x, tileDef.y);
         }
+        READ_SENTINEL
 
         for (Tile &tile : tiles) {
             fread(&tile, sizeof(tile), 1, file);
@@ -231,123 +259,41 @@ Err Tilemap::Load(std::string path)
                 //err = RN_OUT_OF_BOUNDS; break;
             }
         }
+        READ_SENTINEL
 
-        for (AiPathNode &aiPathNode : pathNodes) {
+        for (data::AiPathNode &aiPathNode : pathNodes) {
             fread(&aiPathNode.pos.x, sizeof(aiPathNode.pos.x), 1, file);
             fread(&aiPathNode.pos.y, sizeof(aiPathNode.pos.y), 1, file);
             fread(&aiPathNode.waitFor, sizeof(aiPathNode.waitFor), 1, file);
         }
+        READ_SENTINEL
 
         for (uint32_t &aiPathNodeIndex : pathNodeIndices) {
             fread(&aiPathNodeIndex, sizeof(aiPathNodeIndex), 1, file);
         }
+        READ_SENTINEL
 
-        for (AiPath &aiPath : paths) {
+        for (data::AiPath &aiPath : paths) {
             fread(&aiPath.pathNodeIndexOffset, sizeof(aiPath.pathNodeIndexOffset), 1, file);
             fread(&aiPath.pathNodeIndexCount, sizeof(aiPath.pathNodeIndexCount), 1, file);
         }
+        READ_SENTINEL
     } while (0);
+
+#undef READ_SENTINEL
+
     if (file) fclose(file);
 
     if (!err) {
         name = path;
         printf("[tilemap] Loaded %s successfully\n", name.c_str());
-    } else {
-        Unload();
+
+        data::Pack pack = data::Pack("pack/overworld_map.dat");
+        pack.tile_maps.push_back(*this);
+        Err err2 = data::SavePack(pack);
+        assert(!err2);
     }
     return err;
-}
-
-Err Tilemap::ChangeTileset(Tilemap &map, StringId newTextureId, double now)
-{
-    Err err = RN_SUCCESS;
-
-    const TextureCatalog::Entry &texEntry = rnTextureCatalog.GetEntry(map.textureId);
-
-    // TODO(dlb): Is this valid?? comparing a std::string to a const char *
-    if (newTextureId == map.textureId) {
-        assert(!"u wot mate?");
-        return RN_SUCCESS;
-    }
-
-    Tilemap *newMapPtr = new Tilemap();
-    Tilemap &newMap = *newMapPtr;
-    do {
-        newMap.textureId = newTextureId;
-        err = rnTextureCatalog.Load(newMap.textureId);
-        if (err) break;
-
-        const TextureCatalog::Entry &newTexEntry = rnTextureCatalog.GetEntry(newMap.textureId);
-        if (newTexEntry.texture.width % TILE_W != 0 || newTexEntry.texture.height % TILE_W != 0) {
-            err = RN_INVALID_SIZE; break;
-        }
-        if (!newTexEntry.image.width) {
-            err = RN_BAD_FILE_READ; break;
-        }
-
-        size_t tileDefCount = ((size_t)newTexEntry.texture.width / TILE_W) * (newTexEntry.texture.height / TILE_W);
-        newMap.tileDefs.resize(tileDefCount);
-        for (int i = 0; i < tileDefCount; i++) {
-            TileDef &tileDef = newMap.tileDefs[i];
-            int tilesPerRow = newTexEntry.texture.width / TILE_W;
-            tileDef.x = i % tilesPerRow * TILE_W;
-            tileDef.y = i / tilesPerRow * TILE_W;
-
-            // This probably kinda stupid.. but idk
-            if (i < map.tileDefs.size()) {
-                TileDef &oldTileDef = map.tileDefs[i];
-                tileDef.collide = oldTileDef.collide;
-            }
-
-            tileDef.color = GetImageColor(newTexEntry.image, tileDef.x, tileDef.y);
-        }
-
-        // TODO(dlb): If we want to be able to change the size of tileset images
-        // but still have the old indices somehow resolve to the same art in the
-        // new tileset image, we should probably do something fancy like hash
-        // the pixel data of the tiles and match them up that way or wutevs.
-        //
-        // If we did that, maybe it's optional.. because you might want to move
-        // tiles around on purpose and have them map to some other tile, right?
-        //
-        newMap.tiles.resize((size_t)map.width * map.height);
-        for (int i = 0; i < map.width * map.height; i++) {
-            Tile &src = map.tiles[i];
-            Tile &dst = newMap.tiles[i];
-            dst = src >= tileDefCount ? 0 : src;
-        }
-    } while(0);
-
-    if (!err) {
-        rnTextureCatalog.Unload(map.textureId);
-
-        map.textureId = newMap.textureId;
-        //map.width = newMap.width;
-        //map.height = newMap.width;
-        map.tileDefs = newMap.tileDefs;
-        map.tiles = newMap.tiles;
-        //map.pathNodes = newMap.pathNodes;
-        //map.pathNodeIndices = newMap.pathNodeIndices;
-        //map.paths = newMap.paths;
-        map.chunkLastUpdatedAt = now;
-    }
-
-    newMap.Unload();
-    delete newMapPtr;
-
-    return err;
-}
-
-void Tilemap::Unload(void)
-{
-    rnTextureCatalog.Unload(textureId);
-
-    textureId = STR_NULL;
-    tileDefs.clear();
-    tiles.clear();
-    pathNodes.clear();
-    pathNodeIndices.clear();
-    paths.clear();
 }
 
 Tile Tilemap::At(uint32_t x, uint32_t y)
@@ -460,39 +406,39 @@ void Tilemap::Fill(uint32_t x, uint32_t y, int tileDefId, double now)
     }
 }
 
-const TileDef &Tilemap::GetTileDef(Tile tile)
+const data::TileDef &Tilemap::GetTileDef(Tile tile)
 {
     if (tile >= tileDefs.size()) tile = 0;
     return tileDefs[tile];
 }
 Rectangle Tilemap::TileDefRect(Tile tile)
 {
-    const TileDef &tileDef = GetTileDef(tile);
+    const data::TileDef &tileDef = GetTileDef(tile);
     const Rectangle rect{ (float)tileDef.x, (float)tileDef.y, TILE_W, TILE_W };
     return rect;
 }
 Color Tilemap::TileDefAvgColor(Tile tile)
 {
-    const TileDef &tileDef = GetTileDef(tile);
+    const data::TileDef &tileDef = GetTileDef(tile);
     return tileDef.color;
 }
 
-AiPath *Tilemap::GetPath(uint32_t pathId) {
+data::AiPath *Tilemap::GetPath(uint32_t pathId) {
     if (pathId < paths.size()) {
         return &paths[pathId];
     }
     return 0;
 }
 uint32_t Tilemap::GetNextPathNodeIndex(uint32_t pathId, uint32_t pathNodeIndex) {
-    AiPath *path = GetPath(pathId);
+    data::AiPath *path = GetPath(pathId);
     if (path && pathNodeIndex < path->pathNodeIndexCount) {
         uint32_t nextPathNodeIndex = (pathNodeIndex + 1) % path->pathNodeIndexCount;
         return nextPathNodeIndex;
     }
     return 0;
 }
-AiPathNode *Tilemap::GetPathNode(uint32_t pathId, uint32_t pathNodeIndex) {
-    AiPath *path = GetPath(pathId);
+data::AiPathNode *Tilemap::GetPathNode(uint32_t pathId, uint32_t pathNodeIndex) {
+    data::AiPath *path = GetPath(pathId);
     if (path && pathNodeIndex < path->pathNodeIndexCount) {
         uint32_t pathNodeId = pathNodeIndices[(size_t)path->pathNodeIndexOffset + pathNodeIndex];
         return &pathNodes[pathNodeId];
@@ -522,7 +468,7 @@ void Tilemap::ResolveEntityTerrainCollisions(data::Entity &entity)
         for (int x = xMin; x < xMax; x++) {
             Tile tile{};
             if (AtTry(x, y, tile)) {
-                const TileDef &tileDef = GetTileDef(tile);
+                const data::TileDef &tileDef = GetTileDef(tile);
                 if (tileDef.collide) {
                     Rectangle tileRect{};
                     Vector2 tilePos = { (float)x * TILE_W, (float)y * TILE_W };
@@ -557,13 +503,18 @@ void Tilemap::ResolveEntityTerrainCollisions(uint32_t entityId)
 void Tilemap::DrawTile(Texture2D tex, Tile tile, Vector2 position)
 {
     const Rectangle texRect = TileDefRect(tile);
-    position.x = floorf(position.x);
-    position.y = floorf(position.y);
+    //position.x = floorf(position.x);
+    //position.y = floorf(position.y);
+    if (position.x != floorf(position.x)) assert(!"floating x");
+    if (position.y != floorf(position.y)) assert(!"floating y");
     dlb_DrawTextureRec(tex, texRect, position, WHITE);
 }
 void Tilemap::Draw(Camera2D &camera)
 {
-    const Texture tex = rnTextureCatalog.GetTexture(textureId);
+    const data::GfxFile *gfx_file = data::packs[0]->FindGraphic(texture);
+    if (!gfx_file) return;
+
+    const Texture tex = gfx_file->texture;
     Rectangle screenRect = GetScreenRectWorld(camera);
     int yMin = CLAMP(floorf(screenRect.y / TILE_W), 0, height);
     int yMax = CLAMP(ceilf((screenRect.y + screenRect.height) / TILE_W), 0, height);
@@ -588,7 +539,7 @@ void Tilemap::DrawColliders(Camera2D &camera)
     for (int y = yMin; y < yMax; y++) {
         for (int x = xMin; x < xMax; x++) {
             Tile tile = At(x, y);
-            const TileDef &tileDef = GetTileDef(tile);
+            const data::TileDef &tileDef = GetTileDef(tile);
             if (tileDef.collide) {
                 Vector2 tilePos = { (float)x * TILE_W, (float)y * TILE_W };
                 const int pad = 1;

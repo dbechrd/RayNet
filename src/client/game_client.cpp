@@ -53,7 +53,7 @@ Err GameClient::TryConnect(void)
 
     yj_client->InsecureConnect(privateKey, clientId, serverAddress);
     world = new ClientWorld;
-    world->camera2d.zoom = 2.0f;
+    world->camera2d.zoom = 1.0f;
     world->musBackgroundMusic = "mus_ambient_outdoors";
     //world->map.LoadPack(LEVEL_001, now);
     entityDb = new EntityDB;

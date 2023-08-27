@@ -522,7 +522,7 @@ void GameServer::ProcessMessages(void)
     }
 }
 
-data::Entity *GameServer::SpawnProjectile(uint32_t map_id, Vector2 position, Vector2 direction)
+data::Entity *GameServer::SpawnProjectile(uint32_t map_id, Vector2 position, Vector2 direction, Vector2 initial_velocity)
 {
     data::Entity *projectile = SpawnEntity(data::ENTITY_PROJECTILE);
     if (!projectile) return 0;
@@ -537,7 +537,8 @@ data::Entity *GameServer::SpawnProjectile(uint32_t map_id, Vector2 position, Vec
     dir.x += GetRandomValue(-20, 20);
     dir.y += GetRandomValue(-20, 20);
     dir = Vector2Normalize(dir);
-    Vector2 velocity = Vector2Scale(dir, 200); //GetRandomValue(800, 1000));;
+    Vector2 velocity = initial_velocity;
+    velocity = Vector2Add(velocity, Vector2Scale(dir, 200)); //GetRandomValue(800, 1000));;
     // [Physics] random speed
     projectile->velocity = velocity;
     projectile->drag = 0.02f;
@@ -572,7 +573,7 @@ void GameServer::UpdateServerPlayers(void)
                     if (now - player->last_attacked_at > player->attack_cooldown) {
                         Vector2 projectile_spawn_pos = player->position;
                         projectile_spawn_pos.y -= 24;
-                        data::Entity *projectile = SpawnProjectile(player->map_id, projectile_spawn_pos, input_cmd->facing);
+                        data::Entity *projectile = SpawnProjectile(player->map_id, projectile_spawn_pos, input_cmd->facing, player->velocity);
                         if (projectile) {
                             Vector2 recoil_force = Vector2Negate(projectile->velocity);
                             player->ApplyForce(recoil_force);
@@ -613,7 +614,7 @@ data::Entity *SpawnEntityProto(GameServer &server, uint32_t mapId, Vector2 posit
     entity->speed                = GetRandomValue(proto.speed_min, proto.speed_max);
     entity->sprite               = proto.sprite;
 
-    AiPathNode *aiPathNode = map->GetPathNode(entity->path_id, 0);
+    data::AiPathNode *aiPathNode = map->GetPathNode(entity->path_id, 0);
     if (aiPathNode) {
         entity->position = aiPathNode->pos;
     }
@@ -784,7 +785,7 @@ void GameServer::TickEntityNPC(uint32_t entityId, double dt)
     // TODO: tick_pathfind?
     // TODO: Instead of path_id -1 for "no path" change it to 0 like everything else. After tilemap refactor.
     if (entity->path_id >= 0 && !entity->dialog_spawned_at) {
-        AiPathNode *ai_path_node = map->GetPathNode(entity->path_id, entity->path_node_target);
+        data::AiPathNode *ai_path_node = map->GetPathNode(entity->path_id, entity->path_node_target);
         if (ai_path_node) {
             Vector2 target = ai_path_node->pos;
             Vector2 to_target = Vector2Subtract(target, entity->position);
