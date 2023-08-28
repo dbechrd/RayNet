@@ -1,4 +1,6 @@
 #include "data.h"
+#include "file_utils.h"
+#include "net/net.h"
 #include <sstream>
 #include <iomanip>
 
@@ -30,6 +32,24 @@ namespace data {
         bool freye_introduced;
     };
     GameState game_state{};
+
+    GhostSnapshot::GhostSnapshot(Msg_S_EntitySnapshot &msg)
+    {
+        server_time              = msg.server_time;
+        last_processed_input_cmd = msg.last_processed_input_cmd;
+
+        // Entity
+        map_id   = msg.map_id;
+        position = msg.position;
+
+        // Life
+        hp_max   = msg.hp_max;
+        hp       = msg.hp;
+
+        // Physics
+        //speed    = msg.speed;
+        velocity = msg.velocity;
+    }
 
     Err LoadResources(Pack &pack);
 
@@ -281,22 +301,22 @@ namespace data {
         //};
 
         GfxFrame gfx_frames[] = {
-            // id                       image file                x   y    w    h
+            // id                       image file             x   y    w    h
             // playable characters
-            { GFX_FRAME_CHR_MAGE_E_0,   "gfx_chr_mage",         0,  0,  64,  128 },
-            { GFX_FRAME_CHR_MAGE_W_0,   "gfx_chr_mage",        64,  0,  64,  128 },
+            { GFX_FRAME_CHR_MAGE_E_0,   "gfx_chr_mage",        0,  0,  64, 128 },
+            { GFX_FRAME_CHR_MAGE_W_0,   "gfx_chr_mage",       64,  0,  64, 128 },
 
             // npcs
-            { GFX_FRAME_NPC_LILY_E_0,    "gfx_npc_lily",        0,  0,  64,  128 },
-            { GFX_FRAME_NPC_LILY_W_0,    "gfx_npc_lily",       64,  0,  64,  128 },
-            { GFX_FRAME_NPC_FREYE_E_0,   "gfx_npc_freye",       0,  0,  64,  128 },
-            { GFX_FRAME_NPC_FREYE_W_0,   "gfx_npc_freye",      64,  0,  64,  128 },
-            { GFX_FRAME_NPC_NESSA_E_0,   "gfx_npc_nessa",       0,  0,  64,  128 },
-            { GFX_FRAME_NPC_NESSA_W_0,   "gfx_npc_nessa",      64,  0,  64,  128 },
-            { GFX_FRAME_NPC_ELANE_E_0,   "gfx_npc_elane",       0,  0,  64,  128 },
-            { GFX_FRAME_NPC_ELANE_W_0,   "gfx_npc_elane",      64,  0,  64,  128 },
-            { GFX_FRAME_NPC_CHICKEN_E_0, "gfx_npc_chicken",     0,  0,  64,  128 },
-            { GFX_FRAME_NPC_CHICKEN_W_0, "gfx_npc_chicken",    64,  0,  64,  128 },
+            { GFX_FRAME_NPC_LILY_E_0,    "gfx_npc_lily",       0,  0,  64, 128 },
+            { GFX_FRAME_NPC_LILY_W_0,    "gfx_npc_lily",      64,  0,  64, 128 },
+            { GFX_FRAME_NPC_FREYE_E_0,   "gfx_npc_freye",      0,  0,  64, 128 },
+            { GFX_FRAME_NPC_FREYE_W_0,   "gfx_npc_freye",     64,  0,  64, 128 },
+            { GFX_FRAME_NPC_NESSA_E_0,   "gfx_npc_nessa",      0,  0,  64, 128 },
+            { GFX_FRAME_NPC_NESSA_W_0,   "gfx_npc_nessa",     64,  0,  64, 128 },
+            { GFX_FRAME_NPC_ELANE_E_0,   "gfx_npc_elane",      0,  0,  64, 128 },
+            { GFX_FRAME_NPC_ELANE_W_0,   "gfx_npc_elane",     64,  0,  64, 128 },
+            { GFX_FRAME_NPC_CHICKEN_E_0, "gfx_npc_chicken",    0,  0,  64,  64 },
+            { GFX_FRAME_NPC_CHICKEN_W_0, "gfx_npc_chicken",   64,  0,  64,  64 },
 
             // objects
             { GFX_FRAME_OBJ_CAMPFIRE_0, "gfx_obj_campfire",    0,  0, 256, 256 },
@@ -309,7 +329,7 @@ namespace data {
             { GFX_FRAME_OBJ_CAMPFIRE_7, "gfx_obj_campfire", 1792,  0, 256, 256 },
 
             // projectiles
-            { GFX_FRAME_PRJ_FIREBALL_0, "gfx_prj_fireball",    0,  0,   8,   8 },
+            { GFX_FRAME_PRJ_FIREBALL_0, "gfx_prj_fireball",    0,  0,  16,  16 },
 
             // tiles
             { GFX_FRAME_TIL_GRASS,      "gfx_til_overworld",   0, 192,  64,  64 },
@@ -556,10 +576,6 @@ namespace data {
             TraceLog(LOG_ERROR, "Failed to load sound index.\n");
         }
 
-        //Pack packOverworld("pack/overworld_map.dat");
-        //err = LoadPack(packOverworld);
-        //assert(!err);
-
         Pack packHardcoded{ "pack/pack1.dat" };
         for (auto &i : gfx_files)  packHardcoded.gfx_files .push_back(i);
         for (auto &i : mus_files)  packHardcoded.mus_files .push_back(i);
@@ -570,11 +586,26 @@ namespace data {
         for (auto &i : sprites)    packHardcoded.sprites   .push_back(i);
         for (auto &i : tile_types) packHardcoded.tile_types.push_back(i);
 
+#if 0
+        Pack packOverworld("pack/overworld_map.dat");
+        err = LoadPack(packOverworld);
+        assert(!err);
+        // HACK: Re-scale path nodes for old maps
+        for (auto &pathNode : packOverworld.tile_maps[1].pathNodes) {
+            pathNode.pos = Vector2Scale(pathNode.pos, 2);
+        }
+        err = SavePack(packOverworld);
+        assert(!err);
+        packHardcoded.tile_maps.push_back(packOverworld.tile_maps[1]);
+#endif
+
         // Ensure every array element is initialized and in contiguous order by id
-#define ID_CHECK(type, name, arr) \
-            for (type name : arr) { \
-                static int i = 0; \
-                assert(name.id == i++); \
+#define ID_CHECK(type, name, arr)                       \
+            for (int i = 0; i < arr.size(); i++) {      \
+                const type name = arr[i];               \
+                if (name.id != i) {                     \
+                    assert(!"expected contiguous IDs"); \
+                }                                       \
             }
 
         //ID_CHECK(GfxFile  &, gfx_file,  gfx_files);
@@ -942,6 +973,10 @@ namespace data {
 
         PROC(sentinel);
         assert(sentinel == Tilemap::SENTINEL);
+
+        if (stream.mode == PACK_MODE_READ) {
+            stream.pack->tile_maps_by_name[tile_map.name] = index;
+        }
     }
 
     Err Process(PackStream &stream)
@@ -975,9 +1010,11 @@ namespace data {
 
         if (stream.mode == PACK_MODE_WRITE) {
             #define WRITE_ARRAY(arr) \
-                for (auto &i : arr) { \
-                    pack.toc.entries.push_back(PackTocEntry(i.dtype, ftell(stream.f))); \
-                    Process(stream, i, 0); \
+                /* 0 slot is reserved, skip it when writing */\
+                for (int i = 1; i < arr.size(); i++) { \
+                    auto &entry = arr[i]; \
+                    pack.toc.entries.push_back(PackTocEntry(entry.dtype, ftell(stream.f))); \
+                    Process(stream, entry, i); \
                 }
 
             // TODO: These should all be pack.blah after we've removed the
@@ -1018,38 +1055,40 @@ namespace data {
                 typeCounts[tocEntry.dtype]++;
             }
 
-            pack.gfx_files .resize(typeCounts[DAT_TYP_GFX_FILE]);
-            pack.mus_files .resize(typeCounts[DAT_TYP_MUS_FILE]);
-            pack.sfx_files .resize(typeCounts[DAT_TYP_SFX_FILE]);
-            pack.gfx_frames.resize(typeCounts[DAT_TYP_GFX_FRAME]);
-            pack.gfx_anims .resize(typeCounts[DAT_TYP_GFX_ANIM]);
-            pack.materials .resize(typeCounts[DAT_TYP_MATERIAL]);
-            pack.sprites   .resize(typeCounts[DAT_TYP_SPRITE]);
-            pack.tile_types.resize(typeCounts[DAT_TYP_TILE_TYPE]);
-            pack.tile_maps .resize(typeCounts[DAT_TYP_TILE_MAP]);
-
-            assert(typeCounts[DAT_TYP_ENTITY] == SV_MAX_ENTITIES);
-            pack.entities.resize(typeCounts[DAT_TYP_ENTITY]);
+            pack.gfx_files .resize(1 + typeCounts[DAT_TYP_GFX_FILE]);
+            pack.mus_files .resize(1 + typeCounts[DAT_TYP_MUS_FILE]);
+            pack.sfx_files .resize(1 + typeCounts[DAT_TYP_SFX_FILE]);
+            pack.gfx_frames.resize(1 + typeCounts[DAT_TYP_GFX_FRAME]);
+            pack.gfx_anims .resize(1 + typeCounts[DAT_TYP_GFX_ANIM]);
+            pack.materials .resize(1 + typeCounts[DAT_TYP_MATERIAL]);
+            pack.sprites   .resize(1 + typeCounts[DAT_TYP_SPRITE]);
+            pack.tile_types.resize(1 + typeCounts[DAT_TYP_TILE_TYPE]);
+            pack.tile_maps .resize(1 + typeCounts[DAT_TYP_TILE_MAP]);
+            pack.entities  .resize(1 + typeCounts[DAT_TYP_ENTITY]);
 
             int typeNextIndex[DAT_TYP_COUNT]{};
+            // 0 slot is reserved, skip it when reading
+            for (int i = 0; i < DAT_TYP_COUNT; i++) {
+                typeNextIndex[i] = 1;
+            }
 
             for (PackTocEntry &tocEntry : pack.toc.entries) {
                 fseek(stream.f, tocEntry.offset, SEEK_SET);
-                int &nextIndex = typeNextIndex[tocEntry.dtype];
-                tocEntry.index = nextIndex;
+                int index = typeNextIndex[tocEntry.dtype];
+                tocEntry.index = index;
                 switch (tocEntry.dtype) {
-                    case DAT_TYP_GFX_FILE:  Process(stream, pack.gfx_files [nextIndex], nextIndex); break;
-                    case DAT_TYP_MUS_FILE:  Process(stream, pack.mus_files [nextIndex], nextIndex); break;
-                    case DAT_TYP_SFX_FILE:  Process(stream, pack.sfx_files [nextIndex], nextIndex); break;
-                    case DAT_TYP_GFX_FRAME: Process(stream, pack.gfx_frames[nextIndex], nextIndex); break;
-                    case DAT_TYP_GFX_ANIM:  Process(stream, pack.gfx_anims [nextIndex], nextIndex); break;
-                    case DAT_TYP_MATERIAL:  Process(stream, pack.materials [nextIndex], nextIndex); break;
-                    case DAT_TYP_SPRITE:    Process(stream, pack.sprites   [nextIndex], nextIndex); break;
-                    case DAT_TYP_TILE_TYPE: Process(stream, pack.tile_types[nextIndex], nextIndex); break;
-                    case DAT_TYP_ENTITY:    Process(stream, pack.entities  [nextIndex], nextIndex); break;
-                    case DAT_TYP_TILE_MAP:  Process(stream, pack.tile_maps [nextIndex], nextIndex); break;
+                    case DAT_TYP_GFX_FILE:  Process(stream, pack.gfx_files [index], index); break;
+                    case DAT_TYP_MUS_FILE:  Process(stream, pack.mus_files [index], index); break;
+                    case DAT_TYP_SFX_FILE:  Process(stream, pack.sfx_files [index], index); break;
+                    case DAT_TYP_GFX_FRAME: Process(stream, pack.gfx_frames[index], index); break;
+                    case DAT_TYP_GFX_ANIM:  Process(stream, pack.gfx_anims [index], index); break;
+                    case DAT_TYP_MATERIAL:  Process(stream, pack.materials [index], index); break;
+                    case DAT_TYP_SPRITE:    Process(stream, pack.sprites   [index], index); break;
+                    case DAT_TYP_TILE_TYPE: Process(stream, pack.tile_types[index], index); break;
+                    case DAT_TYP_ENTITY:    Process(stream, pack.entities  [index], index); break;
+                    case DAT_TYP_TILE_MAP:  Process(stream, pack.tile_maps [index], index); break;
                 }
-                nextIndex++;
+                typeNextIndex[tocEntry.dtype]++;
             }
         }
 
@@ -1060,6 +1099,11 @@ namespace data {
     Err SavePack(Pack &pack)
     {
         Err err = RN_SUCCESS;
+
+        if (FileExists(pack.path.c_str())) {
+            err = MakeBackup(pack.path.c_str());
+            if (err) return err;
+        }
 
         PackStream stream{};
         stream.mode = PACK_MODE_WRITE;
@@ -1083,13 +1127,12 @@ namespace data {
 
         // Ensure every array element is initialized and in contiguous order by id
 #define ID_CHECK(type, name, arr)                       \
-            for (type name : arr) {                     \
-                static int i = 0;                       \
+            for (int i = 0; i < arr.size(); i++) {      \
+                const type name = arr[i];               \
                 if (name.id != i) {                     \
                     assert(!"expected contiguous IDs"); \
                     return RN_BAD_FILE_READ;            \
                 }                                       \
-                i++;                                    \
             }
 
         //ID_CHECK(GfxFile  &, gfx_file,  pack.gfx_files);

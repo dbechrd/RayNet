@@ -1,6 +1,5 @@
 #pragma once
 #include "common.h"
-#include "ring_buffer.h"
 
 struct Histogram {
     struct Entry {

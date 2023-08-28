@@ -2,6 +2,7 @@
 #include "../common/dlg.h"
 #include "../common/entity_db.h"
 #include "../common/input_command.h"
+#include "../common/net/net.h"
 #include "../common/tilemap.h"
 
 // Q: when the player goes to a new level, they see all the wrong entities

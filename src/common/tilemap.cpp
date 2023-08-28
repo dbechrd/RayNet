@@ -1,5 +1,6 @@
 #include "collision.h"
 #include "file_utils.h"
+#include "net/net.h"
 #include "texture_catalog.h"
 #include "tilemap.h"
 #include "wang.h"
@@ -29,6 +30,7 @@ void Tilemap::CL_DeserializeChunk(Msg_S_TileChunk &tileChunk)
     }
 }
 
+#if 1
 Err Tilemap::Save(std::string path)
 {
     Err err = RN_SUCCESS;
@@ -40,7 +42,7 @@ Err Tilemap::Save(std::string path)
 
 #define WRITE_SENTINEL fwrite(&SENTINEL, sizeof(SENTINEL), 1, file);
 
-    FILE *file = fopen(path.c_str(), "w");
+    FILE *file = fopen(path.c_str(), "wb");
     do {
         if (!file) {
             err = RN_BAD_FILE_WRITE; break;
@@ -148,7 +150,7 @@ Err Tilemap::Load(std::string path)
         } \
     }
 
-    FILE *file = fopen(path.c_str(), "r");
+    FILE *file = fopen(path.c_str(), "rb");
     do {
         if (!file) {
             err = RN_BAD_FILE_READ; break;
@@ -295,6 +297,7 @@ Err Tilemap::Load(std::string path)
     }
     return err;
 }
+#endif
 
 Tile Tilemap::At(uint32_t x, uint32_t y)
 {
@@ -363,7 +366,7 @@ bool Tilemap::NeedsFill(uint32_t x, uint32_t y, int tileDefFill)
     }
     return false;
 }
-void Tilemap::Scan(uint32_t lx, uint32_t rx, uint32_t y, Tile tileDefFill, std::stack<Tilemap::Coord> &stack)
+void Tilemap::Scan(uint32_t lx, uint32_t rx, uint32_t y, Tile tileDefFill, std::stack<Coord> &stack)
 {
     bool inSpan = false;
     for (uint32_t x = lx; x < rx; x++) {

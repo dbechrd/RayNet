@@ -1,30 +1,11 @@
 #include "client_world.h"
 #include "game_client.h"
 #include "../common/collision.h"
-#include "../common//dlg.h"
-#include "../common/entity.h"
+#include "../common/dlg.h"
 #include "../common/entity_db.h"
 #include "../common/io.h"
 #include "../common/net/messages/msg_s_entity_spawn.h"
 #include "../common/net/messages/msg_s_entity_snapshot.h"
-
-GhostSnapshot::GhostSnapshot(Msg_S_EntitySnapshot &msg)
-{
-    server_time              = msg.server_time;
-    last_processed_input_cmd = msg.last_processed_input_cmd;
-
-    // Entity
-    map_id   = msg.map_id;
-    position = msg.position;
-
-    // Life
-    hp_max   = msg.hp_max;
-    hp       = msg.hp;
-
-    // Physics
-    //speed    = msg.speed;
-    velocity = msg.velocity;
-}
 
 ClientWorld::~ClientWorld(void)
 {
@@ -65,7 +46,6 @@ Tilemap *ClientWorld::FindOrLoadMap(uint32_t map_id)
         std::string mapName = "unknownMapId";
         switch (map_id) {
             case 1: mapName = LEVEL_001; break;
-            case 2: mapName = LEVEL_CAVE; break;
         }
         // TODO: LoadPack map and add to maps/mapsById
 
@@ -89,7 +69,7 @@ Tilemap *ClientWorld::FindOrLoadMap(uint32_t map_id)
     if (map) {
         switch (map->id) {
             case 1: musBackgroundMusic = "mus_ambient_outdoors"; break;
-            case 2: musBackgroundMusic = "mus_ambient_cave"; break;
+            //case 2: musBackgroundMusic = "mus_ambient_cave"; break;
             default: musBackgroundMusic = "mus_none"; break;
         }
     }
@@ -97,7 +77,7 @@ Tilemap *ClientWorld::FindOrLoadMap(uint32_t map_id)
     return map;
 }
 
-bool ClientWorld::CopyEntityData(uint32_t entityId, EntityData &data)
+bool ClientWorld::CopyEntityData(uint32_t entityId, data::EntityData &data)
 {
     size_t entityIndex = entityDb->FindEntityIndex(entityId);
     if (!entityIndex) {
@@ -135,7 +115,7 @@ void ClientWorld::ApplySpawnEvent(const Msg_S_EntitySpawn &entitySpawn)
 }
 
 void ClientWorld::ApplyStateInterpolated(data::Entity &entity,
-    const GhostSnapshot &a, const GhostSnapshot &b, float alpha, float dt)
+    const data::GhostSnapshot &a, const data::GhostSnapshot &b, float alpha, float dt)
 {
     if (b.map_id != a.map_id) {
         alpha = 1.0f;
@@ -154,7 +134,7 @@ void ClientWorld::ApplyStateInterpolated(data::Entity &entity,
 }
 
 void ClientWorld::ApplyStateInterpolated(uint32_t entityId,
-    const GhostSnapshot &a, const GhostSnapshot &b, float alpha, float dt)
+    const data::GhostSnapshot &a, const data::GhostSnapshot &b, float alpha, float dt)
 {
     data::Entity *entity = entityDb->FindEntity(entityId);
     if (!entity) {
@@ -215,12 +195,12 @@ void ClientWorld::UpdateLocalPlayerHisto(GameClient &client, data::Entity &entit
     );
 }
 
-void ClientWorld::UpdateLocalPlayer(GameClient &client, data::Entity &entity, AspectGhost &ghost)
+void ClientWorld::UpdateLocalPlayer(GameClient &client, data::Entity &entity, data::AspectGhost &ghost)
 {
     uint32_t latestSnapInputSeq = 0;
 
     // Apply latest snapshot
-    const GhostSnapshot &latestSnapshot = ghost.newest();
+    const data::GhostSnapshot &latestSnapshot = ghost.newest();
     if (latestSnapshot.server_time) {
         ApplyStateInterpolated(entity.id, ghost.newest(), ghost.newest(), 0, client.frameDt);
         latestSnapInputSeq = latestSnapshot.last_processed_input_cmd;
@@ -267,7 +247,7 @@ void ClientWorld::UpdateLocalPlayer(GameClient &client, data::Entity &entity, As
     UpdateLocalPlayerHisto(client, entity, histoData);
 }
 
-void ClientWorld::UpdateLocalGhost(GameClient &client, data::Entity &entity, AspectGhost &ghost, Tilemap *localPlayerMap)
+void ClientWorld::UpdateLocalGhost(GameClient &client, data::Entity &entity, data::AspectGhost &ghost, Tilemap *localPlayerMap)
 {
     // TODO(dlb): Find snapshots nearest to (GetTime() - clientTimeDeltaVsServer)
     const double renderAt = client.ServerNow() - SV_TICK_DT;
@@ -279,8 +259,8 @@ void ClientWorld::UpdateLocalGhost(GameClient &client, data::Entity &entity, Asp
         snapshotBIdx++;
     }
 
-    const GhostSnapshot *snapshotA = 0;
-    const GhostSnapshot *snapshotB = 0;
+    const data::GhostSnapshot *snapshotA = 0;
+    const data::GhostSnapshot *snapshotB = 0;
 
     if (snapshotBIdx <= 0) {
         snapshotA = &ghost.oldest();
@@ -320,7 +300,7 @@ void ClientWorld::UpdateEntities(GameClient &client)
         }
 
         uint32_t entityIndex = entityDb->FindEntityIndex(entity.id);
-        AspectGhost &ghost = entityDb->ghosts[entityIndex];
+        data::AspectGhost &ghost = entityDb->ghosts[entityIndex];
 
         // Local player
         if (entity.id == localPlayerEntityId) {
@@ -377,9 +357,9 @@ void ClientWorld::DrawEntitySnapshotShadows(uint32_t entityId, Controller &contr
         if (!entityIndex) return;
 
         data::Entity &entity = entityDb->entities[entityIndex];
-        AspectGhost &ghost = entityDb->ghosts[entityIndex];
+        data::AspectGhost &ghost = entityDb->ghosts[entityIndex];
 
-        EntityData ghostData{};
+        data::EntityData ghostData{};
         CopyEntityData(entity.id, ghostData);
         // Prevents accidentally overwriting real entities if someone we pass a tuple
         // to decides to look up the entity by id instead of using the tuple's data.
@@ -404,7 +384,7 @@ void ClientWorld::DrawEntitySnapshotShadows(uint32_t entityId, Controller &contr
             Tilemap *map = FindOrLoadMap(entity.map_id);
             if (map) {
                 uint32_t lastProcessedInputCmd = 0;
-                const GhostSnapshot &latestSnapshot = ghost.newest();
+                const data::GhostSnapshot &latestSnapshot = ghost.newest();
                 if (latestSnapshot.server_time) {
                     ApplyStateInterpolated(ghostData.entity, latestSnapshot, latestSnapshot, 0, dt);
                     lastProcessedInputCmd = latestSnapshot.last_processed_input_cmd;

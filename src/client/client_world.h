@@ -1,5 +1,6 @@
 #pragma once
 #include "../common/common.h"
+#include "../common/input_command.h"
 #include "../common/tilemap.h"
 
 struct Msg_S_EntitySpawn;
@@ -34,14 +35,14 @@ struct ClientWorld {
 
     Tilemap *FindOrLoadMap(uint32_t map_id);
 
-    bool CopyEntityData(uint32_t entityId, EntityData &data);
+    bool CopyEntityData(uint32_t entityId, data::EntityData &data);
 
     void ApplySpawnEvent(const Msg_S_EntitySpawn &entitySpawn);
 
     void ApplyStateInterpolated(data::Entity &entity,
-        const GhostSnapshot &a, const GhostSnapshot &b, float alpha, float dt);
+        const data::GhostSnapshot &a, const data::GhostSnapshot &b, float alpha, float dt);
     void ApplyStateInterpolated(uint32_t entityId,
-        const GhostSnapshot &a, const GhostSnapshot &b, float alpha, float dt);
+        const data::GhostSnapshot &a, const data::GhostSnapshot &b, float alpha, float dt);
     Err CreateDialog(uint32_t entityId, uint32_t dialogId, std::string message, double now);
     void Update(GameClient &client);
     void Draw(GameClient &client);
@@ -54,8 +55,8 @@ private:
     };
 
     void UpdateLocalPlayerHisto(GameClient &client, data::Entity &entity, HistoData &histoData);
-    void UpdateLocalPlayer(GameClient &client, data::Entity &entity, AspectGhost &ghost);
-    void UpdateLocalGhost(GameClient &client, data::Entity &entity, AspectGhost &ghost, Tilemap *localPlayerMap);
+    void UpdateLocalPlayer(GameClient &client, data::Entity &entity, data::AspectGhost &ghost);
+    void UpdateLocalGhost(GameClient &client, data::Entity &entity, data::AspectGhost &ghost, Tilemap *localPlayerMap);
     void UpdateEntities(GameClient &client);
 
     void DrawEntitySnapshotShadows(uint32_t entityId, Controller &controller, double now, double dt);

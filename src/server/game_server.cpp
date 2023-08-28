@@ -50,8 +50,8 @@ void GameServer::OnClientJoin(int clientIdx)
 
         player->type = data::ENTITY_PLAYER;
         player->map_id = maps[0]->id;
-        const Vector2 caveEntrance{ 1650, 435 };
-        const Vector2 townCenter{ 830, 1180 };
+        const Vector2 caveEntrance{ 3300, 870 };
+        const Vector2 townCenter{ 1660, 2360 };
         player->position = townCenter;
         player->radius = 10;
         player->hp_max = 100;
@@ -727,8 +727,8 @@ void GameServer::TickSpawnTownNPCs(uint32_t mapId)
                 Vector2 spawn{};
                 // TODO: If chicken spawns inside something, immediately despawn
                 //       it (or find better strat for this)
-                spawn.x = GetRandomValue(200, 1200);
-                spawn.y = GetRandomValue(1000, 1700);
+                spawn.x = GetRandomValue(400, 2400);
+                spawn.y = GetRandomValue(2000, 3400);
                 entity = SpawnEntityProto(*this, mapId, spawn, chicken);
                 if (entity) {
                     BroadcastEntitySpawn(entity->id);
@@ -1014,7 +1014,7 @@ void GameServer::Tick(void)
 {
     // HACK: Only spawn NPCs in map 1, whatever map that may be (hopefully it's Level_001)
     TickSpawnTownNPCs(1);
-    TickSpawnCaveNPCs(2);
+    //TickSpawnCaveNPCs(2);
 
     // Tick entites
     for (data::Entity &entity : entityDb->entities) {

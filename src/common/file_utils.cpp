@@ -7,14 +7,14 @@ Err HexifyFile(const char *filename)
     FILE *src{};
     FILE *dst{};
     do {
-        src = fopen(filename, "r");
+        src = fopen(filename, "rb");
         if (!src) {
             err = RN_BAD_FILE_READ; break;
         }
 
         char dstFilename[1024]{};
         snprintf(dstFilename, sizeof(dstFilename), "%s.hex", filename);
-        dst = fopen(dstFilename, "w");
+        dst = fopen(dstFilename, "wb");
         if (!dst) {
             err = RN_BAD_FILE_WRITE; break;
         }
@@ -42,7 +42,7 @@ Err MakeBackup(const char *filename)
     char dstFilename[1024]{};
     char dstFilenameTok[1024]{};
     do {
-        src = fopen(filename, "r");
+        src = fopen(filename, "rb");
         if (!src) {
             err = RN_BAD_FILE_READ; break;
         }
@@ -59,7 +59,7 @@ Err MakeBackup(const char *filename)
             fileExt
         );
 
-        dst = fopen(dstFilename, "w");
+        dst = fopen(dstFilename, "wb");
         if (!dst) {
             err = RN_BAD_FILE_WRITE; break;
         }

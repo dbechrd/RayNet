@@ -1,6 +1,6 @@
 #pragma once
 #include "../../common.h"
-#include "../../entity.h"
+#include "../../data.h"
 
 struct Msg_S_EntitySnapshot : public yojimbo::Message
 {
