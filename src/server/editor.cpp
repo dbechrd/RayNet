@@ -1497,7 +1497,7 @@ void Editor::DrawUI_PackFiles(UI &uiActionBar, double now)
                 case data::DAT_TYP_GFX_FRAME:
                 {
                     data::GfxFrame &gfxFrame = pack.gfx_frames[entry.index];
-                    desc = data::GfxFrameIdStr(gfxFrame.id);
+                    desc = gfxFrame.id.c_str();
                     break;
                 }
                 case data::DAT_TYP_GFX_ANIM:

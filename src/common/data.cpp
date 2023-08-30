@@ -3,6 +3,7 @@
 #include "net/net.h"
 #include <sstream>
 #include <iomanip>
+#include <type_traits>
 
 namespace data {
 #define ENUM_STR_GENERATOR(type, enumDef, enumGen) \
@@ -83,59 +84,6 @@ namespace data {
         }
     }
 
-#if 0
-#define LINE_MAX 1024
-#define KEY_MAX  64
-#define PATH_MAX 512
-    Err LoadMusicIndexOrig(std::string path, std::vector<MusFile> &mus_files)
-    {
-        double start = GetTime();
-        Err err = RN_SUCCESS;
-
-        char *buf = LoadFileText(path.c_str());
-        printf("C loaded file text in %f seconds\n", GetTime() - start);
-
-        if (buf) {
-            char buf_line[LINE_MAX + 1];
-            char buf_key[KEY_MAX + 1];
-            char buf_path[PATH_MAX + 1];
-
-            char *cur = buf;
-            int bytes_read = 0;
-
-            while (sscanf(cur, "%" STRSTR(LINE_MAX) "[^\n]\n%n", buf_line, &bytes_read) == 1) {
-                cur += bytes_read;
-                bytes_read = 0;
-
-                char closing_quote = 0;
-                int arg_count = sscanf(buf_line,
-                    "%" STRSTR(KEY_MAX) "[A-Za-z0-9_] \"%" STRSTR(PATH_MAX) "[^\"]%c",
-                    buf_key, buf_path, &closing_quote);
-
-                if (arg_count != 3 || closing_quote != '\"') {
-                    continue;
-                }
-
-                MusFile mus_file{};
-                mus_file.id = buf_key;
-                mus_file.path = buf_path;
-                mus_files.push_back(mus_file);
-            }
-
-            UnloadFileText(buf);
-        } else {
-            assert(!"failed to read file");
-            err = RN_BAD_FILE_READ;
-        }
-
-        printf("C loaded %zu records in %f seconds\n", mus_files.size(), GetTime() - start);
-        return err;
-    }
-#undef LINE_MAX
-#undef KEY_MAX
-#undef PATH_MAX
-#endif
-
     Err LoadGraphicsIndex(std::string path, std::vector<GfxFile> &gfx_files)
     {
         Err err = RN_SUCCESS;
@@ -157,6 +105,38 @@ namespace data {
                 }
             }
 
+            inputFile.close();
+        } else {
+            assert(!"failed to read file");
+            err = RN_BAD_FILE_READ;
+        }
+
+        return err;
+    }
+
+    Err LoadFramesIndex(std::string path, std::vector<GfxFrame> &gfx_frames)
+    {
+        Err err = RN_SUCCESS;
+
+        std::ifstream inputFile(path);
+        if (inputFile.is_open()) {
+            std::string line;
+            while (std::getline(inputFile, line)) {
+                std::istringstream iss(line);
+
+                GfxFrame gfx_frame{};
+                if (iss
+                    >> gfx_frame.id
+                    >> gfx_frame.gfx
+                    >> gfx_frame.x
+                    >> gfx_frame.y
+                    >> gfx_frame.w
+                    >> gfx_frame.h
+                    && gfx_frame.id[0] != '#'
+                ) {
+                    gfx_frames.push_back(gfx_frame);
+                }
+            }
             inputFile.close();
         } else {
             assert(!"failed to read file");
@@ -267,204 +247,35 @@ namespace data {
         }
 
 #if 1
-        //GfxFile gfx_files[] = {
-        //    { GFX_FILE_NONE },
-        //    // id                       texture path
-        //    { GFX_FILE_DLG_NPATCH,     "resources/texture/npatch.png" },
-        //    { GFX_FILE_CHR_MAGE,       "resources/texture/mage.png" },
-        //    { GFX_FILE_NPC_LILY,       "resources/texture/lily.png" },
-        //    { GFX_FILE_NPC_FREYE,      "resources/texture/freye.png" },
-        //    { GFX_FILE_NPC_NESSA,      "resources/texture/nessa.png" },
-        //    { GFX_FILE_NPC_ELANE,      "resources/texture/elane.png" },
-        //    { GFX_FILE_NPC_CHICKEN,    "resources/texture/chicken.png" },
-        //    { GFX_FILE_OBJ_CAMPFIRE,   "resources/texture/campfire.png" },
-        //    { GFX_FILE_PRJ_FIREBALL,   "resources/texture/fireball.png" },
-        //    { GFX_FILE_TIL_OVERWORLD,  "resources/texture/tiles32.png" },
-        //    { GFX_FILE_TIL_AUTO_GRASS, "resources/texture/autotile_3x3_min.png" },
-        //};
-
-        //MusFile mus_files[] = {
-        //    { "NONE" },
-        //    // id                  music file path
-        //    { "AMBIENT_OUTDOORS", "resources/music/copyright/345470__philip_goddard__branscombe-landslip-birds-and-sea-echoes-ese-from-cave-track.ogg" },
-        //    { "AMBIENT_CAVE",     "resources/music/copyright/69391__zixem__cave_amb.wav" },
-        //};
-
-        //SfxFile sfx_files[] = {
-        //    { SFX_FILE_NONE },
-        //    // id                       sound file path                      pitch variance  multi
-        //    { SFX_FILE_SOFT_TICK,      "resources/sound/soft_tick.wav"     , 0.03f,          true },
-        //    { SFX_FILE_CAMPFIRE,       "resources/sound/campfire.wav"      , 0.00f,          false },
-        //    { SFX_FILE_FOOTSTEP_GRASS, "resources/sound/footstep_grass.wav", 0.00f,          true },
-        //    { SFX_FILE_FOOTSTEP_STONE, "resources/sound/footstep_stone.wav", 0.00f,          true },
-        //    { SFX_FILE_FIREBALL,       "resources/sound/fireball.wav",       0.05f,          true },
-        //};
-
-        GfxFrame gfx_frames[] = {
-            // id                       image file             x   y    w    h
-            // playable characters
-            { GFX_FRAME_CHR_MAGE_E_0,   "gfx_chr_mage",        0,  0,  64, 128 },
-            { GFX_FRAME_CHR_MAGE_W_0,   "gfx_chr_mage",       64,  0,  64, 128 },
-
-            // npcs
-            { GFX_FRAME_NPC_LILY_E_0,    "gfx_npc_lily",       0,  0,  64, 128 },
-            { GFX_FRAME_NPC_LILY_W_0,    "gfx_npc_lily",      64,  0,  64, 128 },
-            { GFX_FRAME_NPC_FREYE_E_0,   "gfx_npc_freye",      0,  0,  64, 128 },
-            { GFX_FRAME_NPC_FREYE_W_0,   "gfx_npc_freye",     64,  0,  64, 128 },
-            { GFX_FRAME_NPC_NESSA_E_0,   "gfx_npc_nessa",      0,  0,  64, 128 },
-            { GFX_FRAME_NPC_NESSA_W_0,   "gfx_npc_nessa",     64,  0,  64, 128 },
-            { GFX_FRAME_NPC_ELANE_E_0,   "gfx_npc_elane",      0,  0,  64, 128 },
-            { GFX_FRAME_NPC_ELANE_W_0,   "gfx_npc_elane",     64,  0,  64, 128 },
-            { GFX_FRAME_NPC_CHICKEN_E_0, "gfx_npc_chicken",    0,  0,  64,  64 },
-            { GFX_FRAME_NPC_CHICKEN_W_0, "gfx_npc_chicken",   64,  0,  64,  64 },
-
-            // objects
-            { GFX_FRAME_OBJ_CAMPFIRE_0, "gfx_obj_campfire",    0,  0, 256, 256 },
-            { GFX_FRAME_OBJ_CAMPFIRE_1, "gfx_obj_campfire",  256,  0, 256, 256 },
-            { GFX_FRAME_OBJ_CAMPFIRE_2, "gfx_obj_campfire",  512,  0, 256, 256 },
-            { GFX_FRAME_OBJ_CAMPFIRE_3, "gfx_obj_campfire",  768,  0, 256, 256 },
-            { GFX_FRAME_OBJ_CAMPFIRE_4, "gfx_obj_campfire", 1024,  0, 256, 256 },
-            { GFX_FRAME_OBJ_CAMPFIRE_5, "gfx_obj_campfire", 1280,  0, 256, 256 },
-            { GFX_FRAME_OBJ_CAMPFIRE_6, "gfx_obj_campfire", 1536,  0, 256, 256 },
-            { GFX_FRAME_OBJ_CAMPFIRE_7, "gfx_obj_campfire", 1792,  0, 256, 256 },
-
-            // projectiles
-            { GFX_FRAME_PRJ_FIREBALL_0, "gfx_prj_fireball",    0,  0,  16,  16 },
-
-            // tiles
-            { GFX_FRAME_TIL_GRASS,      "gfx_til_overworld",   0, 192,  64,  64 },
-            { GFX_FRAME_TIL_STONE_PATH, "gfx_til_overworld", 256,   0,  64,  64 },
-            { GFX_FRAME_TIL_WALL,       "gfx_til_overworld", 256,  64,  64,  64 },
-            { GFX_FRAME_TIL_WATER_0,    "gfx_til_overworld", 256, 192,  64,  64 },
-
-            { GFX_FRAME_TIL_AUTO_GRASS_00, "gfx_til_auto_grass", TILE_W * 0, TILE_W *  0, TILE_W, TILE_W },
-            { GFX_FRAME_TIL_AUTO_GRASS_01, "gfx_til_auto_grass", TILE_W * 1, TILE_W *  0, TILE_W, TILE_W },
-            { GFX_FRAME_TIL_AUTO_GRASS_02, "gfx_til_auto_grass", TILE_W * 2, TILE_W *  0, TILE_W, TILE_W },
-            { GFX_FRAME_TIL_AUTO_GRASS_03, "gfx_til_auto_grass", TILE_W * 3, TILE_W *  0, TILE_W, TILE_W },
-            { GFX_FRAME_TIL_AUTO_GRASS_04, "gfx_til_auto_grass", TILE_W * 0, TILE_W *  1, TILE_W, TILE_W },
-            { GFX_FRAME_TIL_AUTO_GRASS_05, "gfx_til_auto_grass", TILE_W * 1, TILE_W *  1, TILE_W, TILE_W },
-            { GFX_FRAME_TIL_AUTO_GRASS_06, "gfx_til_auto_grass", TILE_W * 2, TILE_W *  1, TILE_W, TILE_W },
-            { GFX_FRAME_TIL_AUTO_GRASS_07, "gfx_til_auto_grass", TILE_W * 3, TILE_W *  1, TILE_W, TILE_W },
-            { GFX_FRAME_TIL_AUTO_GRASS_08, "gfx_til_auto_grass", TILE_W * 0, TILE_W *  2, TILE_W, TILE_W },
-            { GFX_FRAME_TIL_AUTO_GRASS_09, "gfx_til_auto_grass", TILE_W * 1, TILE_W *  2, TILE_W, TILE_W },
-            { GFX_FRAME_TIL_AUTO_GRASS_10, "gfx_til_auto_grass", TILE_W * 2, TILE_W *  2, TILE_W, TILE_W },
-            { GFX_FRAME_TIL_AUTO_GRASS_11, "gfx_til_auto_grass", TILE_W * 3, TILE_W *  2, TILE_W, TILE_W },
-            { GFX_FRAME_TIL_AUTO_GRASS_12, "gfx_til_auto_grass", TILE_W * 0, TILE_W *  3, TILE_W, TILE_W },
-            { GFX_FRAME_TIL_AUTO_GRASS_13, "gfx_til_auto_grass", TILE_W * 1, TILE_W *  3, TILE_W, TILE_W },
-            { GFX_FRAME_TIL_AUTO_GRASS_14, "gfx_til_auto_grass", TILE_W * 2, TILE_W *  3, TILE_W, TILE_W },
-            { GFX_FRAME_TIL_AUTO_GRASS_15, "gfx_til_auto_grass", TILE_W * 3, TILE_W *  3, TILE_W, TILE_W },
-            { GFX_FRAME_TIL_AUTO_GRASS_16, "gfx_til_auto_grass", TILE_W * 0, TILE_W *  4, TILE_W, TILE_W },
-            { GFX_FRAME_TIL_AUTO_GRASS_17, "gfx_til_auto_grass", TILE_W * 1, TILE_W *  4, TILE_W, TILE_W },
-            { GFX_FRAME_TIL_AUTO_GRASS_18, "gfx_til_auto_grass", TILE_W * 2, TILE_W *  4, TILE_W, TILE_W },
-            { GFX_FRAME_TIL_AUTO_GRASS_19, "gfx_til_auto_grass", TILE_W * 3, TILE_W *  4, TILE_W, TILE_W },
-            { GFX_FRAME_TIL_AUTO_GRASS_20, "gfx_til_auto_grass", TILE_W * 0, TILE_W *  5, TILE_W, TILE_W },
-            { GFX_FRAME_TIL_AUTO_GRASS_21, "gfx_til_auto_grass", TILE_W * 1, TILE_W *  5, TILE_W, TILE_W },
-            { GFX_FRAME_TIL_AUTO_GRASS_22, "gfx_til_auto_grass", TILE_W * 2, TILE_W *  5, TILE_W, TILE_W },
-            { GFX_FRAME_TIL_AUTO_GRASS_23, "gfx_til_auto_grass", TILE_W * 3, TILE_W *  5, TILE_W, TILE_W },
-            { GFX_FRAME_TIL_AUTO_GRASS_24, "gfx_til_auto_grass", TILE_W * 0, TILE_W *  6, TILE_W, TILE_W },
-            { GFX_FRAME_TIL_AUTO_GRASS_25, "gfx_til_auto_grass", TILE_W * 1, TILE_W *  6, TILE_W, TILE_W },
-            { GFX_FRAME_TIL_AUTO_GRASS_26, "gfx_til_auto_grass", TILE_W * 2, TILE_W *  6, TILE_W, TILE_W },
-            { GFX_FRAME_TIL_AUTO_GRASS_27, "gfx_til_auto_grass", TILE_W * 3, TILE_W *  6, TILE_W, TILE_W },
-            { GFX_FRAME_TIL_AUTO_GRASS_28, "gfx_til_auto_grass", TILE_W * 0, TILE_W *  7, TILE_W, TILE_W },
-            { GFX_FRAME_TIL_AUTO_GRASS_29, "gfx_til_auto_grass", TILE_W * 1, TILE_W *  7, TILE_W, TILE_W },
-            { GFX_FRAME_TIL_AUTO_GRASS_30, "gfx_til_auto_grass", TILE_W * 2, TILE_W *  7, TILE_W, TILE_W },
-            { GFX_FRAME_TIL_AUTO_GRASS_31, "gfx_til_auto_grass", TILE_W * 3, TILE_W *  7, TILE_W, TILE_W },
-            { GFX_FRAME_TIL_AUTO_GRASS_32, "gfx_til_auto_grass", TILE_W * 0, TILE_W *  8, TILE_W, TILE_W },
-            { GFX_FRAME_TIL_AUTO_GRASS_33, "gfx_til_auto_grass", TILE_W * 1, TILE_W *  8, TILE_W, TILE_W },
-            { GFX_FRAME_TIL_AUTO_GRASS_34, "gfx_til_auto_grass", TILE_W * 2, TILE_W *  8, TILE_W, TILE_W },
-            { GFX_FRAME_TIL_AUTO_GRASS_35, "gfx_til_auto_grass", TILE_W * 3, TILE_W *  8, TILE_W, TILE_W },
-            { GFX_FRAME_TIL_AUTO_GRASS_36, "gfx_til_auto_grass", TILE_W * 0, TILE_W *  9, TILE_W, TILE_W },
-            { GFX_FRAME_TIL_AUTO_GRASS_37, "gfx_til_auto_grass", TILE_W * 1, TILE_W *  9, TILE_W, TILE_W },
-            { GFX_FRAME_TIL_AUTO_GRASS_38, "gfx_til_auto_grass", TILE_W * 2, TILE_W *  9, TILE_W, TILE_W },
-            { GFX_FRAME_TIL_AUTO_GRASS_39, "gfx_til_auto_grass", TILE_W * 3, TILE_W *  9, TILE_W, TILE_W },
-            { GFX_FRAME_TIL_AUTO_GRASS_40, "gfx_til_auto_grass", TILE_W * 0, TILE_W * 10, TILE_W, TILE_W },
-            { GFX_FRAME_TIL_AUTO_GRASS_41, "gfx_til_auto_grass", TILE_W * 1, TILE_W * 10, TILE_W, TILE_W },
-            { GFX_FRAME_TIL_AUTO_GRASS_42, "gfx_til_auto_grass", TILE_W * 2, TILE_W * 10, TILE_W, TILE_W },
-            { GFX_FRAME_TIL_AUTO_GRASS_43, "gfx_til_auto_grass", TILE_W * 3, TILE_W * 10, TILE_W, TILE_W },
-            { GFX_FRAME_TIL_AUTO_GRASS_44, "gfx_til_auto_grass", TILE_W * 0, TILE_W * 11, TILE_W, TILE_W },
-            { GFX_FRAME_TIL_AUTO_GRASS_45, "gfx_til_auto_grass", TILE_W * 1, TILE_W * 11, TILE_W, TILE_W },
-            { GFX_FRAME_TIL_AUTO_GRASS_46, "gfx_til_auto_grass", TILE_W * 2, TILE_W * 11, TILE_W, TILE_W },
-            { GFX_FRAME_TIL_AUTO_GRASS_47, "gfx_til_auto_grass", TILE_W * 3, TILE_W * 11, TILE_W, TILE_W },
-        };
-
         GfxAnim gfx_anims[] = {
             // id                       sound effect  frmRate  frmCount  frmDelay  frames
             // playable characters
-            { GFX_ANIM_CHR_MAGE_E,                "", 60, 1,        0, { GFX_FRAME_CHR_MAGE_E_0 }},
-            { GFX_ANIM_CHR_MAGE_W,                "", 60, 1,        0, { GFX_FRAME_CHR_MAGE_W_0 }},
+            { GFX_ANIM_CHR_MAGE_E,                "",      60,        1,        0, { GFX_FRAME_CHR_MAGE_E_0 }},
+            { GFX_ANIM_CHR_MAGE_W,                "",      60,        1,        0, { GFX_FRAME_CHR_MAGE_W_0 }},
 
             // npcs
-            { GFX_ANIM_NPC_LILY_E,                "", 60, 1,        0, { GFX_FRAME_NPC_LILY_E_0 }},
-            { GFX_ANIM_NPC_LILY_W,                "", 60, 1,        0, { GFX_FRAME_NPC_LILY_W_0 }},
-            { GFX_ANIM_NPC_FREYE_E,               "", 60, 1,        0, { GFX_FRAME_NPC_FREYE_E_0 }},
-            { GFX_ANIM_NPC_FREYE_W,               "", 60, 1,        0, { GFX_FRAME_NPC_FREYE_W_0 }},
-            { GFX_ANIM_NPC_NESSA_E,               "", 60, 1,        0, { GFX_FRAME_NPC_NESSA_E_0 }},
-            { GFX_ANIM_NPC_NESSA_W,               "", 60, 1,        0, { GFX_FRAME_NPC_NESSA_W_0 }},
-            { GFX_ANIM_NPC_ELANE_E,               "", 60, 1,        0, { GFX_FRAME_NPC_ELANE_E_0 }},
-            { GFX_ANIM_NPC_ELANE_W,               "", 60, 1,        0, { GFX_FRAME_NPC_ELANE_W_0 }},
-            { GFX_ANIM_NPC_CHICKEN_E,             "", 60, 1,        0, { GFX_FRAME_NPC_CHICKEN_E_0 }},
-            { GFX_ANIM_NPC_CHICKEN_W,             "", 60, 1,        0, { GFX_FRAME_NPC_CHICKEN_W_0 }},
+            { GFX_ANIM_NPC_LILY_E,                "",      60,        1,        0, { GFX_FRAME_NPC_LILY_E_0 }},
+            { GFX_ANIM_NPC_LILY_W,                "",      60,        1,        0, { GFX_FRAME_NPC_LILY_W_0 }},
+            { GFX_ANIM_NPC_FREYE_E,               "",      60,        1,        0, { GFX_FRAME_NPC_FREYE_E_0 }},
+            { GFX_ANIM_NPC_FREYE_W,               "",      60,        1,        0, { GFX_FRAME_NPC_FREYE_W_0 }},
+            { GFX_ANIM_NPC_NESSA_E,               "",      60,        1,        0, { GFX_FRAME_NPC_NESSA_E_0 }},
+            { GFX_ANIM_NPC_NESSA_W,               "",      60,        1,        0, { GFX_FRAME_NPC_NESSA_W_0 }},
+            { GFX_ANIM_NPC_ELANE_E,               "",      60,        1,        0, { GFX_FRAME_NPC_ELANE_E_0 }},
+            { GFX_ANIM_NPC_ELANE_W,               "",      60,        1,        0, { GFX_FRAME_NPC_ELANE_W_0 }},
+            { GFX_ANIM_NPC_CHICKEN_E,             "",      60,        1,        0, { GFX_FRAME_NPC_CHICKEN_E_0 }},
+            { GFX_ANIM_NPC_CHICKEN_W,             "",      60,        1,        0, { GFX_FRAME_NPC_CHICKEN_W_0 }},
 
             // objects
-            { GFX_ANIM_OBJ_CAMPFIRE,  "sfx_campfire", 60, 8,        4, { GFX_FRAME_OBJ_CAMPFIRE_0, GFX_FRAME_OBJ_CAMPFIRE_1, GFX_FRAME_OBJ_CAMPFIRE_2, GFX_FRAME_OBJ_CAMPFIRE_3, GFX_FRAME_OBJ_CAMPFIRE_4, GFX_FRAME_OBJ_CAMPFIRE_5, GFX_FRAME_OBJ_CAMPFIRE_6, GFX_FRAME_OBJ_CAMPFIRE_7 }},
+            { GFX_ANIM_OBJ_CAMPFIRE,  "sfx_campfire",      60,        8,        4, { GFX_FRAME_OBJ_CAMPFIRE_0, GFX_FRAME_OBJ_CAMPFIRE_1, GFX_FRAME_OBJ_CAMPFIRE_2, GFX_FRAME_OBJ_CAMPFIRE_3, GFX_FRAME_OBJ_CAMPFIRE_4, GFX_FRAME_OBJ_CAMPFIRE_5, GFX_FRAME_OBJ_CAMPFIRE_6, GFX_FRAME_OBJ_CAMPFIRE_7 }},
 
             // projectiles
-            { GFX_ANIM_PRJ_FIREBALL,  "sfx_fireball", 60, 1,        0, { GFX_FRAME_PRJ_FIREBALL_0 }},
+            { GFX_ANIM_PRJ_FIREBALL,  "sfx_fireball",      60,        1,        0, { GFX_FRAME_PRJ_FIREBALL_0 }},
 
             // tiles
-            { GFX_ANIM_TIL_GRASS,                 "", 60, 1,        0, { GFX_FRAME_TIL_GRASS }},
-            { GFX_ANIM_TIL_STONE_PATH,            "", 60, 1,        0, { GFX_FRAME_TIL_STONE_PATH }},
-            { GFX_ANIM_TIL_WALL,                  "", 60, 1,        0, { GFX_FRAME_TIL_WALL }},
-            { GFX_ANIM_TIL_WATER,                 "", 60, 1,        0, { GFX_FRAME_TIL_WATER_0 }},
-
-            { GFX_ANIM_TIL_AUTO_GRASS_00,         "", 60, 1,        0, { GFX_FRAME_TIL_AUTO_GRASS_00 }},
-            { GFX_ANIM_TIL_AUTO_GRASS_01,         "", 60, 1,        0, { GFX_FRAME_TIL_AUTO_GRASS_01 }},
-            { GFX_ANIM_TIL_AUTO_GRASS_02,         "", 60, 1,        0, { GFX_FRAME_TIL_AUTO_GRASS_02 }},
-            { GFX_ANIM_TIL_AUTO_GRASS_03,         "", 60, 1,        0, { GFX_FRAME_TIL_AUTO_GRASS_03 }},
-            { GFX_ANIM_TIL_AUTO_GRASS_04,         "", 60, 1,        0, { GFX_FRAME_TIL_AUTO_GRASS_04 }},
-            { GFX_ANIM_TIL_AUTO_GRASS_05,         "", 60, 1,        0, { GFX_FRAME_TIL_AUTO_GRASS_05 }},
-            { GFX_ANIM_TIL_AUTO_GRASS_06,         "", 60, 1,        0, { GFX_FRAME_TIL_AUTO_GRASS_06 }},
-            { GFX_ANIM_TIL_AUTO_GRASS_07,         "", 60, 1,        0, { GFX_FRAME_TIL_AUTO_GRASS_07 }},
-            { GFX_ANIM_TIL_AUTO_GRASS_08,         "", 60, 1,        0, { GFX_FRAME_TIL_AUTO_GRASS_08 }},
-            { GFX_ANIM_TIL_AUTO_GRASS_09,         "", 60, 1,        0, { GFX_FRAME_TIL_AUTO_GRASS_09 }},
-            { GFX_ANIM_TIL_AUTO_GRASS_10,         "", 60, 1,        0, { GFX_FRAME_TIL_AUTO_GRASS_10 }},
-            { GFX_ANIM_TIL_AUTO_GRASS_11,         "", 60, 1,        0, { GFX_FRAME_TIL_AUTO_GRASS_11 }},
-            { GFX_ANIM_TIL_AUTO_GRASS_12,         "", 60, 1,        0, { GFX_FRAME_TIL_AUTO_GRASS_12 }},
-            { GFX_ANIM_TIL_AUTO_GRASS_13,         "", 60, 1,        0, { GFX_FRAME_TIL_AUTO_GRASS_13 }},
-            { GFX_ANIM_TIL_AUTO_GRASS_14,         "", 60, 1,        0, { GFX_FRAME_TIL_AUTO_GRASS_14 }},
-            { GFX_ANIM_TIL_AUTO_GRASS_15,         "", 60, 1,        0, { GFX_FRAME_TIL_AUTO_GRASS_15 }},
-            { GFX_ANIM_TIL_AUTO_GRASS_16,         "", 60, 1,        0, { GFX_FRAME_TIL_AUTO_GRASS_16 }},
-            { GFX_ANIM_TIL_AUTO_GRASS_17,         "", 60, 1,        0, { GFX_FRAME_TIL_AUTO_GRASS_17 }},
-            { GFX_ANIM_TIL_AUTO_GRASS_18,         "", 60, 1,        0, { GFX_FRAME_TIL_AUTO_GRASS_18 }},
-            { GFX_ANIM_TIL_AUTO_GRASS_19,         "", 60, 1,        0, { GFX_FRAME_TIL_AUTO_GRASS_19 }},
-            { GFX_ANIM_TIL_AUTO_GRASS_20,         "", 60, 1,        0, { GFX_FRAME_TIL_AUTO_GRASS_20 }},
-            { GFX_ANIM_TIL_AUTO_GRASS_21,         "", 60, 1,        0, { GFX_FRAME_TIL_AUTO_GRASS_21 }},
-            { GFX_ANIM_TIL_AUTO_GRASS_22,         "", 60, 1,        0, { GFX_FRAME_TIL_AUTO_GRASS_22 }},
-            { GFX_ANIM_TIL_AUTO_GRASS_23,         "", 60, 1,        0, { GFX_FRAME_TIL_AUTO_GRASS_23 }},
-            { GFX_ANIM_TIL_AUTO_GRASS_24,         "", 60, 1,        0, { GFX_FRAME_TIL_AUTO_GRASS_24 }},
-            { GFX_ANIM_TIL_AUTO_GRASS_25,         "", 60, 1,        0, { GFX_FRAME_TIL_AUTO_GRASS_25 }},
-            { GFX_ANIM_TIL_AUTO_GRASS_26,         "", 60, 1,        0, { GFX_FRAME_TIL_AUTO_GRASS_26 }},
-            { GFX_ANIM_TIL_AUTO_GRASS_27,         "", 60, 1,        0, { GFX_FRAME_TIL_AUTO_GRASS_27 }},
-            { GFX_ANIM_TIL_AUTO_GRASS_28,         "", 60, 1,        0, { GFX_FRAME_TIL_AUTO_GRASS_28 }},
-            { GFX_ANIM_TIL_AUTO_GRASS_29,         "", 60, 1,        0, { GFX_FRAME_TIL_AUTO_GRASS_29 }},
-            { GFX_ANIM_TIL_AUTO_GRASS_30,         "", 60, 1,        0, { GFX_FRAME_TIL_AUTO_GRASS_30 }},
-            { GFX_ANIM_TIL_AUTO_GRASS_31,         "", 60, 1,        0, { GFX_FRAME_TIL_AUTO_GRASS_31 }},
-            { GFX_ANIM_TIL_AUTO_GRASS_32,         "", 60, 1,        0, { GFX_FRAME_TIL_AUTO_GRASS_32 }},
-            { GFX_ANIM_TIL_AUTO_GRASS_33,         "", 60, 1,        0, { GFX_FRAME_TIL_AUTO_GRASS_33 }},
-            { GFX_ANIM_TIL_AUTO_GRASS_34,         "", 60, 1,        0, { GFX_FRAME_TIL_AUTO_GRASS_34 }},
-            { GFX_ANIM_TIL_AUTO_GRASS_35,         "", 60, 1,        0, { GFX_FRAME_TIL_AUTO_GRASS_35 }},
-            { GFX_ANIM_TIL_AUTO_GRASS_36,         "", 60, 1,        0, { GFX_FRAME_TIL_AUTO_GRASS_36 }},
-            { GFX_ANIM_TIL_AUTO_GRASS_37,         "", 60, 1,        0, { GFX_FRAME_TIL_AUTO_GRASS_37 }},
-            { GFX_ANIM_TIL_AUTO_GRASS_38,         "", 60, 1,        0, { GFX_FRAME_TIL_AUTO_GRASS_38 }},
-            { GFX_ANIM_TIL_AUTO_GRASS_39,         "", 60, 1,        0, { GFX_FRAME_TIL_AUTO_GRASS_39 }},
-            { GFX_ANIM_TIL_AUTO_GRASS_40,         "", 60, 1,        0, { GFX_FRAME_TIL_AUTO_GRASS_40 }},
-            { GFX_ANIM_TIL_AUTO_GRASS_41,         "", 60, 1,        0, { GFX_FRAME_TIL_AUTO_GRASS_41 }},
-            { GFX_ANIM_TIL_AUTO_GRASS_42,         "", 60, 1,        0, { GFX_FRAME_TIL_AUTO_GRASS_42 }},
-            { GFX_ANIM_TIL_AUTO_GRASS_43,         "", 60, 1,        0, { GFX_FRAME_TIL_AUTO_GRASS_43 }},
-            { GFX_ANIM_TIL_AUTO_GRASS_44,         "", 60, 1,        0, { GFX_FRAME_TIL_AUTO_GRASS_44 }},
-            { GFX_ANIM_TIL_AUTO_GRASS_45,         "", 60, 1,        0, { GFX_FRAME_TIL_AUTO_GRASS_45 }},
-            { GFX_ANIM_TIL_AUTO_GRASS_46,         "", 60, 1,        0, { GFX_FRAME_TIL_AUTO_GRASS_46 }},
-            { GFX_ANIM_TIL_AUTO_GRASS_47,         "", 60, 1,        0, { GFX_FRAME_TIL_AUTO_GRASS_47 }},
+            { GFX_ANIM_TIL_GRASS,                 "",      60,        1,        0, { GFX_FRAME_TIL_GRASS }},
+            { GFX_ANIM_TIL_STONE_PATH,            "",      60,        1,        0, { GFX_FRAME_TIL_STONE_PATH }},
+            { GFX_ANIM_TIL_WALL,                  "",      60,        1,        0, { GFX_FRAME_TIL_WALL }},
+            { GFX_ANIM_TIL_WATER,                 "",      60,        1,        0, { GFX_FRAME_TIL_WATER }},
         };
 
         Material materials[] = {
@@ -562,6 +373,13 @@ namespace data {
             TraceLog(LOG_ERROR, "Failed to load graphics index.\n");
         }
 
+        std::vector<GfxFrame> gfx_frames{};
+        err = LoadFramesIndex("resources/texture/index_frames.txt", gfx_frames);
+        if (err) {
+            assert(!err);
+            TraceLog(LOG_ERROR, "Failed to load graphics frames index.\n");
+        }
+
         std::vector<MusFile> mus_files{};
         err = LoadMusicIndex("resources/music/index.txt", mus_files);
         if (err) {
@@ -608,10 +426,6 @@ namespace data {
                 }                                       \
             }
 
-        //ID_CHECK(GfxFile  &, gfx_file,  gfx_files);
-        //ID_CHECK(MusFile  &, mus_file,  mus_files);
-        //ID_CHECK(SfxFile  &, sfx_file,  sfx_files);
-        ID_CHECK(GfxFrame &, gfx_frame, packHardcoded.gfx_frames);
         ID_CHECK(GfxAnim  &, gfx_anim,  packHardcoded.gfx_anims);
         ID_CHECK(Material &, material,  packHardcoded.materials);
         ID_CHECK(Sprite   &, sprite,    packHardcoded.sprites);
@@ -679,8 +493,14 @@ namespace data {
 #endif
     }
 
-#define PROC(v) { static_assert(!std::is_same_v<decltype(v), std::string>); stream.process(&v, sizeof(v), 1, stream.f); }
-
+#define PROC(v) Process(stream, v);
+    template <typename T>
+    void Process(PackStream &stream, T &v)
+    {
+        static_assert(std::is_fundamental_v<T> || std::is_enum_v<T>,
+            "You cannot fread/write a non-primitive type");
+        stream.process(&v, sizeof(v), 1, stream.f);
+    }
     void Process(PackStream &stream, std::string &str)
     {
         uint16_t strLen = (uint16_t)str.size();
@@ -688,7 +508,11 @@ namespace data {
         str.resize(strLen);
         stream.process(str.data(), 1, strLen, stream.f);
     }
-
+    void Process(PackStream &stream, Vector2 &vec)
+    {
+        PROC(vec.x);
+        PROC(vec.y);
+    }
     void Process(PackStream &stream, DatBuffer &buffer)
     {
         PROC(buffer.length);
@@ -700,7 +524,6 @@ namespace data {
             stream.process(buffer.bytes, 1, buffer.length, stream.f);
         }
     }
-
     void Process(PackStream &stream, GfxFile &gfx_file, int index)
     {
         Process(stream, gfx_file.id);
@@ -714,7 +537,6 @@ namespace data {
             stream.pack->gfx_files_by_id[gfx_file.id] = index;
         }
     }
-
     void Process(PackStream &stream, MusFile &mus_file, int index)
     {
         Process(stream, mus_file.id);
@@ -732,7 +554,6 @@ namespace data {
             stream.pack->mus_files_by_id[mus_file.id] = index;
         }
     }
-
     void Process(PackStream &stream, SfxFile &sfx_file, int index)
     {
         Process(stream, sfx_file.id);
@@ -749,17 +570,15 @@ namespace data {
             sfx_variants.push_back(index);
         }
     }
-
     void Process(PackStream &stream, GfxFrame &gfx_frame, int index)
     {
-        PROC(gfx_frame.id);
+        Process(stream, gfx_frame.id);
         Process(stream, gfx_frame.gfx);
         PROC(gfx_frame.x);
         PROC(gfx_frame.y);
         PROC(gfx_frame.w);
         PROC(gfx_frame.h);
     }
-
     void Process(PackStream &stream, GfxAnim &gfx_anim, int index)
     {
         PROC(gfx_anim.id);
@@ -772,13 +591,11 @@ namespace data {
             PROC(gfx_anim.frames[i]);
         }
     }
-
     void Process(PackStream &stream, Material &material, int index)
     {
         PROC(material.id);
         Process(stream, material.footstep_sound);
     }
-
     void Process(PackStream &stream, Sprite &sprite, int index) {
         PROC(sprite.id);
         assert(ARRAY_SIZE(sprite.anims) == 8); // if this changes, version must increment
@@ -786,7 +603,6 @@ namespace data {
             PROC(sprite.anims[i]);
         }
     }
-
     void Process(PackStream &stream, TileType &tile_type, int index)
     {
         PROC(tile_type.id);
@@ -795,7 +611,6 @@ namespace data {
         PROC(tile_type.flags);
         PROC(tile_type.auto_tile_mask);
     }
-
     void Process(PackStream &stream, Entity &entity, int index)
     {
         bool alive = entity.id && !entity.despawned_at && entity.type;
@@ -876,7 +691,6 @@ namespace data {
         //warp.templateTileset = "resources/wang/tileset2x2.png";
         //---------------------------------------
     }
-
     void Process(PackStream &stream, TileMapData &tile_map, int index)
     {
         uint32_t sentinel = 0;
@@ -978,7 +792,6 @@ namespace data {
             stream.pack->tile_maps_by_name[tile_map.name] = index;
         }
     }
-
     Err Process(PackStream &stream)
     {
         static const int MAGIC = 0x9291BBDB;
@@ -1135,10 +948,6 @@ namespace data {
                 }                                       \
             }
 
-        //ID_CHECK(GfxFile  &, gfx_file,  pack.gfx_files);
-        //ID_CHECK(MusFile  &, mus_file,  pack.mus_files);
-        //ID_CHECK(SfxFile  &, sfx_file,  pack.sfx_files);
-        ID_CHECK(GfxFrame &, gfx_frame, pack.gfx_frames);
         ID_CHECK(GfxAnim  &, gfx_anim,  pack.gfx_anims);
         ID_CHECK(Material &, material,  pack.materials);
         ID_CHECK(Sprite   &, sprite,    pack.sprites);
@@ -1198,7 +1007,7 @@ namespace data {
         pack.gfx_files[0].texture = placeholderTex;
 
         assert(pack.gfx_frames.size());
-        assert(pack.gfx_frames[0].id == GFX_FRAME_NONE);//.empty());
+        assert(pack.gfx_frames[0].id.empty());
         //pack.gfx_frames[0].id = GFX_FRAME_NONE;
         //pack.gfx_frames[0].gfx = GFX_FILE_NONE;
         pack.gfx_frames[0].w = placeholderTex.width;

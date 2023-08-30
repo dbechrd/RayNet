@@ -1,0 +1,35 @@
+# id                       imagefile           x       y     w     h
+# characters
+gfx_frame_chr_mage_e_0     gfx_chr_mage        0       0    64   128
+gfx_frame_chr_mage_w_0     gfx_chr_mage        64      0    64   128
+
+# npcs
+gfx_frame_npc_lily_e_0     gfx_npc_lily        0       0    64   128
+gfx_frame_npc_lily_w_0     gfx_npc_lily        64      0    64   128
+gfx_frame_npc_freye_e_0    gfx_npc_freye       0       0    64   128
+gfx_frame_npc_freye_w_0    gfx_npc_freye       64      0    64   128
+gfx_frame_npc_nessa_e_0    gfx_npc_nessa       0       0    64   128
+gfx_frame_npc_nessa_w_0    gfx_npc_nessa       64      0    64   128
+gfx_frame_npc_elane_e_0    gfx_npc_elane       0       0    64   128
+gfx_frame_npc_elane_w_0    gfx_npc_elane       64      0    64   128
+gfx_frame_npc_chicken_e_0  gfx_npc_chicken     0       0    64    64
+gfx_frame_npc_chicken_w_0  gfx_npc_chicken     64      0    64    64
+
+# objects
+gfx_frame_obj_campfire_0   gfx_obj_campfire    0       0   256   256
+gfx_frame_obj_campfire_1   gfx_obj_campfire    256     0   256   256
+gfx_frame_obj_campfire_2   gfx_obj_campfire    512     0   256   256
+gfx_frame_obj_campfire_3   gfx_obj_campfire    768     0   256   256
+gfx_frame_obj_campfire_4   gfx_obj_campfire    1024    0   256   256
+gfx_frame_obj_campfire_5   gfx_obj_campfire    1280    0   256   256
+gfx_frame_obj_campfire_6   gfx_obj_campfire    1536    0   256   256
+gfx_frame_obj_campfire_7   gfx_obj_campfire    1792    0   256   256
+
+# projectiles
+gfx_frame_prj_fireball_0   gfx_prj_fireball    0       0   16     16
+
+# tiles
+gfx_frame_til_grass        gfx_til_overworld   0     192   64     64
+gfx_frame_til_stone_path   gfx_til_overworld   256     0   64     64
+gfx_frame_til_wall         gfx_til_overworld   256    64   64     64
+gfx_frame_til_water        gfx_til_overworld   256   192   64     64

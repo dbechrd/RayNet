@@ -181,62 +181,14 @@ namespace data {
     gen(GFX_FRAME_TIL_GRASS)         \
     gen(GFX_FRAME_TIL_STONE_PATH)    \
     gen(GFX_FRAME_TIL_WALL)          \
-    gen(GFX_FRAME_TIL_WATER_0)       \
-    gen(GFX_FRAME_TIL_AUTO_GRASS_00) \
-    gen(GFX_FRAME_TIL_AUTO_GRASS_01) \
-    gen(GFX_FRAME_TIL_AUTO_GRASS_02) \
-    gen(GFX_FRAME_TIL_AUTO_GRASS_03) \
-    gen(GFX_FRAME_TIL_AUTO_GRASS_04) \
-    gen(GFX_FRAME_TIL_AUTO_GRASS_05) \
-    gen(GFX_FRAME_TIL_AUTO_GRASS_06) \
-    gen(GFX_FRAME_TIL_AUTO_GRASS_07) \
-    gen(GFX_FRAME_TIL_AUTO_GRASS_08) \
-    gen(GFX_FRAME_TIL_AUTO_GRASS_09) \
-    gen(GFX_FRAME_TIL_AUTO_GRASS_10) \
-    gen(GFX_FRAME_TIL_AUTO_GRASS_11) \
-    gen(GFX_FRAME_TIL_AUTO_GRASS_12) \
-    gen(GFX_FRAME_TIL_AUTO_GRASS_13) \
-    gen(GFX_FRAME_TIL_AUTO_GRASS_14) \
-    gen(GFX_FRAME_TIL_AUTO_GRASS_15) \
-    gen(GFX_FRAME_TIL_AUTO_GRASS_16) \
-    gen(GFX_FRAME_TIL_AUTO_GRASS_17) \
-    gen(GFX_FRAME_TIL_AUTO_GRASS_18) \
-    gen(GFX_FRAME_TIL_AUTO_GRASS_19) \
-    gen(GFX_FRAME_TIL_AUTO_GRASS_20) \
-    gen(GFX_FRAME_TIL_AUTO_GRASS_21) \
-    gen(GFX_FRAME_TIL_AUTO_GRASS_22) \
-    gen(GFX_FRAME_TIL_AUTO_GRASS_23) \
-    gen(GFX_FRAME_TIL_AUTO_GRASS_24) \
-    gen(GFX_FRAME_TIL_AUTO_GRASS_25) \
-    gen(GFX_FRAME_TIL_AUTO_GRASS_26) \
-    gen(GFX_FRAME_TIL_AUTO_GRASS_27) \
-    gen(GFX_FRAME_TIL_AUTO_GRASS_28) \
-    gen(GFX_FRAME_TIL_AUTO_GRASS_29) \
-    gen(GFX_FRAME_TIL_AUTO_GRASS_30) \
-    gen(GFX_FRAME_TIL_AUTO_GRASS_31) \
-    gen(GFX_FRAME_TIL_AUTO_GRASS_32) \
-    gen(GFX_FRAME_TIL_AUTO_GRASS_33) \
-    gen(GFX_FRAME_TIL_AUTO_GRASS_34) \
-    gen(GFX_FRAME_TIL_AUTO_GRASS_35) \
-    gen(GFX_FRAME_TIL_AUTO_GRASS_36) \
-    gen(GFX_FRAME_TIL_AUTO_GRASS_37) \
-    gen(GFX_FRAME_TIL_AUTO_GRASS_38) \
-    gen(GFX_FRAME_TIL_AUTO_GRASS_39) \
-    gen(GFX_FRAME_TIL_AUTO_GRASS_40) \
-    gen(GFX_FRAME_TIL_AUTO_GRASS_41) \
-    gen(GFX_FRAME_TIL_AUTO_GRASS_42) \
-    gen(GFX_FRAME_TIL_AUTO_GRASS_43) \
-    gen(GFX_FRAME_TIL_AUTO_GRASS_44) \
-    gen(GFX_FRAME_TIL_AUTO_GRASS_45) \
-    gen(GFX_FRAME_TIL_AUTO_GRASS_46) \
-    gen(GFX_FRAME_TIL_AUTO_GRASS_47)
+    gen(GFX_FRAME_TIL_WATER)
 
     enum GfxFrameId : uint16_t {
         GFX_FRAME_IDS(ENUM_GEN_VALUE)
     };
     struct GfxFrame {
         static const DataType dtype = DAT_TYP_GFX_FRAME;
-        GfxFrameId  id  {};
+        std::string id  {};
         std::string gfx {};  // TODO: StringId
         uint16_t    x   {};
         uint16_t    y   {};
