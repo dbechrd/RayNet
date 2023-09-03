@@ -367,28 +367,28 @@ namespace data {
         };
 
         std::vector<GfxFile> gfx_files{};
-        err = LoadGraphicsIndex("resources/texture/index.txt", gfx_files);
+        err = LoadGraphicsIndex("resources/graphics.txt", gfx_files);
         if (err) {
             assert(!err);
             TraceLog(LOG_ERROR, "Failed to load graphics index.\n");
         }
 
         std::vector<GfxFrame> gfx_frames{};
-        err = LoadFramesIndex("resources/texture/index_frames.txt", gfx_frames);
+        err = LoadFramesIndex("resources/graphics_frame.txt", gfx_frames);
         if (err) {
             assert(!err);
             TraceLog(LOG_ERROR, "Failed to load graphics frames index.\n");
         }
 
         std::vector<MusFile> mus_files{};
-        err = LoadMusicIndex("resources/music/index.txt", mus_files);
+        err = LoadMusicIndex("resources/music.txt", mus_files);
         if (err) {
             assert(!err);
             TraceLog(LOG_ERROR, "Failed to load music index.\n");
         }
 
         std::vector<SfxFile> sfx_files{};
-        err = LoadSoundIndex("resources/sound/index.txt", sfx_files);
+        err = LoadSoundIndex("resources/sound.txt", sfx_files);
         if (err) {
             assert(!err);
             TraceLog(LOG_ERROR, "Failed to load sound index.\n");
@@ -512,6 +512,12 @@ namespace data {
     {
         PROC(vec.x);
         PROC(vec.y);
+    }
+    void Process(PackStream &stream, Vector3 &vec)
+    {
+        PROC(vec.x);
+        PROC(vec.y);
+        PROC(vec.z);
     }
     void Process(PackStream &stream, DatBuffer &buffer)
     {
@@ -653,8 +659,9 @@ namespace data {
 
         PROC(entity.drag);
         PROC(entity.speed);
-        PROC(entity.force_accum);
-        PROC(entity.velocity);
+
+        //PROC(entity.force_accum);
+        //PROC(entity.velocity);
 
         PROC(entity.sprite);
         PROC(entity.direction);
@@ -767,6 +774,9 @@ namespace data {
         for (data::AiPathNode &aiPathNode : tile_map.pathNodes) {
             PROC(aiPathNode.pos.x);
             PROC(aiPathNode.pos.y);
+            if (tile_map.version >= 9) {
+                PROC(aiPathNode.pos.z);
+            }
             PROC(aiPathNode.waitFor);
         }
 
@@ -1107,6 +1117,17 @@ namespace data {
 
         return frame;
     }
+    Rectangle GetSpriteRect(const Entity &entity)
+    {
+        const data::GfxFrame &frame = GetSpriteFrame(entity);
+        const Rectangle rect{
+            entity.position.x - (float)(frame.w / 2),
+            entity.position.y - entity.position.z - (float)frame.h,
+            (float)frame.w,
+            (float)frame.h
+        };
+        return rect;
+    }
     void UpdateSprite(Entity &entity, double dt, bool newlySpawned)
     {
         entity.anim_accum += dt;
@@ -1156,7 +1177,7 @@ namespace data {
         entity.anim_frame = 0;
         entity.anim_accum = 0;
     }
-    void DrawSprite(const Entity &entity, Vector2 pos)
+    void DrawSprite(const Entity &entity)
     {
         const GfxFrame &frame = GetSpriteFrame(entity);
         const GfxFile *gfx_file = packs[0]->FindGraphic(frame.gfx);
@@ -1165,11 +1186,15 @@ namespace data {
             gfx_file = &packs[0]->gfx_files[0];
         }
 
-        const Rectangle frame_rec{ (float)frame.x, (float)frame.y, (float)frame.w, (float)frame.h };
-        if (Vector2LengthSqr(entity.velocity) < 0.0001f) {
+        Rectangle sprite_rect = GetSpriteRect(entity);
+        Vector3 pos = { sprite_rect.x, sprite_rect.y };
+        if (Vector3LengthSqr(entity.velocity) < 0.0001f) {
             pos.x = floorf(pos.x);
             pos.y = floorf(pos.y);
         }
-        DrawTextureRec(gfx_file->texture, frame_rec, pos, WHITE);
+
+        const Vector2 sprite_pos{ pos.x, pos.y - pos.z };
+        const Rectangle frame_rec{ (float)frame.x, (float)frame.y, (float)frame.w, (float)frame.h };
+        DrawTextureRec(gfx_file->texture, frame_rec, sprite_pos, WHITE);
     }
 }

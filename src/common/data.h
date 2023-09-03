@@ -384,7 +384,12 @@ namespace data {
         double        despawned_at {};
 
         uint32_t      map_id       {};
-        Vector2       position     {};
+        Vector3       position     {};
+
+        Vector2 ScreenPos(void) {
+            Vector2 screenPos{ position.x, position.y - position.z };
+            return screenPos;
+        }
 
         // TODO: Separate this out into its own array?
         uint32_t freelist_next {};
@@ -447,19 +452,18 @@ namespace data {
         int    path_node_target       {};
         double path_node_arrived_at   {};
 
-        Vector2 path_rand_direction  {};  // move this direction (if possible)
+        Vector3 path_rand_direction  {};  // move this direction (if possible)
         double  path_rand_duration   {};  // for this long
         double  path_rand_started_at {};  // when we started moving this way
 
         //// Physics ////
         float   drag        {};
         float   speed       {};
-        Vector2 force_accum {};
-        Vector2 velocity    {};
+        Vector3 force_accum {};
+        Vector3 velocity    {};
 
-        void ApplyForce(Vector2 force) {
-            force_accum.x += force.x;
-            force_accum.y += force.y;
+        void ApplyForce(Vector3 force) {
+            force_accum = Vector3Add(force_accum, force);
         }
 
         //// Sprite ////
@@ -470,7 +474,7 @@ namespace data {
 
         //// Warp ////
         Rectangle warp_collider {};
-        Vector2   warp_dest_pos {};
+        Vector3   warp_dest_pos {};
 
         // You either need this
         std::string warp_dest_map         {};  // regular map to warp to
@@ -484,11 +488,11 @@ namespace data {
 
         // Entity
         uint32_t map_id      {};
-        Vector2  position    {};
+        Vector3  position    {};
 
         // Physics
-        float    speed       {};
-        Vector2  velocity    {};
+        float    speed       {};  // max walk speed or something
+        Vector3  velocity    {};
 
         // Life
         int      hp_max      {};
@@ -586,7 +590,7 @@ namespace data {
     };
 
     struct AiPathNode {
-        Vector2 pos;
+        Vector3 pos;
         double waitFor;
     };
 
@@ -622,7 +626,8 @@ namespace data {
         // v6: added auto-tile mask to tileDef
         // v7: tileDefCount no longer based on texture size, in case texture is moved/deleted
         // v8: add sentinel
-        static const uint32_t VERSION = 8;
+        // v9: Vector3 path nodes
+        static const uint32_t VERSION = 9;
         static const uint32_t SENTINEL = 0x12345678;
 
         uint32_t    version   {};  // version on disk
@@ -867,8 +872,9 @@ namespace data {
     void StopSound(std::string id);
 
     const GfxFrame &GetSpriteFrame(const Entity &entity);
+    Rectangle GetSpriteRect(const Entity &entity);
     void UpdateSprite(Entity &entity, double dt, bool newlySpawned);
     void ResetSprite(Entity &entity);
-    void DrawSprite(const Entity &entity, Vector2 pos);
+    void DrawSprite(const Entity &entity);
 }
 ////////////////////////////////////////////////////////////////////////////

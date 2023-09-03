@@ -79,8 +79,6 @@ void draw_menu_connecting(GameClient &client)
 
     const data::GfxFrame &campfireFrame = data::GetSpriteFrame(campfire);
 
-    Vector2 uiPosition{ floorf(GetRenderWidth() / 2.0f), floorf(GetRenderHeight() / 2.0f) };
-    uiPosition.y -= campfireFrame.h / 1.5;
     UIStyle uiStyleMenu {};
     uiStyleMenu.margin = {};
     uiStyleMenu.pad = { 16, 4 };
@@ -88,11 +86,18 @@ void draw_menu_connecting(GameClient &client)
     uiStyleMenu.fgColor = RAYWHITE;
     uiStyleMenu.font = &fntBig;
     uiStyleMenu.alignH = TextAlign_Center;
+
+    Vector2 uiPosition{ floorf(GetRenderWidth() / 2.0f), floorf(GetRenderHeight() - uiStyleMenu.font->baseSize * 4) };
     UI uiMenu{ uiPosition, uiStyleMenu };
 
-    Vector2 campfirePos = Vector2Subtract(uiMenu.CursorScreen(), { (float)(campfireFrame.w / 2), 0 });
-    data::DrawSprite(campfire, campfirePos);
-    uiMenu.Space({ 0, (float)campfireFrame.h + uiStyleMenu.font->baseSize });
+    const Vector2 cursorScreen = uiMenu.CursorScreen();
+    const Vector2 campfirePos = cursorScreen; //Vector2Subtract(cursorScreen, { (float)(campfireFrame.w / 2), 0 });
+    campfire.position.x = campfirePos.x;
+    campfire.position.y = campfirePos.y;
+    campfire.position.z = 0;
+
+    data::DrawSprite(campfire);
+    uiMenu.Space({ 0, (float)uiStyleMenu.font->baseSize / 2 });
 
     if (client.yj_client->IsConnecting()) {
         uiMenu.Text(connectingStrs[connectingDotIdx]);
@@ -160,10 +165,10 @@ void update_camera(Camera2D &camera, Tilemap *map, Vector2 target, float frameDt
         zoomTarget = 2;
     }
 
-    camera.target.x = floorf(camera.target.x);
-    camera.target.y = floorf(camera.target.y);
-    camera.offset.x = floorf(camera.offset.x);
-    camera.offset.y = floorf(camera.offset.y);
+    //camera.target.x = floorf(camera.target.x);
+    //camera.target.y = floorf(camera.target.y);
+    //camera.offset.x = floorf(camera.offset.x);
+    //camera.offset.y = floorf(camera.offset.y);
 }
 
 void draw_game(GameClient &client)
@@ -460,7 +465,7 @@ int main(int argc, char *argv[])
                 Camera2D &camera = client->world->camera2d;
                 Vector2 cursorWorldPos = GetScreenToWorld2D(GetMousePosition(), camera);
                 cursorWorldPos = GetScreenToWorld2D(GetMousePosition(), camera);
-                Vector2 facing = Vector2Subtract(cursorWorldPos, localPlayer->position);
+                Vector2 facing = Vector2Subtract(cursorWorldPos, localPlayer->ScreenPos());
                 facing = Vector2Normalize(facing);
                 client->controller.cmdAccum.facing = facing;
 
@@ -521,7 +526,7 @@ int main(int argc, char *argv[])
                 client->world->Update(*client);
                 // Update camera
                 update_camera(client->world->camera2d, client->world->LocalPlayerMap(),
-                    localPlayer->position, client->frameDt);
+                    localPlayer->ScreenPos(), client->frameDt);
             }
         }
 

@@ -50,14 +50,14 @@ void GameServer::OnClientJoin(int clientIdx)
 
         player->type = data::ENTITY_PLAYER;
         player->map_id = maps[0]->id;
-        const Vector2 caveEntrance{ 3300, 870 };
-        const Vector2 townCenter{ 1660, 2360 };
+        const Vector3 caveEntrance{ 3300, 870, 0 };
+        const Vector3 townCenter{ 1660, 2360, 0 };
         player->position = townCenter;
         player->radius = 10;
         player->hp_max = 100;
         player->hp = player->hp_max;
         player->speed = 1000;
-        player->drag = 1.0f;
+        player->drag = 0.9f;
         player->sprite = data::SPRITE_CHR_MAGE;
         //projectile->direction = data::DIR_E;  // what's it do if it defaults to North?
 
@@ -522,7 +522,7 @@ void GameServer::ProcessMessages(void)
     }
 }
 
-data::Entity *GameServer::SpawnProjectile(uint32_t map_id, Vector2 position, Vector2 direction, Vector2 initial_velocity)
+data::Entity *GameServer::SpawnProjectile(uint32_t map_id, Vector3 position, Vector2 direction, Vector3 initial_velocity)
 {
     data::Entity *projectile = SpawnEntity(data::ENTITY_PROJECTILE);
     if (!projectile) return 0;
@@ -537,8 +537,9 @@ data::Entity *GameServer::SpawnProjectile(uint32_t map_id, Vector2 position, Vec
     dir.x += GetRandomValue(-20, 20);
     dir.y += GetRandomValue(-20, 20);
     dir = Vector2Normalize(dir);
-    Vector2 velocity = initial_velocity;
-    velocity = Vector2Add(velocity, Vector2Scale(dir, 200)); //GetRandomValue(800, 1000));;
+    Vector3 velocity = initial_velocity;
+    velocity.x += dir.x * 200; //GetRandomValue(800, 1000));
+    velocity.y += dir.y * 200; //GetRandomValue(800, 1000));
     // [Physics] random speed
     projectile->velocity = velocity;
     projectile->drag = 0.02f;
@@ -566,16 +567,18 @@ void GameServer::UpdateServerPlayers(void)
         if (input_cmd) {
             data::Entity *player = entityDb->FindEntity(sv_player.entityId, data::ENTITY_PLAYER);
             if (player) {
-                Vector2 move_force = input_cmd->GenerateMoveForce(player->speed);
+                Vector3 move_force = input_cmd->GenerateMoveForce(player->speed);
                 player->ApplyForce(move_force);
 
                 if (input_cmd->fire) {
                     if (now - player->last_attacked_at > player->attack_cooldown) {
-                        Vector2 projectile_spawn_pos = player->position;
-                        projectile_spawn_pos.y -= 24;
+                        Vector3 projectile_spawn_pos = player->position;
+                        projectile_spawn_pos.z += 24;  // "hand" height
                         data::Entity *projectile = SpawnProjectile(player->map_id, projectile_spawn_pos, input_cmd->facing, player->velocity);
                         if (projectile) {
-                            Vector2 recoil_force = Vector2Negate(projectile->velocity);
+                            Vector3 recoil_force{};
+                            recoil_force.x = -projectile->velocity.x;
+                            recoil_force.y = -projectile->velocity.y;
                             player->ApplyForce(recoil_force);
                         }
                         player->last_attacked_at = now;
@@ -590,7 +593,7 @@ void GameServer::UpdateServerPlayers(void)
     }
 }
 
-data::Entity *SpawnEntityProto(GameServer &server, uint32_t mapId, Vector2 position, data::EntityProto &proto)
+data::Entity *SpawnEntityProto(GameServer &server, uint32_t mapId, Vector3 position, data::EntityProto &proto)
 {
     Tilemap *map = server.FindMap(mapId);
     if (!map) return 0;
@@ -616,7 +619,8 @@ data::Entity *SpawnEntityProto(GameServer &server, uint32_t mapId, Vector2 posit
 
     data::AiPathNode *aiPathNode = map->GetPathNode(entity->path_id, 0);
     if (aiPathNode) {
-        entity->position = aiPathNode->pos;
+        entity->position.x = aiPathNode->pos.x;
+        entity->position.y = aiPathNode->pos.y;
     }
 
     return entity;
@@ -724,7 +728,7 @@ void GameServer::TickSpawnTownNPCs(uint32_t mapId)
         for (int i = 0; i < ARRAY_SIZE(chicken_ids); i++) {
             data::Entity *entity = entityDb->FindEntity(chicken_ids[i], data::ENTITY_NPC);
             if (!entity) {
-                Vector2 spawn{};
+                Vector3 spawn{};
                 // TODO: If chicken spawns inside something, immediately despawn
                 //       it (or find better strat for this)
                 spawn.x = GetRandomValue(400, 2400);
@@ -787,9 +791,9 @@ void GameServer::TickEntityNPC(uint32_t entityId, double dt)
     if (entity->path_id >= 0 && !entity->dialog_spawned_at) {
         data::AiPathNode *ai_path_node = map->GetPathNode(entity->path_id, entity->path_node_target);
         if (ai_path_node) {
-            Vector2 target = ai_path_node->pos;
-            Vector2 to_target = Vector2Subtract(target, entity->position);
-            if (Vector2LengthSqr(to_target) < 10 * 10) {
+            Vector3 target = ai_path_node->pos;
+            Vector3 to_target = Vector3Subtract(target, entity->position);
+            if (Vector3LengthSqr(to_target) < 10 * 10) {
                 if (entity->path_node_last_reached != entity->path_node_target) {
                     // Arrived at a new node
                     entity->path_node_last_reached = entity->path_node_target;
@@ -803,9 +807,9 @@ void GameServer::TickEntityNPC(uint32_t entityId, double dt)
                 entity->path_node_last_reached = 0;
                 entity->path_node_arrived_at = 0;
 
-                Vector2 move_force = to_target;
-                move_force = Vector2Normalize(move_force);
-                move_force = Vector2Scale(move_force, entity->speed);
+                Vector3 move_force = to_target;
+                move_force = Vector3Normalize(move_force);
+                move_force = Vector3Scale(move_force, entity->speed);
                 entity->ApplyForce(move_force);
             }
 
@@ -837,11 +841,11 @@ void GameServer::TickEntityNPC(uint32_t entityId, double dt)
 
         if (now - entity->path_rand_started_at >= entity->path_rand_duration) {
             double duration = 0;
-            Vector2 dir{};
-            if (Vector2LengthSqr(entity->path_rand_direction) == 0) {
+            Vector3 dir{};
+            if (Vector3LengthSqr(entity->path_rand_direction) == 0) {
                 dir.x = GetRandomFloatMinusOneToOne();
                 dir.y = GetRandomFloatMinusOneToOne();
-                dir = Vector2Normalize(dir);
+                dir = Vector3Normalize(dir);
                 duration = GetRandomValue(2, 4);
             } else {
                 dir = {};
@@ -851,7 +855,7 @@ void GameServer::TickEntityNPC(uint32_t entityId, double dt)
             entity->path_rand_direction = dir;
             entity->path_rand_duration = duration;
         }
-        Vector2 move = Vector2Scale(entity->path_rand_direction, entity->speed);
+        Vector3 move = Vector3Scale(entity->path_rand_direction, entity->speed);
         entity->ApplyForce(move);
     }
 
@@ -1002,7 +1006,7 @@ void GameServer::TickResolveEntityWarpCollisions(Tilemap &map, uint32_t entityId
         }
 
         data::Entity &warp = entity;
-        const bool on_warp = dlb_CheckCollisionCircleRec(victim->position, victim->radius, warp.warp_collider, 0);
+        const bool on_warp = dlb_CheckCollisionCircleRec(victim->ScreenPos(), victim->radius, warp.warp_collider, 0);
         if (on_warp) {
             victim->on_warp = true;
             WarpEntity(map, entityId, warp);

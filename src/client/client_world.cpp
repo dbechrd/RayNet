@@ -208,7 +208,7 @@ void ClientWorld::UpdateLocalPlayer(GameClient &client, data::Entity &entity, da
 
 #if CL_CLIENT_SIDE_PREDICT
     double cmdAccumDt{};
-    Vector2 cmdAccumForce{};
+    Vector3 cmdAccumForce{};
     Tilemap *map = FindOrLoadMap(entity.map_id);
     if (map) {
         // Apply unacked input
@@ -223,7 +223,7 @@ void ClientWorld::UpdateLocalPlayer(GameClient &client, data::Entity &entity, da
 
         cmdAccumDt = client.now - client.controller.lastInputSampleAt;
         if (cmdAccumDt > 0) {
-            Vector2 posBefore = entity.position;
+            Vector3 posBefore = entity.position;
             cmdAccumForce = client.controller.cmdAccum.GenerateMoveForce(entity.speed);
             entity.ApplyForce(cmdAccumForce);
             entityDb->EntityTick(entity.id, SV_TICK_DT);
@@ -372,7 +372,7 @@ void ClientWorld::DrawEntitySnapshotShadows(uint32_t entityId, Controller &contr
             ApplyStateInterpolated(ghostData.entity, ghost[i], ghost[i], 0, dt);
 
             const float scalePer = 1.0f / (CL_SNAPSHOT_COUNT + 1);
-            Rectangle ghostRect = entityDb->EntityRect(ghostData.entity);
+            Rectangle ghostRect = data::GetSpriteRect(ghostData.entity);
             ghostRect = RectShrink(ghostRect, scalePer);
             DrawRectangleRec(ghostRect, Fade(RED, 0.1f));
             DrawRectangleLinesEx(ghostRect, 1, Fade(RED, 0.8f));
@@ -396,7 +396,7 @@ void ClientWorld::DrawEntitySnapshotShadows(uint32_t entityId, Controller &contr
                         ghostData.entity.ApplyForce(inputCmd.GenerateMoveForce(ghostData.entity.speed));
                         entityDb->EntityTick(ghostData.entity, SV_TICK_DT);
                         map->ResolveEntityTerrainCollisions(ghostData.entity);
-                        Rectangle ghostRect = entityDb->EntityRect(ghostData.entity);
+                        Rectangle ghostRect = data::GetSpriteRect(ghostData.entity);
                         DrawRectangleRec(ghostRect, Fade(GREEN, 0.1f));
                         DrawRectangleLinesEx(ghostRect, 1, Fade(GREEN, 0.8f));
                     }
@@ -408,15 +408,15 @@ void ClientWorld::DrawEntitySnapshotShadows(uint32_t entityId, Controller &contr
             // the entity is invisible.
              const double cmdAccumDt = now - controller.lastInputSampleAt;
             if (cmdAccumDt > 0) {
-                Vector2 posBefore = ghostData.entity.position;
-                Vector2 cmdAccumForce = controller.cmdAccum.GenerateMoveForce(ghostData.entity.speed);
+                Vector3 posBefore = ghostData.entity.position;
+                Vector3 cmdAccumForce = controller.cmdAccum.GenerateMoveForce(ghostData.entity.speed);
                 ghostData.entity.ApplyForce(cmdAccumForce);
                 entityDb->EntityTick(ghostData.entity, SV_TICK_DT);
                 map->ResolveEntityTerrainCollisions(ghostData.entity);
                 ghostData.entity.position.y = LERP(posBefore.y, ghostData.entity.position.y, cmdAccumDt / SV_TICK_DT);
                 ghostData.entity.position.x = LERP(posBefore.x, ghostData.entity.position.x, cmdAccumDt / SV_TICK_DT);
             }
-            Rectangle ghostRect = entityDb->EntityRect(ghostData.entity);
+            Rectangle ghostRect = data::GetSpriteRect(ghostData.entity);
             ghostRect.x = floorf(ghostRect.x);
             ghostRect.y = floorf(ghostRect.y);
             DrawRectangleLinesEx(ghostRect, 1, Fade(BLUE, 0.8f));
@@ -633,11 +633,13 @@ void ClientWorld::Draw(GameClient &client)
 
     struct EntityDrawCmd {
         uint32_t entity_id {};
-        float    y_pos     {};
+        Vector3  position  {};
 
-        EntityDrawCmd(uint32_t entity_id, float y_pos) : entity_id(entity_id), y_pos(y_pos) {}
+        EntityDrawCmd(uint32_t entity_id, Vector3 position) : entity_id(entity_id), position(position) {}
         bool operator<(const EntityDrawCmd& rhs) const {
-            return y_pos > rhs.y_pos;  // backwards on purpose cus y is inverted
+            const float me = position.y + position.z;
+            const float other = rhs.position.y + rhs.position.z;
+            return other < me;
         }
     };
     std::priority_queue<EntityDrawCmd> sortedEntityIds{};
@@ -647,7 +649,7 @@ void ClientWorld::Draw(GameClient &client)
             continue;
         }
         assert(entity.id);
-        sortedEntityIds.emplace(entity.id, entity.position.y);
+        sortedEntityIds.emplace(entity.id, entity.position);
     }
 
     while (!sortedEntityIds.empty()) {

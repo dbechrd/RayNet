@@ -11,7 +11,7 @@ struct Msg_S_EntitySpawn : public yojimbo::Message
     data::EntitySpecies spec      {};
     char                name      [SV_MAX_ENTITY_NAME_LEN + 1]{};
     uint32_t            map_id    {};
-    Vector2             position  {};
+    Vector3             position  {};
     // Collision
     float               radius    {};
     // Life
@@ -20,7 +20,7 @@ struct Msg_S_EntitySpawn : public yojimbo::Message
     // Physics
     float               drag      {};  // TODO: EntityType should imply this.. client should have prototypes
     float               speed     {};
-    Vector2             velocity  {};
+    Vector3             velocity  {};
     // Sprite
     data::SpriteId      sprite    {};
 
@@ -36,6 +36,7 @@ struct Msg_S_EntitySpawn : public yojimbo::Message
         serialize_uint32(stream, map_id);
         serialize_float(stream, position.x);
         serialize_float(stream, position.y);
+        serialize_float(stream, position.z);
 
         // Collision
         serialize_float(stream, radius);
@@ -51,6 +52,7 @@ struct Msg_S_EntitySpawn : public yojimbo::Message
         serialize_float(stream, speed);
         serialize_float(stream, velocity.x);
         serialize_float(stream, velocity.y);
+        serialize_float(stream, velocity.z);
 
         // Sprite
         uint32_t spriteId = sprite;

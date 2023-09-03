@@ -112,25 +112,13 @@ void EntityDB::DestroyEntity(uint32_t entityId)
     }
 }
 
-Rectangle EntityDB::EntityRect(data::Entity &entity)
-{
-    const data::GfxFrame &frame = data::GetSpriteFrame(entity);
-    const Rectangle rect{
-        entity.position.x - (float)(frame.w / 2),
-        entity.position.y - (float)frame.h,
-        (float)frame.w,
-        (float)frame.h
-    };
-    return rect;
-}
-
 Rectangle EntityDB::EntityRect(uint32_t entityId)
 {
     assert(entityId);
 
     data::Entity *entity = FindEntity(entityId);
     if (entity) {
-        return EntityRect(*entity);
+        return data::GetSpriteRect(*entity);
     }
     return {};
 }
@@ -147,11 +135,10 @@ Vector2 EntityDB::EntityTopCenter(uint32_t entityId)
 }
 void EntityDB::EntityTick(data::Entity &entity, double dt)
 {
-    Vector2 &pos = entity.position;
-    Vector2 &vel = entity.velocity;
+    Vector3 &pos = entity.position;
+    Vector3 &vel = entity.velocity;
 
-    vel.x += entity.force_accum.x * dt;
-    vel.y += entity.force_accum.y * dt;
+    vel = Vector3Add(vel, Vector3Scale(entity.force_accum, dt));
     entity.force_accum = {};
 
 #if 0
@@ -186,12 +173,10 @@ void EntityDB::EntityTick(data::Entity &entity, double dt)
     // Lerping: current = Mathf.Lerp(current, target, 1.0f - Mathf.Exp(-Sharpness * Time.deltaTime));
     // Damping: current *= Mathf.Exp(-Sharpness * Time.deltaTime);
 
-    vel.x *= exp2f(-10.0f * (entity.drag) * dt);
-    vel.y *= exp2f(-10.0f * (entity.drag) * dt);
+    vel = Vector3Scale(vel, exp2f(-10.0f * (entity.drag) * dt));
 #endif
 
-    pos.x += vel.x * dt;
-    pos.y += vel.y * dt;
+    pos = Vector3Add(pos, Vector3Scale(vel, dt));
 }
 void EntityDB::EntityTick(uint32_t entityId, double dt)
 {
@@ -210,7 +195,7 @@ void EntityDB::DrawEntityIds(uint32_t entityId, Camera2D &camera)
     if (entity) {
         assert(entity->id == entityId);
         assert(entity->type);
-        DrawTextEx(fntSmall, TextFormat("%u", entity->id), entity->position,
+        DrawTextEx(fntSmall, TextFormat("%u", entity->id), entity->ScreenPos(),
             fntSmall.baseSize / camera.zoom, 1 / camera.zoom, WHITE);
     }
 }
@@ -269,7 +254,7 @@ void EntityDB::DrawEntity(uint32_t entityId)
 {
     data::Entity *entity = FindEntity(entityId);
     if (entity) {
-        const Rectangle rect = EntityRect(*entity);
-        data::DrawSprite(*entity, { rect.x, rect.y });
+        const Rectangle rect = data::GetSpriteRect(*entity);
+        data::DrawSprite(*entity);
     }
 }

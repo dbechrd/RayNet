@@ -194,7 +194,7 @@ void Editor::DrawGroundOverlay_Paths(Camera2D &camera, double now)
                     cursor.dragging = true;
                     cursor.dragPathId = aiPathId;
                     cursor.dragPathNodeIndex = aiPathNodeIndex;
-                    cursor.dragStartPosition = aiPathNode->pos;
+                    cursor.dragStartPosition = { aiPathNode->pos.x, aiPathNode->pos.y };
                 }
             }
 
@@ -207,7 +207,8 @@ void Editor::DrawGroundOverlay_Paths(Camera2D &camera, double now)
                     color = aiPathNode->waitFor ? DARKBLUE : MAROON;
 
                     if (io.KeyPressed(KEY_ESCAPE)) {
-                        aiPathNode->pos = cursor.dragStartPosition;
+                        aiPathNode->pos.x = cursor.dragStartPosition.x;
+                        aiPathNode->pos.y = cursor.dragStartPosition.y;
                         cursor = {};
                         io.CaptureKeyboard();
                     }
@@ -234,7 +235,8 @@ void Editor::DrawGroundOverlay_Paths(Camera2D &camera, double now)
         if (aiPath) {
             data::AiPathNode *aiPathNode = map->GetPathNode(cursor.dragPathId, cursor.dragPathNodeIndex);
             assert(aiPathNode);
-            aiPathNode->pos = newNodePos;
+            aiPathNode->pos.x = newNodePos.x;
+            aiPathNode->pos.y = newNodePos.y;
         }
 
         io.PopScope();
@@ -256,7 +258,7 @@ void Editor::DrawEntityOverlays(Camera2D &camera, double now)
     data::Entity *selectedEntity = entityDb->FindEntity(state.entities.selectedId);
     if (selectedEntity && selectedEntity->map_id == map->id) {
         DrawTextEx(fntSmall, TextFormat("[selected in editor]\n%u", selectedEntity->id),
-            selectedEntity->position, fntSmall.baseSize / camera.zoom, 1 / camera.zoom, WHITE);
+            selectedEntity->ScreenPos(), fntSmall.baseSize / camera.zoom, 1 / camera.zoom, WHITE);
     }
 
     if (state.showEntityIds) {

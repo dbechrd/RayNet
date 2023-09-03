@@ -19,7 +19,6 @@ struct EntityDB {
     bool DespawnEntity(uint32_t entityId, double now);
     void DestroyEntity(uint32_t entityId);
 
-    Rectangle EntityRect(data::Entity &entity);
     Rectangle EntityRect(uint32_t entityId);
     Vector2 EntityTopCenter(uint32_t entityId);
     void EntityTick(data::Entity &entity, double dt);

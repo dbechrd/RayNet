@@ -480,9 +480,10 @@ void Tilemap::ResolveEntityTerrainCollisions(data::Entity &entity)
                     tileRect.width = TILE_W;
                     tileRect.height = TILE_W;
                     Manifold manifold{};
-                    if (dlb_CheckCollisionCircleRec(entity.position, entity.radius, tileRect, &manifold)) {
+                    if (dlb_CheckCollisionCircleRec(entity.ScreenPos(), entity.radius, tileRect, &manifold)) {
                         entity.colliding = true;
-                        if (Vector2DotProduct(entity.velocity, manifold.normal) < 0) {
+                        Vector2 vel2 = { entity.velocity.x, entity.velocity.y };
+                        if (Vector2DotProduct(vel2, manifold.normal) < 0) {
                             entity.position.x += manifold.normal.x * manifold.depth;
                             entity.position.y += manifold.normal.y * manifold.depth;
                         }

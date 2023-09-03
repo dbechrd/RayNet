@@ -125,7 +125,7 @@ private:
     // All part of Update()
     void RequestDialog(int clientIdx, data::Entity &entity, Dialog &dialog);
     void ProcessMessages(void);
-    data::Entity *SpawnProjectile(uint32_t mapId, Vector2 position, Vector2 direction, Vector2 initial_velocity);
+    data::Entity *SpawnProjectile(uint32_t mapId, Vector3 position, Vector2 direction, Vector3 initial_velocity);
     void UpdateServerPlayers(void);
     void TickSpawnTownNPCs(uint32_t mapId);
     void TickSpawnCaveNPCs(uint32_t mapId);

@@ -51,7 +51,7 @@ private:
     struct HistoData {
         uint32_t latestSnapInputSeq;
         double cmdAccumDt;
-        Vector2 cmdAccumForce;
+        Vector3 cmdAccumForce;
     };
 
     void UpdateLocalPlayerHisto(GameClient &client, data::Entity &entity, HistoData &histoData);

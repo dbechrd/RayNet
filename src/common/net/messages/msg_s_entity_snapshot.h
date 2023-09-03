@@ -11,7 +11,7 @@ struct Msg_S_EntitySnapshot : public yojimbo::Message
     data::EntityType    type       {};  // doesn't change, but needed for switch statements in deserializer
     data::EntitySpecies spec       {};
     uint32_t            map_id     {};
-    Vector2             position   {};
+    Vector3             position   {};
 
     // Collision
     //float       radius     {};  // when would this ever change? doesn't.. for now.
@@ -22,7 +22,7 @@ struct Msg_S_EntitySnapshot : public yojimbo::Message
 
     // Physics
     //float       speed      {};  // we don't need to know speed for ghosts
-    Vector2     velocity   {};
+    Vector3     velocity   {};
 
     // Only for Entity_Player
     // TODO: Only send this to the player who actually owns this player entity,
@@ -41,6 +41,7 @@ struct Msg_S_EntitySnapshot : public yojimbo::Message
         serialize_uint32(stream, map_id);
         serialize_float(stream, position.x);
         serialize_float(stream, position.y);
+        serialize_float(stream, position.z);
 
         // Life
         serialize_varint32(stream, hp_max);
@@ -51,6 +52,7 @@ struct Msg_S_EntitySnapshot : public yojimbo::Message
         // Physics
         serialize_float(stream, velocity.x);
         serialize_float(stream, velocity.y);
+        serialize_float(stream, velocity.z);
 
         // TODO: Also check if player is the clientIdx player. I.e. don't leak
         //       input info to all other players.

@@ -11,7 +11,7 @@ struct InputCmd {
     Vector2 facing;
     double sampledAt;  // client time for debug
 
-    Vector2 GenerateMoveForce(float speed) const
+    Vector3 GenerateMoveForce(float speed) const
     {
         Vector2 moveForce{};
         if (north) {
@@ -32,6 +32,6 @@ struct InputCmd {
 
         moveForce.x *= speed;
         moveForce.y *= speed;
-        return moveForce;
+        return { moveForce.x, moveForce.y, 0 };
     }
 };
