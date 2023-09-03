@@ -515,10 +515,8 @@ void Tilemap::DrawTile(Texture2D tex, Tile tile, Vector2 position)
 }
 void Tilemap::Draw(Camera2D &camera)
 {
-    const data::GfxFile *gfx_file = data::packs[0]->FindGraphic(texture);
-    if (!gfx_file) return;
+    const data::GfxFile &gfx_file = data::packs[0]->FindGraphic(texture);
 
-    const Texture tex = gfx_file->texture;
     Rectangle screenRect = GetScreenRectWorld(camera);
     int yMin = CLAMP(floorf(screenRect.y / TILE_W), 0, height);
     int yMax = CLAMP(ceilf((screenRect.y + screenRect.height) / TILE_W), 0, height);
@@ -528,7 +526,7 @@ void Tilemap::Draw(Camera2D &camera)
     for (int y = yMin; y < yMax; y++) {
         for (int x = xMin; x < xMax; x++) {
             Tile tile = At(x, y);
-            DrawTile(tex, tile, { (float)x * TILE_W, (float)y * TILE_W });
+            DrawTile(gfx_file.texture, tile, { (float)x * TILE_W, (float)y * TILE_W });
         }
     }
 }

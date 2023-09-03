@@ -126,11 +126,9 @@ void Editor::DrawGroundOverlay_Tiles(Camera2D &camera, double now)
             }
 
             Vector2 drawPos{ (float)coord.x * TILE_W, (float)coord.y * TILE_W };
-            const data::GfxFile *gfx_file = data::packs[0]->FindGraphic(map->texture);
-            if (gfx_file) {
-                map->DrawTile(gfx_file->texture, cursorTile, drawPos);
-                DrawRectangleLinesEx({ drawPos.x, drawPos.y, TILE_W, TILE_W }, 2, WHITE);
-            }
+            const data::GfxFile &gfx_file = data::packs[0]->FindGraphic(map->texture);
+            map->DrawTile(gfx_file.texture, cursorTile, drawPos);
+            DrawRectangleLinesEx({ drawPos.x, drawPos.y, TILE_W, TILE_W }, 2, WHITE);
         }
     }
 }
@@ -681,18 +679,13 @@ void Editor::DrawUI_Tilesheet(UI &uiActionBar, double now)
 {
     // TODO: Support multi-select (big rectangle?), and figure out where this lives
 
-    const data::GfxFile *gfx_file = data::packs[0]->FindGraphic(map->texture);
-    if (!gfx_file) {
-        assert(!"no texture :(");
-        return;
-    }
-
-    const Texture *mapTex = &gfx_file->texture;
+    const data::GfxFile &gfx_file = data::packs[0]->FindGraphic(map->texture);
+    const Texture &mapTex = gfx_file.texture;
 
     static Texture checkerboard{};
-    if (checkerboard.width != mapTex->width || checkerboard.height != mapTex->height) {
+    if (checkerboard.width != mapTex.width || checkerboard.height != mapTex.height) {
         checkerboard = LoadTextureFromImage(
-            GenImageChecked(mapTex->width, mapTex->height, 8, 8, GRAY, LIGHTGRAY)
+            GenImageChecked(mapTex.width, mapTex.height, 8, 8, GRAY, LIGHTGRAY)
         );
     }
 
@@ -703,7 +696,7 @@ void Editor::DrawUI_Tilesheet(UI &uiActionBar, double now)
     UIState sheet = uiActionBar.Image(checkerboard);
     Vector2 imgTL{ sheet.contentRect.x, sheet.contentRect.y };
 
-    DrawTextureEx(*mapTex, imgTL, 0, 1, WHITE);
+    DrawTextureEx(mapTex, imgTL, 0, 1, WHITE);
     uiActionBar.PopStyle();
 
     // Draw collision overlay on tilesheet if we're in collision editing mode
@@ -788,7 +781,7 @@ void Editor::DrawUI_Tilesheet(UI &uiActionBar, double now)
 
         // If mouse pressed, select tile, or change collision data, depending on mode
         if (sheet.pressed) {
-            const int tileIdx = tileY * (mapTex->width / TILE_W) + tileX;
+            const int tileIdx = tileY * (mapTex.width / TILE_W) + tileX;
             if (tileIdx >= 0 && tileIdx < map->tileDefs.size()) {
                 switch (state.tiles.tileEditMode) {
                     case TileEditMode_Select: {
@@ -960,9 +953,9 @@ void Editor::DrawUI_Wang(UI &uiActionBar, double now)
                     uint8_t *pixel = &imgData[templateOffset];
                     uint8_t tile = pixel[0] < map->tileDefs.size() ? pixel[0] : 0;
 
-                    data::GfxFile *gfx_file = data::packs[0]->FindGraphic(map->texture);
+                    data::GfxFile &gfx_file = data::packs[0]->FindGraphic(map->texture);
                     const Rectangle tileRect = map->TileDefRect(tile);
-                    if (uiWangTile.Image(gfx_file->texture, tileRect).down) {
+                    if (uiWangTile.Image(gfx_file.texture, tileRect).down) {
                         pixel[0] = selectedTile; //^ (selectedTile*55);
                         pixel[1] = selectedTile; //^ (selectedTile*55);
                         pixel[2] = selectedTile; //^ (selectedTile*55);
@@ -981,9 +974,9 @@ void Editor::DrawUI_Wang(UI &uiActionBar, double now)
                     uint8_t *pixel = &imgData[templateOffset];
                     uint8_t tile = pixel[0] < map->tileDefs.size() ? pixel[0] : 0;
 
-                    data::GfxFile *gfx_file = data::packs[0]->FindGraphic(map->texture);
+                    data::GfxFile &gfx_file = data::packs[0]->FindGraphic(map->texture);
                     const Rectangle tileRect = map->TileDefRect(tile);
-                    if (uiWangTile.Image(gfx_file->texture, tileRect).down) {
+                    if (uiWangTile.Image(gfx_file.texture, tileRect).down) {
                         pixel[0] = selectedTile; //^ (selectedTile*55);
                         pixel[1] = selectedTile; //^ (selectedTile*55);
                         pixel[2] = selectedTile; //^ (selectedTile*55);
@@ -1353,20 +1346,20 @@ void Editor::DrawUI_SfxFiles(UI &uiActionBar, double now)
 
     if (!state.sfxFiles.selectedSfx.empty()) {
         const int labelWidth = 100;
-        data::SfxFile *sfx_file = data::packs[0]->FindSound(state.sfxFiles.selectedSfx);
-        if (sfx_file) {
+        data::SfxFile &sfx_file = data::packs[0]->FindSound(state.sfxFiles.selectedSfx);
+        if (!sfx_file.id.empty()) {
             uiActionBar.Label("id", labelWidth);
-            uiActionBar.Text(TextFormat("%d", sfx_file->id));
+            uiActionBar.Text(TextFormat("%d", sfx_file.id));
             uiActionBar.Newline();
 
             uiActionBar.Label("path", labelWidth);
             static STB_TexteditState txtPath{};
-            uiActionBar.Textbox(txtPath, sfx_file->path);
+            uiActionBar.Textbox(txtPath, sfx_file.path);
             uiActionBar.Newline();
 
             uiActionBar.Label("pitch variance", labelWidth);
             static STB_TexteditState txtPitchVariance{};
-            uiActionBar.TextboxFloat(txtPitchVariance, sfx_file->pitch_variance);
+            uiActionBar.TextboxFloat(txtPitchVariance, sfx_file.pitch_variance);
             uiActionBar.Newline();
         } else {
             state.sfxFiles.selectedSfx.clear();
@@ -1505,7 +1498,7 @@ void Editor::DrawUI_PackFiles(UI &uiActionBar, double now)
                 case data::DAT_TYP_GFX_ANIM:
                 {
                     data::GfxAnim &gfxAnim = pack.gfx_anims[entry.index];
-                    desc = data::GfxAnimIdStr(gfxAnim.id);
+                    desc = gfxAnim.id.c_str();
                     break;
                 }
                 case data::DAT_TYP_MATERIAL:

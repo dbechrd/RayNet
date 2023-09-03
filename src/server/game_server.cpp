@@ -537,9 +537,10 @@ data::Entity *GameServer::SpawnProjectile(uint32_t map_id, Vector3 position, Vec
     dir.x += GetRandomValue(-20, 20);
     dir.y += GetRandomValue(-20, 20);
     dir = Vector2Normalize(dir);
+    const float random_speed = GetRandomValue(400, 500);
     Vector3 velocity = initial_velocity;
-    velocity.x += dir.x * 200; //GetRandomValue(800, 1000));
-    velocity.y += dir.y * 200; //GetRandomValue(800, 1000));
+    velocity.x += dir.x * random_speed;
+    velocity.y += dir.y * random_speed;
     // [Physics] random speed
     projectile->velocity = velocity;
     projectile->drag = 0.02f;

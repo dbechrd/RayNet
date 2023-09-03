@@ -151,41 +151,6 @@ namespace data {
             : id(id), path(path), pitch_variance(pitch_variance), multi(multi) {}
     };
 
-#define GFX_FRAME_IDS(gen)           \
-    gen(GFX_FRAME_NONE)              \
-    gen(GFX_FRAME_CHR_MAGE_E_0)      \
-    gen(GFX_FRAME_CHR_MAGE_W_0)      \
-    gen(GFX_FRAME_NPC_LILY_E_0)      \
-    gen(GFX_FRAME_NPC_LILY_W_0)      \
-    gen(GFX_FRAME_NPC_FREYE_E_0)     \
-    gen(GFX_FRAME_NPC_FREYE_W_0)     \
-    gen(GFX_FRAME_NPC_NESSA_E_0)     \
-    gen(GFX_FRAME_NPC_NESSA_W_0)     \
-    gen(GFX_FRAME_NPC_ELANE_E_0)     \
-    gen(GFX_FRAME_NPC_ELANE_W_0)     \
-    gen(GFX_FRAME_NPC_CHICKEN_E_0)   \
-    gen(GFX_FRAME_NPC_CHICKEN_W_0)   \
-    gen(GFX_FRAME_OBJ_CAMPFIRE_0)    \
-    gen(GFX_FRAME_OBJ_CAMPFIRE_1)    \
-    gen(GFX_FRAME_OBJ_CAMPFIRE_2)    \
-    gen(GFX_FRAME_OBJ_CAMPFIRE_3)    \
-    gen(GFX_FRAME_OBJ_CAMPFIRE_4)    \
-    gen(GFX_FRAME_OBJ_CAMPFIRE_5)    \
-    gen(GFX_FRAME_OBJ_CAMPFIRE_6)    \
-    gen(GFX_FRAME_OBJ_CAMPFIRE_7)    \
-    /* gen(GFX_FRAME_OBJ_FLAG_0) */  \
-    /* gen(GFX_FRAME_OBJ_FLAG_1) */  \
-    /* gen(GFX_FRAME_OBJ_FLAG_2) */  \
-    /* gen(GFX_FRAME_OBJ_FLAG_3) */  \
-    gen(GFX_FRAME_PRJ_FIREBALL_0)    \
-    gen(GFX_FRAME_TIL_GRASS)         \
-    gen(GFX_FRAME_TIL_STONE_PATH)    \
-    gen(GFX_FRAME_TIL_WALL)          \
-    gen(GFX_FRAME_TIL_WATER)
-
-    enum GfxFrameId : uint16_t {
-        GFX_FRAME_IDS(ENUM_GEN_VALUE)
-    };
     struct GfxFrame {
         static const DataType dtype = DAT_TYP_GFX_FRAME;
         std::string id  {};
@@ -196,87 +161,14 @@ namespace data {
         uint16_t    h   {};
     };
 
-#define GFX_ANIM_IDS(gen)            \
-    gen(GFX_ANIM_NONE)               \
-    gen(GFX_ANIM_CHR_MAGE_E)         \
-    gen(GFX_ANIM_CHR_MAGE_W)         \
-    gen(GFX_ANIM_NPC_LILY_E)         \
-    gen(GFX_ANIM_NPC_LILY_W)         \
-    gen(GFX_ANIM_NPC_FREYE_E)        \
-    gen(GFX_ANIM_NPC_FREYE_W)        \
-    gen(GFX_ANIM_NPC_NESSA_E)        \
-    gen(GFX_ANIM_NPC_NESSA_W)        \
-    gen(GFX_ANIM_NPC_ELANE_E)        \
-    gen(GFX_ANIM_NPC_ELANE_W)        \
-    gen(GFX_ANIM_NPC_CHICKEN_E)      \
-    gen(GFX_ANIM_NPC_CHICKEN_W)      \
-    gen(GFX_ANIM_OBJ_CAMPFIRE)       \
-    gen(GFX_ANIM_PRJ_FIREBALL)       \
-    /* gen(GFX_ANIM_FLAG) */         \
-    gen(GFX_ANIM_TIL_GRASS)          \
-    gen(GFX_ANIM_TIL_STONE_PATH)     \
-    gen(GFX_ANIM_TIL_WALL)           \
-    gen(GFX_ANIM_TIL_WATER)          \
-    gen(GFX_ANIM_TIL_AUTO_GRASS_00)  \
-    gen(GFX_ANIM_TIL_AUTO_GRASS_01)  \
-    gen(GFX_ANIM_TIL_AUTO_GRASS_02)  \
-    gen(GFX_ANIM_TIL_AUTO_GRASS_03)  \
-    gen(GFX_ANIM_TIL_AUTO_GRASS_04)  \
-    gen(GFX_ANIM_TIL_AUTO_GRASS_05)  \
-    gen(GFX_ANIM_TIL_AUTO_GRASS_06)  \
-    gen(GFX_ANIM_TIL_AUTO_GRASS_07)  \
-    gen(GFX_ANIM_TIL_AUTO_GRASS_08)  \
-    gen(GFX_ANIM_TIL_AUTO_GRASS_09)  \
-    gen(GFX_ANIM_TIL_AUTO_GRASS_10)  \
-    gen(GFX_ANIM_TIL_AUTO_GRASS_11)  \
-    gen(GFX_ANIM_TIL_AUTO_GRASS_12)  \
-    gen(GFX_ANIM_TIL_AUTO_GRASS_13)  \
-    gen(GFX_ANIM_TIL_AUTO_GRASS_14)  \
-    gen(GFX_ANIM_TIL_AUTO_GRASS_15)  \
-    gen(GFX_ANIM_TIL_AUTO_GRASS_16)  \
-    gen(GFX_ANIM_TIL_AUTO_GRASS_17)  \
-    gen(GFX_ANIM_TIL_AUTO_GRASS_18)  \
-    gen(GFX_ANIM_TIL_AUTO_GRASS_19)  \
-    gen(GFX_ANIM_TIL_AUTO_GRASS_20)  \
-    gen(GFX_ANIM_TIL_AUTO_GRASS_21)  \
-    gen(GFX_ANIM_TIL_AUTO_GRASS_22)  \
-    gen(GFX_ANIM_TIL_AUTO_GRASS_23)  \
-    gen(GFX_ANIM_TIL_AUTO_GRASS_24)  \
-    gen(GFX_ANIM_TIL_AUTO_GRASS_25)  \
-    gen(GFX_ANIM_TIL_AUTO_GRASS_26)  \
-    gen(GFX_ANIM_TIL_AUTO_GRASS_27)  \
-    gen(GFX_ANIM_TIL_AUTO_GRASS_28)  \
-    gen(GFX_ANIM_TIL_AUTO_GRASS_29)  \
-    gen(GFX_ANIM_TIL_AUTO_GRASS_30)  \
-    gen(GFX_ANIM_TIL_AUTO_GRASS_31)  \
-    gen(GFX_ANIM_TIL_AUTO_GRASS_32)  \
-    gen(GFX_ANIM_TIL_AUTO_GRASS_33)  \
-    gen(GFX_ANIM_TIL_AUTO_GRASS_34)  \
-    gen(GFX_ANIM_TIL_AUTO_GRASS_35)  \
-    gen(GFX_ANIM_TIL_AUTO_GRASS_36)  \
-    gen(GFX_ANIM_TIL_AUTO_GRASS_37)  \
-    gen(GFX_ANIM_TIL_AUTO_GRASS_38)  \
-    gen(GFX_ANIM_TIL_AUTO_GRASS_39)  \
-    gen(GFX_ANIM_TIL_AUTO_GRASS_40)  \
-    gen(GFX_ANIM_TIL_AUTO_GRASS_41)  \
-    gen(GFX_ANIM_TIL_AUTO_GRASS_42)  \
-    gen(GFX_ANIM_TIL_AUTO_GRASS_43)  \
-    gen(GFX_ANIM_TIL_AUTO_GRASS_44)  \
-    gen(GFX_ANIM_TIL_AUTO_GRASS_45)  \
-    gen(GFX_ANIM_TIL_AUTO_GRASS_46)  \
-    gen(GFX_ANIM_TIL_AUTO_GRASS_47)
-
-    enum GfxAnimId : uint16_t {
-        GFX_ANIM_IDS(ENUM_GEN_VALUE)
-    };
     struct GfxAnim {
         static const DataType dtype = DAT_TYP_GFX_ANIM;
-        GfxAnimId   id          {};
-        std::string sound       {};
-        uint8_t     frame_rate  {};
-        uint8_t     frame_count {};
-        uint8_t     frame_delay {};
-        GfxFrameId  frames[8]   {};
+        std::string              id          {};
+        std::string              sound       {};
+        uint8_t                  frame_rate  {};
+        uint8_t                  frame_count {};
+        uint8_t                  frame_delay {};
+        std::vector<std::string> frames      {};
 
         bool soundPlayed{};
     };
@@ -326,8 +218,8 @@ namespace data {
     //wraith
     struct Sprite {
         static const DataType dtype = DAT_TYP_SPRITE;
-        SpriteId  id       {};
-        GfxAnimId anims[8] {};  // for each direction
+        SpriteId    id       {};
+        std::string anims[8] {};  // for each direction
     };
 
     ////////////////////////////////////////////////////////////////////////////
@@ -582,7 +474,7 @@ namespace data {
     struct TileType {
         static const DataType dtype = DAT_TYP_TILE_TYPE;
         TileTypeId  id             {};
-        GfxAnimId   anim           {};
+        std::string anim           {};
         MaterialId  material       {};
         TileFlags   flags          {};
         uint8_t     auto_tile_mask {};
@@ -751,10 +643,12 @@ namespace data {
         // - particles? maybe?
         std::vector<Entity> entities {};
 
-        std::unordered_map<std::string, size_t> gfx_files_by_id{};
-        std::unordered_map<std::string, size_t> mus_files_by_id{};
-        std::unordered_map<std::string, std::vector<size_t>> sfx_files_by_id{};  // vector holds variants
-        std::unordered_map<std::string, size_t> tile_maps_by_name{};
+        std::unordered_map<std::string, size_t> gfx_file_by_id{};
+        std::unordered_map<std::string, size_t> gfx_frame_by_id{};
+        std::unordered_map<std::string, size_t> gfx_anim_by_id{};
+        std::unordered_map<std::string, size_t> mus_file_by_id{};
+        std::unordered_map<std::string, std::vector<size_t>> sfx_file_by_id{};  // vector holds variants
+        std::unordered_map<std::string, size_t> tile_map_by_name{};
 
         PackToc toc {};
 
@@ -771,34 +665,49 @@ namespace data {
             tile_maps.emplace_back();
         }
 
-        GfxFile *FindGraphic(std::string id) {
-            if (id.empty()) return 0;
-            const auto &entry = gfx_files_by_id.find(id);
-            if (entry != gfx_files_by_id.end()) {
-                return &gfx_files[entry->second];
+        GfxFile &FindGraphic(std::string id) {
+            const auto &entry = gfx_file_by_id.find(id);
+            if (entry != gfx_file_by_id.end()) {
+                return gfx_files[entry->second];
             } else {
-                TraceLog(LOG_WARNING, "Missing graphic: %s", id.c_str());
-                assert(!"woops");
+                TraceLog(LOG_WARNING, "Missing graphic file: %s", id.c_str());
+                return gfx_files[0];
             }
-            return 0;
         }
 
-        MusFile *FindMusic(std::string id) {
-            if (id.empty()) return 0;
-            const auto &entry = mus_files_by_id.find(id);
-            if (entry != mus_files_by_id.end()) {
-                return &mus_files[entry->second];
+        GfxFrame &FindGraphicFrame(std::string id) {
+            const auto &entry = gfx_frame_by_id.find(id);
+            if (entry != gfx_frame_by_id.end()) {
+                return gfx_frames[entry->second];
+            } else {
+                TraceLog(LOG_WARNING, "Missing graphic frame: %s", id.c_str());
+                return gfx_frames[0];
+            }
+        }
+
+        GfxAnim &FindGraphicAnim(std::string id) {
+            const auto &entry = gfx_anim_by_id.find(id);
+            if (entry != gfx_anim_by_id.end()) {
+                return gfx_anims[entry->second];
+            } else {
+                TraceLog(LOG_WARNING, "Missing graphic animation: %s", id.c_str());
+                return gfx_anims[0];
+            }
+        }
+
+        MusFile &FindMusic(std::string id) {
+            const auto &entry = mus_file_by_id.find(id);
+            if (entry != mus_file_by_id.end()) {
+                return mus_files[entry->second];
             } else {
                 TraceLog(LOG_WARNING, "Missing music: %s", id.c_str());
-                assert(!"woops");
+                return mus_files[0];
             }
-            return 0;
         }
 
-        SfxFile *FindSound(std::string id) {
-            if (id.empty()) return 0;
-            const auto &entry = sfx_files_by_id.find(id);
-            if (entry != sfx_files_by_id.end()) {
+        SfxFile &FindSound(std::string id) {
+            const auto &entry = sfx_file_by_id.find(id);
+            if (entry != sfx_file_by_id.end()) {
                 const auto &variants = entry->second;
                 assert(!variants.empty());
 
@@ -810,24 +719,21 @@ namespace data {
                     sfx_idx = variants[0];
                 }
 
-                return &sfx_files[sfx_idx];
+                return sfx_files[sfx_idx];
             } else {
                 TraceLog(LOG_WARNING, "Missing sound: %s", id.c_str());
-                assert(!"woops");
+                return sfx_files[0];
             }
-            return 0;
         }
 
-        TileMapData *FindTileMap(std::string name) {
-            if (name.empty()) return 0;
-            const auto &entry = tile_maps_by_name.find(name);
-            if (entry != tile_maps_by_name.end()) {
-                return &tile_maps[entry->second];
+        TileMapData &FindTileMap(std::string name) {
+            const auto &entry = tile_map_by_name.find(name);
+            if (entry != tile_map_by_name.end()) {
+                return tile_maps[entry->second];
             } else {
                 TraceLog(LOG_WARNING, "Missing tile map: %s", name.c_str());
-                assert(!"woops");
+                return tile_maps[0];
             }
-            return 0;
         }
     };
 
@@ -846,11 +752,6 @@ namespace data {
     };
 
     const char *DataTypeStr(DataType type);
-    //const char *GfxFileIdStr(GfxFileId id);
-    //const char *MusFileIdStr(MusFileId id);
-    //const char *SfxFileIdStr(SfxFileId id);
-    const char *GfxFrameIdStr(GfxFrameId id);
-    const char *GfxAnimIdStr(GfxAnimId id);
     const char *MaterialIdStr(MaterialId id);
     const char *TileTypeIdStr(TileTypeId id);
     const char *EntityTypeStr(EntityType type);
