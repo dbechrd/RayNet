@@ -56,7 +56,7 @@ void GameServer::OnClientJoin(int clientIdx)
         player->radius = 10;
         player->hp_max = 100;
         player->hp = player->hp_max;
-        player->speed = 1000;
+        player->speed = 3000;
         player->drag = 0.9f;
         player->sprite = data::SPRITE_CHR_MAGE;
         //projectile->direction = data::DIR_E;  // what's it do if it defaults to North?

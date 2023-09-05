@@ -462,33 +462,57 @@ void Tilemap::ResolveEntityTerrainCollisions(data::Entity &entity)
         entity.position.y + entity.radius
     };
 
-    int yMin = CLAMP(floorf(topLeft.y / TILE_W), 0, height);
-    int yMax = CLAMP(ceilf(bottomRight.y / TILE_W), 0, height);
-    int xMin = CLAMP(floorf(topLeft.x / TILE_W), 0, width);
-    int xMax = CLAMP(ceilf(bottomRight.x / TILE_W), 0, width);
+    int yMin = CLAMP(floorf(topLeft.y / TILE_W) - 1, 0, height);
+    int yMax = CLAMP(ceilf(bottomRight.y / TILE_W) + 1, 0, height);
+    int xMin = CLAMP(floorf(topLeft.x / TILE_W) - 1, 0, width);
+    int xMax = CLAMP(ceilf(bottomRight.x / TILE_W) + 1, 0, width);
 
-    for (int y = yMin; y < yMax; y++) {
-        for (int x = xMin; x < xMax; x++) {
-            Tile tile{};
-            if (AtTry(x, y, tile)) {
-                const data::TileDef &tileDef = GetTileDef(tile);
-                if (tileDef.collide) {
-                    Rectangle tileRect{};
-                    Vector2 tilePos = { (float)x * TILE_W, (float)y * TILE_W };
-                    tileRect.x = tilePos.x;
-                    tileRect.y = tilePos.y;
-                    tileRect.width = TILE_W;
-                    tileRect.height = TILE_W;
-                    Manifold manifold{};
-                    if (dlb_CheckCollisionCircleRec(entity.ScreenPos(), entity.radius, tileRect, &manifold)) {
-                        entity.colliding = true;
-                        Vector2 vel2 = { entity.velocity.x, entity.velocity.y };
-                        if (Vector2DotProduct(vel2, manifold.normal) < 0) {
-                            entity.position.x += manifold.normal.x * manifold.depth;
-                            entity.position.y += manifold.normal.y * manifold.depth;
+    for (int iters = 0; iters < 1; iters++) {
+        Vector2 resolve{};
+
+        for (int y = yMin; y < yMax; y++) {
+            for (int x = xMin; x < xMax; x++) {
+                Tile tile{};
+                if (AtTry(x, y, tile)) {
+                    const data::TileDef &tileDef = GetTileDef(tile);
+                    if (tileDef.collide) {
+                        Rectangle tileRect{};
+                        Vector2 tilePos = { (float)x * TILE_W, (float)y * TILE_W };
+                        tileRect.x = tilePos.x;
+                        tileRect.y = tilePos.y;
+                        tileRect.width = TILE_W;
+                        tileRect.height = TILE_W;
+                        Manifold manifold{};
+                        if (dlb_CheckCollisionCircleRec(entity.ScreenPos(), entity.radius, tileRect, &manifold)) {
+#if 0
+                            entity.position = entity.lastValidPosition;
+                            printf("Resetting entity to last known good pos: %.2f %.2f\n", entity.position.x, entity.position.y);
+                            return;
+#elif 0
+                            Vector2 vel2 = { entity.velocity.x, entity.velocity.y };
+                            if (Vector2DotProduct(vel2, manifold.normal) < 0) {
+                                entity.position.x += manifold.normal.x * manifold.depth;
+                                entity.position.y += manifold.normal.y * manifold.depth;
+                            }
+#else
+                            resolve.x += manifold.normal.x * manifold.depth;
+                            resolve.y += manifold.normal.y * manifold.depth;
+#endif
+                            entity.colliding = true;
                         }
                     }
                 }
+            }
+        }
+
+        if (Vector2LengthSqr(resolve)) {
+            entity.position.x += resolve.x;
+            entity.position.y += resolve.y;
+            if (resolve.x) {
+                entity.velocity.x = 0; //*= 0.5;
+            }
+            if (resolve.y) {
+                entity.velocity.y = 0; //*= 0.5;
             }
         }
     }

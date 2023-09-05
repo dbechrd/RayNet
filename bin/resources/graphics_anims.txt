@@ -1,20 +1,20 @@
 
 # playable characters
 # id                         sound effect  frmrate  frmcount  frmdelay  frames
-gfx_anim_chr_mage_e                  none       60         1         0  gfx_frame_chr_mage_e_0
-gfx_anim_chr_mage_w                  none       60         1         0  gfx_frame_chr_mage_w_0
+gfx_anim_chr_mage_e          none               60         1         0  gfx_frame_chr_mage_e_0
+gfx_anim_chr_mage_w          none               60         1         0  gfx_frame_chr_mage_w_0
 
 # npcs
-gfx_anim_npc_lily_e                  none       60         1         0  gfx_frame_npc_lily_e_0
-gfx_anim_npc_lily_w                  none       60         1         0  gfx_frame_npc_lily_w_0
-gfx_anim_npc_freye_e                 none       60         1         0  gfx_frame_npc_freye_e_0
-gfx_anim_npc_freye_w                 none       60         1         0  gfx_frame_npc_freye_w_0
-gfx_anim_npc_nessa_e                 none       60         1         0  gfx_frame_npc_nessa_e_0
-gfx_anim_npc_nessa_w                 none       60         1         0  gfx_frame_npc_nessa_w_0
-gfx_anim_npc_elane_e                 none       60         1         0  gfx_frame_npc_elane_e_0
-gfx_anim_npc_elane_w                 none       60         1         0  gfx_frame_npc_elane_w_0
-gfx_anim_npc_chicken_e               none       60         1         0  gfx_frame_npc_chicken_e_0
-gfx_anim_npc_chicken_w               none       60         1         0  gfx_frame_npc_chicken_w_0
+gfx_anim_npc_lily_e          none               60         1         0  gfx_frame_npc_lily_e_0
+gfx_anim_npc_lily_w          none               60         1         0  gfx_frame_npc_lily_w_0
+gfx_anim_npc_freye_e         none               60         1         0  gfx_frame_npc_freye_e_0
+gfx_anim_npc_freye_w         none               60         1         0  gfx_frame_npc_freye_w_0
+gfx_anim_npc_nessa_e         none               60         1         0  gfx_frame_npc_nessa_e_0
+gfx_anim_npc_nessa_w         none               60         1         0  gfx_frame_npc_nessa_w_0
+gfx_anim_npc_elane_e         none               60         1         0  gfx_frame_npc_elane_e_0
+gfx_anim_npc_elane_w         none               60         1         0  gfx_frame_npc_elane_w_0
+gfx_anim_npc_chicken_e       none               60         1         0  gfx_frame_npc_chicken_e_0
+gfx_anim_npc_chicken_w       none               60         1         0  gfx_frame_npc_chicken_w_0
 
 # objects
 gfx_anim_obj_campfire        sfx_campfire       60         8         4  gfx_frame_obj_campfire_0 gfx_frame_obj_campfire_1 gfx_frame_obj_campfire_2 gfx_frame_obj_campfire_3 gfx_frame_obj_campfire_4 gfx_frame_obj_campfire_5 gfx_frame_obj_campfire_6 gfx_frame_obj_campfire_7
@@ -23,7 +23,7 @@ gfx_anim_obj_campfire        sfx_campfire       60         8         4  gfx_fram
 gfx_anim_prj_fireball        sfx_fireball       60         1         0  gfx_frame_prj_fireball_0
 
 # tiles
-gfx_anim_til_grass                   none       60         1         0  gfx_frame_til_grass
-gfx_anim_til_stone_path              none       60         1         0  gfx_frame_til_stone_path
-gfx_anim_til_wall                    none       60         1         0  gfx_frame_til_wall
-gfx_anim_til_water                   none       60         1         0  gfx_frame_til_water
+gfx_anim_til_grass           none               60         1         0  gfx_frame_til_grass
+gfx_anim_til_stone_path      none               60         1         0  gfx_frame_til_stone_path
+gfx_anim_til_wall            none               60         1         0  gfx_frame_til_wall
+gfx_anim_til_water           none               60         1         0  gfx_frame_til_water

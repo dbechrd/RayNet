@@ -304,6 +304,27 @@ void Editor::DrawEntityOverlay_Collision(Camera2D &camera, double now)
         // [Debug] Draw colliders
         if (state.showColliders) {
             if (entity.radius) {
+#if 0
+                Vector2 topLeft{
+                    entity.position.x - entity.radius,
+                    entity.position.y - entity.radius
+                };
+                Vector2 bottomRight{
+                    entity.position.x + entity.radius,
+                    entity.position.y + entity.radius
+                };
+
+                float yMin = CLAMP(floorf(topLeft.y / TILE_W) - 1, 0, 64);
+                float yMax = CLAMP(ceilf(bottomRight.y / TILE_W) + 1, 0, 64);
+                float xMin = CLAMP(floorf(topLeft.x / TILE_W) - 1, 0, 64);
+                float xMax = CLAMP(ceilf(bottomRight.x / TILE_W) + 1, 0, 64);
+
+                Rectangle foo{
+                    xMin * TILE_W, yMin * TILE_W, (xMax - xMin) * TILE_W, (yMax - yMin) * TILE_W
+                };
+
+                DrawRectangleRec(foo, Fade(YELLOW, 0.5));
+#endif
                 DrawCircle(
                     entity.position.x, entity.position.y,
                     entity.radius,
