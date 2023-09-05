@@ -483,19 +483,19 @@ void dlb_DrawTexturePro(Texture2D texture, Rectangle source, Rectangle dest, Vec
         rlNormal3f(0.0f, 0.0f, 1.0f);
 
         // Top-left corner for texture and quad
-        rlTexCoord2f(source.x/width, source.y/height);
+        rlTexCoord2f(source.x/width + 0.0001f, source.y/height + 0.0001f);
         rlVertex2f(topLeft.x, topLeft.y);
 
         // Bottom-left corner for texture and quad
-        rlTexCoord2f(source.x/width, (source.y + source.height)/height);
+        rlTexCoord2f(source.x/width + 0.0001f, (source.y + source.height)/height - 0.0001f);
         rlVertex2f(bottomLeft.x, bottomLeft.y);
 
         // Bottom-right corner for texture and quad
-        rlTexCoord2f((source.x + source.width)/width, (source.y + source.height)/height);
+        rlTexCoord2f((source.x + source.width)/width - 0.0001f, (source.y + source.height)/height - 0.0001f);
         rlVertex2f(bottomRight.x, bottomRight.y);
 
         // Top-right corner for texture and quad
-        rlTexCoord2f((source.x + source.width)/width, source.y/height);
+        rlTexCoord2f((source.x + source.width)/width - 0.0001f, source.y/height + 0.0001f);
         rlVertex2f(topRight.x, topRight.y);
 
         rlEnd();

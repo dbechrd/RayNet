@@ -1046,6 +1046,7 @@ namespace data {
         for (GfxFile &gfxFile : pack.gfx_files) {
             if (gfxFile.path.empty()) continue;
             gfxFile.texture = LoadTexture(gfxFile.path.c_str());
+            SetTextureFilter(gfxFile.texture, TEXTURE_FILTER_POINT);
         }
         for (MusFile &musFile : pack.mus_files) {
             if (musFile.path.empty()) continue;
