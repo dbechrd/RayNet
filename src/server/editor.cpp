@@ -1431,12 +1431,13 @@ void Editor::DrawUI_PackFiles(UI &uiActionBar, double now)
             { true,  "TIL", ColorFromHSV(7 * (360.0f / (float)data::DAT_TYP_COUNT), 0.9f, 0.6f) },
             { true,  "ENT", ColorFromHSV(8 * (360.0f / (float)data::DAT_TYP_COUNT), 0.9f, 0.6f) },
             { true,  "SPT", ColorFromHSV(9 * (360.0f / (float)data::DAT_TYP_COUNT), 0.9f, 0.6f) },
+            { true,  "MAP", ColorFromHSV(10 * (360.0f / (float)data::DAT_TYP_COUNT), 0.9f, 0.6f) },
         };
 
         uiActionBar.PushWidth(34);
         for (int i = 1; i < data::DAT_TYP_COUNT; i++) {
             DatTypeFilter &filter = datTypeFilter[i];
-            if (uiActionBar.Button(filter.text, filter.enabled, DARKGRAY, filter.color).pressed) {
+            if (uiActionBar.Button(filter.text ? filter.text : "???", filter.enabled, DARKGRAY, filter.color).pressed) {
                 if (io.KeyDown(KEY_LEFT_SHIFT)) {
                     filter.enabled = !filter.enabled;
                 } else {
@@ -1504,7 +1505,7 @@ void Editor::DrawUI_PackFiles(UI &uiActionBar, double now)
                 case data::DAT_TYP_MATERIAL:
                 {
                     data::Material &material = pack.materials[entry.index];
-                    desc = data::MaterialIdStr(material.id);
+                    desc = material.id.c_str();
                     break;
                 }
                 case data::DAT_TYP_TILE_TYPE:

@@ -15,7 +15,6 @@ namespace data {
     }
 
     ENUM_STR_GENERATOR(DataType,   DATA_TYPES   , ENUM_GEN_CASE_RETURN_DESC);
-    ENUM_STR_GENERATOR(MaterialId, MATERIAL_IDS , ENUM_GEN_CASE_RETURN_STR);
     ENUM_STR_GENERATOR(SpriteId,   SPRITE_IDS,    ENUM_GEN_CASE_RETURN_STR);
     ENUM_STR_GENERATOR(TileTypeId, TILE_TYPE_IDS, ENUM_GEN_CASE_RETURN_STR);
     ENUM_STR_GENERATOR(EntityType, ENTITY_TYPES , ENUM_GEN_CASE_RETURN_STR);
@@ -70,7 +69,6 @@ namespace data {
         datBuffer.bytes = LoadFileData(filename.c_str(), &bytes_read);
         datBuffer.length = bytes_read;
     }
-
     void FreeDataBuffer(DatBuffer &datBuffer)
     {
         if (datBuffer.length) {
@@ -107,7 +105,6 @@ namespace data {
 
         return err;
     }
-
     Err LoadFramesIndex(std::string path, std::vector<GfxFrame> &gfx_frames)
     {
         Err err = RN_SUCCESS;
@@ -139,7 +136,6 @@ namespace data {
 
         return err;
     }
-
     Err LoadAnimIndex(std::string path, std::vector<GfxAnim> &gfx_anims)
     {
         Err err = RN_SUCCESS;
@@ -191,7 +187,6 @@ namespace data {
 
         return err;
     }
-
     Err LoadMusicIndex(std::string path, std::vector<MusFile> &mus_files)
     {
         Err err = RN_SUCCESS;
@@ -220,7 +215,6 @@ namespace data {
 
         return err;
     }
-
     Err LoadSoundIndex(std::string path, std::vector<SfxFile> &sfx_files)
     {
         Err err = RN_SUCCESS;
@@ -239,7 +233,7 @@ namespace data {
                     >> sfx_file.pitch_variance
                     >> std::boolalpha >> sfx_file.multi
                     && sfx_file.id[0] != '#'
-                ) {
+                    ) {
                     if (sfx_file.variations > 1) {
                         const char *file_dir = GetDirectoryPath(sfx_file.path.c_str());
                         const char *file_name = GetFileNameWithoutExt(sfx_file.path.c_str());
@@ -254,6 +248,34 @@ namespace data {
                     } else {
                         sfx_files.push_back(sfx_file);
                     }
+                }
+            }
+
+            inputFile.close();
+        } else {
+            assert(!"failed to read file");
+            err = RN_BAD_FILE_READ;
+        }
+
+        return err;
+    }
+    Err LoadMaterialIndex(std::string path, std::vector<Material> &materials)
+    {
+        Err err = RN_SUCCESS;
+
+        std::ifstream inputFile(path);
+        if (inputFile.is_open()) {
+            std::string line;
+            while (!err && std::getline(inputFile, line)) {
+                std::istringstream iss(line);
+
+                Material material{};
+                if (iss
+                    >> material.id
+                    >> material.footstep_sound
+                    && material.id[0] != '#'
+                    ) {
+                    materials.push_back(material);
                 }
             }
 
@@ -291,13 +313,6 @@ namespace data {
         }
 
 #if 1
-        Material materials[] = {
-            // id              footstep sound
-            { MATERIAL_GRASS, "sfx_footstep_grass" },
-            { MATERIAL_STONE, "sfx_footstep_stone" },
-            { MATERIAL_WATER, "sfx_footstep_grass" },
-        };
-
         Sprite sprites[] = {
             // id                    anims
             //                        N                        E                         S       W                         NE      SE      SW      NW
@@ -312,11 +327,11 @@ namespace data {
         };
 
         TileType tile_types[] = {
-            // id               gfx/anim                  material        auto_mask   flags
-            { TILE_GRASS,      "gfx_anim_til_grass",      MATERIAL_GRASS, 0b00000000, TILE_FLAG_WALK },
-            { TILE_STONE_PATH, "gfx_anim_til_stone_path", MATERIAL_STONE, 0b00000000, TILE_FLAG_WALK },
-            { TILE_WATER,      "gfx_anim_til_water",      MATERIAL_WATER, 0b00000000, TILE_FLAG_SWIM },
-            { TILE_WALL,       "gfx_anim_til_wall",       MATERIAL_STONE, 0b00000000, TILE_FLAG_COLLIDE },
+            // id               gfx/anim                  material     auto_mask   flags
+            { TILE_GRASS,      "gfx_anim_til_grass",      "mat_grass", 0b00000000, TILE_FLAG_WALK },
+            { TILE_STONE_PATH, "gfx_anim_til_stone_path", "mat_stone", 0b00000000, TILE_FLAG_WALK },
+            { TILE_WATER,      "gfx_anim_til_water",      "mat_water", 0b00000000, TILE_FLAG_SWIM },
+            { TILE_WALL,       "gfx_anim_til_wall",       "mat_stone", 0b00000000, TILE_FLAG_COLLIDE },
 
 #if 0
             { TILE_AUTO_GRASS_00, 0b00000010 },
@@ -389,14 +404,14 @@ namespace data {
         }
 
         std::vector<GfxFrame> gfx_frames{};
-        err = LoadFramesIndex("resources/graphics_frame.txt", gfx_frames);
+        err = LoadFramesIndex("resources/graphics_frames.txt", gfx_frames);
         if (err) {
             assert(!err);
             TraceLog(LOG_ERROR, "Failed to load graphics frame index.\n");
         }
 
         std::vector<GfxAnim> gfx_anims{};
-        err = LoadAnimIndex("resources/graphics_anim.txt", gfx_anims);
+        err = LoadAnimIndex("resources/graphics_anims.txt", gfx_anims);
         if (err) {
             assert(!err);
             TraceLog(LOG_ERROR, "Failed to load graphics animation index.\n");
@@ -410,10 +425,17 @@ namespace data {
         }
 
         std::vector<SfxFile> sfx_files{};
-        err = LoadSoundIndex("resources/sound.txt", sfx_files);
+        err = LoadSoundIndex("resources/sounds.txt", sfx_files);
         if (err) {
             assert(!err);
             TraceLog(LOG_ERROR, "Failed to load sound index.\n");
+        }
+
+        std::vector<Material> materials{};
+        err = LoadMaterialIndex("resources/materials.txt", materials);
+        if (err) {
+            assert(!err);
+            TraceLog(LOG_ERROR, "Failed to load material index.\n");
         }
 
         Pack packHardcoded{ "pack/pack1.dat" };
@@ -448,7 +470,6 @@ namespace data {
                 }                                       \
             }
 
-        ID_CHECK(Material &, material,  packHardcoded.materials);
         ID_CHECK(Sprite   &, sprite,    packHardcoded.sprites);
         ID_CHECK(TileType &, tile_type, packHardcoded.tile_types);
 #undef ID_CHECK
@@ -496,7 +517,6 @@ namespace data {
 
         dialog_library.RegisterListener("DIALOG_FREYE_INTRO", FreyeIntroListener);
     }
-
     void Free(void)
     {
         // NOTE(dlb): ~Material is crashing for unknown reason. double free or trying to free string constant??
@@ -987,7 +1007,6 @@ namespace data {
                 }                                       \
             }
 
-        ID_CHECK(Material &, material,  pack.materials);
         ID_CHECK(Sprite   &, sprite,    pack.sprites);
         ID_CHECK(TileType &, tile_type, pack.tile_types);
 #undef ID_CHECK

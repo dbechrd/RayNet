@@ -1,0 +1,4 @@
+# id       footstep sound
+mat_grass  sfx_footstep_grass
+mat_stone  sfx_footstep_stone
+mat_water  sfx_footstep_grass

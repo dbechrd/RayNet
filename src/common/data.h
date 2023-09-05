@@ -173,19 +173,9 @@ namespace data {
         bool soundPlayed{};
     };
 
-#define MATERIAL_IDS(gen) \
-    gen(MATERIAL_NONE)    \
-    gen(MATERIAL_GRASS)   \
-    gen(MATERIAL_STONE)   \
-    gen(MATERIAL_WATER)
-
-    enum MaterialId : uint16_t {
-        MATERIAL_IDS(ENUM_GEN_VALUE)
-    };
-
     struct Material {
         static const DataType dtype = DAT_TYP_MATERIAL;
-        MaterialId  id             {};
+        std::string id             {};
         std::string footstep_sound {};
     };
 
@@ -475,7 +465,7 @@ namespace data {
         static const DataType dtype = DAT_TYP_TILE_TYPE;
         TileTypeId  id             {};
         std::string anim           {};
-        MaterialId  material       {};
+        std::string material       {};
         TileFlags   flags          {};
         uint8_t     auto_tile_mask {};
         //Color color;  // color for minimap/wang tile editor (top left pixel of tile)
@@ -752,7 +742,6 @@ namespace data {
     };
 
     const char *DataTypeStr(DataType type);
-    const char *MaterialIdStr(MaterialId id);
     const char *TileTypeIdStr(TileTypeId id);
     const char *EntityTypeStr(EntityType type);
 
