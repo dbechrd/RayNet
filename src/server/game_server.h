@@ -77,13 +77,8 @@ struct GameServer {
     bool showF3Menu = false;
 
     uint32_t nextEntityId = 1;
-    uint32_t nextMapId = 1;
-    std::vector<Tilemap *> maps{};
-    std::unordered_map<uint32_t, size_t> mapsById{};      // loaded maps by their map id
-    std::unordered_map<std::string, size_t> mapsByName{}; // loaded maps by their filename
 
     GameServer(double now) : now(now), frameStart(now) {};
-    ~GameServer(void);
 
     void OnClientJoin(int clientIdx);
     void OnClientLeave(int clientIdx);

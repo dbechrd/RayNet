@@ -21,13 +21,6 @@ void GameServerNetAdapter::OnServerClientDisconnected(int clientIdx)
     server->OnClientLeave(clientIdx);
 }
 
-GameServer::~GameServer(void)
-{
-    for (Tilemap *map : maps) {
-        delete map;
-    }
-}
-
 void GameServer::OnClientJoin(int clientIdx)
 {
     static const Color playerColors[]{
@@ -35,11 +28,6 @@ void GameServer::OnClientJoin(int clientIdx)
         LIME,
         SKYBLUE
     };
-
-    // TODO: Huh? What dis mean?
-    if (!maps.size()) {
-        return;
-    }
 
     data::Entity *player = SpawnEntity(data::ENTITY_PLAYER);
     if (player) {
@@ -49,7 +37,7 @@ void GameServer::OnClientJoin(int clientIdx)
         sv_player.entityId = player->id;
 
         player->type = data::ENTITY_PLAYER;
-        player->map_id = maps[0]->id;
+        player->map_id = 1;  // TODO: Something smarter
         const Vector3 caveEntrance{ 3300, 870, 0 };
         const Vector3 townCenter{ 1660, 2360, 0 };
         player->position = townCenter;
@@ -71,11 +59,13 @@ void GameServer::OnClientJoin(int clientIdx)
 }
 void GameServer::OnClientLeave(int clientIdx)
 {
+#if 0
     // TODO: Huh? What dis mean?
     if (!maps.size()) return;
 
     // TODO: Which map is this sv_player currently on? Need to despawn them from that map.
     Tilemap &map = *maps[0];
+#endif
 
     ServerPlayer &serverPlayer = players[clientIdx];
     DespawnEntity(serverPlayer.entityId);
@@ -89,6 +79,15 @@ uint32_t GameServer::GetPlayerEntityId(uint32_t clientIdx)
 
 Tilemap *GameServer::FindOrLoadMap(std::string filename)
 {
+#if 1
+    // TODO: Go back to assuming it's not already loaded once we figure out packs
+    Tilemap *map = &data::packs[0]->FindTileMap(filename);
+    if (map->id) {
+        return map;
+    } else {
+        return 0;
+    }
+#else
     const auto &mapEntry = mapsByName.find(filename);
     if (mapEntry != mapsByName.end()) {
         size_t mapIndex = mapEntry->second;
@@ -120,6 +119,7 @@ Tilemap *GameServer::FindOrLoadMap(std::string filename)
         }
         return 0;
     }
+#endif
 }
 Err GameServer::Start(void)
 {
@@ -194,11 +194,9 @@ Err GameServer::Start(void)
 
 Tilemap *GameServer::FindMap(uint32_t mapId)
 {
-    const auto &mapEntry = mapsById.find(mapId);
-    if (mapEntry != mapsById.end()) {
-        return maps[mapEntry->second];
-    }
-    return 0;
+    // TODO: Remove this alias and call data::* directly?
+    auto &tile_map = data::packs[0]->FindTileMap(mapId);
+    return &tile_map;
 }
 
 data::Entity *GameServer::SpawnEntity(data::EntityType type)

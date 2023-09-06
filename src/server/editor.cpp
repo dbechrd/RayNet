@@ -67,12 +67,14 @@ void Editor::DrawGroundOverlays(Camera2D &camera, double now)
 {
     io.PushScope(IO::IO_EditorGroundOverlay);
 
+    auto &map = data::packs[0]->FindTileMap(map_name);
+
     // Draw tile collision layer
     if (state.showColliders) {
-        map->DrawColliders(camera);
+        map.DrawColliders(camera);
     }
     if (state.showTileIds) {
-        map->DrawTileIds(camera);
+        map.DrawTileIds(camera);
     }
 
     if (active) {
@@ -112,22 +114,24 @@ void Editor::DrawGroundOverlay_Tiles(Camera2D &camera, double now)
 
         Tile &cursorTile = state.tiles.cursor.tileDefId;
         Tile hoveredTile{};
-        if (map->AtWorld((int32_t)cursorWorldPos.x, (int32_t)cursorWorldPos.y, hoveredTile)) {
+        auto &map = data::packs[0]->FindTileMap(map_name);
+
+        if (map.AtWorld((int32_t)cursorWorldPos.x, (int32_t)cursorWorldPos.y, hoveredTile)) {
             Tilemap::Coord coord{};
-            bool validCoord = map->WorldToTileIndex(cursorWorldPos.x, cursorWorldPos.y, coord);
+            bool validCoord = map.WorldToTileIndex(cursorWorldPos.x, cursorWorldPos.y, coord);
             assert(validCoord);  // should always be true when hoveredTile != null
 
             if (editorPlaceTile) {
-                map->Set(coord.x, coord.y, cursorTile, now);
+                map.Set(coord.x, coord.y, cursorTile, now);
             } else if (editorPickTile) {
                 cursorTile = hoveredTile;
             } else if (editorFillTile) {
-                map->Fill(coord.x, coord.y, cursorTile, now);
+                map.Fill(coord.x, coord.y, cursorTile, now);
             }
 
             Vector2 drawPos{ (float)coord.x * TILE_W, (float)coord.y * TILE_W };
-            const data::GfxFile &gfx_file = data::packs[0]->FindGraphic(map->texture);
-            map->DrawTile(gfx_file.texture, cursorTile, drawPos);
+            const data::GfxFile &gfx_file = data::packs[0]->FindGraphic(map.texture);
+            map.DrawTile(gfx_file.texture, cursorTile, drawPos);
             DrawRectangleLinesEx({ drawPos.x, drawPos.y, TILE_W, TILE_W }, 2, WHITE);
         }
     }
@@ -141,16 +145,17 @@ void Editor::DrawGroundOverlay_Paths(Camera2D &camera, double now)
     const Vector2 cursorWorldPos = GetScreenToWorld2D({ (float)GetMouseX(), (float)GetMouseY() }, camera);
 
     // Draw path edges
-    for (uint32_t aiPathId = 0; aiPathId < map->paths.size(); aiPathId++) {
-        data::AiPath *aiPath = map->GetPath(aiPathId);
+    auto &map = data::packs[0]->FindTileMap(map_name);
+    for (uint32_t aiPathId = 0; aiPathId < map.paths.size(); aiPathId++) {
+        data::AiPath *aiPath = map.GetPath(aiPathId);
         if (!aiPath) {
             continue;
         }
 
         for (uint32_t aiPathNodeIndex = 0; aiPathNodeIndex < aiPath->pathNodeIndexCount; aiPathNodeIndex++) {
-            uint32_t aiPathNodeNextIndex = map->GetNextPathNodeIndex(aiPathId, aiPathNodeIndex);
-            data::AiPathNode *aiPathNode = map->GetPathNode(aiPathId, aiPathNodeIndex);
-            data::AiPathNode *aiPathNodeNext = map->GetPathNode(aiPathId, aiPathNodeNextIndex);
+            uint32_t aiPathNodeNextIndex = map.GetNextPathNodeIndex(aiPathId, aiPathNodeIndex);
+            data::AiPathNode *aiPathNode = map.GetPathNode(aiPathId, aiPathNodeIndex);
+            data::AiPathNode *aiPathNodeNext = map.GetPathNode(aiPathId, aiPathNodeNextIndex);
             assert(aiPathNode);
             assert(aiPathNodeNext);
             DrawLine(
@@ -163,14 +168,14 @@ void Editor::DrawGroundOverlay_Paths(Camera2D &camera, double now)
 
     // Draw path nodes
     const float pathRectRadius = 5;
-    for (uint32_t aiPathId = 0; aiPathId < map->paths.size(); aiPathId++) {
-        data::AiPath *aiPath = map->GetPath(aiPathId);
+    for (uint32_t aiPathId = 0; aiPathId < map.paths.size(); aiPathId++) {
+        data::AiPath *aiPath = map.GetPath(aiPathId);
         if (!aiPath) {
             continue;
         }
 
         for (uint32_t aiPathNodeIndex = 0; aiPathNodeIndex < aiPath->pathNodeIndexCount; aiPathNodeIndex++) {
-            data::AiPathNode *aiPathNode = map->GetPathNode(aiPathId, aiPathNodeIndex);
+            data::AiPathNode *aiPathNode = map.GetPathNode(aiPathId, aiPathNodeIndex);
             assert(aiPathNode);
 
             Rectangle nodeRect{
@@ -229,9 +234,9 @@ void Editor::DrawGroundOverlay_Paths(Camera2D &camera, double now)
             newNodePos.y = roundf(newNodePos.y / 8) * 8;
         }
         Vector2SubtractValue(newNodePos, pathRectRadius);
-        data::AiPath *aiPath = map->GetPath(cursor.dragPathId);
+        data::AiPath *aiPath = map.GetPath(cursor.dragPathId);
         if (aiPath) {
-            data::AiPathNode *aiPathNode = map->GetPathNode(cursor.dragPathId, cursor.dragPathNodeIndex);
+            data::AiPathNode *aiPathNode = map.GetPathNode(cursor.dragPathId, cursor.dragPathNodeIndex);
             assert(aiPathNode);
             aiPathNode->pos.x = newNodePos.x;
             aiPathNode->pos.y = newNodePos.y;
@@ -254,14 +259,15 @@ void Editor::DrawEntityOverlays(Camera2D &camera, double now)
     io.PushScope(IO::IO_EditorEntityOverlay);
 
     data::Entity *selectedEntity = entityDb->FindEntity(state.entities.selectedId);
-    if (selectedEntity && selectedEntity->map_id == map->id) {
+    auto &map = data::packs[0]->FindTileMap(map_name);
+    if (selectedEntity && selectedEntity->map_id == map.id) {
         DrawTextEx(fntSmall, TextFormat("[selected in editor]\n%u", selectedEntity->id),
             selectedEntity->ScreenPos(), fntSmall.baseSize / camera.zoom, 1 / camera.zoom, WHITE);
     }
 
     if (state.showEntityIds) {
         for (data::Entity &entity : entityDb->entities) {
-            if (entity.map_id == map->id && entity.id != state.entities.selectedId) {
+            if (entity.map_id == map.id && entity.id != state.entities.selectedId) {
                 entityDb->DrawEntityIds(entity.id, camera);
             }
         }
@@ -292,14 +298,15 @@ void Editor::DrawEntityOverlays(Camera2D &camera, double now)
 }
 void Editor::DrawEntityOverlay_Collision(Camera2D &camera, double now)
 {
+    auto &map = data::packs[0]->FindTileMap(map_name);
     for (data::Entity &entity : entityDb->entities) {
-        if (entity.map_id != map->id) {
+        if (entity.map_id != map.id) {
             continue;
         }
         assert(entity.id && entity.type);
 
         // [Debug] Draw entity texture rect
-        //DrawRectangleRec(map->EntityRect(i), Fade(SKYBLUE, 0.7f));
+        //DrawRectangleRec(map.EntityRect(i), Fade(SKYBLUE, 0.7f));
 
         // [Debug] Draw colliders
         if (state.showColliders) {
@@ -460,9 +467,11 @@ UIState Editor::DrawUI_ActionBar(Vector2 position, GameServer &server, double no
     static std::string openRequest;
     static std::string saveAsRequest;
 
+    auto &map = data::packs[0]->FindTileMap(map_name);
+
     UIState openButton = uiActionBar.Button("Open");
     if (openButton.released) {
-        std::string filename = map->name;
+        std::string filename = map.name;
         std::thread openFileThread([filename, mapFileFilter]{
             const char *openRequestBuf = tinyfd_openFileDialog(
                 "Open File",
@@ -490,10 +499,10 @@ UIState Editor::DrawUI_ActionBar(Vector2 position, GameServer &server, double no
 
     UIState saveButton = uiActionBar.Button("Save");
     if (saveButton.released) {
-        //map->SaveKV(map->filename + ".txt");
-        Err err = map->Save(map->name);
+        //map.SaveKV(map.filename + ".txt");
+        Err err = map.Save(map.name);
         if (err) {
-            std::string filename = map->name;
+            std::string filename = map.name;
             std::thread errorThread([filename, err]{
                 const char *msg = TextFormat("Failed to save file %s. %s\n", filename.c_str(), ErrStr(err));
                 tinyfd_messageBox("Error", msg, "ok", "error", 1);
@@ -504,7 +513,7 @@ UIState Editor::DrawUI_ActionBar(Vector2 position, GameServer &server, double no
 
     UIState saveAsButton = uiActionBar.Button("Save As");
     if (saveAsButton.released) {
-        std::string filename = map->name;
+        std::string filename = map.name;
         std::thread saveAsThread([filename, mapFileFilter]{
             const char *saveAsRequestBuf = tinyfd_saveFileDialog(
                 "Save File",
@@ -517,7 +526,7 @@ UIState Editor::DrawUI_ActionBar(Vector2 position, GameServer &server, double no
         saveAsThread.detach();
     }
     if (saveAsRequest.size()) {
-        Err err = map->Save(saveAsRequest);
+        Err err = map.Save(saveAsRequest);
         if (err) {
             std::thread errorThread([err]{
                 const char *msg = TextFormat("Failed to save file %s. %s\n", saveAsRequest.c_str(), ErrStr(err));
@@ -530,9 +539,9 @@ UIState Editor::DrawUI_ActionBar(Vector2 position, GameServer &server, double no
 
     UIState reloadButton = uiActionBar.Button("Reload");
     if (reloadButton.released) {
-        Err err = map->Load(map->name);
+        Err err = map.Load(map.name);
         if (err) {
-            std::string filename = map->name;
+            std::string filename = map.name;
             std::thread errorThread([filename, err]{
                 const char *msg = TextFormat("Failed to reload file %s. %s\n", filename.c_str(), ErrStr(err));
                 tinyfd_messageBox("Error", msg, "ok", "error", 1);
@@ -542,11 +551,11 @@ UIState Editor::DrawUI_ActionBar(Vector2 position, GameServer &server, double no
     }
     uiActionBar.Newline();
 
-    UIState mapPath = uiActionBar.Text(GetFileName(map->name.c_str()), WHITE);
+    UIState mapPath = uiActionBar.Text(GetFileName(map.name.c_str()), WHITE);
     if (mapPath.released) {
         system("explorer maps");
     }
-    uiActionBar.Text(TextFormat("(v%d)", map->version));
+    uiActionBar.Text(TextFormat("(v%d)", map.version));
     uiActionBar.Newline();
 
     uiActionBar.Text("Show:");
@@ -625,9 +634,9 @@ UIState Editor::DrawUI_ActionBar(Vector2 position, GameServer &server, double no
 }
 void Editor::DrawUI_MapActions(UI &uiActionBar, GameServer &server, double now)
 {
-    for (Tilemap *map : server.maps) {
-        if (uiActionBar.Button(TextFormat("[%d] %s", map->id, map->name.c_str())).pressed) {
-            this->map = map;
+    for (const Tilemap &map : data::packs[0]->tile_maps) {
+        if (uiActionBar.Button(TextFormat("[%d] %s", map.id, map.name.c_str())).pressed) {
+            map_name = map.name;
         }
         uiActionBar.Newline();
     }
@@ -638,7 +647,7 @@ void Editor::DrawUI_TileActions(UI &uiActionBar, double now)
     static const char *openRequest = 0;
 
 #if 0
-    std::string tilesetPath = rnStringCatalog.GetString(map->textureId);
+    std::string tilesetPath = rnStringCatalog.GetString(map.textureId);
     uiActionBar.Text(tilesetPath.c_str());
     if (uiActionBar.Button("Change tileset", ColorBrightness(ORANGE, -0.3f)).released) {
         std::thread openFileThread([tilesetPath, mapFileFilter]{
@@ -700,7 +709,8 @@ void Editor::DrawUI_Tilesheet(UI &uiActionBar, double now)
 {
     // TODO: Support multi-select (big rectangle?), and figure out where this lives
 
-    const data::GfxFile &gfx_file = data::packs[0]->FindGraphic(map->texture);
+    auto &map = data::packs[0]->FindTileMap(map_name);
+    const data::GfxFile &gfx_file = data::packs[0]->FindGraphic(map.texture);
     const Texture &mapTex = gfx_file.texture;
 
     static Texture checkerboard{};
@@ -723,9 +733,9 @@ void Editor::DrawUI_Tilesheet(UI &uiActionBar, double now)
     // Draw collision overlay on tilesheet if we're in collision editing mode
     switch (state.tiles.tileEditMode) {
         case TileEditMode_Collision: {
-            for (int i = 0; i < map->tileDefs.size(); i++) {
-                if (map->tileDefs[i].collide) {
-                    Rectangle tileDefRectScreen = map->TileDefRect(i);
+            for (int i = 0; i < map.tileDefs.size(); i++) {
+                if (map.tileDefs[i].collide) {
+                    Rectangle tileDefRectScreen = map.TileDefRect(i);
                     tileDefRectScreen.x += imgTL.x;
                     tileDefRectScreen.y += imgTL.y;
                     tileDefRectScreen = RectShrink(tileDefRectScreen, 2);
@@ -735,9 +745,9 @@ void Editor::DrawUI_Tilesheet(UI &uiActionBar, double now)
             break;
         }
         case TileEditMode_AutoTileMask: {
-            for (int i = 0; i < map->tileDefs.size(); i++) {
+            for (int i = 0; i < map.tileDefs.size(); i++) {
                 const int tileThird = TILE_W / 3;
-                Rectangle tileDefRectScreen = map->TileDefRect(i);
+                Rectangle tileDefRectScreen = map.TileDefRect(i);
                 tileDefRectScreen.x += imgTL.x + 1;
                 tileDefRectScreen.y += imgTL.y + 1;
                 tileDefRectScreen.width = tileThird;
@@ -746,7 +756,7 @@ void Editor::DrawUI_Tilesheet(UI &uiActionBar, double now)
                 const Color color = Fade(MAROON, 0.7f);
 
                 Vector2 cursor{};
-                uint8_t mask = map->tileDefs[i].auto_tile_mask;
+                uint8_t mask = map.tileDefs[i].auto_tile_mask;
                 if (mask & 0b10000000) DrawRectangleRectOffset(tileDefRectScreen, cursor, color);
                 cursor.x += tileThird;
 
@@ -803,14 +813,14 @@ void Editor::DrawUI_Tilesheet(UI &uiActionBar, double now)
         // If mouse pressed, select tile, or change collision data, depending on mode
         if (sheet.pressed) {
             const int tileIdx = tileY * (mapTex.width / TILE_W) + tileX;
-            if (tileIdx >= 0 && tileIdx < map->tileDefs.size()) {
+            if (tileIdx >= 0 && tileIdx < map.tileDefs.size()) {
                 switch (state.tiles.tileEditMode) {
                     case TileEditMode_Select: {
                         state.tiles.cursor.tileDefId = tileIdx;
                         break;
                     }
                     case TileEditMode_Collision: {
-                        data::TileDef &tileDef = map->tileDefs[tileIdx];
+                        data::TileDef &tileDef = map.tileDefs[tileIdx];
                         tileDef.collide = !tileDef.collide;
                         break;
                     }
@@ -827,7 +837,7 @@ void Editor::DrawUI_Tilesheet(UI &uiActionBar, double now)
 
                         const int tileSegment = tileYSegment * 3 + tileXSegment;
                         //printf("x: %d, y: %d, s: %d\n", tileXSegment, tileYSegment, tileSegment);
-                        data::TileDef &tileDef = map->tileDefs[tileIdx];
+                        data::TileDef &tileDef = map.tileDefs[tileIdx];
                         switch (tileSegment) {
                             case 0: tileDef.auto_tile_mask ^= 0b10000000; break;
                             case 1: tileDef.auto_tile_mask ^= 0b01000000; break;
@@ -850,7 +860,7 @@ void Editor::DrawUI_Tilesheet(UI &uiActionBar, double now)
 
     // Draw highlight around currently styleSelected tiledef in draw mode
     if (state.tiles.cursor.tileDefId >= 0) {
-        Rectangle tileDefRectScreen = map->TileDefRect(state.tiles.cursor.tileDefId);
+        Rectangle tileDefRectScreen = map.TileDefRect(state.tiles.cursor.tileDefId);
         tileDefRectScreen.x += imgTL.x;
         tileDefRectScreen.y += imgTL.y;
         DrawRectangleLinesEx(tileDefRectScreen, 2, WHITE);
@@ -938,14 +948,16 @@ void Editor::DrawUI_Wang(UI &uiActionBar, double now)
     uiWangStyle2x.scale = 2;
     uiActionBar.PushStyle(uiWangStyle2x);
 
+    auto &map = data::packs[0]->FindTileMap(map_name);
+
     if (uiActionBar.Button("Re-generate Map").pressed) {
-        wangTileset.GenerateMap(map->width, map->height, wangMap);
+        wangTileset.GenerateMap(map.width, map.height, wangMap);
     }
     uiActionBar.Newline();
 
     static Tilemap wangTilemap{};
     if (uiActionBar.Image(wangMap.colorized).pressed) {
-        map->SetFromWangMap(wangMap, now);
+        map.SetFromWangMap(wangMap, now);
     }
 
     if (hTex >= 0 || vTex >= 0) {
@@ -972,10 +984,10 @@ void Editor::DrawUI_Wang(UI &uiActionBar, double now)
                     int templateY = wangTile->y + y;
                     int templateOffset = (templateY * wangTileset.ts.img.width + templateX) * 3;
                     uint8_t *pixel = &imgData[templateOffset];
-                    uint8_t tile = pixel[0] < map->tileDefs.size() ? pixel[0] : 0;
+                    uint8_t tile = pixel[0] < map.tileDefs.size() ? pixel[0] : 0;
 
-                    data::GfxFile &gfx_file = data::packs[0]->FindGraphic(map->texture);
-                    const Rectangle tileRect = map->TileDefRect(tile);
+                    data::GfxFile &gfx_file = data::packs[0]->FindGraphic(map.texture);
+                    const Rectangle tileRect = map.TileDefRect(tile);
                     if (uiWangTile.Image(gfx_file.texture, tileRect).down) {
                         pixel[0] = selectedTile; //^ (selectedTile*55);
                         pixel[1] = selectedTile; //^ (selectedTile*55);
@@ -993,10 +1005,10 @@ void Editor::DrawUI_Wang(UI &uiActionBar, double now)
                     int templateY = wangTile->y + y;
                     int templateOffset = (templateY * wangTileset.ts.img.width + templateX) * 3;
                     uint8_t *pixel = &imgData[templateOffset];
-                    uint8_t tile = pixel[0] < map->tileDefs.size() ? pixel[0] : 0;
+                    uint8_t tile = pixel[0] < map.tileDefs.size() ? pixel[0] : 0;
 
-                    data::GfxFile &gfx_file = data::packs[0]->FindGraphic(map->texture);
-                    const Rectangle tileRect = map->TileDefRect(tile);
+                    data::GfxFile &gfx_file = data::packs[0]->FindGraphic(map.texture);
+                    const Rectangle tileRect = map.TileDefRect(tile);
                     if (uiWangTile.Image(gfx_file.texture, tileRect).down) {
                         pixel[0] = selectedTile; //^ (selectedTile*55);
                         pixel[1] = selectedTile; //^ (selectedTile*55);
@@ -1033,12 +1045,12 @@ void Editor::DrawUI_PathActions(UI &uiActionBar, double now)
 void Editor::DrawUI_WarpActions(UI &uiActionBar, double now)
 {
     //if (uiActionBar.Button("Delete all warps", MAROON).pressed) {
-    //    map->warps.clear();
+    //    map.warps.clear();
     //}
     //uiActionBar.Newline();
 
     if (uiActionBar.Button("Add", DARKGREEN).pressed) {
-        //map->warps.push_back({});
+        //map.warps.push_back({});
     }
     uiActionBar.Newline();
 
@@ -1133,7 +1145,7 @@ void Editor::DrawUI_DialogActions(UI &uiActionBar, double now)
 {
 #if 0
     //if (uiActionBar.Button("Add", DARKGREEN).pressed) {
-    //    //map->warps.push_back({});
+    //    //map.warps.push_back({});
     //}
     //uiActionBar.Newline();
 
@@ -1193,9 +1205,10 @@ void Editor::DrawUI_DialogActions(UI &uiActionBar, double now)
 }
 void Editor::DrawUI_EntityActions(UI &uiActionBar, double now)
 {
+    auto &map = data::packs[0]->FindTileMap(map_name);
     if (uiActionBar.Button("Despawn all", ColorBrightness(MAROON, -0.3f)).pressed) {
         for (const data::Entity &entity : entityDb->entities) {
-            if (entity.type == data::ENTITY_PLAYER || entity.map_id != map->id) {
+            if (entity.type == data::ENTITY_PLAYER || entity.map_id != map.id) {
                 continue;
             }
             assert(entity.id && entity.type);
@@ -1222,7 +1235,7 @@ void Editor::DrawUI_EntityActions(UI &uiActionBar, double now)
 
     for (uint32_t i = 0; i < SV_MAX_ENTITIES; i++) {
         data::Entity &entity = entityDb->entities[i];
-        if (!entity.id || entity.map_id != map->id) {
+        if (!entity.id || entity.map_id != map.id) {
             continue;
         }
 

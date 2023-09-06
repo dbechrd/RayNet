@@ -288,6 +288,26 @@ namespace data {
         return err;
     }
 
+    Err SaveTilemap(std::string path, Tilemap &tilemap)
+    {
+        Err err = RN_SUCCESS;
+        std::ofstream stream(path);
+
+        do {
+            if (!stream.is_open()) {
+                err = RN_BAD_FILE_WRITE; break;
+            }
+
+            stream << "version" << tilemap.version << '\n';
+            stream << "size" << tilemap.width << tilemap.height << '\n';
+            stream << "name" << tilemap.name << '\n';
+            stream << "texture" << tilemap.texture << '\n';
+        } while (0);
+
+        stream.close();
+        return err;
+    }
+
     void Init(void)
     {
         Err err = RN_SUCCESS;
@@ -448,16 +468,16 @@ namespace data {
         for (auto &i : sprites)    packHardcoded.sprites   .push_back(i);
         for (auto &i : tile_types) packHardcoded.tile_types.push_back(i);
 
-#if 0
+#if 1
         Pack packOverworld("pack/overworld_map.dat");
         err = LoadPack(packOverworld);
         assert(!err);
         // HACK: Re-scale path nodes for old maps
-        for (auto &pathNode : packOverworld.tile_maps[1].pathNodes) {
-            pathNode.pos = Vector2Scale(pathNode.pos, 2);
-        }
-        err = SavePack(packOverworld);
-        assert(!err);
+        //for (auto &pathNode : packOverworld.tile_maps[1].pathNodes) {
+        //    pathNode.pos = Vector3Scale(pathNode.pos, 2);
+        //}
+        //err = SavePack(packOverworld);
+        //assert(!err);
         packHardcoded.tile_maps.push_back(packOverworld.tile_maps[1]);
 #endif
 
@@ -848,6 +868,8 @@ namespace data {
         assert(sentinel == Tilemap::SENTINEL);
 
         if (stream.mode == PACK_MODE_READ) {
+            tile_map.id = stream.pack->next_map_id++;  // HACK: Store this or something.. firebase?
+            stream.pack->tile_map_by_id[tile_map.id] = index;
             stream.pack->tile_map_by_name[tile_map.name] = index;
         }
     }

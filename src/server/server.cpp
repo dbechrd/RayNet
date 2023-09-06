@@ -182,7 +182,8 @@ Err Play(GameServer &server)
     Camera2D camera{};
     camera.zoom = 1;
 
-    Editor editor{ server.maps[0] };
+    // TODO: Store name, pointer is unstable if vector resizes. Or reserve() the vector.
+    Editor editor{ LEVEL_001 };
     editor.Init();
 
     bool quit = false;
@@ -251,7 +252,8 @@ Err Play(GameServer &server)
             ClearBackground(BLUE_DESAT);
             BeginMode2D(camera);
                 // [World] Tilemap
-                editor.map->Draw(camera);
+                auto &editor_map = data::packs[0]->FindTileMap(editor.map_name);
+                editor_map.Draw(camera);
 
                 // [Editor] Overlays
                 editor.DrawGroundOverlays(camera, server.now);
@@ -260,7 +262,7 @@ Err Play(GameServer &server)
                 // NOTE(dlb): We could build an array of { entityIndex, position.y } and sort it
                 // each frame, then render the entities in that order.
                 for (data::Entity &entity : entityDb->entities) {
-                    if (entity.map_id == editor.map->id) {
+                    if (entity.map_id == editor_map.id) {
                         entityDb->DrawEntity(entity.id);
                     }
                 }

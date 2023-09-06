@@ -89,12 +89,12 @@ struct EditModeState {
 };
 
 struct Editor {
-    bool          active {};
-    EditMode      mode   {};
-    EditModeState state  {};
-    Tilemap *     map    {};
+    bool          active   {};
+    EditMode      mode     {};
+    EditModeState state    {};
+    std::string   map_name {};
 
-    Editor(Tilemap *map) : map(map) {}
+    Editor(std::string map_name) : map_name(map_name) {}
     Err Init(void);
     void HandleInput(Camera2D &camera);
     void DrawGroundOverlays(Camera2D &camera, double now);

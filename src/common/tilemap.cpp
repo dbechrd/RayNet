@@ -16,7 +16,6 @@ void Tilemap::SV_SerializeChunk(Msg_S_TileChunk &tileChunk, uint32_t x, uint32_t
         }
     }
 }
-
 void Tilemap::CL_DeserializeChunk(Msg_S_TileChunk &tileChunk)
 {
     if (id = tileChunk.map_id) {

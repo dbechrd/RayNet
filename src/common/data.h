@@ -640,6 +640,9 @@ namespace data {
         std::unordered_map<std::string, std::vector<size_t>> sfx_file_by_id{};  // vector holds variants
         std::unordered_map<std::string, size_t> tile_map_by_name{};
 
+        size_t next_map_id = 1;
+        std::unordered_map<uint32_t, size_t> tile_map_by_id{};
+
         PackToc toc {};
 
         Pack(std::string path) : path(path) {
@@ -716,12 +719,22 @@ namespace data {
             }
         }
 
+        TileMapData &FindTileMap(uint32_t id) {
+            const auto &entry = tile_map_by_id.find(id);
+            if (entry != tile_map_by_id.end()) {
+                return tile_maps[entry->second];
+            } else {
+                TraceLog(LOG_WARNING, "Missing tile map id: %u", id);
+                return tile_maps[0];
+            }
+        }
+
         TileMapData &FindTileMap(std::string name) {
             const auto &entry = tile_map_by_name.find(name);
             if (entry != tile_map_by_name.end()) {
                 return tile_maps[entry->second];
             } else {
-                TraceLog(LOG_WARNING, "Missing tile map: %s", name.c_str());
+                TraceLog(LOG_WARNING, "Missing tile map name: %s", name.c_str());
                 return tile_maps[0];
             }
         }
