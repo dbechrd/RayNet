@@ -284,10 +284,11 @@ void draw_f3_menu(GameClient &client)
 
     Rectangle todoListRect{};
     DRAW_TEXT_MEASURE(&todoListRect, client.showTodoList ? "[-] todo" : "[+] todo", "");
-    if (io.MouseButtonPressed(MOUSE_BUTTON_LEFT)
-        && CheckCollisionPointRec({ (float)GetMouseX(), (float)GetMouseY() }, todoListRect))
-    {
-        client.showTodoList = !client.showTodoList;
+    if (CheckCollisionPointRec({ (float)GetMouseX(), (float)GetMouseY() }, todoListRect)) {
+        io.CaptureMouse();
+        if (io.MouseButtonPressed(MOUSE_BUTTON_LEFT)) {
+            client.showTodoList = !client.showTodoList;
+        }
     }
     if (client.showTodoList) {
         hudCursor.y += 8;
@@ -388,7 +389,7 @@ int main(int argc, char *argv[])
         bool doNetTick = client->netTickAccum >= SV_TICK_DT;
 
         // TODO: Move this somewhere in client?
-        if (client->world) {
+        if (client->yj_client->IsConnected()) {
             const data::MusFile &mus_file = data::packs[0]->FindMusic(client->world->musBackgroundMusic);
             if (!IsMusicStreamPlaying(mus_file.music)) {
                 PlayMusicStream(mus_file.music);
@@ -438,7 +439,7 @@ int main(int argc, char *argv[])
             client->Stop();
         }
         if (io.KeyPressed(KEY_Z)) {
-            if (client->world) {
+            if (client->yj_client->IsConnected()) {
                 client->world->showSnapshotShadows = !client->world->showSnapshotShadows;
             }
         }

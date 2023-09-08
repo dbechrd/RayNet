@@ -131,24 +131,20 @@ namespace data {
         std::string path        {};
         DatBuffer   data_buffer {};
         ::Music     music       {};
-
-        MusFile(void) = default;
-        MusFile(std::string id, std::string path) : id(id), path(path) {}
     };
 
     struct SfxFile {
         static const DataType dtype = DAT_TYP_SFX_FILE;
-        std::string id             {};
-        std::string path           {};
-        int         variations     {};  // how many version of the file to look for with "_00" suffix
-        float       pitch_variance {};
-        bool        multi          {};
-        DatBuffer   data_buffer    {};
-        ::Sound     sound          {};
+        std::string          id             {};
+        std::string          path           {};
+        int                  variations     {};  // how many version of the file to look for with "_00" suffix
+        float                pitch_variance {};
+        int                  max_instances  {};  // how many can be played at the same time
+        DatBuffer            data_buffer    {};
 
-        SfxFile(void) = default;
-        SfxFile(std::string id, std::string path, float pitch_variance, bool multi)
-            : id(id), path(path), pitch_variance(pitch_variance), multi(multi) {}
+        // Runtime data
+        ::Sound              sound          {};
+        std::vector<::Sound> instances      {};  // "SoundAlias" in raylib, shares buffer, replaces PlaySoundMulti API
     };
 
     struct GfxFrame {
@@ -698,7 +694,7 @@ namespace data {
             }
         }
 
-        SfxFile &FindSound(std::string id) {
+        SfxFile &FindSoundVariant(std::string id) {
             const auto &entry = sfx_file_by_id.find(id);
             if (entry != sfx_file_by_id.end()) {
                 const auto &variants = entry->second;

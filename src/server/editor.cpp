@@ -1380,7 +1380,7 @@ void Editor::DrawUI_SfxFiles(UI &uiActionBar, double now)
 
     if (!state.sfxFiles.selectedSfx.empty()) {
         const int labelWidth = 100;
-        data::SfxFile &sfx_file = data::packs[0]->FindSound(state.sfxFiles.selectedSfx);
+        data::SfxFile &sfx_file = data::packs[0]->FindSoundVariant(state.sfxFiles.selectedSfx);
         if (!sfx_file.id.empty()) {
             uiActionBar.Label("id", labelWidth);
             uiActionBar.Text(TextFormat("%d", sfx_file.id));

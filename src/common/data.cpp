@@ -65,7 +65,7 @@ namespace data {
 
     void ReadFileIntoDataBuffer(std::string filename, DatBuffer &datBuffer)
     {
-        uint32_t bytes_read = 0;
+        int bytes_read = 0;
         datBuffer.bytes = LoadFileData(filename.c_str(), &bytes_read);
         datBuffer.length = bytes_read;
     }
@@ -231,16 +231,16 @@ namespace data {
                     >> std::quoted(sfx_file.path)
                     >> sfx_file.variations
                     >> sfx_file.pitch_variance
-                    >> std::boolalpha >> sfx_file.multi
+                    >> sfx_file.max_instances
                     && sfx_file.id[0] != '#'
                     ) {
                     if (sfx_file.variations > 1) {
                         const char *file_dir = GetDirectoryPath(sfx_file.path.c_str());
                         const char *file_name = GetFileNameWithoutExt(sfx_file.path.c_str());
                         const char *file_ext = GetFileExtension(sfx_file.path.c_str());
-                        for (int i = 0; i < sfx_file.variations; i++) {
+                        for (int i = 1; i <= sfx_file.variations; i++) {
                             // Build variant path, e.g. chicken_cluck.wav -> chicken_cluck_01.wav
-                            const char *variant_path = TextFormat("%s/%s_%02d%s", file_dir, file_name, i + 1, file_ext);
+                            const char *variant_path = TextFormat("%s/%s_%02d%s", file_dir, file_name, i, file_ext);
                             SfxFile sfx_variant = sfx_file;
                             sfx_variant.path = variant_path;
                             sfx_files.push_back(sfx_variant);
@@ -626,13 +626,15 @@ namespace data {
         Process(stream, sfx_file.id);
         Process(stream, sfx_file.path);
         Process(stream, sfx_file.data_buffer);
+        PROC(sfx_file.variations);
         PROC(sfx_file.pitch_variance);
-        PROC(sfx_file.multi);
-        if (stream.mode == PACK_MODE_READ && !sfx_file.data_buffer.length && !sfx_file.path.empty()) {
-            ReadFileIntoDataBuffer(sfx_file.path.c_str(), sfx_file.data_buffer);
-        }
+        PROC(sfx_file.max_instances);
 
         if (stream.mode == PACK_MODE_READ) {
+            if (!sfx_file.data_buffer.length && !sfx_file.path.empty()) {
+                ReadFileIntoDataBuffer(sfx_file.path.c_str(), sfx_file.data_buffer);
+            }
+
             auto &sfx_variants = stream.pack->sfx_file_by_id[sfx_file.id];
             sfx_variants.push_back(index);
         }
@@ -1065,18 +1067,24 @@ namespace data {
         }
 #endif
 
-        for (GfxFile &gfxFile : pack.gfx_files) {
-            if (gfxFile.path.empty()) continue;
-            gfxFile.texture = LoadTexture(gfxFile.path.c_str());
-            SetTextureFilter(gfxFile.texture, TEXTURE_FILTER_POINT);
+        for (GfxFile &gfx_file : pack.gfx_files) {
+            if (gfx_file.path.empty()) continue;
+            gfx_file.texture = LoadTexture(gfx_file.path.c_str());
+            SetTextureFilter(gfx_file.texture, TEXTURE_FILTER_POINT);
         }
-        for (MusFile &musFile : pack.mus_files) {
-            if (musFile.path.empty()) continue;
-            musFile.music = LoadMusicStream(musFile.path.c_str());
+        for (MusFile &mus_file : pack.mus_files) {
+            if (mus_file.path.empty()) continue;
+            mus_file.music = LoadMusicStream(mus_file.path.c_str());
         }
-        for (SfxFile &sfxFile : pack.sfx_files) {
-            if (sfxFile.path.empty()) continue;
-            sfxFile.sound = LoadSound(sfxFile.path.c_str());
+        for (SfxFile &sfx_file : pack.sfx_files) {
+            if (sfx_file.path.empty()) continue;
+            sfx_file.sound = LoadSound(sfx_file.path.c_str());
+            if (sfx_file.sound.frameCount) {
+                sfx_file.instances.resize(sfx_file.max_instances);
+                for (int i = 0; i < sfx_file.max_instances; i++) {
+                    sfx_file.instances[i] = LoadSoundAlias(sfx_file.sound);
+                }
+            }
         }
 
         // Place checkerboard image in slot 0 as a placeholder for when other images fail to load
@@ -1135,6 +1143,10 @@ namespace data {
             FreeDataBuffer(musFile.data_buffer);
         }
         for (SfxFile &sfxFile : pack.sfx_files) {
+            assert(sfxFile.instances.size() == sfxFile.max_instances);
+            for (int i = 0; i < sfxFile.max_instances; i++) {
+                UnloadSoundAlias(sfxFile.instances[i]);
+            }
             UnloadSound(sfxFile.sound);
             FreeDataBuffer(sfxFile.data_buffer);
         }
@@ -1142,30 +1154,42 @@ namespace data {
 
     void PlaySound(std::string id, float pitchVariance)
     {
-        const SfxFile &sfx_file = packs[0]->FindSound(id);
-
-        float variance = pitchVariance ? pitchVariance : sfx_file.pitch_variance;
-        SetSoundPitch(sfx_file.sound, 1.0f + GetRandomFloatVariance(variance));
+        const SfxFile &sfx_file = packs[0]->FindSoundVariant(id);
+        assert(sfx_file.instances.size() == sfx_file.max_instances);
 
         //printf("updatesprite playsound %s (multi = %d)\n", sfx_file.path.c_str(), sfx_file.multi);
-        if (sfx_file.multi) {
-            PlaySoundMulti(sfx_file.sound);
-        } else if (!IsSoundPlaying(sfx_file.sound)) {
-            PlaySound(sfx_file.sound);
+        for (int i = 0; i < sfx_file.max_instances; i++) {
+            if (!IsSoundPlaying(sfx_file.instances[i])) {
+                float variance = pitchVariance ? pitchVariance : sfx_file.pitch_variance;
+                SetSoundPitch(sfx_file.instances[i], 1.0f + GetRandomFloatVariance(variance));
+                PlaySound(sfx_file.instances[i]);
+                break;
+            }
         }
     }
 
     bool IsSoundPlaying(std::string id)
     {
-        const SfxFile &sfx_file = packs[0]->FindSound(id);
-        const bool playing = IsSoundPlaying(sfx_file.sound);
+        // TODO: Does this work still with SoundAlias stuff?
+        const SfxFile &sfx_file = packs[0]->FindSoundVariant(id);
+        assert(sfx_file.instances.size() == sfx_file.max_instances);
+
+        bool playing = false;
+        for (int i = 0; i < sfx_file.max_instances; i++) {
+            playing = IsSoundPlaying(sfx_file.instances[i]);
+            if (playing) break;
+        }
         return playing;
     }
 
     void StopSound(std::string id)
     {
-        const SfxFile &sfx_file = packs[0]->FindSound(id);
-        StopSound(sfx_file.sound);
+        const SfxFile &sfx_file = packs[0]->FindSoundVariant(id);
+        assert(sfx_file.instances.size() == sfx_file.max_instances);
+
+        for (int i = 0; i < sfx_file.max_instances; i++) {
+            StopSound(sfx_file.instances[i]);
+        }
     }
 
     const GfxFrame &GetSpriteFrame(const Entity &entity)
@@ -1224,7 +1248,7 @@ namespace data {
         }
 
         if (newlySpawned) {
-            const SfxFile &sfx_file = packs[0]->FindSound(anim.sound);
+            const SfxFile &sfx_file = packs[0]->FindSoundVariant(anim.sound);
             PlaySound(sfx_file.id);
         }
     }
@@ -1232,10 +1256,7 @@ namespace data {
     {
         const Sprite sprite = packs[0]->sprites[entity.sprite];
         GfxAnim &anim = packs[0]->FindGraphicAnim(sprite.anims[entity.direction]);
-        const SfxFile &sfx_file = packs[0]->FindSound(anim.sound);
-        if (IsSoundPlaying(sfx_file.sound)) {
-            StopSound(sfx_file.sound);
-        }
+        StopSound(anim.sound);
 
         entity.anim_frame = 0;
         entity.anim_accum = 0;

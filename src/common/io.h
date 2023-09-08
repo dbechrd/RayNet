@@ -63,11 +63,11 @@ struct IO {
         return captureScope > scopeStack.top();
     }
 
-    bool KeyPressed(int key) {
+    bool KeyPressed(int key, bool include_repeats = false) {
         if (KeyboardCaptured()) {
             return false;
         }
-        return IsKeyPressed(key);
+        return IsKeyPressed(key) || (include_repeats && IsKeyPressedRepeat(key));
     }
     bool KeyDown(int key) {
         if (KeyboardCaptured()) {

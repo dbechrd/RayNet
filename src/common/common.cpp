@@ -136,7 +136,7 @@ Font dlb_LoadFontEx(const char *fileName, int fontSize, int *fontChars, int glyp
     Font font = { 0 };
 
     // Loading file to memory
-    unsigned int fileSize = 0;
+    int fileSize = 0;
     unsigned char *fileData = LoadFileData(fileName, &fileSize);
 
     if (fileData != NULL)

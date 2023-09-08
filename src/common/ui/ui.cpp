@@ -506,6 +506,9 @@ UIState UI::Textbox(STB_TexteditState &stbState, std::string &text, KeyCallback 
         ctrlSize.y
     };
 
+    //--------------------------------------------------------------------------
+    // Focus
+    //--------------------------------------------------------------------------
     static HoverHash prevHoverHash{};
     UIState state = CalcState(ctrlRect, prevHoverHash);
     if (state.pressed || tabToNextEditor || &stbState == tabToPrevEditor) {
@@ -515,25 +518,29 @@ UIState UI::Textbox(STB_TexteditState &stbState, std::string &text, KeyCallback 
         tabToPrevEditor = 0;
     }
 
-    Vector2 mousePosRel{
-        GetMouseX() - (ctrlPosition.x + textOffset.x),
-        GetMouseY() - (ctrlPosition.y + textOffset.y)
-    };
-
-    static double lastClickTime{};
-    static Vector2 lastClickMousePosRel{};
-    static int mouseClicks{};
-    static int dblClickWordLeft{};
-    static int dblClickWordRight{};
-    static bool newlyActivePress{};
-
     const bool wasActive = prevActiveEditor == &stbState;
     const bool isActive = activeEditor == &stbState;
     const bool newlyActive = isActive && (!stbState.initialized || !wasActive);
 
-    const double now = GetTime();
-    const double timeSinceLastClick = now - lastClickTime;
     if (isActive) {
+        //--------------------------------------------------------------------------
+        // Mouse
+        //--------------------------------------------------------------------------
+        Vector2 mousePosRel{
+            GetMouseX() - (ctrlPosition.x + textOffset.x),
+            GetMouseY() - (ctrlPosition.y + textOffset.y)
+        };
+
+        static double lastClickTime{};
+        static Vector2 lastClickMousePosRel{};
+        static int mouseClicks{};
+        static int dblClickWordLeft{};
+        static int dblClickWordRight{};
+        static bool newlyActivePress{};
+
+        const double now = GetTime();
+        const double timeSinceLastClick = now - lastClickTime;
+
         if (newlyActive) {
             stb_textedit_initialize_state(&stbState, true);
             prevActiveEditor = activeEditor;
@@ -617,9 +624,22 @@ UIState UI::Textbox(STB_TexteditState &stbState, std::string &text, KeyCallback 
             stbState.cursor = stbState.select_start;
         }
 
-        if (!io.KeyboardCaptured()) {
+        //--------------------------------------------------------------------------
+        // Keyboard
+        //--------------------------------------------------------------------------
+        bool keyHandled = false;
+        if (!io.KeyboardCaptured() && keyCallback) {
+            const char *newStr = keyCallback(userData, keyHandled);
+            if (newStr) {
+                str.data = newStr;
+            }
+        }
+
+        if (!io.KeyboardCaptured() && !keyHandled) {
+#if 0
             int key = GetKeyPressed();
             while (key) {
+                printf("key_pressed: %c\n", (char)key);
                 if (keyCallback) {
                     const char *newStr = keyCallback(key, userData);
                     if (newStr) {
@@ -680,8 +700,75 @@ UIState UI::Textbox(STB_TexteditState &stbState, std::string &text, KeyCallback 
                 }
                 key = GetKeyPressed();
             }
+#else
+            bool ctrl = io.KeyDown(KEY_LEFT_CONTROL) || io.KeyDown(KEY_RIGHT_CONTROL);
+            bool shift = io.KeyDown(KEY_LEFT_SHIFT) || io.KeyDown(KEY_RIGHT_SHIFT);
+
+            int mod = 0;
+            if (ctrl) mod |= STB_TEXTEDIT_K_CTRL;
+            if (shift) mod |= STB_TEXTEDIT_K_SHIFT;
+
+#define STB_KEY(key) if (io.KeyPressed(key, true)) { stb_textedit_key(&str, &stbState, mod | key); }
+            STB_KEY(KEY_LEFT);
+            STB_KEY(KEY_RIGHT);
+            STB_KEY(KEY_UP);
+            STB_KEY(KEY_DOWN);
+            STB_KEY(KEY_DELETE);
+            STB_KEY(KEY_BACKSPACE);
+            STB_KEY(KEY_HOME);
+            STB_KEY(KEY_END);
+            STB_KEY(KEY_PAGE_UP);
+            STB_KEY(KEY_PAGE_DOWN);
+            STB_KEY(KEY_Z);
+#undef STB_KEY
+
+            if (ctrl && io.KeyPressed(KEY_A)) {
+                stbState.cursor = text.size();
+                stbState.select_start = 0;
+                stbState.select_end = text.size();
+            }
+            if (ctrl && io.KeyPressed(KEY_X, true)) {
+                int selectLeft = MIN(stbState.select_start, stbState.select_end);
+                int selectRight = MAX(stbState.select_start, stbState.select_end);
+                int selectLen = selectRight - selectLeft;
+                if (selectLen) {
+                    std::string selectedText = str.data.substr(selectLeft, selectLen);
+                    SetClipboardText(selectedText.c_str());
+                    stb_textedit_cut(&str, &stbState);
+                }
+            }
+            if (ctrl && io.KeyPressed(KEY_C, false)) {
+                int selectLeft = MIN(stbState.select_start, stbState.select_end);
+                int selectRight = MAX(stbState.select_start, stbState.select_end);
+                int selectLen = selectRight - selectLeft;
+                if (selectLen) {
+                    std::string selectedText = str.data.substr(selectLeft, selectLen);
+                    SetClipboardText(selectedText.c_str());
+                }
+            }
+            if (ctrl && io.KeyPressed(KEY_V, true)) {
+                const char *clipboard = GetClipboardText();
+                if (clipboard) {
+                    size_t clipboardLen = strlen(clipboard);
+                    if (clipboardLen) {
+                        stb_textedit_paste(&str, &stbState, clipboard, clipboardLen);
+                    }
+                }
+            }
+            if (io.KeyPressed(KEY_TAB, true)) {
+                if (shift) {
+                    // tell previously drawn textbox to activate next frame
+                    tabToPrevEditor = lastDrawnEditor;
+                } else {
+                    // tell next textbox that draws to activate
+                    tabToNextEditor = true;
+                }
+            }
+#endif
+
             int ch = GetCharPressed();
             while (ch) {
+                printf("char_pressed: %c\n", (char)ch);
                 /*if (keyCallback) {
                     const char *newStr = keyCallback(ch, userData);
                     if (newStr) {
@@ -691,7 +778,7 @@ UIState UI::Textbox(STB_TexteditState &stbState, std::string &text, KeyCallback 
                     }
                 }*/
 
-                if (RN_stb_key_to_char(key) != -1) {
+                if (RN_stb_key_to_char(ch) != -1) {
                     stb_textedit_key(&str, &stbState, ch);
                 }
                 ch = GetCharPressed();
@@ -699,6 +786,9 @@ UIState UI::Textbox(STB_TexteditState &stbState, std::string &text, KeyCallback 
         }
     }
 
+    //--------------------------------------------------------------------------
+    // Draw
+    //--------------------------------------------------------------------------
     // Background
     Color bgColor = style.bgColor[UI_CtrlTypeDefault];
     if (!bgColor.a) {
@@ -780,18 +870,20 @@ struct TextboxFloatCallbackData {
     float increment;
 };
 
-const char *AdjustFloat(int key, void *userData)
+const char *AdjustFloat(void *userData, bool &keyHandled)
 {
     TextboxFloatCallbackData *data = (TextboxFloatCallbackData *)userData;
     const char *newStr = 0;
 
-    if (key == KEY_UP) {
+    if (io.KeyPressed(KEY_UP, true)) {
         *data->val += data->increment;
         newStr = TextFormat(data->fmt, *data->val);
+        keyHandled = true;
     }
-    if (key == KEY_DOWN) {
+    if (io.KeyPressed(KEY_DOWN, true)) {
         *data->val -= data->increment;
         newStr = TextFormat(data->fmt, *data->val);
+        keyHandled = true;
     }
 
     return newStr;

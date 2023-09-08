@@ -107,7 +107,7 @@ struct UI {
     UIState Button(const char *text, Color bgColor);
     UIState Button(const char *text, bool pressed, Color bgColor, Color bgColorPressed);
 
-    typedef const char *(*KeyCallback)(int key, void *userData);
+    typedef const char *(*KeyCallback)(void *userData, bool &keyHandled);
     UIState Textbox(STB_TexteditState &state, std::string &text, KeyCallback keyCallback = 0, void *userData = 0);
     UIState TextboxFloat(STB_TexteditState &stbState, float &value, float width = 0, const char *fmt = "%.2f", float increment = 1);
 

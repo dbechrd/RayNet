@@ -10,12 +10,12 @@
 [x] edit tileDef collision
 [x] Profile server
 [x] Switch maps
+[x] Y sort (drawlist)
 [ ] Make warps collapse in editor UI
 [ ] Edit wang tiles as maps (persisted or virtual?)
 [ ] Items
 [ ] Inventory (w/ Hotbar)
 [ ] NPC inventory (Buy/Sell UI)
-[ ] Y sort (drawlist)
 [ ] Chat
 [ ] Choose which server to connect to (localhost vs. DandyNet)
 [ ] Nice entering area titles
