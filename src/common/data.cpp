@@ -291,6 +291,7 @@ namespace data {
     Err SaveTilemap(std::string path, Tilemap &tilemap)
     {
         Err err = RN_SUCCESS;
+#if 0
         std::ofstream stream(path);
 
         do {
@@ -298,13 +299,83 @@ namespace data {
                 err = RN_BAD_FILE_WRITE; break;
             }
 
-            stream << "version" << tilemap.version << '\n';
-            stream << "size" << tilemap.width << tilemap.height << '\n';
-            stream << "name" << tilemap.name << '\n';
-            stream << "texture" << tilemap.texture << '\n';
+            stream << "version " << tilemap.version << '\n';
+            stream << "size " << tilemap.width << " " << tilemap.height << '\n';
+            stream << "name " << tilemap.name << '\n';
+            stream << "texture " << tilemap.texture << '\n';
         } while (0);
 
         stream.close();
+#else
+        FILE *file = fopen(path.c_str(), "w");
+
+        do {
+            if (ferror(file)) {
+                err = RN_BAD_FILE_WRITE; break;
+            }
+
+            fprintf(file, "%-10s %u\n", "version", tilemap.version);
+            fprintf(file, "%-10s %u %u\n", "size", tilemap.width, tilemap.height);
+            fprintf(file, "%-10s %s\n", "name", tilemap.name.c_str());
+            fprintf(file, "%-10s %s\n", "texture", tilemap.texture.c_str());
+
+            fprintf(file, "# x y w h collide auto_tile_mask\n");
+            for (const TileDef &tile_def : tilemap.tileDefs) {
+                fprintf(file, "%-10s %u %u %u %u %u %u\n",
+                    "tile_def",
+                    (uint32_t)tile_def.x,
+                    (uint32_t)tile_def.y,
+                    (uint32_t)tile_def.w,
+                    (uint32_t)tile_def.h,
+                    (uint32_t)tile_def.collide,
+                    (uint32_t)tile_def.auto_tile_mask
+                );
+
+            }
+
+            fprintf(file, "tiles_start\n");
+            for (int i = 0; i < tilemap.tiles.size(); i++) {
+                const Tile &tile = tilemap.tiles[i];
+                fprintf(file, "%3u", tilemap.tiles[i]);
+                if (i % tilemap.width == tilemap.width - 1) {
+                    fprintf(file, "\n");
+                } else {
+                    fprintf(file, " ");
+                }
+
+            }
+            fprintf(file, "tiles_end\n");
+
+            fprintf(file, "# x y z wait_for\n");
+            for (const AiPathNode &path_node : tilemap.pathNodes) {
+                fprintf(file, "%-10s %f %f %f %f\n",
+                    "path_node",
+                    path_node.pos.x,
+                    path_node.pos.y,
+                    path_node.pos.z,
+                    (float)path_node.waitFor
+                );
+            }
+
+            // TODO(dlb): This doesn't need to exist.. Just have offset/count of AiPath point directly to path_nodes!??
+            fprintf(file, "path_node_indices");
+            for (uint32_t path_node_idx : tilemap.pathNodeIndices) {
+                fprintf(file, " %u", path_node_idx);
+            }
+            fprintf(file, "\n");
+
+            fprintf(file, "# node_offset node_count\n");
+            for (const AiPath &path : tilemap.paths) {
+                fprintf(file, "%-10s %u %u\n",
+                    "path",
+                    path.pathNodeIndexOffset,
+                    path.pathNodeIndexCount
+                );
+            }
+        } while (0);
+
+        if (file) fclose(file);
+#endif
         return err;
     }
 
@@ -480,6 +551,8 @@ namespace data {
         //assert(!err);
         packHardcoded.tile_maps.push_back(packOverworld.tile_maps[1]);
 #endif
+
+        SaveTilemap("resources/map/overworld_map.txt", packHardcoded.tile_maps[1]);
 
         // Ensure every array element is initialized and in contiguous order by id
 #define ID_CHECK(type, name, arr)                       \
@@ -1037,7 +1110,6 @@ namespace data {
 
         return err;
     }
-
     Err LoadResources(Pack &pack)
     {
         Err err = RN_SUCCESS;
@@ -1103,7 +1175,6 @@ namespace data {
 
         return err;
     }
-
     Err LoadPack(Pack &pack)
     {
         Err err = RN_SUCCESS;
@@ -1131,7 +1202,6 @@ namespace data {
         if (stream.f) fclose(stream.f);
         return err;
     }
-
     void UnloadPack(Pack &pack)
     {
         for (GfxFile &gfxFile : pack.gfx_files) {
@@ -1167,7 +1237,6 @@ namespace data {
             }
         }
     }
-
     bool IsSoundPlaying(std::string id)
     {
         // TODO: Does this work still with SoundAlias stuff?
@@ -1181,7 +1250,6 @@ namespace data {
         }
         return playing;
     }
-
     void StopSound(std::string id)
     {
         const SfxFile &sfx_file = packs[0]->FindSoundVariant(id);
