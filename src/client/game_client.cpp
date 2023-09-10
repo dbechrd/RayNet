@@ -108,11 +108,12 @@ void GameClient::SendEntityInteractDialogOption(data::Entity &entity, uint32_t o
 }
 
 
-void GameClient::SendTileInteract(uint32_t x, uint32_t y)
+void GameClient::SendTileInteract(std::string map_name, uint32_t x, uint32_t y)
 {
     if (yj_client->CanSendMessage(MSG_C_TILE_INTERACT)) {
         Msg_C_TileInteract *msg = (Msg_C_TileInteract *)yj_client->CreateMessage(MSG_C_TILE_INTERACT);
         if (msg) {
+            strncpy(msg->map_name, map_name.c_str(), SV_MAX_TILE_MAP_NAME_LEN);
             msg->x = x;
             msg->y = y;
             yj_client->SendMessage(MSG_C_TILE_INTERACT, msg);
@@ -176,14 +177,14 @@ void GameClient::ProcessMessages(void)
                     //printf("[ENTITY_SPAWN] id=%u mapId=%u\n", msg->entity_id, msg->map_id);
                     data::Entity *entity = entityDb->FindEntity(msg->entity_id);
                     if (!entity) {
-                        Tilemap *map = world->FindOrLoadMap(msg->map_id);
+                        Tilemap *map = world->FindOrLoadMap(msg->map_name);
                         assert(map && "why no map? we get chunks before entities, right!?");
                         if (map) {
                             if (entityDb->SpawnEntity(msg->entity_id, msg->type, now)) {
                                 world->ApplySpawnEvent(*msg);
                             }
                         } else {
-                            printf("[game_client] Failed to load map id %u to spawn entity id %u\n", msg->map_id, msg->entity_id);
+                            printf("[game_client] Failed to load map id %s to spawn entity id %u\n", msg->map_name, msg->entity_id);
                         }
                     } else {
                         assert(!"why two spawn events for same entityId??");
@@ -194,7 +195,7 @@ void GameClient::ProcessMessages(void)
                 {
                     Msg_S_TileChunk *msg = (Msg_S_TileChunk *)yjMsg;
 
-                    Tilemap *map = world->FindOrLoadMap(msg->map_id);
+                    Tilemap *map = world->FindOrLoadMap(msg->map_name);
                     if (map) {
                         map->CL_DeserializeChunk(*msg);
                     } else {

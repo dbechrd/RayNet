@@ -7,13 +7,6 @@
 #include "../common/net/messages/msg_s_entity_spawn.h"
 #include "../common/net/messages/msg_s_entity_snapshot.h"
 
-ClientWorld::~ClientWorld(void)
-{
-    for (Tilemap *map : maps) {
-        delete map;
-    }
-}
-
 data::Entity *ClientWorld::LocalPlayer(void) {
     data::Entity *localPlayer = entityDb->FindEntity(localPlayerEntityId);
     if (localPlayer) {
@@ -28,53 +21,22 @@ data::Entity *ClientWorld::LocalPlayer(void) {
 Tilemap *ClientWorld::LocalPlayerMap(void)
 {
     data::Entity *localPlayer = LocalPlayer();
-    if (localPlayer && localPlayer->map_id) {
-        return FindOrLoadMap(localPlayer->map_id);
+    if (localPlayer && !localPlayer->map_name.empty()) {
+        return FindOrLoadMap(localPlayer->map_name);
     }
     return 0;
 }
 
-Tilemap *ClientWorld::FindOrLoadMap(uint32_t map_id)
+Tilemap *ClientWorld::FindOrLoadMap(std::string map_name)
 {
-    assert(map_id);
-    Tilemap *map = 0;
+    Tilemap &map = data::packs[0]->FindTileMap(map_name);
 
-    const auto &mapEntry = mapsById.find(map_id);
-    if (mapEntry != mapsById.end()) {
-        map = maps[mapEntry->second];
-    } else {
-        std::string mapName = "unknownMapId";
-        switch (map_id) {
-            case 1: mapName = LEVEL_001; break;
-        }
-        // TODO: LoadPack map and add to maps/mapsById
-
-        map = new Tilemap();
-        if (map) {
-            Err err = map->Load(mapName);
-            if (!err) {
-                map->id = map_id;
-                mapsById[map->id] = maps.size();
-                maps.push_back(map);
-            } else {
-                printf("Failed to load map id %u with code %d\n", map_id, err);
-                delete map;
-                map = 0;
-            }
-        } else {
-            printf("Failed to allocate space to load map id %u\n", map_id);
-        }
+    if (map.name == LEVEL_001) {
+        musBackgroundMusic = "mus_ambient_outdoors";
     }
+    //case 2: musBackgroundMusic = "mus_ambient_cave"; break;
 
-    if (map) {
-        switch (map->id) {
-            case 1: musBackgroundMusic = "mus_ambient_outdoors"; break;
-            //case 2: musBackgroundMusic = "mus_ambient_cave"; break;
-            default: musBackgroundMusic = "mus_none"; break;
-        }
-    }
-
-    return map;
+    return &map;
 }
 
 bool ClientWorld::CopyEntityData(uint32_t entityId, data::EntityData &data)
@@ -103,7 +65,7 @@ void ClientWorld::ApplySpawnEvent(const Msg_S_EntitySpawn &entitySpawn)
     entity.type     = entitySpawn.type;
     entity.spec     = entitySpawn.spec;
     entity.name     = entitySpawn.name;
-    entity.map_id   = entitySpawn.map_id;
+    entity.map_name = entitySpawn.map_name;
     entity.position = entitySpawn.position;
     entity.radius   = entitySpawn.radius;
     entity.drag     = entitySpawn.drag;
@@ -117,10 +79,10 @@ void ClientWorld::ApplySpawnEvent(const Msg_S_EntitySpawn &entitySpawn)
 void ClientWorld::ApplyStateInterpolated(data::Entity &entity,
     const data::GhostSnapshot &a, const data::GhostSnapshot &b, float alpha, float dt)
 {
-    if (b.map_id != a.map_id) {
+    if (b.map_name != a.map_name) {
         alpha = 1.0f;
     }
-    entity.map_id = b.map_id;
+    entity.map_name = b.map_name;
     entity.position.x = LERP(a.position.x, b.position.x, alpha);
     entity.position.y = LERP(a.position.y, b.position.y, alpha);
 
@@ -209,7 +171,7 @@ void ClientWorld::UpdateLocalPlayer(GameClient &client, data::Entity &entity, da
 #if CL_CLIENT_SIDE_PREDICT
     double cmdAccumDt{};
     Vector3 cmdAccumForce{};
-    Tilemap *map = FindOrLoadMap(entity.map_id);
+    Tilemap *map = FindOrLoadMap(entity.map_name);
     if (map) {
         // Apply unacked input
         for (size_t cmdIndex = 0; cmdIndex < client.controller.cmdQueue.size(); cmdIndex++) {
@@ -280,7 +242,7 @@ void ClientWorld::UpdateLocalGhost(GameClient &client, data::Entity &entity, dat
 
     ApplyStateInterpolated(entity.id, *snapshotA, *snapshotB, alpha, client.frameDt);
 
-    if (localPlayerMap && entity.map_id == localPlayerMap->id) {
+    if (localPlayerMap && entity.map_name == localPlayerMap->name) {
         const Vector2 cursorWorldPos = GetScreenToWorld2D(GetMousePosition(), camera2d);
         bool hover = dlb_CheckCollisionPointRec(cursorWorldPos, entityDb->EntityRect(entity.id));
         if (hover) {
@@ -381,7 +343,7 @@ void ClientWorld::DrawEntitySnapshotShadows(uint32_t entityId, Controller &contr
         // NOTE(dlb): These aren't actually snapshot shadows, they're client-side prediction shadows
         if (entity.id == localPlayerEntityId) {
 #if CL_CLIENT_SIDE_PREDICT
-            Tilemap *map = FindOrLoadMap(entity.map_id);
+            Tilemap *map = FindOrLoadMap(entity.map_name);
             if (map) {
                 uint32_t lastProcessedInputCmd = 0;
                 const data::GhostSnapshot &latestSnapshot = ghost.newest();
@@ -592,7 +554,7 @@ void ClientWorld::DrawDialogs(GameClient &client, Camera2D &camera)
     std::vector<FancyTextTip> tips{};
 
     for (data::Entity &entity : entityDb->entities) {
-        if (!entity.type || entity.despawned_at || entity.map_id != map->id) {
+        if (!entity.type || entity.despawned_at || entity.map_name != map->name) {
             continue;
         }
         assert(entity.id);
@@ -645,7 +607,7 @@ void ClientWorld::Draw(GameClient &client)
     std::priority_queue<EntityDrawCmd> sortedEntityIds{};
 
     for (data::Entity &entity : entityDb->entities) {
-        if (!entity.type || entity.despawned_at || entity.map_id != map->id) {
+        if (!entity.type || entity.despawned_at || entity.map_name != map->name) {
             continue;
         }
         assert(entity.id);

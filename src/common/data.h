@@ -226,7 +226,8 @@ namespace data {
     gen(ENTITY_SPEC_NONE)         \
     gen(ENTITY_SPEC_NPC_TOWNFOLK) \
     gen(ENTITY_SPEC_NPC_CHICKEN)  \
-    gen(ENTITY_SPEC_OBJ_WARP)
+    gen(ENTITY_SPEC_OBJ_WARP)     \
+    gen(ENTITY_SPEC_PRJ_FIREBALL)
 
     enum EntitySpecies : uint8_t {
         ENTITY_SPECIES(ENUM_GEN_VALUE)
@@ -247,6 +248,7 @@ namespace data {
         float         speed_max            {};
         float         drag                 {};
         SpriteId      sprite               {};
+        Direction     direction            {};
     };
 
     struct Entity {
@@ -261,7 +263,7 @@ namespace data {
         double        spawned_at   {};
         double        despawned_at {};
 
-        uint32_t      map_id       {};
+        std::string   map_name     {};
         Vector3       position     {};
 
         Vector2 ScreenPos(void) {
@@ -362,19 +364,19 @@ namespace data {
     };
 
     struct GhostSnapshot {
-        double   server_time {};
+        double      server_time {};
 
         // Entity
-        uint32_t map_id      {};
-        Vector3  position    {};
+        std::string map_name    {};
+        Vector3     position    {};
 
         // Physics
-        float    speed       {};  // max walk speed or something
-        Vector3  velocity    {};
+        float       speed       {};  // max walk speed or something
+        Vector3     velocity    {};
 
         // Life
-        int      hp_max      {};
-        int      hp          {};
+        int         hp_max      {};
+        int         hp          {};
 
         // TODO: Wtf do I do with this shit?
         uint32_t last_processed_input_cmd {};
@@ -473,8 +475,8 @@ namespace data {
     };
 
     struct AiPath {
-        uint32_t pathNodeIndexOffset;
-        uint32_t pathNodeIndexCount;
+        uint32_t pathNodeStart;
+        uint32_t pathNodeCount;
     };
 
     struct TileDef {
@@ -537,7 +539,7 @@ namespace data {
         void SV_SerializeChunk(Msg_S_TileChunk &tileChunk, uint32_t x, uint32_t y);
         void CL_DeserializeChunk(Msg_S_TileChunk &tileChunk);
 
-#if 1
+#if 0
         Err Save(std::string path);
         Err Load(std::string path);
 #endif
@@ -710,7 +712,9 @@ namespace data {
 
                 return sfx_files[sfx_idx];
             } else {
-                TraceLog(LOG_WARNING, "Missing sound: %s", id.c_str());
+                if (!id.empty()) {
+                    TraceLog(LOG_WARNING, "Missing sound: %s", id.c_str());
+                }
                 return sfx_files[0];
             }
         }

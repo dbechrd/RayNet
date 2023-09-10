@@ -34,7 +34,7 @@ namespace data {
         last_processed_input_cmd = msg.last_processed_input_cmd;
 
         // Entity
-        map_id   = msg.map_id;
+        map_name = msg.map_name;
         position = msg.position;
 
         // Life
@@ -85,14 +85,14 @@ namespace data {
         if (inputFile.is_open()) {
             std::string line;
             while (!err && std::getline(inputFile, line)) {
+                if (line[0] == '#') continue;
                 std::istringstream iss(line);
 
                 GfxFile gfx_file{};
                 if (iss
                     >> gfx_file.id
                     >> std::quoted(gfx_file.path)
-                    && gfx_file.id[0] != '#'
-                    ) {
+                ) {
                     gfx_files.push_back(gfx_file);
                 }
             }
@@ -113,6 +113,7 @@ namespace data {
         if (inputFile.is_open()) {
             std::string line;
             while (!err && std::getline(inputFile, line)) {
+                if (line[0] == '#') continue;
                 std::istringstream iss(line);
 
                 GfxFrame gfx_frame{};
@@ -123,7 +124,6 @@ namespace data {
                     >> gfx_frame.y
                     >> gfx_frame.w
                     >> gfx_frame.h
-                    && gfx_frame.id[0] != '#'
                 ) {
                     gfx_frames.push_back(gfx_frame);
                 }
@@ -144,6 +144,7 @@ namespace data {
         if (inputFile.is_open()) {
             std::string line;
             while (!err && std::getline(inputFile, line)) {
+                if (line[0] == '#') continue;
                 std::istringstream iss(line);
 
                 int frame_rate = 0;
@@ -157,8 +158,9 @@ namespace data {
                     >> frame_rate
                     >> frame_count
                     >> frame_delay
-                    && gfx_anim.id[0] != '#'
                 ) {
+                    if (gfx_anim.sound == "-") gfx_anim.sound = "";
+
                     assert(frame_rate > 0 && frame_rate < UINT8_MAX);
                     assert(frame_count > 0 && frame_count < UINT8_MAX);
                     assert(frame_delay >= 0 && frame_delay < UINT8_MAX);
@@ -195,13 +197,13 @@ namespace data {
         if (inputFile.is_open()) {
             std::string line;
             while (!err && std::getline(inputFile, line)) {
+                if (line[0] == '#') continue;
                 std::istringstream iss(line);
 
                 MusFile mus_file{};
                 if (iss
                     >> mus_file.id
                     >> std::quoted(mus_file.path)
-                    && mus_file.id[0] != '#'
                 ) {
                     mus_files.push_back(mus_file);
                 }
@@ -223,6 +225,7 @@ namespace data {
         if (inputFile.is_open()) {
             std::string line;
             while (!err && std::getline(inputFile, line)) {
+                if (line[0] == '#') continue;
                 std::istringstream iss(line);
 
                 SfxFile sfx_file{};
@@ -232,8 +235,7 @@ namespace data {
                     >> sfx_file.variations
                     >> sfx_file.pitch_variance
                     >> sfx_file.max_instances
-                    && sfx_file.id[0] != '#'
-                    ) {
+                ) {
                     if (sfx_file.variations > 1) {
                         const char *file_dir = GetDirectoryPath(sfx_file.path.c_str());
                         const char *file_name = GetFileNameWithoutExt(sfx_file.path.c_str());
@@ -267,18 +269,131 @@ namespace data {
         if (inputFile.is_open()) {
             std::string line;
             while (!err && std::getline(inputFile, line)) {
+                if (line[0] == '#') continue;
                 std::istringstream iss(line);
 
                 Material material{};
                 if (iss
                     >> material.id
                     >> material.footstep_sound
-                    && material.id[0] != '#'
-                    ) {
+                ) {
                     materials.push_back(material);
                 }
             }
 
+            inputFile.close();
+        } else {
+            assert(!"failed to read file");
+            err = RN_BAD_FILE_READ;
+        }
+
+        return err;
+    }
+    Err LoadTilemapIndex(std::string path, std::vector<TileMapData> &tile_maps)
+    {
+        Err err = RN_SUCCESS;
+
+        std::ifstream inputFile(path);
+        if (inputFile.is_open()) {
+            TileMapData tile_map{};
+
+            std::string line;
+            while (!err && std::getline(inputFile, line)) {
+                if (line.empty() || line[0] == '#') continue;
+                std::istringstream iss(line);
+
+                std::string type;
+                iss >> type;
+                if (iss.fail()) { err = RN_BAD_FILE_READ; break; }
+
+                if (type == "map") {
+                    iss >> tile_map.version
+                        >> tile_map.name
+                        >> tile_map.texture;
+                    if (iss.fail()) { err = RN_BAD_FILE_READ; break; }
+                } else if (type == "tile_defs") {
+                    int tile_def_count = 0;
+                    iss >> tile_def_count;
+                    if (iss.fail()) { err = RN_BAD_FILE_READ; break; }
+
+                    tile_map.tileDefs.reserve(tile_def_count);
+                    for (int i = 0; i < tile_def_count; i++) {
+                        std::getline(inputFile, line);
+                        iss = std::istringstream(line);
+
+                        int w = 0;
+                        int h = 0;
+                        int collide = 0;
+                        int auto_tile_mask = 0;
+
+                        TileDef tile_def{};
+                        iss >> tile_def.x
+                            >> tile_def.y
+                            >> w
+                            >> h
+                            >> collide
+                            >> auto_tile_mask;
+                        if (iss.fail()) { err = RN_BAD_FILE_READ; break; }
+
+                        tile_def.w = w;
+                        tile_def.h = h;
+                        tile_def.collide = collide;
+                        tile_def.auto_tile_mask = auto_tile_mask;
+
+                        tile_map.tileDefs.push_back(tile_def);
+                    }
+                } else if (type == "tiles") {
+                    iss >> tile_map.width;
+                    iss >> tile_map.height;
+                    if (iss.fail()) { err = RN_BAD_FILE_READ; break; }
+
+                    tile_map.tiles.reserve(tile_map.width * tile_map.height);
+                    for (int y = 0; y < tile_map.height; y++) {
+                        std::getline(inputFile, line);
+                        iss = std::istringstream(line);
+
+                        for (int x = 0; x < tile_map.width; x++) {
+                            int tile = 0;
+                            iss >> tile;
+                            if (iss.fail()) { err = RN_BAD_FILE_READ; break; }
+
+                            tile_map.tiles.push_back(tile);
+                        }
+                    }
+                } else if (type == "path_nodes") {
+                    int count = 0;
+                    iss >> count;
+                    if (iss.fail()) { err = RN_BAD_FILE_READ; break; }
+
+                    tile_map.pathNodes.reserve(count);
+                    for (int i = 0; i < count; i++) {
+                        std::getline(inputFile, line);
+                        iss = std::istringstream(line);
+
+                        AiPathNode path_node{};
+                        iss >> path_node.pos.x
+                            >> path_node.pos.y
+                            >> path_node.pos.z
+                            >> path_node.waitFor;
+                        if (iss.fail()) { err = RN_BAD_FILE_READ; break; }
+                        tile_map.pathNodes.push_back(path_node);
+                    }
+                } else if (type == "path") {
+                    AiPath path{};
+                    iss >> path.pathNodeStart
+                        >> path.pathNodeCount;
+                    if (iss.fail()) { err = RN_BAD_FILE_READ; break; }
+                    tile_map.paths.push_back(path);
+                } else {
+                    assert(!"unexpected line");
+                    err = RN_BAD_FILE_READ;
+                    break;
+                }
+            }
+
+            if (!err) {
+                tile_maps.push_back(tile_map);
+            }
             inputFile.close();
         } else {
             assert(!"failed to read file");
@@ -368,8 +483,8 @@ namespace data {
             for (const AiPath &path : tilemap.paths) {
                 fprintf(file, "%-10s %u %u\n",
                     "path",
-                    path.pathNodeIndexOffset,
-                    path.pathNodeIndexCount
+                    path.pathNodeStart,
+                    path.pathNodeCount
                 );
             }
         } while (0);
@@ -406,15 +521,15 @@ namespace data {
 #if 1
         Sprite sprites[] = {
             // id                    anims
-            //                        N                        E                         S       W                         NE      SE      SW      NW
-            { SPRITE_CHR_MAGE,     { "none",                  "gfx_anim_chr_mage_e",    "none", "gfx_anim_chr_mage_w",    "none", "none", "none", "none" }},
-            { SPRITE_NPC_LILY,     { "none",                  "gfx_anim_npc_lily_e",    "none", "gfx_anim_npc_lily_w",    "none", "none", "none", "none" }},
-            { SPRITE_NPC_FREYE,    { "none",                  "gfx_anim_npc_freye_e",   "none", "gfx_anim_npc_freye_w",   "none", "none", "none", "none" }},
-            { SPRITE_NPC_NESSA,    { "none",                  "gfx_anim_npc_nessa_e",   "none", "gfx_anim_npc_nessa_w",   "none", "none", "none", "none" }},
-            { SPRITE_NPC_ELANE,    { "none",                  "gfx_anim_npc_elane_e",   "none", "gfx_anim_npc_elane_w",   "none", "none", "none", "none" }},
-            { SPRITE_NPC_CHICKEN,  { "none",                  "gfx_anim_npc_chicken_e", "none", "gfx_anim_npc_chicken_w", "none", "none", "none", "none" }},
-            { SPRITE_OBJ_CAMPFIRE, { "gfx_anim_obj_campfire", "gfx_anim_none",          "none", "none",                   "none", "none", "none", "none" }},
-            { SPRITE_PRJ_FIREBALL, { "gfx_anim_prj_fireball", "gfx_anim_none",          "none", "none",                   "none", "none", "none", "none" }},
+            //                       N                        E                         S       W                         NE      SE      SW      NW
+            { SPRITE_CHR_MAGE,     { ""    ,                  "gfx_anim_chr_mage_e",    ""    , "gfx_anim_chr_mage_w",    ""    , ""    , ""    , ""     }},
+            { SPRITE_NPC_LILY,     { ""    ,                  "gfx_anim_npc_lily_e",    ""    , "gfx_anim_npc_lily_w",    ""    , ""    , ""    , ""     }},
+            { SPRITE_NPC_FREYE,    { ""    ,                  "gfx_anim_npc_freye_e",   ""    , "gfx_anim_npc_freye_w",   ""    , ""    , ""    , ""     }},
+            { SPRITE_NPC_NESSA,    { ""    ,                  "gfx_anim_npc_nessa_e",   ""    , "gfx_anim_npc_nessa_w",   ""    , ""    , ""    , ""     }},
+            { SPRITE_NPC_ELANE,    { ""    ,                  "gfx_anim_npc_elane_e",   ""    , "gfx_anim_npc_elane_w",   ""    , ""    , ""    , ""     }},
+            { SPRITE_NPC_CHICKEN,  { ""    ,                  "gfx_anim_npc_chicken_e", ""    , "gfx_anim_npc_chicken_w", ""    , ""    , ""    , ""     }},
+            { SPRITE_OBJ_CAMPFIRE, { "gfx_anim_obj_campfire", "",                       ""    , ""    ,                   ""    , ""    , ""    , ""     }},
+            { SPRITE_PRJ_FIREBALL, { "gfx_anim_prj_fireball", "",                       ""    , ""    ,                   ""    , ""    , ""    , ""     }},
         };
 
         TileType tile_types[] = {
@@ -529,6 +644,13 @@ namespace data {
             TraceLog(LOG_ERROR, "Failed to load material index.\n");
         }
 
+        std::vector<TileMapData> tile_maps{};
+        err = LoadTilemapIndex("resources/map/overworld_map.txt", tile_maps);
+        if (err) {
+            assert(!err);
+            TraceLog(LOG_ERROR, "Failed to load tile map index.\n");
+        }
+
         Pack packHardcoded{ "pack/pack1.dat" };
         for (auto &i : gfx_files)  packHardcoded.gfx_files .push_back(i);
         for (auto &i : mus_files)  packHardcoded.mus_files .push_back(i);
@@ -538,8 +660,9 @@ namespace data {
         for (auto &i : materials)  packHardcoded.materials .push_back(i);
         for (auto &i : sprites)    packHardcoded.sprites   .push_back(i);
         for (auto &i : tile_types) packHardcoded.tile_types.push_back(i);
+        for (auto &i : tile_maps)  packHardcoded.tile_maps .push_back(i);
 
-#if 1
+#if 0
         Pack packOverworld("pack/overworld_map.dat");
         err = LoadPack(packOverworld);
         assert(!err);
@@ -552,7 +675,7 @@ namespace data {
         packHardcoded.tile_maps.push_back(packOverworld.tile_maps[1]);
 #endif
 
-        SaveTilemap("resources/map/overworld_map.txt", packHardcoded.tile_maps[1]);
+        //SaveTilemap("resources/map/overworld_map.txt", packHardcoded.tile_maps[1]);
 
         // Ensure every array element is initialized and in contiguous order by id
 #define ID_CHECK(type, name, arr)                       \
@@ -770,10 +893,11 @@ namespace data {
         }
 
         PROC(entity.id);
-        PROC(entity.map_id);
         PROC(entity.type);
         PROC(entity.spawned_at);
         //PROC(entity.despawned_at);
+
+        Process(stream, entity.map_name);
         PROC(entity.position.x);
         PROC(entity.position.y);
 
@@ -935,8 +1059,8 @@ namespace data {
         assert(sentinel == Tilemap::SENTINEL);
 
         for (data::AiPath &aiPath : tile_map.paths) {
-            PROC(aiPath.pathNodeIndexOffset);
-            PROC(aiPath.pathNodeIndexCount);
+            PROC(aiPath.pathNodeStart);
+            PROC(aiPath.pathNodeCount);
         }
 
         PROC(sentinel);
@@ -1267,7 +1391,7 @@ namespace data {
         const std::string anim_id = sprite.anims[entity.direction];
         const GfxAnim &anim = packs[0]->FindGraphicAnim(anim_id);
 
-        std::string frame_id = "none";
+        std::string frame_id = "";
         if (!anim.frames.empty()) {
             frame_id = anim.frames[entity.anim_frame];
         }

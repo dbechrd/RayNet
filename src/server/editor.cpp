@@ -152,7 +152,7 @@ void Editor::DrawGroundOverlay_Paths(Camera2D &camera, double now)
             continue;
         }
 
-        for (uint32_t aiPathNodeIndex = 0; aiPathNodeIndex < aiPath->pathNodeIndexCount; aiPathNodeIndex++) {
+        for (uint32_t aiPathNodeIndex = aiPath->pathNodeStart; aiPathNodeIndex < aiPath->pathNodeStart + aiPath->pathNodeCount; aiPathNodeIndex++) {
             uint32_t aiPathNodeNextIndex = map.GetNextPathNodeIndex(aiPathId, aiPathNodeIndex);
             data::AiPathNode *aiPathNode = map.GetPathNode(aiPathId, aiPathNodeIndex);
             data::AiPathNode *aiPathNodeNext = map.GetPathNode(aiPathId, aiPathNodeNextIndex);
@@ -174,7 +174,7 @@ void Editor::DrawGroundOverlay_Paths(Camera2D &camera, double now)
             continue;
         }
 
-        for (uint32_t aiPathNodeIndex = 0; aiPathNodeIndex < aiPath->pathNodeIndexCount; aiPathNodeIndex++) {
+        for (uint32_t aiPathNodeIndex = aiPath->pathNodeStart; aiPathNodeIndex < aiPath->pathNodeStart + aiPath->pathNodeCount; aiPathNodeIndex++) {
             data::AiPathNode *aiPathNode = map.GetPathNode(aiPathId, aiPathNodeIndex);
             assert(aiPathNode);
 
@@ -260,14 +260,14 @@ void Editor::DrawEntityOverlays(Camera2D &camera, double now)
 
     data::Entity *selectedEntity = entityDb->FindEntity(state.entities.selectedId);
     auto &map = data::packs[0]->FindTileMap(map_name);
-    if (selectedEntity && selectedEntity->map_id == map.id) {
+    if (selectedEntity && selectedEntity->map_name == map.name) {
         DrawTextEx(fntSmall, TextFormat("[selected in editor]\n%u", selectedEntity->id),
             selectedEntity->ScreenPos(), fntSmall.baseSize / camera.zoom, 1 / camera.zoom, WHITE);
     }
 
     if (state.showEntityIds) {
         for (data::Entity &entity : entityDb->entities) {
-            if (entity.map_id == map.id && entity.id != state.entities.selectedId) {
+            if (entity.map_name == map.name && entity.id != state.entities.selectedId) {
                 entityDb->DrawEntityIds(entity.id, camera);
             }
         }
@@ -300,7 +300,7 @@ void Editor::DrawEntityOverlay_Collision(Camera2D &camera, double now)
 {
     auto &map = data::packs[0]->FindTileMap(map_name);
     for (data::Entity &entity : entityDb->entities) {
-        if (entity.map_id != map.id) {
+        if (entity.map_name != map.name) {
             continue;
         }
         assert(entity.id && entity.type);
@@ -500,7 +500,8 @@ UIState Editor::DrawUI_ActionBar(Vector2 position, GameServer &server, double no
     UIState saveButton = uiActionBar.Button("Save");
     if (saveButton.released) {
         //map.SaveKV(map.filename + ".txt");
-        Err err = map.Save(map.name);
+        assert(!"not implemented with new map format");
+        Err err = RN_BAD_FILE_WRITE; // map.Save(map.name);
         if (err) {
             std::string filename = map.name;
             std::thread errorThread([filename, err]{
@@ -526,7 +527,8 @@ UIState Editor::DrawUI_ActionBar(Vector2 position, GameServer &server, double no
         saveAsThread.detach();
     }
     if (saveAsRequest.size()) {
-        Err err = map.Save(saveAsRequest);
+        assert(!"not implemented with new map format");
+        Err err = RN_BAD_FILE_WRITE; // map.Save(saveAsRequest);
         if (err) {
             std::thread errorThread([err]{
                 const char *msg = TextFormat("Failed to save file %s. %s\n", saveAsRequest.c_str(), ErrStr(err));
@@ -539,7 +541,8 @@ UIState Editor::DrawUI_ActionBar(Vector2 position, GameServer &server, double no
 
     UIState reloadButton = uiActionBar.Button("Reload");
     if (reloadButton.released) {
-        Err err = map.Load(map.name);
+        assert(!"not implemented with new map format");
+        Err err = RN_BAD_FILE_READ; // map.Load(map.name);
         if (err) {
             std::string filename = map.name;
             std::thread errorThread([filename, err]{
@@ -1208,7 +1211,7 @@ void Editor::DrawUI_EntityActions(UI &uiActionBar, double now)
     auto &map = data::packs[0]->FindTileMap(map_name);
     if (uiActionBar.Button("Despawn all", ColorBrightness(MAROON, -0.3f)).pressed) {
         for (const data::Entity &entity : entityDb->entities) {
-            if (entity.type == data::ENTITY_PLAYER || entity.map_id != map.id) {
+            if (entity.type == data::ENTITY_PLAYER || entity.map_name != map.name) {
                 continue;
             }
             assert(entity.id && entity.type);
@@ -1235,7 +1238,7 @@ void Editor::DrawUI_EntityActions(UI &uiActionBar, double now)
 
     for (uint32_t i = 0; i < SV_MAX_ENTITIES; i++) {
         data::Entity &entity = entityDb->entities[i];
-        if (!entity.id || entity.map_id != map.id) {
+        if (!entity.id || entity.map_name != map.name) {
             continue;
         }
 

@@ -7,7 +7,7 @@
 
 void Tilemap::SV_SerializeChunk(Msg_S_TileChunk &tileChunk, uint32_t x, uint32_t y)
 {
-    tileChunk.map_id = id;
+    strncpy(tileChunk.map_name, name.c_str(), SV_MAX_TILE_MAP_NAME_LEN);
     tileChunk.x = x;
     tileChunk.y = y;
     for (uint32_t ty = y; ty < SV_TILE_CHUNK_WIDTH; ty++) {
@@ -18,18 +18,18 @@ void Tilemap::SV_SerializeChunk(Msg_S_TileChunk &tileChunk, uint32_t x, uint32_t
 }
 void Tilemap::CL_DeserializeChunk(Msg_S_TileChunk &tileChunk)
 {
-    if (id = tileChunk.map_id) {
+    if (name == std::string(tileChunk.map_name)) {
         for (uint32_t ty = tileChunk.y; ty < SV_TILE_CHUNK_WIDTH; ty++) {
             for (uint32_t tx = tileChunk.x; tx < SV_TILE_CHUNK_WIDTH; tx++) {
                 Set(tileChunk.x + tx, tileChunk.y + ty, tileChunk.tileDefs[ty * SV_TILE_CHUNK_WIDTH + tx], 0);
             }
         }
     } else {
-        printf("[tilemap] Failed to deserialize chunk with mapId %u into map with id %u\n", tileChunk.map_id, id);
+        printf("[tilemap] Failed to deserialize chunk with mapId %s into map with id %s\n", tileChunk.map_name, name.c_str());
     }
 }
 
-#if 1
+#if 0
 Err Tilemap::Save(std::string path)
 {
     Err err = RN_SUCCESS;
@@ -433,17 +433,19 @@ data::AiPath *Tilemap::GetPath(uint32_t pathId) {
 }
 uint32_t Tilemap::GetNextPathNodeIndex(uint32_t pathId, uint32_t pathNodeIndex) {
     data::AiPath *path = GetPath(pathId);
-    if (path && pathNodeIndex < path->pathNodeIndexCount) {
-        uint32_t nextPathNodeIndex = (pathNodeIndex + 1) % path->pathNodeIndexCount;
+    if (path) {
+        uint32_t nextPathNodeIndex = pathNodeIndex + 1;
+        if (nextPathNodeIndex >= path->pathNodeStart + path->pathNodeCount) {
+            nextPathNodeIndex = path->pathNodeStart;
+        }
         return nextPathNodeIndex;
     }
     return 0;
 }
 data::AiPathNode *Tilemap::GetPathNode(uint32_t pathId, uint32_t pathNodeIndex) {
     data::AiPath *path = GetPath(pathId);
-    if (path && pathNodeIndex < path->pathNodeIndexCount) {
-        uint32_t pathNodeId = pathNodeIndices[(size_t)path->pathNodeIndexOffset + pathNodeIndex];
-        return &pathNodes[pathNodeId];
+    if (path) {
+        return &pathNodes[pathNodeIndex];
     }
     return 0;
 }

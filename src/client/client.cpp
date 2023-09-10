@@ -487,7 +487,7 @@ int main(int argc, char *argv[])
                         Tilemap *map = client->world->LocalPlayerMap();
                         if (map && map->WorldToTileIndex(cursorWorldPos.x, cursorWorldPos.y, coord)) {
                             // TOOD: Send mapId too then validate server-side
-                            client->SendTileInteract(coord.x, coord.y);
+                            client->SendTileInteract(map->name, coord.x, coord.y);
                         }
                     }
                 }

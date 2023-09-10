@@ -24,16 +24,12 @@ struct ClientWorld {
     uint32_t localPlayerEntityId{};
     uint32_t hoveredEntityId{};
 
-    std::vector<Tilemap *> maps{};
-    std::unordered_map<uint32_t, size_t> mapsById{};     // maps by their map id
-
     std::string musBackgroundMusic{};
 
-    ~ClientWorld(void);
     data::Entity *LocalPlayer(void);
     Tilemap *LocalPlayerMap(void);
 
-    Tilemap *FindOrLoadMap(uint32_t map_id);
+    Tilemap *FindOrLoadMap(std::string map_name);
 
     bool CopyEntityData(uint32_t entityId, data::EntityData &data);
 

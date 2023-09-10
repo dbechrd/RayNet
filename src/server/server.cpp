@@ -262,7 +262,7 @@ Err Play(GameServer &server)
                 // NOTE(dlb): We could build an array of { entityIndex, position.y } and sort it
                 // each frame, then render the entities in that order.
                 for (data::Entity &entity : entityDb->entities) {
-                    if (entity.map_id == editor_map.id) {
+                    if (entity.map_name == editor_map.name) {
                         entityDb->DrawEntity(entity.id);
                     }
                 }
@@ -370,7 +370,10 @@ int main(int argc, char *argv[])
 
         //--------------------
         // Load necessary maps
-        if (!server->FindOrLoadMap(LEVEL_001)) break;
+        if (!server->FindOrLoadMap(LEVEL_001)) {
+            err = RN_BAD_FILE_READ;
+            break;
+        }
         //if (!server->FindOrLoadMap(LEVEL_002)) break;
 
         //--------------------
