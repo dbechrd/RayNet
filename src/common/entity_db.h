@@ -3,14 +3,11 @@
 #include "data.h"
 
 struct EntityDB {
-    uint32_t entity_freelist{};
     std::unordered_map<uint32_t, size_t> entityIndexById{};
 
     // TODO: Rename these so they don't collide with local variables all the time
     std::vector<data::Entity>      entities {SV_MAX_ENTITIES};
     std::vector<data::AspectGhost> ghosts   {SV_MAX_ENTITIES};
-
-    EntityDB(void);
 
     size_t FindEntityIndex(uint32_t entityId);
     data::Entity *FindEntity(uint32_t entityId, bool evenIfDespawned = false);

@@ -3,15 +3,6 @@
 
 EntityDB *entityDb{};
 
-EntityDB::EntityDB(void)
-{
-    entity_freelist = 1;  // 0 is reserved for null entity
-    for (uint32_t i = 1; i < entities.size() - 1; i++) {
-        data::Entity &entity = entities[i];
-        entities[i].freelist_next = i + 1;
-    }
-}
-
 size_t EntityDB::FindEntityIndex(uint32_t entityId)
 {
     if (entityId) {
@@ -52,26 +43,28 @@ data::Entity *EntityDB::SpawnEntity(uint32_t entityId, data::EntityType type, do
 
     data::Entity *entity = FindEntity(entityId);
     if (entity) {
-        assert(0);
         printf("[entity_db] Failed to spawn entity id %u of type %s. An entity with that id already exists.\n", entityId, EntityTypeStr(type));
+        assert(!"entity already exists.. huh?");
         return 0;
     }
 
-    if (entity_freelist) {
-        size_t entityIndex = entity_freelist;
-        data::Entity &e = entities[entityIndex];
-        entity_freelist = e.freelist_next;
-
-        e.freelist_next = 0;
-        e.id = entityId;
-        e.type = type;
-        e.spawned_at = now;
-        entityIndexById[entityId] = entityIndex;
-        return &e;
-    } else {
-        printf("[entity_db] Failed to spawn entity id %u of type %s. Freelist is empty.\n", entityId, EntityTypeStr(type));
-        return 0;
+    if (entityIndexById.size() < SV_MAX_ENTITIES) {
+        for (int i = 1; i < entities.size(); i++) {
+            if (!entities[i].id) {
+                entity = &entities[i];
+                entity->id = entityId;
+                entity->type = type;
+                entity->spawned_at = now;
+                entityIndexById[entityId] = i;
+                break;
+            }
+        }
     }
+
+    if (!entity) {
+        printf("[entity_db] Failed to spawn entity id %u of type %s. Max entities.\n", entityId, EntityTypeStr(type));
+    }
+    return entity;
 }
 bool EntityDB::DespawnEntity(uint32_t entityId, double now)
 {
@@ -102,10 +95,6 @@ void EntityDB::DestroyEntity(uint32_t entityId)
 
         // Remove from map
         entityIndexById.erase(entityId);
-
-        // Update freelist
-        entity.freelist_next = entity_freelist;
-        entity_freelist = entityIndex;
     } else {
         assert(0);
         printf("error: entityId %u out of range\n", entityId);

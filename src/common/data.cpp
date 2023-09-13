@@ -789,9 +789,9 @@ namespace data {
     }
     void Process(PackStream &stream, GfxFile &gfx_file, int index)
     {
-        Process(stream, gfx_file.id);
-        Process(stream, gfx_file.path);
-        Process(stream, gfx_file.data_buffer);
+        PROC(gfx_file.id);
+        PROC(gfx_file.path);
+        PROC(gfx_file.data_buffer);
         if (stream.mode == PACK_MODE_READ && !gfx_file.data_buffer.length && !gfx_file.path.empty()) {
             ReadFileIntoDataBuffer(gfx_file.path.c_str(), gfx_file.data_buffer);
         }
@@ -802,12 +802,12 @@ namespace data {
     }
     void Process(PackStream &stream, MusFile &mus_file, int index)
     {
-        Process(stream, mus_file.id);
-        Process(stream, mus_file.path);
+        PROC(mus_file.id);
+        PROC(mus_file.path);
 
         // NOTE(dlb): Music is streaming, don't read whole file into memory
         //if (stream.pack->version >= 2) {
-        //    Process(stream, mus_file.data_buffer);
+        //    PROC(mus_file.data_buffer);
         //}
         //if (stream.mode == PACK_MODE_READ && !mus_file.data_buffer.length && !mus_file.path.empty()) {
         //    ReadFileIntoDataBuffer(mus_file.path.c_str(), mus_file.data_buffer);
@@ -819,9 +819,9 @@ namespace data {
     }
     void Process(PackStream &stream, SfxFile &sfx_file, int index)
     {
-        Process(stream, sfx_file.id);
-        Process(stream, sfx_file.path);
-        Process(stream, sfx_file.data_buffer);
+        PROC(sfx_file.id);
+        PROC(sfx_file.path);
+        PROC(sfx_file.data_buffer);
         PROC(sfx_file.variations);
         PROC(sfx_file.pitch_variance);
         PROC(sfx_file.max_instances);
@@ -837,8 +837,8 @@ namespace data {
     }
     void Process(PackStream &stream, GfxFrame &gfx_frame, int index)
     {
-        Process(stream, gfx_frame.id);
-        Process(stream, gfx_frame.gfx);
+        PROC(gfx_frame.id);
+        PROC(gfx_frame.gfx);
         PROC(gfx_frame.x);
         PROC(gfx_frame.y);
         PROC(gfx_frame.w);
@@ -851,7 +851,7 @@ namespace data {
     void Process(PackStream &stream, GfxAnim &gfx_anim, int index)
     {
         PROC(gfx_anim.id);
-        Process(stream, gfx_anim.sound);
+        PROC(gfx_anim.sound);
         PROC(gfx_anim.frame_rate);
         PROC(gfx_anim.frame_count);
         PROC(gfx_anim.frame_delay);
@@ -867,7 +867,7 @@ namespace data {
     void Process(PackStream &stream, Material &material, int index)
     {
         PROC(material.id);
-        Process(stream, material.footstep_sound);
+        PROC(material.footstep_sound);
     }
     void Process(PackStream &stream, Sprite &sprite, int index) {
         PROC(sprite.id);
@@ -892,14 +892,17 @@ namespace data {
             return;
         }
 
+        //// Entity ////
         PROC(entity.id);
         PROC(entity.type);
+        PROC(entity.spec);
+        PROC(entity.name);
+        PROC(entity.caused_by);
         PROC(entity.spawned_at);
         //PROC(entity.despawned_at);
 
-        Process(stream, entity.map_name);
-        PROC(entity.position.x);
-        PROC(entity.position.y);
+        PROC(entity.map_name);
+        PROC(entity.position);
 
         PROC(entity.radius);
         //PROC(entity.colliding);
@@ -908,7 +911,7 @@ namespace data {
         //PROC(entity.last_attacked_at);
         //PROC(entity.attack_cooldown);
 
-        Process(stream, entity.dialog_root_key);
+        PROC(entity.dialog_root_key);
         //PROC(entity.dialog_spawned_at);
         //PROC(entity.dialog_id);
         //PROC(entity.dialog_title);
@@ -944,9 +947,9 @@ namespace data {
         PROC(entity.warp_dest_pos.x);
         PROC(entity.warp_dest_pos.y);
 
-        Process(stream, entity.warp_dest_map);
-        Process(stream, entity.warp_template_map);
-        Process(stream, entity.warp_template_tileset);
+        PROC(entity.warp_dest_map);
+        PROC(entity.warp_template_map);
+        PROC(entity.warp_template_tileset);
 
         //---------------------------------------
         //Vector2 TL{ 1632, 404 };
@@ -978,8 +981,8 @@ namespace data {
         }
 
         PROC(tile_map.version);
-        Process(stream, tile_map.name);
-        Process(stream, tile_map.texture);
+        PROC(tile_map.name);
+        PROC(tile_map.texture);
         PROC(tile_map.width);
         PROC(tile_map.height);
 

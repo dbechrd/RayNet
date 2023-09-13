@@ -271,9 +271,6 @@ namespace data {
             return screenPos;
         }
 
-        // TODO: Separate this out into its own array?
-        uint32_t freelist_next {};
-
         //// Audio ////
         std::string ambient_fx           {};  // some sound they play occasionally
         double      ambient_fx_delay_min {};

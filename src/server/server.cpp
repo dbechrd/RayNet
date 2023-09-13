@@ -10,7 +10,7 @@ void RN_TraceLogCallback(int logLevel, const char *text, va_list args)
     //return;
 
     const char *outofbounds = "Requested image pixel";
-    if (!strncmp(text, "Requested image pixel", strlen(outofbounds))) {
+    if (!strncmp(text, outofbounds, strlen(outofbounds))) {
         logLevel = LOG_FATAL;
     }
 
