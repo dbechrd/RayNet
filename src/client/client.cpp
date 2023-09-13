@@ -65,8 +65,8 @@ static double connectingDotIdxLastUpdatedAt = 0;
 
 void draw_menu_connecting(GameClient &client)
 {
-    if (!campfire.sprite) {
-        campfire.sprite = data::SPRITE_OBJ_CAMPFIRE;
+    if (campfire.sprite.empty()) {
+        campfire.sprite = "sprite_obj_campfire";
     }
 
     data::UpdateSprite(campfire, client.frameDt, !connectingDotIdxLastUpdatedAt);

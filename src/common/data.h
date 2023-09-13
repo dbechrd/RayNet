@@ -175,21 +175,6 @@ namespace data {
         std::string footstep_sound {};
     };
 
-#define SPRITE_IDS(gen)        \
-    gen(SPRITE_NONE)           \
-    gen(SPRITE_CHR_MAGE)       \
-    gen(SPRITE_NPC_LILY)       \
-    gen(SPRITE_NPC_FREYE)      \
-    gen(SPRITE_NPC_NESSA)      \
-    gen(SPRITE_NPC_ELANE)      \
-    gen(SPRITE_NPC_CHICKEN)    \
-    gen(SPRITE_OBJ_CAMPFIRE)   \
-    gen(SPRITE_PRJ_FIREBALL)
-
-    enum SpriteId : uint16_t {
-        SPRITE_IDS(ENUM_GEN_VALUE)
-    };
-
     //apparition
     //phantom
     //shade
@@ -204,7 +189,7 @@ namespace data {
     //wraith
     struct Sprite {
         static const DataType dtype = DAT_TYP_SPRITE;
-        SpriteId    id       {};
+        std::string id       {};
         std::string anims[8] {};  // for each direction
     };
 
@@ -247,7 +232,7 @@ namespace data {
         float         speed_min            {};
         float         speed_max            {};
         float         drag                 {};
-        SpriteId      sprite               {};
+        std::string   sprite               {};
         Direction     direction            {};
     };
 
@@ -344,10 +329,10 @@ namespace data {
         }
 
         //// Sprite ////
-        SpriteId  sprite     {};  // sprite resource
-        Direction direction  {};  // current facing direction
-        uint8_t   anim_frame {};  // current frame index
-        double    anim_accum {};  // time since last update
+        std::string sprite     {};  // sprite resource
+        Direction   direction  {};  // current facing direction
+        uint8_t     anim_frame {};  // current frame index
+        double      anim_accum {};  // time since last update
 
         //// Warp ////
         Rectangle warp_collider {};
@@ -633,6 +618,7 @@ namespace data {
         std::unordered_map<std::string, size_t> gfx_anim_by_id{};
         std::unordered_map<std::string, size_t> mus_file_by_id{};
         std::unordered_map<std::string, std::vector<size_t>> sfx_file_by_id{};  // vector holds variants
+        std::unordered_map<std::string, size_t> sprite_by_id{};
         std::unordered_map<std::string, size_t> tile_map_by_name{};
 
         size_t next_map_id = 1;
@@ -713,6 +699,16 @@ namespace data {
                     TraceLog(LOG_WARNING, "Missing sound: %s", id.c_str());
                 }
                 return sfx_files[0];
+            }
+        }
+
+        Sprite &FindSprite(std::string id) {
+            const auto &entry = sprite_by_id.find(id);
+            if (entry != sprite_by_id.end()) {
+                return sprites[entry->second];
+            } else {
+                TraceLog(LOG_WARNING, "Missing sprite: %s", id.c_str());
+                return sprites[0];
             }
         }
 

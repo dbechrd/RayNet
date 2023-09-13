@@ -46,6 +46,10 @@ typedef uint8_t Tile;
 #define PATH_LEN_MAX 1024
 #define LEVEL_001  "map_overworld"
 
+// Developer macros
+
+#define DEV_BUILD_PACK_FILE 1
+
 // Helper macros
 
 #define LERP(a, b, alpha) ((a) + ((b) - (a)) * (alpha))
@@ -90,6 +94,7 @@ typedef uint8_t Tile;
 #define SV_MAX_ENTITY_SAY_MSG_LEN            1023
 #define SV_MAX_ENTITY_NAME_LEN               63 // "Goranza The Arch-Nemesis Defiler of Doom" was the longest name I could think of when I wrote this
 #define SV_MAX_TILE_MAP_NAME_LEN             63
+#define SV_MAX_SPRITE_NAME_LEN               63
 // how long this entity stays interested in a conversation before returning to pathfinding
 #define SV_ENTITY_DIALOG_INTERESTED_DURATION 30
 #define SV_TILE_CHUNK_WIDTH                  64

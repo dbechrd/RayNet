@@ -1,0 +1,10 @@
+# id                 anims
+#                    N                      E                       S  W                       NE   SE   SW   NW
+sprite_chr_mage      -                      gfx_anim_chr_mage_e     -  gfx_anim_chr_mage_w     -    -    -    -
+sprite_npc_lily      -                      gfx_anim_npc_lily_e     -  gfx_anim_npc_lily_w     -    -    -    -
+sprite_npc_freye     -                      gfx_anim_npc_freye_e    -  gfx_anim_npc_freye_w    -    -    -    -
+sprite_npc_nessa     -                      gfx_anim_npc_nessa_e    -  gfx_anim_npc_nessa_w    -    -    -    -
+sprite_npc_elane     -                      gfx_anim_npc_elane_e    -  gfx_anim_npc_elane_w    -    -    -    -
+sprite_npc_chicken   -                      gfx_anim_npc_chicken_e  -  gfx_anim_npc_chicken_w  -    -    -    -
+sprite_obj_campfire  gfx_anim_obj_campfire  -                       -  -                       -    -    -    -
+sprite_prj_fireball  gfx_anim_prj_fireball  -                       -  -                       -    -    -    -

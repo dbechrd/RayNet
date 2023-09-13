@@ -22,7 +22,7 @@ struct Msg_S_EntitySpawn : public yojimbo::Message
     float               speed     {};
     Vector3             velocity  {};
     // Sprite
-    data::SpriteId      sprite    {};
+    char                sprite    [SV_MAX_SPRITE_NAME_LEN + 1]{};
 
     template <typename Stream> bool Serialize(Stream &stream)
     {
@@ -55,9 +55,7 @@ struct Msg_S_EntitySpawn : public yojimbo::Message
         serialize_float(stream, velocity.z);
 
         // Sprite
-        uint32_t spriteId = sprite;
-        serialize_uint32(stream, spriteId);
-        sprite = (data::SpriteId)spriteId;
+        serialize_string(stream, sprite, sizeof(sprite));
 
         return true;
     }

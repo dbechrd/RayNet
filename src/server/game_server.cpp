@@ -46,7 +46,7 @@ void GameServer::OnClientJoin(int clientIdx)
         player->hp = player->hp_max;
         player->speed = 3000;
         player->drag = 0.9f;
-        player->sprite = data::SPRITE_CHR_MAGE;
+        player->sprite = "sprite_chr_mage";
         //projectile->direction = data::DIR_E;  // what's it do if it defaults to North?
 
         TileChunkRecord mainMap{};
@@ -253,7 +253,7 @@ void GameServer::SerializeSpawn(uint32_t entityId, Msg_S_EntitySpawn &entitySpaw
     entitySpawn.velocity  = entity->velocity;
 
     // Sprite
-    entitySpawn.sprite    = entity->sprite;
+    strncpy(entitySpawn.sprite, entity->sprite.c_str(), SV_MAX_SPRITE_NAME_LEN);
 }
 void GameServer::SendEntitySpawn(int clientIdx, uint32_t entityId)
 {
@@ -545,7 +545,7 @@ data::Entity *GameServer::SpawnProjectile(std::string map_name, Vector3 position
     projectile->velocity = velocity;
     projectile->drag = 0.02f;
 
-    projectile->sprite = data::SPRITE_PRJ_FIREBALL;
+    projectile->sprite = "sprite_prj_fireball";
     //projectile->direction = data::DIR_E;
 
     BroadcastEntitySpawn(projectile->id);
@@ -652,7 +652,7 @@ void GameServer::TickSpawnTownNPCs(std::string map_name)
         lily.speed_min = 300;
         lily.speed_max = 600;
         lily.drag = 1.0f;
-        lily.sprite = data::SPRITE_NPC_LILY;
+        lily.sprite = "sprite_npc_lily";
         lily.direction = data::DIR_E;
 
         freye.type = data::ENTITY_NPC;
@@ -665,7 +665,7 @@ void GameServer::TickSpawnTownNPCs(std::string map_name)
         freye.speed_min = 300;
         freye.speed_max = 600;
         freye.drag = 1.0f;
-        freye.sprite = data::SPRITE_NPC_FREYE;
+        freye.sprite = "sprite_npc_freye";
         freye.direction = data::DIR_E;
 
         nessa.type = data::ENTITY_NPC;
@@ -678,7 +678,7 @@ void GameServer::TickSpawnTownNPCs(std::string map_name)
         nessa.speed_min = 300;
         nessa.speed_max = 600;
         nessa.drag = 1.0f;
-        nessa.sprite = data::SPRITE_NPC_NESSA;
+        nessa.sprite = "sprite_npc_nessa";
         nessa.direction = data::DIR_E;
 
         elane.type = data::ENTITY_NPC;
@@ -691,7 +691,7 @@ void GameServer::TickSpawnTownNPCs(std::string map_name)
         elane.speed_min = 300;
         elane.speed_max = 600;
         elane.drag = 1.0f;
-        elane.sprite = data::SPRITE_NPC_ELANE;
+        elane.sprite = "sprite_npc_elane";
         elane.direction = data::DIR_E;
 
         chicken.type = data::ENTITY_NPC;
@@ -706,7 +706,7 @@ void GameServer::TickSpawnTownNPCs(std::string map_name)
         chicken.speed_min = 50;
         chicken.speed_max = 150;
         chicken.drag = 1.0f;
-        chicken.sprite = data::SPRITE_NPC_CHICKEN;
+        chicken.sprite = "sprite_npc_chicken";
     }
 
     assert(ARRAY_SIZE(townfolk) == ARRAY_SIZE(townfolk_ids));
@@ -772,7 +772,7 @@ void GameServer::TickSpawnCaveNPCs(std::string map_name)
             entity->speed = GetRandomValue(300, 600);
             entity->drag = 8.0f;
 
-            entity->sprite = data::SPRITE_NPC_LILY;
+            entity->sprite = "sprite_npc_lily";
             //entity->direction = data::DIR_E;
 
             BroadcastEntitySpawn(entity->id);

@@ -15,7 +15,6 @@ namespace data {
     }
 
     ENUM_STR_GENERATOR(DataType,   DATA_TYPES   , ENUM_GEN_CASE_RETURN_DESC);
-    ENUM_STR_GENERATOR(SpriteId,   SPRITE_IDS,    ENUM_GEN_CASE_RETURN_STR);
     ENUM_STR_GENERATOR(TileTypeId, TILE_TYPE_IDS, ENUM_GEN_CASE_RETURN_STR);
     ENUM_STR_GENERATOR(EntityType, ENTITY_TYPES , ENUM_GEN_CASE_RETURN_STR);
 #undef ENUM_STR_GENERATOR
@@ -289,6 +288,44 @@ namespace data {
 
         return err;
     }
+    Err LoadSpriteIndex(std::string path, std::vector<Sprite> &sprites)
+    {
+        Err err = RN_SUCCESS;
+
+        std::ifstream inputFile(path);
+        if (inputFile.is_open()) {
+            std::string line;
+            while (!err && std::getline(inputFile, line)) {
+                if (line[0] == '#') continue;
+                std::istringstream iss(line);
+
+                Sprite sprite{};
+                if (iss
+                    >> sprite.id
+                    >> sprite.anims[DIR_N]
+                    >> sprite.anims[DIR_E]
+                    >> sprite.anims[DIR_S]
+                    >> sprite.anims[DIR_W]
+                    >> sprite.anims[DIR_NE]
+                    >> sprite.anims[DIR_SE]
+                    >> sprite.anims[DIR_SW]
+                    >> sprite.anims[DIR_NW]
+                ) {
+                    for (int i = 0; i < 8; i++) {
+                        if (sprite.anims[i] == "-") sprite.anims[i] = "";
+                    }
+                    sprites.push_back(sprite);
+                }
+            }
+
+            inputFile.close();
+        } else {
+            assert(!"failed to read file");
+            err = RN_BAD_FILE_READ;
+        }
+
+        return err;
+    }
     Err LoadTilemapIndex(std::string path, std::vector<TileMapData> &tile_maps)
     {
         Err err = RN_SUCCESS;
@@ -518,20 +555,7 @@ namespace data {
             printf("[data] WARN: Failed to generate placeholder image\n");
         }
 
-#if 1
-        Sprite sprites[] = {
-            // id                    anims
-            //                       N                        E                         S       W                         NE      SE      SW      NW
-            { SPRITE_CHR_MAGE,     { ""    ,                  "gfx_anim_chr_mage_e",    ""    , "gfx_anim_chr_mage_w",    ""    , ""    , ""    , ""     }},
-            { SPRITE_NPC_LILY,     { ""    ,                  "gfx_anim_npc_lily_e",    ""    , "gfx_anim_npc_lily_w",    ""    , ""    , ""    , ""     }},
-            { SPRITE_NPC_FREYE,    { ""    ,                  "gfx_anim_npc_freye_e",   ""    , "gfx_anim_npc_freye_w",   ""    , ""    , ""    , ""     }},
-            { SPRITE_NPC_NESSA,    { ""    ,                  "gfx_anim_npc_nessa_e",   ""    , "gfx_anim_npc_nessa_w",   ""    , ""    , ""    , ""     }},
-            { SPRITE_NPC_ELANE,    { ""    ,                  "gfx_anim_npc_elane_e",   ""    , "gfx_anim_npc_elane_w",   ""    , ""    , ""    , ""     }},
-            { SPRITE_NPC_CHICKEN,  { ""    ,                  "gfx_anim_npc_chicken_e", ""    , "gfx_anim_npc_chicken_w", ""    , ""    , ""    , ""     }},
-            { SPRITE_OBJ_CAMPFIRE, { "gfx_anim_obj_campfire", "",                       ""    , ""    ,                   ""    , ""    , ""    , ""     }},
-            { SPRITE_PRJ_FIREBALL, { "gfx_anim_prj_fireball", "",                       ""    , ""    ,                   ""    , ""    , ""    , ""     }},
-        };
-
+#if DEV_BUILD_PACK_FILE
         TileType tile_types[] = {
             // id               gfx/anim                  material     auto_mask   flags
             { TILE_GRASS,      "gfx_anim_til_grass",      "mat_grass", 0b00000000, TILE_FLAG_WALK },
@@ -644,6 +668,13 @@ namespace data {
             TraceLog(LOG_ERROR, "Failed to load material index.\n");
         }
 
+        std::vector<Sprite> sprites{};
+        err = LoadSpriteIndex("resources/sprites.txt", sprites);
+        if (err) {
+            assert(!err);
+            TraceLog(LOG_ERROR, "Failed to load sprite index.\n");
+        }
+
         std::vector<TileMapData> tile_maps{};
         err = LoadTilemapIndex("resources/map/overworld_map.txt", tile_maps);
         if (err) {
@@ -662,19 +693,6 @@ namespace data {
         for (auto &i : tile_types) packHardcoded.tile_types.push_back(i);
         for (auto &i : tile_maps)  packHardcoded.tile_maps .push_back(i);
 
-#if 0
-        Pack packOverworld("pack/overworld_map.dat");
-        err = LoadPack(packOverworld);
-        assert(!err);
-        // HACK: Re-scale path nodes for old maps
-        //for (auto &pathNode : packOverworld.tile_maps[1].pathNodes) {
-        //    pathNode.pos = Vector3Scale(pathNode.pos, 2);
-        //}
-        //err = SavePack(packOverworld);
-        //assert(!err);
-        packHardcoded.tile_maps.push_back(packOverworld.tile_maps[1]);
-#endif
-
         //SaveTilemap("resources/map/overworld_map.txt", packHardcoded.tile_maps[1]);
 
         // Ensure every array element is initialized and in contiguous order by id
@@ -686,7 +704,6 @@ namespace data {
                 }                                       \
             }
 
-        ID_CHECK(Sprite   &, sprite,    packHardcoded.sprites);
         ID_CHECK(TileType &, tile_type, packHardcoded.tile_types);
 #undef ID_CHECK
 
@@ -710,7 +727,7 @@ namespace data {
 
 #if 0
         DatBuffer compressMe{};
-        uint32_t bytesRead = 0;
+        int bytesRead = 0;
         compressMe.bytes = LoadFileData("pack/pack1.dat", &bytesRead);
         compressMe.length = bytesRead;
 
@@ -776,6 +793,13 @@ namespace data {
         PROC(vec.y);
         PROC(vec.z);
     }
+    void Process(PackStream &stream, Rectangle &rec)
+    {
+        PROC(rec.x);
+        PROC(rec.y);
+        PROC(rec.width);
+        PROC(rec.height);
+    }
     void Process(PackStream &stream, DatBuffer &buffer)
     {
         PROC(buffer.length);
@@ -804,14 +828,11 @@ namespace data {
     {
         PROC(mus_file.id);
         PROC(mus_file.path);
-
-        // NOTE(dlb): Music is streaming, don't read whole file into memory
-        //if (stream.pack->version >= 2) {
-        //    PROC(mus_file.data_buffer);
-        //}
-        //if (stream.mode == PACK_MODE_READ && !mus_file.data_buffer.length && !mus_file.path.empty()) {
-        //    ReadFileIntoDataBuffer(mus_file.path.c_str(), mus_file.data_buffer);
-        //}
+        PROC(mus_file.data_buffer);
+        if (stream.mode == PACK_MODE_READ && !mus_file.data_buffer.length && !mus_file.path.empty()) {
+            // TODO(dlb): Music is streaming, don't read whole file into memory
+            ReadFileIntoDataBuffer(mus_file.path.c_str(), mus_file.data_buffer);
+        }
 
         if (stream.mode == PACK_MODE_READ) {
             stream.pack->mus_file_by_id[mus_file.id] = index;
@@ -826,11 +847,11 @@ namespace data {
         PROC(sfx_file.pitch_variance);
         PROC(sfx_file.max_instances);
 
-        if (stream.mode == PACK_MODE_READ) {
-            if (!sfx_file.data_buffer.length && !sfx_file.path.empty()) {
-                ReadFileIntoDataBuffer(sfx_file.path.c_str(), sfx_file.data_buffer);
-            }
+        if (stream.mode == PACK_MODE_READ && !sfx_file.data_buffer.length && !sfx_file.path.empty()) {
+            ReadFileIntoDataBuffer(sfx_file.path.c_str(), sfx_file.data_buffer);
+        }
 
+        if (stream.mode == PACK_MODE_READ) {
             auto &sfx_variants = stream.pack->sfx_file_by_id[sfx_file.id];
             sfx_variants.push_back(index);
         }
@@ -875,6 +896,10 @@ namespace data {
         for (int i = 0; i < 8; i++) {
             PROC(sprite.anims[i]);
         }
+
+        if (stream.mode == PACK_MODE_READ) {
+            stream.pack->sprite_by_id[sprite.id] = index;
+        }
     }
     void Process(PackStream &stream, TileType &tile_type, int index)
     {
@@ -903,6 +928,10 @@ namespace data {
 
         PROC(entity.map_name);
         PROC(entity.position);
+
+        PROC(entity.ambient_fx);
+        PROC(entity.ambient_fx_delay_min);
+        PROC(entity.ambient_fx_delay_max);
 
         PROC(entity.radius);
         //PROC(entity.colliding);
@@ -939,13 +968,8 @@ namespace data {
         //PROC(entity.anim_frame);
         //PROC(entity.anim_accum);
 
-        PROC(entity.warp_collider.x);
-        PROC(entity.warp_collider.y);
-        PROC(entity.warp_collider.width);
-        PROC(entity.warp_collider.height);
-
-        PROC(entity.warp_dest_pos.x);
-        PROC(entity.warp_dest_pos.y);
+        PROC(entity.warp_collider);
+        PROC(entity.warp_dest_pos);
 
         PROC(entity.warp_dest_map);
         PROC(entity.warp_template_map);
@@ -1231,7 +1255,6 @@ namespace data {
                 }                                       \
             }
 
-        ID_CHECK(Sprite   &, sprite,    pack.sprites);
         ID_CHECK(TileType &, tile_type, pack.tile_types);
 #undef ID_CHECK
 
@@ -1389,7 +1412,7 @@ namespace data {
 
     const GfxFrame &GetSpriteFrame(const Entity &entity)
     {
-        const Sprite sprite = packs[0]->sprites[entity.sprite];
+        const Sprite &sprite = packs[0]->FindSprite(entity.sprite);
 
         const std::string anim_id = sprite.anims[entity.direction];
         const GfxAnim &anim = packs[0]->FindGraphicAnim(anim_id);
@@ -1431,7 +1454,7 @@ namespace data {
             }
         }
 
-        const Sprite sprite = packs[0]->sprites[entity.sprite];
+        const Sprite &sprite = packs[0]->FindSprite(entity.sprite);
         const GfxAnim &anim = packs[0]->FindGraphicAnim(sprite.anims[entity.direction]);
         const double anim_frame_time = (1.0 / anim.frame_rate) * anim.frame_delay;
         if (entity.anim_accum >= anim_frame_time) {
@@ -1449,7 +1472,7 @@ namespace data {
     }
     void ResetSprite(Entity &entity)
     {
-        const Sprite sprite = packs[0]->sprites[entity.sprite];
+        const Sprite &sprite = packs[0]->FindSprite(entity.sprite);
         GfxAnim &anim = packs[0]->FindGraphicAnim(sprite.anims[entity.direction]);
         StopSound(anim.sound);
 

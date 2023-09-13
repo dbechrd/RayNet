@@ -1561,7 +1561,7 @@ void Editor::DrawUI_PackFiles(UI &uiActionBar, double now)
                 case data::DAT_TYP_SPRITE:
                 {
                     data::Sprite &sprite = pack.sprites[entry.index];
-                    desc = data::SpriteIdStr(sprite.id);
+                    desc = sprite.id.c_str();
                     break;
                 }
             }
