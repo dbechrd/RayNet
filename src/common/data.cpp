@@ -535,6 +535,29 @@ namespace data {
     {
         Err err = RN_SUCCESS;
 
+#if 1
+        // setup the global arena
+        static MD_Arena *arena = MD_ArenaAlloc();
+
+        printf("--- string ---\n");
+        {
+            // parse a string
+            MD_String8 name = MD_S8Lit("<name>");
+            MD_String8 hello_world = MD_S8Lit("hello world");
+            MD_ParseResult parse = MD_ParseWholeString(arena, name, hello_world);
+            MD_PrintDebugDumpFromNode(stdout, parse.node, MD_GenerateFlags_All);
+        }
+        printf("--- file ---\n");
+        {
+            // parse a file
+            MD_String8 filename = MD_S8Lit("meta/hello_world.mdesk");
+            MD_ParseResult parse = MD_ParseWholeFile(arena, filename);
+            MD_PrintDebugDumpFromNode(stdout, parse.node, MD_GenerateFlags_All);
+        }
+
+        MD_ArenaRelease(arena);
+#endif
+
         // Generate checkerboard image in slot 0 as a placeholder for when other images fail to load
         Image placeholderImg = GenImageChecked(16, 16, 4, 4, MAGENTA, WHITE);
         if (placeholderImg.width) {

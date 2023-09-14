@@ -18,6 +18,7 @@
     <ClInclude Include="src\common\spritesheet.h" />
     <ClInclude Include="src\common\audio\audio.cpp" />
     <ClInclude Include="src\common\spritesheet.cpp" />
+    <ClCompile Include="src\common\md.cpp" />
     <ClCompile Include="src\server\server.cpp" />
   </ItemGroup>
   <ItemGroup>
