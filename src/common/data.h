@@ -467,8 +467,8 @@ namespace data {
         //uint16_t materialId;
         uint16_t x;
         uint16_t y;
-        uint8_t w;
-        uint8_t h;
+        //uint8_t w;
+        //uint8_t h;
         uint8_t collide;
         uint8_t auto_tile_mask;
 
@@ -477,7 +477,7 @@ namespace data {
         Color color;  // color for minimap/wang tile editor (top left pixel of tile)
     };
 
-    struct TileMapData {
+    struct Tilemap {
         static const DataType dtype = DAT_TYP_TILE_MAP;
         static const uint32_t MAGIC = 0xDBBB9192;
         // v1: the OG
@@ -502,7 +502,6 @@ namespace data {
         std::vector<TileDef>    tileDefs        {};
         std::vector<Tile>       tiles           {};
         std::vector<AiPathNode> pathNodes       {};  // 94 19 56 22 57
-        std::vector<uint32_t>   pathNodeIndices {};  // 0 1 2 | 3 4 5
         std::vector<AiPath>     paths           {};  // offset, length | 0, 3 | 3, 3
 
         //-------------------------------
@@ -586,15 +585,15 @@ namespace data {
         // - sprite defs
         // - tile defs
         // - object defs
-        std::vector<GfxFile>     gfx_files  {};
-        std::vector<MusFile>     mus_files  {};
-        std::vector<SfxFile>     sfx_files  {};
-        std::vector<GfxFrame>    gfx_frames {};
-        std::vector<GfxAnim>     gfx_anims  {};
-        std::vector<Material>    materials  {};
-        std::vector<Sprite>      sprites    {};
-        std::vector<TileType>    tile_types {};
-        std::vector<TileMapData> tile_maps  {};
+        std::vector<GfxFile>  gfx_files  {};
+        std::vector<MusFile>  mus_files  {};
+        std::vector<SfxFile>  sfx_files  {};
+        std::vector<GfxFrame> gfx_frames {};
+        std::vector<GfxAnim>  gfx_anims  {};
+        std::vector<Material> materials  {};
+        std::vector<Sprite>   sprites    {};
+        std::vector<TileType> tile_types {};
+        std::vector<Tilemap>  tile_maps  {};
 
         // static entities? (objects?)
         // - doors
@@ -712,25 +711,30 @@ namespace data {
             }
         }
 
-        TileMapData &FindTileMap(uint32_t id) {
+        Tilemap &FindTilemap(uint32_t id) {
             const auto &entry = tile_map_by_id.find(id);
             if (entry != tile_map_by_id.end()) {
                 return tile_maps[entry->second];
             } else {
-                TraceLog(LOG_WARNING, "Missing tile map id: %u", id);
+                TraceLog(LOG_WARNING, "Missing tilemap id: %u", id);
                 return tile_maps[0];
             }
         }
 
-        TileMapData &FindTileMap(std::string name) {
+        Tilemap &FindTilemap(std::string name) {
             const auto &entry = tile_map_by_name.find(name);
             if (entry != tile_map_by_name.end()) {
                 return tile_maps[entry->second];
             } else {
-                TraceLog(LOG_WARNING, "Missing tile map name: %s", name.c_str());
+                TraceLog(LOG_WARNING, "Missing tilemap name: %s", name.c_str());
                 return tile_maps[0];
             }
         }
+    };
+
+    enum PackStreamType {
+        PACK_TYPE_BINARY,
+        PACK_TYPE_TEXT,
     };
 
     enum PackStreamMode {
@@ -741,10 +745,21 @@ namespace data {
     typedef size_t (*ProcessFn)(void *buffer, size_t size, size_t count, FILE* stream);
 
     struct PackStream {
-        PackStreamMode mode    {};
-        FILE *         f       {};
-        ProcessFn      process {};
         Pack *         pack    {};
+        FILE *         file    {};
+        PackStreamMode mode    {};
+        PackStreamType type    {};
+        ProcessFn      process {};
+
+        PackStream(Pack *pack, FILE *file, PackStreamMode mode, PackStreamType type)
+            : type(type), mode(mode), file(file), pack(pack)
+        {
+            if (mode == PACK_MODE_READ) {
+                process = (ProcessFn)fread;
+            } else {
+                process = (ProcessFn)fwrite;
+            }
+        };
     };
 
     const char *DataTypeStr(DataType type);
@@ -759,8 +774,8 @@ namespace data {
     void Init(void);
     void Free(void);
 
-    Err SavePack(Pack &pack);
-    Err LoadPack(Pack &pack);
+    Err SavePack(Pack &pack, PackStreamType type);
+    Err LoadPack(Pack &pack, PackStreamType type);
     void UnloadPack(Pack &pack);
 
     void PlaySound(std::string id, float pitchVariance = 0.0f);

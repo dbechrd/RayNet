@@ -252,7 +252,7 @@ Err Play(GameServer &server)
             ClearBackground(BLUE_DESAT);
             BeginMode2D(camera);
                 // [World] Tilemap
-                auto &editor_map = data::packs[0]->FindTileMap(editor.map_name);
+                auto &editor_map = data::packs[0]->FindTilemap(editor.map_name);
                 editor_map.Draw(camera);
 
                 // [Editor] Overlays

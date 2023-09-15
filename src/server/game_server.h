@@ -1,9 +1,9 @@
 #pragma once
+#include "../common/data.h"
 #include "../common/dlg.h"
 #include "../common/entity_db.h"
 #include "../common/input_command.h"
 #include "../common/net/net.h"
-#include "../common/tilemap.h"
 
 // Q: when the player goes to a new level, they see all the wrong entities
 // A: entities needs to be scoped by level
@@ -34,7 +34,7 @@
 struct Msg_S_EntitySpawn;
 
 struct TileChunkRecord {
-    Tilemap::Coord coord{};
+    data::Tilemap::Coord coord{};
     double lastSentAt{};  // when we last sent this chunk to the client
 };
 
@@ -85,10 +85,10 @@ struct GameServer {
 
     uint32_t GetPlayerEntityId(uint32_t clientIdx);
 
-    Tilemap *FindOrLoadMap(std::string map_name);
+    data::Tilemap *FindOrLoadMap(std::string map_name);
     Err Start(void);
 
-    Tilemap *FindMap(std::string map_name);
+    data::Tilemap *FindMap(std::string map_name);
 
     data::Entity *SpawnEntity(data::EntityType type);
     void DespawnEntity(uint32_t entityId);
@@ -114,8 +114,8 @@ private:
     void SendEntitySay(int clientIdx, uint32_t entityId, uint32_t dialogId, std::string message);
     void BroadcastEntitySay(uint32_t entityId, std::string message);
 
-    void SendTileChunk(int clientIdx, Tilemap &map, uint32_t x, uint32_t y);
-    void BroadcastTileChunk(Tilemap &map, uint32_t x, uint32_t y);
+    void SendTileChunk(int clientIdx, data::Tilemap &map, uint32_t x, uint32_t y);
+    void BroadcastTileChunk(data::Tilemap &map, uint32_t x, uint32_t y);
 
     // All part of Update()
     void RequestDialog(int clientIdx, data::Entity &entity, Dialog &dialog);
@@ -127,8 +127,8 @@ private:
     void TickEntityNPC(uint32_t entityIndex, double dt);
     void TickEntityPlayer(uint32_t entityIndex, double dt);
     void TickEntityProjectile(uint32_t entityIndex, double dt);
-    void WarpEntity(Tilemap &map, uint32_t entityId, data::Entity &warp);
-    void TickResolveEntityWarpCollisions(Tilemap &map, uint32_t entityId, double now);
+    void WarpEntity(data::Tilemap &map, uint32_t entityId, data::Entity &warp);
+    void TickResolveEntityWarpCollisions(data::Tilemap &map, uint32_t entityId, double now);
     void Tick(void);
     void SerializeSnapshot(uint32_t entityId, Msg_S_EntitySnapshot &entitySnapshot);
     void SendClientSnapshots(void);

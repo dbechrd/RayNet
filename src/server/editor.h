@@ -1,6 +1,6 @@
 #pragma once
 #include "../common/common.h"
-#include "../common/tilemap.h"
+#include "../common/data.h"
 #include "../common/ui/ui.h"
 #include "../common/wang.h"
 

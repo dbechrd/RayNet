@@ -114,7 +114,7 @@ void reset_menu_connecting(void)
     connectingDotIdxLastUpdatedAt = 0;
 }
 
-void update_camera(Camera2D &camera, Tilemap *map, Vector2 target, float frameDt)
+void update_camera(Camera2D &camera, data::Tilemap *map, Vector2 target, float frameDt)
 {
     camera.offset = {
         /*floorf(*/GetRenderWidth ()/2.0f/*)*/,
@@ -483,8 +483,8 @@ int main(int argc, char *argv[])
                 bool holdingShovel = true;
                 if (holdingShovel) {
                     if (io.MouseButtonPressed(MOUSE_BUTTON_LEFT)) {
-                        Tilemap::Coord coord{};
-                        Tilemap *map = client->world->LocalPlayerMap();
+                        data::Tilemap::Coord coord{};
+                        data::Tilemap *map = client->world->LocalPlayerMap();
                         if (map && map->WorldToTileIndex(cursorWorldPos.x, cursorWorldPos.y, coord)) {
                             // TOOD: Send mapId too then validate server-side
                             client->SendTileInteract(map->name, coord.x, coord.y);

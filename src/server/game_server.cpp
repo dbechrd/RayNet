@@ -1,7 +1,7 @@
 #include "game_server.h"
+#include "../common/data.h"
 #include "../common/net/messages/msg_s_entity_spawn.h"
 #include "../common/net/messages/msg_s_entity_snapshot.h"
-#include "../common/tilemap.h"
 
 Rectangle lastCollisionA{};
 Rectangle lastCollisionB{};
@@ -64,7 +64,7 @@ void GameServer::OnClientLeave(int clientIdx)
     if (!maps.size()) return;
 
     // TODO: Which map is this sv_player currently on? Need to despawn them from that map.
-    Tilemap &map = *maps[0];
+    data::Tilemap &map = *maps[0];
 #endif
 
     ServerPlayer &serverPlayer = players[clientIdx];
@@ -77,11 +77,11 @@ uint32_t GameServer::GetPlayerEntityId(uint32_t clientIdx)
     return clientIdx + 1;
 }
 
-Tilemap *GameServer::FindOrLoadMap(std::string map_name)
+data::Tilemap *GameServer::FindOrLoadMap(std::string map_name)
 {
 #if 1
     // TODO: Go back to assuming it's not already loaded once we figure out packs
-    Tilemap *map = &data::packs[0]->FindTileMap(map_name);
+    data::Tilemap *map = &data::packs[0]->FindTilemap(map_name);
     if (map->id) {
         return map;
     } else {
@@ -94,7 +94,7 @@ Tilemap *GameServer::FindOrLoadMap(std::string map_name)
         return maps[mapIndex];
     } else {
         Err err = RN_SUCCESS;
-        Tilemap *map = new Tilemap();
+        data::Tilemap *map = new data::Tilemap();
         do {
             if (!map) {
                 printf("Failed to load map %s with code %d\n", filename.c_str(), err);
@@ -192,10 +192,10 @@ Err GameServer::Start(void)
     return RN_SUCCESS;
 }
 
-Tilemap *GameServer::FindMap(std::string map_name)
+data::Tilemap *GameServer::FindMap(std::string map_name)
 {
     // TODO: Remove this alias and call data::* directly?
-    auto &tile_map = data::packs[0]->FindTileMap(map_name);
+    auto &tile_map = data::packs[0]->FindTilemap(map_name);
     return &tile_map;
 }
 
@@ -371,7 +371,7 @@ void GameServer::BroadcastEntitySay(uint32_t entityId, std::string message)
     }
 }
 
-void GameServer::SendTileChunk(int clientIdx, Tilemap &map, uint32_t x, uint32_t y)
+void GameServer::SendTileChunk(int clientIdx, data::Tilemap &map, uint32_t x, uint32_t y)
 {
     if (yj_server->CanSendMessage(clientIdx, CHANNEL_R_TILE_EVENT)) {
         Msg_S_TileChunk *msg = (Msg_S_TileChunk *)yj_server->CreateMessage(clientIdx, MSG_S_TILE_CHUNK);
@@ -381,7 +381,7 @@ void GameServer::SendTileChunk(int clientIdx, Tilemap &map, uint32_t x, uint32_t
         }
     }
 }
-void GameServer::BroadcastTileChunk(Tilemap &map, uint32_t x, uint32_t y)
+void GameServer::BroadcastTileChunk(data::Tilemap &map, uint32_t x, uint32_t y)
 {
     for (int clientIdx = 0; clientIdx < SV_MAX_PLAYERS; clientIdx++) {
         if (!yj_server->IsClientConnected(clientIdx)) {
@@ -505,7 +505,7 @@ void GameServer::ProcessMessages(void)
                         // TODO: Check if sv_player is allowed to actually interact with this
                         // particular tile. E.g. are they even in the same map as it!?
                         // Holding the right tool, proximity, etc.
-                        Tilemap *map = FindMap(msg->map_name);
+                        data::Tilemap *map = FindMap(msg->map_name);
                         Tile tile{};
                         if (map && map->AtTry(msg->x, msg->y, tile)) {
                             //map.Set(msg->x, msg->y, 0);
@@ -596,7 +596,7 @@ void GameServer::UpdateServerPlayers(void)
 
 data::Entity *SpawnEntityProto(GameServer &server, std::string map_name, Vector3 position, data::EntityProto &proto)
 {
-    Tilemap *map = server.FindMap(map_name);
+    data::Tilemap *map = server.FindMap(map_name);
     if (!map) return 0;
 
     data::Entity *entity = server.SpawnEntity(data::ENTITY_NPC);
@@ -785,7 +785,7 @@ void GameServer::TickEntityNPC(uint32_t entityId, double dt)
     data::Entity *entity = entityDb->FindEntity(entityId);
     if (!entity) return;
 
-    Tilemap *map = FindMap(entity->map_name);
+    data::Tilemap *map = FindMap(entity->map_name);
     if (!map) return;
 
     if (now - entity->dialog_spawned_at > SV_ENTITY_DIALOG_INTERESTED_DURATION) {
@@ -929,7 +929,7 @@ void GameServer::TickEntityProjectile(uint32_t entityId, double dt)
         }
     }
 }
-void GameServer::WarpEntity(Tilemap &map, uint32_t entityId, data::Entity &warp)
+void GameServer::WarpEntity(data::Tilemap &map, uint32_t entityId, data::Entity &warp)
 {
     assert(entityId);
 
@@ -938,7 +938,7 @@ void GameServer::WarpEntity(Tilemap &map, uint32_t entityId, data::Entity &warp)
 
     if (warp.warp_dest_map.size()) {
         // TODO: We need to move our victim to the new map
-        Tilemap *map = FindOrLoadMap(warp.warp_dest_map);
+        data::Tilemap *map = FindOrLoadMap(warp.warp_dest_map);
         if (map) {
             // TODO: Move victim to other map?
             victim->map_name = map->name;
@@ -989,7 +989,7 @@ void GameServer::WarpEntity(Tilemap &map, uint32_t entityId, data::Entity &warp)
 #endif
     }
 }
-void GameServer::TickResolveEntityWarpCollisions(Tilemap &map, uint32_t entityId, double now)
+void GameServer::TickResolveEntityWarpCollisions(data::Tilemap &map, uint32_t entityId, double now)
 {
     assert(entityId);
 
@@ -1052,7 +1052,7 @@ void GameServer::Tick(void)
             case data::ENTITY_PROJECTILE: TickEntityProjectile (entity.id, SV_TICK_DT); break;
         }
 
-        Tilemap *map = FindMap(entity.map_name);
+        data::Tilemap *map = FindMap(entity.map_name);
         if (map) {
             map->ResolveEntityTerrainCollisions(entity.id);
             TickResolveEntityWarpCollisions(*map, entity.id, now);
@@ -1109,7 +1109,7 @@ void GameServer::SendClientSnapshots(void)
             continue;
         }
 
-        Tilemap *map = FindMap(entity->map_name);
+        data::Tilemap *map = FindMap(entity->map_name);
         if (!map) {
             assert(0);
             printf("[game_server] could not find client id %d's entity id %u's map. cannot send snapshots\n", clientIdx, serverPlayer.entityId);

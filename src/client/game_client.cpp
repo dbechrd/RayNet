@@ -177,7 +177,7 @@ void GameClient::ProcessMessages(void)
                     //printf("[ENTITY_SPAWN] id=%u mapId=%u\n", msg->entity_id, msg->map_id);
                     data::Entity *entity = entityDb->FindEntity(msg->entity_id);
                     if (!entity) {
-                        Tilemap *map = world->FindOrLoadMap(msg->map_name);
+                        data::Tilemap *map = world->FindOrLoadMap(msg->map_name);
                         assert(map && "why no map? we get chunks before entities, right!?");
                         if (map) {
                             if (entityDb->SpawnEntity(msg->entity_id, msg->type, now)) {
@@ -195,7 +195,7 @@ void GameClient::ProcessMessages(void)
                 {
                     Msg_S_TileChunk *msg = (Msg_S_TileChunk *)yjMsg;
 
-                    Tilemap *map = world->FindOrLoadMap(msg->map_name);
+                    data::Tilemap *map = world->FindOrLoadMap(msg->map_name);
                     if (map) {
                         map->CL_DeserializeChunk(*msg);
                     } else {

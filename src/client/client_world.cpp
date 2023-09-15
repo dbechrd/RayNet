@@ -18,7 +18,7 @@ data::Entity *ClientWorld::LocalPlayer(void) {
     return 0;
 }
 
-Tilemap *ClientWorld::LocalPlayerMap(void)
+data::Tilemap *ClientWorld::LocalPlayerMap(void)
 {
     data::Entity *localPlayer = LocalPlayer();
     if (localPlayer && !localPlayer->map_name.empty()) {
@@ -27,9 +27,9 @@ Tilemap *ClientWorld::LocalPlayerMap(void)
     return 0;
 }
 
-Tilemap *ClientWorld::FindOrLoadMap(std::string map_name)
+data::Tilemap *ClientWorld::FindOrLoadMap(std::string map_name)
 {
-    Tilemap &map = data::packs[0]->FindTileMap(map_name);
+    data::Tilemap &map = data::packs[0]->FindTilemap(map_name);
 
     if (map.name == LEVEL_001) {
         musBackgroundMusic = "mus_ambient_outdoors";
@@ -171,7 +171,7 @@ void ClientWorld::UpdateLocalPlayer(GameClient &client, data::Entity &entity, da
 #if CL_CLIENT_SIDE_PREDICT
     double cmdAccumDt{};
     Vector3 cmdAccumForce{};
-    Tilemap *map = FindOrLoadMap(entity.map_name);
+    data::Tilemap *map = FindOrLoadMap(entity.map_name);
     if (map) {
         // Apply unacked input
         for (size_t cmdIndex = 0; cmdIndex < client.controller.cmdQueue.size(); cmdIndex++) {
@@ -209,7 +209,7 @@ void ClientWorld::UpdateLocalPlayer(GameClient &client, data::Entity &entity, da
     UpdateLocalPlayerHisto(client, entity, histoData);
 }
 
-void ClientWorld::UpdateLocalGhost(GameClient &client, data::Entity &entity, data::AspectGhost &ghost, Tilemap *localPlayerMap)
+void ClientWorld::UpdateLocalGhost(GameClient &client, data::Entity &entity, data::AspectGhost &ghost, data::Tilemap *localPlayerMap)
 {
     // TODO(dlb): Find snapshots nearest to (GetTime() - clientTimeDeltaVsServer)
     const double renderAt = client.ServerNow() - SV_TICK_DT;
@@ -254,7 +254,7 @@ void ClientWorld::UpdateLocalGhost(GameClient &client, data::Entity &entity, dat
 void ClientWorld::UpdateEntities(GameClient &client)
 {
     hoveredEntityId = 0;
-    Tilemap *localPlayerMap = LocalPlayerMap();
+    data::Tilemap *localPlayerMap = LocalPlayerMap();
 
     for (data::Entity &entity : entityDb->entities) {
         if (!entity.type) {
@@ -343,7 +343,7 @@ void ClientWorld::DrawEntitySnapshotShadows(uint32_t entityId, Controller &contr
         // NOTE(dlb): These aren't actually snapshot shadows, they're client-side prediction shadows
         if (entity.id == localPlayerEntityId) {
 #if CL_CLIENT_SIDE_PREDICT
-            Tilemap *map = FindOrLoadMap(entity.map_name);
+            data::Tilemap *map = FindOrLoadMap(entity.map_name);
             if (map) {
                 uint32_t lastProcessedInputCmd = 0;
                 const data::GhostSnapshot &latestSnapshot = ghost.newest();
@@ -546,7 +546,7 @@ void ClientWorld::DrawDialogs(GameClient &client, Camera2D &camera)
 {
     io.PushScope(IO::IO_GameNPCDialog);
 
-    Tilemap *map = LocalPlayerMap();
+    data::Tilemap *map = LocalPlayerMap();
     if (!map) {
         return;
     }
@@ -574,7 +574,7 @@ void ClientWorld::DrawDialogs(GameClient &client, Camera2D &camera)
 
 void ClientWorld::Draw(GameClient &client)
 {
-    Tilemap *map = LocalPlayerMap();
+    data::Tilemap *map = LocalPlayerMap();
     if (!map) {
         return;
     }

@@ -1,11 +1,11 @@
 #include "collision.h"
+#include "data.h"
 #include "file_utils.h"
 #include "net/net.h"
 #include "texture_catalog.h"
-#include "tilemap.h"
 #include "wang.h"
 
-void Tilemap::SV_SerializeChunk(Msg_S_TileChunk &tileChunk, uint32_t x, uint32_t y)
+void data::Tilemap::SV_SerializeChunk(Msg_S_TileChunk &tileChunk, uint32_t x, uint32_t y)
 {
     strncpy(tileChunk.map_name, name.c_str(), SV_MAX_TILE_MAP_NAME_LEN);
     tileChunk.x = x;
@@ -16,7 +16,7 @@ void Tilemap::SV_SerializeChunk(Msg_S_TileChunk &tileChunk, uint32_t x, uint32_t
         }
     }
 }
-void Tilemap::CL_DeserializeChunk(Msg_S_TileChunk &tileChunk)
+void data::Tilemap::CL_DeserializeChunk(Msg_S_TileChunk &tileChunk)
 {
     if (name == std::string(tileChunk.map_name)) {
         for (uint32_t ty = tileChunk.y; ty < SV_TILE_CHUNK_WIDTH; ty++) {
@@ -30,7 +30,7 @@ void Tilemap::CL_DeserializeChunk(Msg_S_TileChunk &tileChunk)
 }
 
 #if 0
-Err Tilemap::Save(std::string path)
+Err data::Tilemap::Save(std::string path)
 {
     Err err = RN_SUCCESS;
 
@@ -136,7 +136,7 @@ Err Tilemap::Save(std::string path)
 // TODO(dlb): This shouldn't load in-place.. it causes the game to crash when
 // the load fails. Instead, return a new a tilemap and switch over to it after
 // it has been loaded successfully.
-Err Tilemap::Load(std::string path)
+Err data::Tilemap::Load(std::string path)
 {
     Err err = RN_SUCCESS;
 
@@ -298,13 +298,13 @@ Err Tilemap::Load(std::string path)
 }
 #endif
 
-Tile Tilemap::At(uint32_t x, uint32_t y)
+Tile data::Tilemap::At(uint32_t x, uint32_t y)
 {
     assert(x < width);
     assert(y < height);
     return tiles[(size_t)y * width + x];
 }
-bool Tilemap::AtTry(uint32_t x, uint32_t y, Tile &tile)
+bool data::Tilemap::AtTry(uint32_t x, uint32_t y, Tile &tile)
 {
     if (x < width && y < height) {
         tile = At(x, y);
@@ -312,7 +312,7 @@ bool Tilemap::AtTry(uint32_t x, uint32_t y, Tile &tile)
     }
     return false;
 }
-bool Tilemap::WorldToTileIndex(uint32_t world_x, uint32_t world_y, Coord &coord)
+bool data::Tilemap::WorldToTileIndex(uint32_t world_x, uint32_t world_y, Coord &coord)
 {
     if (world_x < width * TILE_W && world_y < height * TILE_W) {
         coord.x = world_x / TILE_W;
@@ -321,7 +321,7 @@ bool Tilemap::WorldToTileIndex(uint32_t world_x, uint32_t world_y, Coord &coord)
     }
     return false;
 }
-bool Tilemap::AtWorld(uint32_t world_x, uint32_t world_y, Tile &tile)
+bool data::Tilemap::AtWorld(uint32_t world_x, uint32_t world_y, Tile &tile)
 {
     Coord coord{};
     if (WorldToTileIndex(world_x, world_y, coord)) {
@@ -331,7 +331,7 @@ bool Tilemap::AtWorld(uint32_t world_x, uint32_t world_y, Tile &tile)
     return false;
 }
 
-void Tilemap::Set(uint32_t x, uint32_t y, Tile tile, double now)
+void data::Tilemap::Set(uint32_t x, uint32_t y, Tile tile, double now)
 {
     assert(x < width);
     assert(y < height);
@@ -341,7 +341,7 @@ void Tilemap::Set(uint32_t x, uint32_t y, Tile tile, double now)
         chunkLastUpdatedAt = now;
     }
 }
-void Tilemap::SetFromWangMap(WangMap &wangMap, double now)
+void data::Tilemap::SetFromWangMap(WangMap &wangMap, double now)
 {
     // TODO: Specify map coords to set (or chunk id) and do a bounds check here instead
     if (width != wangMap.image.width || height != wangMap.image.height) {
@@ -357,7 +357,7 @@ void Tilemap::SetFromWangMap(WangMap &wangMap, double now)
         }
     }
 }
-bool Tilemap::NeedsFill(uint32_t x, uint32_t y, int tileDefFill)
+bool data::Tilemap::NeedsFill(uint32_t x, uint32_t y, int tileDefFill)
 {
     Tile tile;
     if (AtTry(x, y, tile)) {
@@ -365,7 +365,7 @@ bool Tilemap::NeedsFill(uint32_t x, uint32_t y, int tileDefFill)
     }
     return false;
 }
-void Tilemap::Scan(uint32_t lx, uint32_t rx, uint32_t y, Tile tileDefFill, std::stack<Coord> &stack)
+void data::Tilemap::Scan(uint32_t lx, uint32_t rx, uint32_t y, Tile tileDefFill, std::stack<Coord> &stack)
 {
     bool inSpan = false;
     for (uint32_t x = lx; x < rx; x++) {
@@ -377,18 +377,18 @@ void Tilemap::Scan(uint32_t lx, uint32_t rx, uint32_t y, Tile tileDefFill, std::
         }
     }
 }
-void Tilemap::Fill(uint32_t x, uint32_t y, int tileDefId, double now)
+void data::Tilemap::Fill(uint32_t x, uint32_t y, int tileDefId, double now)
 {
     Tile tileDefFill = At(x, y);
     if (tileDefFill == tileDefId) {
         return;
     }
 
-    std::stack<Tilemap::Coord> stack{};
+    std::stack<data::Tilemap::Coord> stack{};
     stack.push({ x, y });
 
     while (!stack.empty()) {
-        Tilemap::Coord coord = stack.top();
+        data::Tilemap::Coord coord = stack.top();
         stack.pop();
 
         uint32_t lx = coord.x;
@@ -408,30 +408,30 @@ void Tilemap::Fill(uint32_t x, uint32_t y, int tileDefId, double now)
     }
 }
 
-const data::TileDef &Tilemap::GetTileDef(Tile tile)
+const data::TileDef &data::Tilemap::GetTileDef(Tile tile)
 {
     if (tile >= tileDefs.size()) tile = 0;
     return tileDefs[tile];
 }
-Rectangle Tilemap::TileDefRect(Tile tile)
+Rectangle data::Tilemap::TileDefRect(Tile tile)
 {
     const data::TileDef &tileDef = GetTileDef(tile);
     const Rectangle rect{ (float)tileDef.x, (float)tileDef.y, TILE_W, TILE_W };
     return rect;
 }
-Color Tilemap::TileDefAvgColor(Tile tile)
+Color data::Tilemap::TileDefAvgColor(Tile tile)
 {
     const data::TileDef &tileDef = GetTileDef(tile);
     return tileDef.color;
 }
 
-data::AiPath *Tilemap::GetPath(uint32_t pathId) {
+data::AiPath *data::Tilemap::GetPath(uint32_t pathId) {
     if (pathId < paths.size()) {
         return &paths[pathId];
     }
     return 0;
 }
-uint32_t Tilemap::GetNextPathNodeIndex(uint32_t pathId, uint32_t pathNodeIndex) {
+uint32_t data::Tilemap::GetNextPathNodeIndex(uint32_t pathId, uint32_t pathNodeIndex) {
     data::AiPath *path = GetPath(pathId);
     if (path) {
         uint32_t nextPathNodeIndex = pathNodeIndex + 1;
@@ -442,7 +442,7 @@ uint32_t Tilemap::GetNextPathNodeIndex(uint32_t pathId, uint32_t pathNodeIndex) 
     }
     return 0;
 }
-data::AiPathNode *Tilemap::GetPathNode(uint32_t pathId, uint32_t pathNodeIndex) {
+data::AiPathNode *data::Tilemap::GetPathNode(uint32_t pathId, uint32_t pathNodeIndex) {
     data::AiPath *path = GetPath(pathId);
     if (path) {
         return &pathNodes[pathNodeIndex];
@@ -450,7 +450,7 @@ data::AiPathNode *Tilemap::GetPathNode(uint32_t pathId, uint32_t pathNodeIndex) 
     return 0;
 }
 
-void Tilemap::ResolveEntityTerrainCollisions(data::Entity &entity)
+void data::Tilemap::ResolveEntityTerrainCollisions(data::Entity &entity)
 {
     entity.colliding = false;
 
@@ -518,7 +518,7 @@ void Tilemap::ResolveEntityTerrainCollisions(data::Entity &entity)
         }
     }
 }
-void Tilemap::ResolveEntityTerrainCollisions(uint32_t entityId)
+void data::Tilemap::ResolveEntityTerrainCollisions(uint32_t entityId)
 {
     assert(entityId);
     data::Entity *entity = entityDb->FindEntity(entityId);
@@ -529,7 +529,7 @@ void Tilemap::ResolveEntityTerrainCollisions(uint32_t entityId)
     ResolveEntityTerrainCollisions(*entity);
 }
 
-void Tilemap::DrawTile(Texture2D tex, Tile tile, Vector2 position)
+void data::Tilemap::DrawTile(Texture2D tex, Tile tile, Vector2 position)
 {
     const Rectangle texRect = TileDefRect(tile);
     //position.x = floorf(position.x);
@@ -538,7 +538,7 @@ void Tilemap::DrawTile(Texture2D tex, Tile tile, Vector2 position)
     if (position.y != floorf(position.y)) assert(!"floating y");
     dlb_DrawTextureRec(tex, texRect, position, WHITE);
 }
-void Tilemap::Draw(Camera2D &camera)
+void data::Tilemap::Draw(Camera2D &camera)
 {
     const data::GfxFile &gfx_file = data::packs[0]->FindGraphic(texture);
 
@@ -555,7 +555,7 @@ void Tilemap::Draw(Camera2D &camera)
         }
     }
 }
-void Tilemap::DrawColliders(Camera2D &camera)
+void data::Tilemap::DrawColliders(Camera2D &camera)
 {
     Rectangle screenRect = GetScreenRectWorld(camera);
     int yMin = CLAMP(floorf(screenRect.y / TILE_W), 0, height);
@@ -584,7 +584,7 @@ void Tilemap::DrawColliders(Camera2D &camera)
         }
     }
 }
-void Tilemap::DrawTileIds(Camera2D &camera)
+void data::Tilemap::DrawTileIds(Camera2D &camera)
 {
     Rectangle screenRect = GetScreenRectWorld(camera);
     int yMin = CLAMP(floorf(screenRect.y / TILE_W), 0, height);

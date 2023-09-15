@@ -1,9 +1,9 @@
 ﻿#include "../common/collision.h"
 #include "../common/common.h"
+#include "../common/data.h"
 #include "../common/entity_db.h"
 #include "../common/io.h"
 #include "../common/texture_catalog.h"
-#include "../common/tilemap.h"
 #include "../common/ui/ui.h"
 #include "../common/uid.h"
 #include "editor.h"
@@ -67,7 +67,7 @@ void Editor::DrawGroundOverlays(Camera2D &camera, double now)
 {
     io.PushScope(IO::IO_EditorGroundOverlay);
 
-    auto &map = data::packs[0]->FindTileMap(map_name);
+    auto &map = data::packs[0]->FindTilemap(map_name);
 
     // Draw tile collision layer
     if (state.showColliders) {
@@ -114,10 +114,10 @@ void Editor::DrawGroundOverlay_Tiles(Camera2D &camera, double now)
 
         Tile &cursorTile = state.tiles.cursor.tileDefId;
         Tile hoveredTile{};
-        auto &map = data::packs[0]->FindTileMap(map_name);
+        auto &map = data::packs[0]->FindTilemap(map_name);
 
         if (map.AtWorld((int32_t)cursorWorldPos.x, (int32_t)cursorWorldPos.y, hoveredTile)) {
-            Tilemap::Coord coord{};
+            data::Tilemap::Coord coord{};
             bool validCoord = map.WorldToTileIndex(cursorWorldPos.x, cursorWorldPos.y, coord);
             assert(validCoord);  // should always be true when hoveredTile != null
 
@@ -145,7 +145,7 @@ void Editor::DrawGroundOverlay_Paths(Camera2D &camera, double now)
     const Vector2 cursorWorldPos = GetScreenToWorld2D({ (float)GetMouseX(), (float)GetMouseY() }, camera);
 
     // Draw path edges
-    auto &map = data::packs[0]->FindTileMap(map_name);
+    auto &map = data::packs[0]->FindTilemap(map_name);
     for (uint32_t aiPathId = 0; aiPathId < map.paths.size(); aiPathId++) {
         data::AiPath *aiPath = map.GetPath(aiPathId);
         if (!aiPath) {
@@ -259,7 +259,7 @@ void Editor::DrawEntityOverlays(Camera2D &camera, double now)
     io.PushScope(IO::IO_EditorEntityOverlay);
 
     data::Entity *selectedEntity = entityDb->FindEntity(state.entities.selectedId);
-    auto &map = data::packs[0]->FindTileMap(map_name);
+    auto &map = data::packs[0]->FindTilemap(map_name);
     if (selectedEntity && selectedEntity->map_name == map.name) {
         DrawTextEx(fntSmall, TextFormat("[selected in editor]\n%u", selectedEntity->id),
             selectedEntity->ScreenPos(), fntSmall.baseSize / camera.zoom, 1 / camera.zoom, WHITE);
@@ -298,7 +298,7 @@ void Editor::DrawEntityOverlays(Camera2D &camera, double now)
 }
 void Editor::DrawEntityOverlay_Collision(Camera2D &camera, double now)
 {
-    auto &map = data::packs[0]->FindTileMap(map_name);
+    auto &map = data::packs[0]->FindTilemap(map_name);
     for (data::Entity &entity : entityDb->entities) {
         if (entity.map_name != map.name) {
             continue;
@@ -467,7 +467,7 @@ UIState Editor::DrawUI_ActionBar(Vector2 position, GameServer &server, double no
     static std::string openRequest;
     static std::string saveAsRequest;
 
-    auto &map = data::packs[0]->FindTileMap(map_name);
+    auto &map = data::packs[0]->FindTilemap(map_name);
 
     UIState openButton = uiActionBar.Button("Open");
     if (openButton.released) {
@@ -486,7 +486,7 @@ UIState Editor::DrawUI_ActionBar(Vector2 position, GameServer &server, double no
         openFileThread.detach();
     }
     if (openRequest.size()) {
-        Tilemap *openedMap = server.FindOrLoadMap(openRequest);
+        data::Tilemap *openedMap = server.FindOrLoadMap(openRequest);
         if (!openedMap) {
             std::thread errorThread([]{
                 const char *msg = TextFormat("Failed to load file %s.\n", openRequest);
@@ -637,7 +637,7 @@ UIState Editor::DrawUI_ActionBar(Vector2 position, GameServer &server, double no
 }
 void Editor::DrawUI_MapActions(UI &uiActionBar, GameServer &server, double now)
 {
-    for (const Tilemap &map : data::packs[0]->tile_maps) {
+    for (const data::Tilemap &map : data::packs[0]->tile_maps) {
         if (uiActionBar.Button(TextFormat("[%d] %s", map.id, map.name.c_str())).pressed) {
             map_name = map.name;
         }
@@ -666,7 +666,7 @@ void Editor::DrawUI_TileActions(UI &uiActionBar, double now)
         openFileThread.detach();
     }
     if (openRequest) {
-        Err err = Tilemap::ChangeTileset(*map, openRequest, now);
+        Err err = data::Tilemap::ChangeTileset(*map, openRequest, now);
         if (err) {
             std::thread errorThread([err]{
                 const char *msg = TextFormat("Failed to load file %s. %s\n", openRequest, ErrStr(err));
@@ -712,7 +712,7 @@ void Editor::DrawUI_Tilesheet(UI &uiActionBar, double now)
 {
     // TODO: Support multi-select (big rectangle?), and figure out where this lives
 
-    auto &map = data::packs[0]->FindTileMap(map_name);
+    auto &map = data::packs[0]->FindTilemap(map_name);
     const data::GfxFile &gfx_file = data::packs[0]->FindGraphic(map.texture);
     const Texture &mapTex = gfx_file.texture;
 
@@ -951,14 +951,14 @@ void Editor::DrawUI_Wang(UI &uiActionBar, double now)
     uiWangStyle2x.scale = 2;
     uiActionBar.PushStyle(uiWangStyle2x);
 
-    auto &map = data::packs[0]->FindTileMap(map_name);
+    auto &map = data::packs[0]->FindTilemap(map_name);
 
     if (uiActionBar.Button("Re-generate Map").pressed) {
         wangTileset.GenerateMap(map.width, map.height, wangMap);
     }
     uiActionBar.Newline();
 
-    static Tilemap wangTilemap{};
+    static data::Tilemap wangTilemap{};
     if (uiActionBar.Image(wangMap.colorized).pressed) {
         map.SetFromWangMap(wangMap, now);
     }
@@ -1053,7 +1053,7 @@ void Editor::DrawUI_WarpActions(UI &uiActionBar, double now)
     //uiActionBar.Newline();
 
     if (uiActionBar.Button("Add", DARKGREEN).pressed) {
-        //Tilemap &map = data::packs[0]->
+        //data::Tilemap &map = data::packs[0]->
         //map.warps.push_back({});
     }
     uiActionBar.Newline();
@@ -1209,7 +1209,7 @@ void Editor::DrawUI_DialogActions(UI &uiActionBar, double now)
 }
 void Editor::DrawUI_EntityActions(UI &uiActionBar, double now)
 {
-    auto &map = data::packs[0]->FindTileMap(map_name);
+    auto &map = data::packs[0]->FindTilemap(map_name);
     if (uiActionBar.Button("Despawn all", ColorBrightness(MAROON, -0.3f)).pressed) {
         for (const data::Entity &entity : entityDb->entities) {
             if (entity.type == data::ENTITY_PLAYER || entity.map_name != map.name) {

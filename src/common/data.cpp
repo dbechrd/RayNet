@@ -326,13 +326,13 @@ namespace data {
 
         return err;
     }
-    Err LoadTilemapIndex(std::string path, std::vector<TileMapData> &tile_maps)
+    Err LoadTilemapIndex(std::string path, std::vector<Tilemap> &tile_maps)
     {
         Err err = RN_SUCCESS;
 
         std::ifstream inputFile(path);
         if (inputFile.is_open()) {
-            TileMapData tile_map{};
+            Tilemap tile_map{};
 
             std::string line;
             while (!err && std::getline(inputFile, line)) {
@@ -358,22 +358,16 @@ namespace data {
                         std::getline(inputFile, line);
                         iss = std::istringstream(line);
 
-                        int w = 0;
-                        int h = 0;
                         int collide = 0;
                         int auto_tile_mask = 0;
 
                         TileDef tile_def{};
                         iss >> tile_def.x
                             >> tile_def.y
-                            >> w
-                            >> h
                             >> collide
                             >> auto_tile_mask;
                         if (iss.fail()) { err = RN_BAD_FILE_READ; break; }
 
-                        tile_def.w = w;
-                        tile_def.h = h;
                         tile_def.collide = collide;
                         tile_def.auto_tile_mask = auto_tile_mask;
 
@@ -415,12 +409,22 @@ namespace data {
                         if (iss.fail()) { err = RN_BAD_FILE_READ; break; }
                         tile_map.pathNodes.push_back(path_node);
                     }
-                } else if (type == "path") {
-                    AiPath path{};
-                    iss >> path.pathNodeStart
-                        >> path.pathNodeCount;
+                } else if (type == "paths") {
+                    int count = 0;
+                    iss >> count;
                     if (iss.fail()) { err = RN_BAD_FILE_READ; break; }
-                    tile_map.paths.push_back(path);
+
+                    tile_map.paths.reserve(count);
+                    for (int i = 0; i < count; i++) {
+                        std::getline(inputFile, line);
+                        iss = std::istringstream(line);
+
+                        AiPath path{};
+                        iss >> path.pathNodeStart
+                            >> path.pathNodeCount;
+                        if (iss.fail()) { err = RN_BAD_FILE_READ; break; }
+                        tile_map.paths.push_back(path);
+                    }
                 } else {
                     assert(!"unexpected line");
                     err = RN_BAD_FILE_READ;
@@ -455,6 +459,7 @@ namespace data {
             stream << "size " << tilemap.width << " " << tilemap.height << '\n';
             stream << "name " << tilemap.name << '\n';
             stream << "texture " << tilemap.texture << '\n';
+           // stream << tilemap.tileDefs[0];
         } while (0);
 
         stream.close();
@@ -466,29 +471,27 @@ namespace data {
                 err = RN_BAD_FILE_WRITE; break;
             }
 
-            fprintf(file, "%-10s %u\n", "version", tilemap.version);
-            fprintf(file, "%-10s %u %u\n", "size", tilemap.width, tilemap.height);
-            fprintf(file, "%-10s %s\n", "name", tilemap.name.c_str());
-            fprintf(file, "%-10s %s\n", "texture", tilemap.texture.c_str());
+            fprintf(file, "# map version name texture\n");
+            fprintf(file, "map %u %s %s\n", tilemap.version, tilemap.name.c_str(), tilemap.texture.c_str());
+            fputc('\n', file);
 
-            fprintf(file, "# x y w h collide auto_tile_mask\n");
+            fprintf(file, "# tile_defs count [x y w h collide auto_tile_mask]\n");
+            fprintf(file, "tile_defs %u\n", (uint32_t)tilemap.tileDefs.size());
             for (const TileDef &tile_def : tilemap.tileDefs) {
-                fprintf(file, "%-10s %u %u %u %u %u %u\n",
-                    "tile_def",
+                fprintf(file, "%-6u %-6u %u %u\n",
                     (uint32_t)tile_def.x,
                     (uint32_t)tile_def.y,
-                    (uint32_t)tile_def.w,
-                    (uint32_t)tile_def.h,
                     (uint32_t)tile_def.collide,
                     (uint32_t)tile_def.auto_tile_mask
                 );
-
             }
+            fputc('\n', file);
 
-            fprintf(file, "tiles_start\n");
+            fprintf(file, "# tiles width height [indices]\n");
+            fprintf(file, "tiles %u %u\n", tilemap.width, tilemap.height);
             for (int i = 0; i < tilemap.tiles.size(); i++) {
                 const Tile &tile = tilemap.tiles[i];
-                fprintf(file, "%3u", tilemap.tiles[i]);
+                fprintf(file, "%-3u", tilemap.tiles[i]);
                 if (i % tilemap.width == tilemap.width - 1) {
                     fprintf(file, "\n");
                 } else {
@@ -496,30 +499,24 @@ namespace data {
                 }
 
             }
-            fprintf(file, "tiles_end\n");
+            fputc('\n', file);
 
-            fprintf(file, "# x y z wait_for\n");
+            fprintf(file, "# path_nodes count [x y z wait_for]\n");
+            fprintf(file, "path_nodes %u\n", (uint32_t)tilemap.pathNodes.size());
             for (const AiPathNode &path_node : tilemap.pathNodes) {
-                fprintf(file, "%-10s %f %f %f %f\n",
-                    "path_node",
+                fprintf(file, "%f %f %f %f\n",
                     path_node.pos.x,
                     path_node.pos.y,
                     path_node.pos.z,
                     (float)path_node.waitFor
                 );
             }
+            fputc('\n', file);
 
-            // TODO(dlb): This doesn't need to exist.. Just have offset/count of AiPath point directly to path_nodes!??
-            fprintf(file, "path_node_indices");
-            for (uint32_t path_node_idx : tilemap.pathNodeIndices) {
-                fprintf(file, " %u", path_node_idx);
-            }
-            fprintf(file, "\n");
-
-            fprintf(file, "# node_offset node_count\n");
+            fprintf(file, "# paths count [node_start node_count]\n");
+            fprintf(file, "paths %u\n", (uint32_t)tilemap.paths.size());
             for (const AiPath &path : tilemap.paths) {
-                fprintf(file, "%-10s %u %u\n",
-                    "path",
+                fprintf(file, "%u %u\n",
                     path.pathNodeStart,
                     path.pathNodeCount
                 );
@@ -535,7 +532,7 @@ namespace data {
     {
         Err err = RN_SUCCESS;
 
-#if 1
+#if 0
         // setup the global arena
         static MD_Arena *arena = MD_ArenaAlloc();
 
@@ -698,7 +695,7 @@ namespace data {
             TraceLog(LOG_ERROR, "Failed to load sprite index.\n");
         }
 
-        std::vector<TileMapData> tile_maps{};
+        std::vector<Tilemap> tile_maps{};
         err = LoadTilemapIndex("resources/map/overworld_map.txt", tile_maps);
         if (err) {
             assert(!err);
@@ -716,7 +713,7 @@ namespace data {
         for (auto &i : tile_types) packHardcoded.tile_types.push_back(i);
         for (auto &i : tile_maps)  packHardcoded.tile_maps .push_back(i);
 
-        //SaveTilemap("resources/map/overworld_map.txt", packHardcoded.tile_maps[1]);
+        //SaveTilemap("resources/map/test_map.txt", packHardcoded.tile_maps[1]);
 
         // Ensure every array element is initialized and in contiguous order by id
 #define ID_CHECK(type, name, arr)                       \
@@ -732,7 +729,7 @@ namespace data {
 
         LoadResources(packHardcoded);
 
-        err = SavePack(packHardcoded);
+        err = SavePack(packHardcoded, PACK_TYPE_BINARY);
         if (err) {
             assert(!err);
             TraceLog(LOG_ERROR, "Failed to save data file.\n");
@@ -742,11 +739,21 @@ namespace data {
         Pack *pack1 = new Pack{ "pack/pack1.dat" };
         packs.push_back(pack1);
 
-        err = LoadPack(*pack1);
+        err = LoadPack(*pack1, PACK_TYPE_BINARY);
         if (err) {
             assert(!err);
             TraceLog(LOG_ERROR, "Failed to load data file.\n");
         }
+
+#if 0
+        // Doesn't really work.. probably don't need it tbh
+        packHardcoded.path = "pack/pack1.txt";
+        err = SavePack(packHardcoded, PACK_TYPE_TEXT);
+        if (err) {
+            assert(!err);
+            TraceLog(LOG_ERROR, "Failed to save data file as text.\n");
+        }
+#endif
 
 #if 0
         DatBuffer compressMe{};
@@ -791,19 +798,109 @@ namespace data {
     }
 
 #define PROC(v) Process(stream, v);
-    template <typename T>
+
+    template<typename T>
+    concept BoolType =
+        std::is_same_v<T, bool>;
+
+    template<typename T>
+    concept CharType =
+        std::is_same_v<T, char>;
+
+    template<typename T>
+    concept IntType =
+        std::is_same_v<T, int8_t> ||
+        std::is_same_v<T, int16_t> ||
+        std::is_same_v<T, int32_t>;
+
+    template<typename T>
+    concept UintType =
+        std::is_same_v<T, uint8_t> ||
+        std::is_same_v<T, uint16_t> ||
+        std::is_same_v<T, uint32_t>;
+
+    template<typename T>
+    concept SizeType =
+        std::is_same_v<T, size_t>;
+
+    template<typename T>
+    concept FloatType =
+        std::is_same_v<T, float> ||
+        std::is_same_v<T, double>;
+
+    template<typename T>
+    concept SerializableTypes = BoolType<T> || CharType<T> || IntType<T> || UintType<T> || SizeType<T> || FloatType<T>;
+
+    template<BoolType T>
+    void TextAtom(PackStream &stream, T v)
+    {
+        fprintf(stream.file, "%s", v ? "true" : "false");
+        fputc('\n', stream.file);
+    }
+
+    template<CharType T>
+    void TextAtom(PackStream &stream, T v)
+    {
+        fprintf(stream.file, "%c", v);
+    }
+
+    template<IntType T>
+    void TextAtom(PackStream &stream, T v)
+    {
+        fprintf(stream.file, "%d", v);
+        fputc('\n', stream.file);
+    }
+
+    template<UintType T>
+    void TextAtom(PackStream &stream, T v)
+    {
+        fprintf(stream.file, "%u", v);
+        fputc('\n', stream.file);
+    }
+
+    template<SizeType T>
+    void TextAtom(PackStream &stream, T v)
+    {
+        fprintf(stream.file, "%zu", v);
+        fputc('\n', stream.file);
+    }
+
+    template<FloatType T>
+    void TextAtom(PackStream &stream, T v)
+    {
+        fprintf(stream.file, "%f", v);
+        fputc('\n', stream.file);
+    }
+
+    template<SerializableTypes T>
     void Process(PackStream &stream, T &v)
     {
         static_assert(std::is_fundamental_v<T> || std::is_enum_v<T>,
             "You cannot fread/write a non-primitive type");
-        stream.process(&v, sizeof(v), 1, stream.f);
+
+        if (stream.type == PACK_TYPE_BINARY) {
+            stream.process(&v, sizeof(v), 1, stream.file);
+        } else if (stream.type == PACK_TYPE_TEXT) {
+            // text mode reading not yet implemented
+            assert(stream.mode == PACK_MODE_WRITE);
+            TextAtom(stream, v);
+        }
+
+        if (stream.mode == PACK_MODE_WRITE) {
+            fflush(stream.file);
+        }
     }
     void Process(PackStream &stream, std::string &str)
     {
         uint16_t strLen = (uint16_t)str.size();
         PROC(strLen);
         str.resize(strLen);
-        stream.process(str.data(), 1, strLen, stream.f);
+        for (int i = 0; i < strLen; i++) {
+            PROC(str[i]);
+        }
+        if (stream.type == PACK_TYPE_TEXT) {
+            TextAtom(stream, '\n');
+        }
     }
     void Process(PackStream &stream, Vector2 &vec)
     {
@@ -831,7 +928,9 @@ namespace data {
                 assert(stream.mode == PACK_MODE_READ);
                 buffer.bytes = (uint8_t *)MemAlloc(buffer.length);
             }
-            stream.process(buffer.bytes, 1, buffer.length, stream.f);
+            for (size_t i = 0; i < buffer.length; i++) {
+                PROC(buffer.bytes[i]);
+            }
         }
     }
     void Process(PackStream &stream, GfxFile &gfx_file, int index)
@@ -926,7 +1025,7 @@ namespace data {
     }
     void Process(PackStream &stream, TileType &tile_type, int index)
     {
-        PROC(tile_type.id);
+        PROC((uint16_t &)tile_type.id);
         PROC(tile_type.anim);
         PROC(tile_type.material);
         PROC(tile_type.flags);
@@ -942,8 +1041,8 @@ namespace data {
 
         //// Entity ////
         PROC(entity.id);
-        PROC(entity.type);
-        PROC(entity.spec);
+        PROC((uint8_t &)entity.type);
+        PROC((uint8_t &)entity.spec);
         PROC(entity.name);
         PROC(entity.caused_by);
         PROC(entity.spawned_at);
@@ -987,7 +1086,7 @@ namespace data {
         //PROC(entity.velocity);
 
         PROC(entity.sprite);
-        PROC(entity.direction);
+        PROC((uint8_t &)entity.direction);
         //PROC(entity.anim_frame);
         //PROC(entity.anim_accum);
 
@@ -1016,7 +1115,7 @@ namespace data {
         //warp.templateTileset = "resources/wang/tileset2x2.png";
         //---------------------------------------
     }
-    void Process(PackStream &stream, TileMapData &tile_map, int index)
+    void Process(PackStream &stream, Tilemap &tile_map, int index)
     {
         uint32_t sentinel = 0;
         if (stream.mode == PackStreamMode::PACK_MODE_WRITE) {
@@ -1044,12 +1143,10 @@ namespace data {
 
         uint32_t tileDefCount       = tile_map.tileDefs.size();
         uint32_t pathNodeCount      = tile_map.pathNodes.size();
-        uint32_t pathNodeIndexCount = tile_map.pathNodeIndices.size();
         uint32_t pathCount          = tile_map.paths.size();
 
         PROC(tileDefCount);
         PROC(pathNodeCount);
-        PROC(pathNodeIndexCount);
         PROC(pathCount);
 
         PROC(sentinel);
@@ -1058,15 +1155,12 @@ namespace data {
         tile_map.tileDefs       .resize(tileDefCount);
         tile_map.tiles          .resize(tile_map.width * tile_map.height);
         tile_map.pathNodes      .resize(pathNodeCount);
-        tile_map.pathNodeIndices.resize(pathNodeIndexCount);
         tile_map.paths          .resize(pathCount);
 
         for (uint32_t i = 0; i < tileDefCount; i++) {
             data::TileDef &tileDef = tile_map.tileDefs[i];
             PROC(tileDef.x);
             PROC(tileDef.y);
-            PROC(tileDef.w);
-            PROC(tileDef.h);
             PROC(tileDef.collide);
             PROC(tileDef.auto_tile_mask);
 
@@ -1096,13 +1190,6 @@ namespace data {
                 PROC(aiPathNode.pos.z);
             }
             PROC(aiPathNode.waitFor);
-        }
-
-        PROC(sentinel);
-        assert(sentinel == Tilemap::SENTINEL);
-
-        for (uint32_t &aiPathNodeIndex : tile_map.pathNodeIndices) {
-            PROC(aiPathNodeIndex);
         }
 
         PROC(sentinel);
@@ -1147,7 +1234,7 @@ namespace data {
             return RN_BAD_FILE_READ;
         }
 
-        int tocOffsetPos = ftell(stream.f);
+        int tocOffsetPos = ftell(stream.file);
         pack.toc_offset = 0;
         PROC(pack.toc_offset);
 
@@ -1156,7 +1243,7 @@ namespace data {
                 /* 0 slot is reserved, skip it when writing */\
                 for (int i = 1; i < arr.size(); i++) { \
                     auto &entry = arr[i]; \
-                    pack.toc.entries.push_back(PackTocEntry(entry.dtype, ftell(stream.f))); \
+                    pack.toc.entries.push_back(PackTocEntry(entry.dtype, ftell(stream.file))); \
                     Process(stream, entry, i); \
                 }
 
@@ -1175,25 +1262,25 @@ namespace data {
 
             #undef WRITE_ARRAY
 
-            int tocOffset = ftell(stream.f);
+            int tocOffset = ftell(stream.file);
             int entryCount = (int)pack.toc.entries.size();
             PROC(entryCount);
             for (PackTocEntry &tocEntry : pack.toc.entries) {
-                PROC(tocEntry.dtype);
+                PROC((uint8_t &)tocEntry.dtype);
                 PROC(tocEntry.offset);
             }
 
-            fseek(stream.f, tocOffsetPos, SEEK_SET);
+            fseek(stream.file, tocOffsetPos, SEEK_SET);
             PROC(tocOffset);
         } else {
-            fseek(stream.f, pack.toc_offset, SEEK_SET);
+            fseek(stream.file, pack.toc_offset, SEEK_SET);
             int entryCount = 0;
             PROC(entryCount);
             pack.toc.entries.resize(entryCount);
 
             int typeCounts[DAT_TYP_COUNT]{};
             for (PackTocEntry &tocEntry : pack.toc.entries) {
-                PROC(tocEntry.dtype);
+                PROC((uint8_t &)tocEntry.dtype);
                 PROC(tocEntry.offset);
                 typeCounts[tocEntry.dtype]++;
             }
@@ -1216,7 +1303,7 @@ namespace data {
             }
 
             for (PackTocEntry &tocEntry : pack.toc.entries) {
-                fseek(stream.f, tocEntry.offset, SEEK_SET);
+                fseek(stream.file, tocEntry.offset, SEEK_SET);
                 int index = typeNextIndex[tocEntry.dtype];
                 tocEntry.index = index;
                 switch (tocEntry.dtype) {
@@ -1239,7 +1326,7 @@ namespace data {
     }
 #undef PROC
 
-    Err SavePack(Pack &pack)
+    Err SavePack(Pack &pack, PackStreamType type)
     {
         Err err = RN_SUCCESS;
 
@@ -1248,19 +1335,15 @@ namespace data {
             if (err) return err;
         }
 
-        PackStream stream{};
-        stream.mode = PACK_MODE_WRITE;
-        stream.f = fopen(pack.path.c_str(), "wb");
-        if (!stream.f) {
+        FILE *file = fopen(pack.path.c_str(), type == PACK_TYPE_BINARY ? "wb" : "w");
+        if (!file) {
             return RN_BAD_FILE_WRITE;
         }
 
-        stream.process = (ProcessFn)fwrite;
-        stream.pack = &pack;
-
+        PackStream stream{ &pack, file, PACK_MODE_WRITE, type };
         err = Process(stream);
 
-        fclose(stream.f);
+        fclose(stream.file);
         return err;
     }
 
@@ -1348,19 +1431,16 @@ namespace data {
 
         return err;
     }
-    Err LoadPack(Pack &pack)
+    Err LoadPack(Pack &pack, PackStreamType type)
     {
         Err err = RN_SUCCESS;
 
-        PackStream stream{};
-        stream.mode = PACK_MODE_READ;
-        stream.f = fopen(pack.path.c_str(), "rb");
-        if (!stream.f) {
+        FILE *file = fopen(pack.path.c_str(), type == PACK_TYPE_BINARY ? "rb" : "r");
+        if (!file) {
             return RN_BAD_FILE_READ;
         }
-        stream.process = (ProcessFn)fread;
-        stream.pack = &pack;
 
+        PackStream stream{ &pack, file, PACK_MODE_READ, type };
         do {
             err = Process(stream);
             if (err) break;
@@ -1372,7 +1452,7 @@ namespace data {
             if (err) break;
         } while(0);
 
-        if (stream.f) fclose(stream.f);
+        if (stream.file) fclose(stream.file);
         return err;
     }
     void UnloadPack(Pack &pack)

@@ -1,7 +1,7 @@
 #pragma once
 #include "../common/common.h"
+#include "../common/data.h"
 #include "../common/input_command.h"
-#include "../common/tilemap.h"
 
 struct Msg_S_EntitySpawn;
 struct Msg_S_EntitySnapshot;
@@ -27,9 +27,9 @@ struct ClientWorld {
     std::string musBackgroundMusic{};
 
     data::Entity *LocalPlayer(void);
-    Tilemap *LocalPlayerMap(void);
+    data::Tilemap *LocalPlayerMap(void);
 
-    Tilemap *FindOrLoadMap(std::string map_name);
+    data::Tilemap *FindOrLoadMap(std::string map_name);
 
     bool CopyEntityData(uint32_t entityId, data::EntityData &data);
 
@@ -52,7 +52,7 @@ private:
 
     void UpdateLocalPlayerHisto(GameClient &client, data::Entity &entity, HistoData &histoData);
     void UpdateLocalPlayer(GameClient &client, data::Entity &entity, data::AspectGhost &ghost);
-    void UpdateLocalGhost(GameClient &client, data::Entity &entity, data::AspectGhost &ghost, Tilemap *localPlayerMap);
+    void UpdateLocalGhost(GameClient &client, data::Entity &entity, data::AspectGhost &ghost, data::Tilemap *localPlayerMap);
     void UpdateEntities(GameClient &client);
 
     void DrawEntitySnapshotShadows(uint32_t entityId, Controller &controller, double now, double dt);
