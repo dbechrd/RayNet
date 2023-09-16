@@ -23,7 +23,28 @@ gfx_anim_obj_campfire        sfx_campfire       60         8         4  gfx_fram
 gfx_anim_prj_fireball        sfx_fireball       60         1         0  gfx_frame_prj_fireball_0
 
 # tiles
-gfx_anim_til_grass           -                  60         1         0  gfx_frame_til_grass
+gfx_anim_til_void            -                  60         1         0  gfx_frame_til_void
+gfx_anim_til_grass_1         -                  60         1         0  gfx_frame_til_grass_1
+gfx_anim_til_water_1         -                  60         1         0  gfx_frame_til_water_1
+gfx_anim_til_grass_2         -                  60         1         0  gfx_frame_til_grass_2
 gfx_anim_til_stone_path      -                  60         1         0  gfx_frame_til_stone_path
-gfx_anim_til_wall            -                  60         1         0  gfx_frame_til_wall
-gfx_anim_til_water           -                  60         1         0  gfx_frame_til_water
+gfx_anim_til_dried_lake      -                  60         1         0  gfx_frame_til_dried_lake
+gfx_anim_til_grass_3         -                  60         1         0  gfx_frame_til_grass_3
+gfx_anim_til_grass_4         -                  60         1         0  gfx_frame_til_grass_4
+gfx_anim_til_stone_wall_tl   -                  60         1         0  gfx_frame_til_stone_wall_tl
+gfx_anim_til_stone_wall_tc   -                  60         1         0  gfx_frame_til_stone_wall_tc
+gfx_anim_til_stone_wall_tr   -                  60         1         0  gfx_frame_til_stone_wall_tr
+gfx_anim_til_tiny_tree       -                  60         1         0  gfx_frame_til_tiny_tree
+gfx_anim_til_grass_flowers   -                  60         1         0  gfx_frame_til_grass_flowers
+gfx_anim_til_dirt            -                  60         1         0  gfx_frame_til_dirt
+gfx_anim_til_grass_dark      -                  60         1         0  gfx_frame_til_grass_dark
+gfx_anim_til_grass_5         -                  60         1         0  gfx_frame_til_grass_5
+gfx_anim_til_stone_wall_cl   -                  60         1         0  gfx_frame_til_stone_wall_cl
+gfx_anim_til_stone_wall_cc   -                  60         1         0  gfx_frame_til_stone_wall_cc
+gfx_anim_til_stone_wall_cr   -                  60         1         0  gfx_frame_til_stone_wall_cr
+gfx_anim_til_water_dark      -                  60         1         0  gfx_frame_til_water_dark
+gfx_anim_til_grass_6         -                  60         1         0  gfx_frame_til_grass_6
+gfx_anim_til_invis           -                  60         1         0  gfx_frame_til_invis
+gfx_anim_til_stone_wall_bl   -                  60         1         0  gfx_frame_til_stone_wall_bl
+gfx_anim_til_stone_wall_bc   -                  60         1         0  gfx_frame_til_stone_wall_bc
+gfx_anim_til_stone_wall_br   -                  60         1         0  gfx_frame_til_stone_wall_br

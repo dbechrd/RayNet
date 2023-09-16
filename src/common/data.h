@@ -1,13 +1,6 @@
 #pragma once
 #include "common.h"
 
-////////////////////////////////////////////////////////////////////////////
-// TileFrame: textureId, x, y, w, h
-// TileGraphic: uint8_t id, const char *name, animLen[8], frames[8], delays[8] (up to 8 anims, for each direction)
-// TileMaterial: flags (walk, swim), footstepSoundId
-// TileType: uint8_t id, tileGraphicId, tileMaterialId
-////////////////////////////////////////////////////////////////////////////
-
 struct Msg_S_TileChunk;
 struct Msg_S_EntitySnapshot;
 struct WangMap;
@@ -16,16 +9,18 @@ namespace data {
     // DO NOT re-order these! They are hard-coded in the TOC
 #define DATA_TYPES(gen) \
         gen(DAT_TYP_UNUSED,    "UNUSED"   ) \
+\
         gen(DAT_TYP_GFX_FILE,  "GFX_FILE" ) \
         gen(DAT_TYP_MUS_FILE,  "MUS_FILE" ) \
         gen(DAT_TYP_SFX_FILE,  "SFX_FILE" ) \
+\
         gen(DAT_TYP_GFX_FRAME, "GFX_FRAME") \
         gen(DAT_TYP_GFX_ANIM,  "GFX_ANIM" ) \
         gen(DAT_TYP_MATERIAL,  "MATERIAL" ) \
-        gen(DAT_TYP_TILE_TYPE, "TILE_TYPE") \
-        gen(DAT_TYP_ENTITY,    "ENTITY"   ) \
         gen(DAT_TYP_SPRITE,    "SPRITE"   ) \
-        gen(DAT_TYP_TILE_MAP,  "TILE_MAP" )
+\
+        gen(DAT_TYP_TILE_MAP,  "TILE_MAP" ) \
+        gen(DAT_TYP_ENTITY,    "ENTITY"   )
 
     enum DataType : uint8_t {
         DATA_TYPES(ENUM_GEN_VALUE_DESC)
@@ -82,49 +77,6 @@ namespace data {
         ::Texture   texture     {};
     };
 
-//#define MUS_FILE_IDS(gen)           \
-//    gen(MUS_FILE_NONE)              \
-//    gen(MUS_FILE_AMBIENT_OUTDOORS)  \
-//    gen(MUS_FILE_AMBIENT_CAVE)      \
-//
-//    enum MusFileId : uint16_t {
-//        MUS_FILE_IDS(ENUM_GEN_VALUE)
-//    };
-
-#if 0
-    struct Idx {
-        uint16_t index      {};
-        uint16_t generation {};
-    };
-
-    // Idea: Store all resources in a giant array. When looking up, if the index
-    // is valid check and generation matches, return resource. Otherwise, look
-    // up the resource by name and populate index/generation.
-    struct ResId {
-        const char *id         {};
-        uint16_t    index      {};
-        uint16_t    generation {};
-    };
-
-    struct MusFile_Dat {
-        static const DataType dtype = DAT_TYP_MUS_FILE;
-        DatBuffer buf {};
-    };
-
-    struct MusFile_Mem {
-        MusFile_Dat * dat   {};
-        ::Music       music {};
-    };
-
-    struct MapArea_Dat {
-        const char *musAmbientId;
-    };
-
-    struct MapArea_Mem {
-
-    };
-#endif
-
     struct MusFile {
         static const DataType dtype = DAT_TYP_MUS_FILE;
         std::string id          {};
@@ -145,6 +97,19 @@ namespace data {
         // Runtime data
         ::Sound              sound          {};
         std::vector<::Sound> instances      {};  // "SoundAlias" in raylib, shares buffer, replaces PlaySoundMulti API
+    };
+
+    typedef uint32_t MaterialFlags;
+    enum {
+        MATERIAL_FLAG_WALK = 0x01,
+        MATERIAL_FLAG_SWIM = 0x02,
+    };
+
+    struct Material {
+        static const DataType dtype = DAT_TYP_MATERIAL;
+        std::string   id             {};
+        std::string   footstep_sound {};
+        MaterialFlags flags          {};
     };
 
     struct GfxFrame {
@@ -169,12 +134,6 @@ namespace data {
         bool soundPlayed{};
     };
 
-    struct Material {
-        static const DataType dtype = DAT_TYP_MATERIAL;
-        std::string id             {};
-        std::string footstep_sound {};
-    };
-
     //apparition
     //phantom
     //shade
@@ -191,6 +150,109 @@ namespace data {
         static const DataType dtype = DAT_TYP_SPRITE;
         std::string id       {};
         std::string anims[8] {};  // for each direction
+    };
+
+    ////////////////////////////////////////////////////////////////////////////
+
+    struct TileDef {
+        std::string anim     {};
+        std::string material {};
+        uint8_t     auto_tile_mask {};  // not used atm, but this is where it would go once tiledefs are moved to tilesets
+
+        //------------------------
+        // Not serialized
+        Color color;  // color for minimap/wang tile editor (top left pixel of tile)
+    };
+
+    struct AiPathNode {
+        Vector3 pos;
+        double waitFor;
+    };
+
+    struct AiPath {
+        uint32_t pathNodeStart;
+        uint32_t pathNodeCount;
+    };
+
+    struct Entity;
+
+    struct Tilemap {
+        static const DataType dtype = DAT_TYP_TILE_MAP;
+        static const uint32_t MAGIC = 0xDBBB9192;
+        // v1: the OG
+        // v2: added texturePath
+        // v3: added AI paths/nodes
+        // v4: tileDefCount and tileDef.x/y are now implicit based on texture size
+        // v5: added warps
+        // v6: added auto-tile mask to tileDef
+        // v7: tileDefCount no longer based on texture size, in case texture is moved/deleted
+        // v8: add sentinel
+        // v9: Vector3 path nodes
+        static const uint32_t VERSION = 9;
+        static const uint32_t SENTINEL = 0x12345678;
+
+        uint32_t    version {};  // version on disk
+        std::string name    {};  // name of map area
+        uint32_t    width   {};  // width of map in tiles
+        uint32_t    height  {};  // height of map in tiles
+
+        // TODO(dlb): Move these to a global pool, each has its own textureId
+        std::vector<TileDef>    tileDefs  {};
+        std::vector<Tile>       tiles     {};
+        std::vector<AiPathNode> pathNodes {};  // 94 19 56 22 57
+        std::vector<AiPath>     paths     {};  // offset, length | 0, 3 | 3, 3
+
+        //-------------------------------
+        // Not serialized
+        //-------------------------------
+        uint32_t id                 {};  // for communicating efficiently w/ client about which map
+        double   chunkLastUpdatedAt {};  // used by server to know when chunks are dirty on clients
+
+        //-------------------------------
+        // Clean this section up
+        //-------------------------------
+        struct Coord {
+            uint32_t x, y;
+        };
+
+        void SV_SerializeChunk(Msg_S_TileChunk &tileChunk, uint32_t x, uint32_t y);
+        void CL_DeserializeChunk(Msg_S_TileChunk &tileChunk);
+
+#if 0
+        Err Save(std::string path);
+        Err Load(std::string path);
+#endif
+
+        // Tiles
+        Tile At(uint32_t x, uint32_t y);
+        bool AtTry(uint32_t x, uint32_t y, Tile &tile);
+        bool WorldToTileIndex(uint32_t world_x, uint32_t world_y, Coord &coord);
+        bool AtWorld(uint32_t world_x, uint32_t world_y, Tile &tile);
+
+        void Set(uint32_t x, uint32_t y, Tile tile, double now);
+        void SetFromWangMap(WangMap &wangMap, double now);
+        void Fill(uint32_t x, uint32_t y, int tileDefId, double now);
+
+        const GfxFrame &GetTileGfxFrame(Tile tile);
+        const TileDef &GetTileDef(Tile tile);
+        Rectangle TileDefRect(Tile tile);
+        Color TileDefAvgColor(Tile tile);
+
+        AiPath *GetPath(uint32_t pathId);
+        uint32_t GetNextPathNodeIndex(uint32_t pathId, uint32_t pathNodeIndex);
+        AiPathNode *GetPathNode(uint32_t pathId, uint32_t pathNodeIndex);
+
+        void ResolveEntityTerrainCollisions(Entity &entity);
+        void ResolveEntityTerrainCollisions(uint32_t entityId);
+
+        void DrawTile(Tile tile, Vector2 position);
+        void Draw(Camera2D &camera);
+        void DrawColliders(Camera2D &camera);
+        void DrawTileIds(Camera2D &camera);
+
+    private:
+        bool NeedsFill(uint32_t x, uint32_t y, int tileDefFill);
+        void Scan(uint32_t lx, uint32_t rx, uint32_t y, Tile tileDefFill, std::stack<Coord> &stack);
     };
 
     ////////////////////////////////////////////////////////////////////////////
@@ -375,189 +437,6 @@ namespace data {
 
     ////////////////////////////////////////////////////////////////////////////
 
-#define TILE_TYPE_IDS(gen)  \
-    gen(TILE_NONE)          \
-    gen(TILE_GRASS)         \
-    gen(TILE_STONE_PATH)    \
-    gen(TILE_WATER)         \
-    gen(TILE_WALL)          \
-    gen(TILE_AUTO_GRASS_00) \
-    gen(TILE_AUTO_GRASS_01) \
-    gen(TILE_AUTO_GRASS_02) \
-    gen(TILE_AUTO_GRASS_03) \
-    gen(TILE_AUTO_GRASS_04) \
-    gen(TILE_AUTO_GRASS_05) \
-    gen(TILE_AUTO_GRASS_06) \
-    gen(TILE_AUTO_GRASS_07) \
-    gen(TILE_AUTO_GRASS_08) \
-    gen(TILE_AUTO_GRASS_09) \
-    gen(TILE_AUTO_GRASS_10) \
-    gen(TILE_AUTO_GRASS_11) \
-    gen(TILE_AUTO_GRASS_12) \
-    gen(TILE_AUTO_GRASS_13) \
-    gen(TILE_AUTO_GRASS_14) \
-    gen(TILE_AUTO_GRASS_15) \
-    gen(TILE_AUTO_GRASS_16) \
-    gen(TILE_AUTO_GRASS_17) \
-    gen(TILE_AUTO_GRASS_18) \
-    gen(TILE_AUTO_GRASS_19) \
-    gen(TILE_AUTO_GRASS_20) \
-    gen(TILE_AUTO_GRASS_21) \
-    gen(TILE_AUTO_GRASS_22) \
-    gen(TILE_AUTO_GRASS_23) \
-    gen(TILE_AUTO_GRASS_24) \
-    gen(TILE_AUTO_GRASS_25) \
-    gen(TILE_AUTO_GRASS_26) \
-    gen(TILE_AUTO_GRASS_27) \
-    gen(TILE_AUTO_GRASS_28) \
-    gen(TILE_AUTO_GRASS_29) \
-    gen(TILE_AUTO_GRASS_30) \
-    gen(TILE_AUTO_GRASS_31) \
-    gen(TILE_AUTO_GRASS_32) \
-    gen(TILE_AUTO_GRASS_33) \
-    gen(TILE_AUTO_GRASS_34) \
-    gen(TILE_AUTO_GRASS_35) \
-    gen(TILE_AUTO_GRASS_36) \
-    gen(TILE_AUTO_GRASS_37) \
-    gen(TILE_AUTO_GRASS_38) \
-    gen(TILE_AUTO_GRASS_39) \
-    gen(TILE_AUTO_GRASS_40) \
-    gen(TILE_AUTO_GRASS_41) \
-    gen(TILE_AUTO_GRASS_42) \
-    gen(TILE_AUTO_GRASS_43) \
-    gen(TILE_AUTO_GRASS_44) \
-    gen(TILE_AUTO_GRASS_45) \
-    gen(TILE_AUTO_GRASS_46) \
-    gen(TILE_AUTO_GRASS_47)
-
-    enum TileTypeId : uint16_t {
-        TILE_TYPE_IDS(ENUM_GEN_VALUE)
-    };
-
-    typedef uint32_t TileFlags;
-    enum {
-        TILE_FLAG_COLLIDE = 0x01,
-        TILE_FLAG_WALK    = 0x02,
-        TILE_FLAG_SWIM    = 0x04,
-    };
-
-    struct TileType {
-        static const DataType dtype = DAT_TYP_TILE_TYPE;
-        TileTypeId  id             {};
-        std::string anim           {};
-        std::string material       {};
-        TileFlags   flags          {};
-        uint8_t     auto_tile_mask {};
-        //Color color;  // color for minimap/wang tile editor (top left pixel of tile)
-    };
-
-    struct AiPathNode {
-        Vector3 pos;
-        double waitFor;
-    };
-
-    struct AiPath {
-        uint32_t pathNodeStart;
-        uint32_t pathNodeCount;
-    };
-
-    struct TileDef {
-        //uint16_t tileId;
-        //uint16_t sheetId;
-        //uint16_t materialId;
-        uint16_t x;
-        uint16_t y;
-        //uint8_t w;
-        //uint8_t h;
-        uint8_t collide;
-        uint8_t auto_tile_mask;
-
-        //------------------------
-        // Not serialized
-        Color color;  // color for minimap/wang tile editor (top left pixel of tile)
-    };
-
-    struct Tilemap {
-        static const DataType dtype = DAT_TYP_TILE_MAP;
-        static const uint32_t MAGIC = 0xDBBB9192;
-        // v1: the OG
-        // v2: added texturePath
-        // v3: added AI paths/nodes
-        // v4: tileDefCount and tileDef.x/y are now implicit based on texture size
-        // v5: added warps
-        // v6: added auto-tile mask to tileDef
-        // v7: tileDefCount no longer based on texture size, in case texture is moved/deleted
-        // v8: add sentinel
-        // v9: Vector3 path nodes
-        static const uint32_t VERSION = 9;
-        static const uint32_t SENTINEL = 0x12345678;
-
-        uint32_t    version   {};  // version on disk
-        uint32_t    width     {};  // width of map in tiles
-        uint32_t    height    {};  // height of map in tiles
-        std::string name      {};  // name of map area
-        std::string texture   {};  // GfxFile key
-
-        // TODO(dlb): Move these to a global pool, each has its own textureId
-        std::vector<TileDef>    tileDefs        {};
-        std::vector<Tile>       tiles           {};
-        std::vector<AiPathNode> pathNodes       {};  // 94 19 56 22 57
-        std::vector<AiPath>     paths           {};  // offset, length | 0, 3 | 3, 3
-
-        //-------------------------------
-        // Not serialized
-        //-------------------------------
-        uint32_t id                 {};  // for communicating efficiently w/ client about which map
-        double   chunkLastUpdatedAt {};  // used by server to know when chunks are dirty on clients
-
-        //-------------------------------
-        // Clean this section up
-        //-------------------------------
-        struct Coord {
-            uint32_t x, y;
-        };
-
-        void SV_SerializeChunk(Msg_S_TileChunk &tileChunk, uint32_t x, uint32_t y);
-        void CL_DeserializeChunk(Msg_S_TileChunk &tileChunk);
-
-#if 0
-        Err Save(std::string path);
-        Err Load(std::string path);
-#endif
-
-        // Tiles
-        Tile At(uint32_t x, uint32_t y);
-        bool AtTry(uint32_t x, uint32_t y, Tile &tile);
-        bool WorldToTileIndex(uint32_t world_x, uint32_t world_y, Coord &coord);
-        bool AtWorld(uint32_t world_x, uint32_t world_y, Tile &tile);
-
-        void Set(uint32_t x, uint32_t y, Tile tile, double now);
-        void SetFromWangMap(WangMap &wangMap, double now);
-        void Fill(uint32_t x, uint32_t y, int tileDefId, double now);
-
-        const TileDef &GetTileDef(Tile tile);
-        Rectangle TileDefRect(Tile tile);
-        Color TileDefAvgColor(Tile tile);
-
-        AiPath *GetPath(uint32_t pathId);
-        uint32_t GetNextPathNodeIndex(uint32_t pathId, uint32_t pathNodeIndex);
-        AiPathNode *GetPathNode(uint32_t pathId, uint32_t pathNodeIndex);
-
-        void ResolveEntityTerrainCollisions(Entity &entity);
-        void ResolveEntityTerrainCollisions(uint32_t entityId);
-
-        void DrawTile(Texture2D tex, Tile tile, Vector2 position);
-        void Draw(Camera2D &camera);
-        void DrawColliders(Camera2D &camera);
-        void DrawTileIds(Camera2D &camera);
-
-    private:
-        bool NeedsFill(uint32_t x, uint32_t y, int tileDefFill);
-        void Scan(uint32_t lx, uint32_t rx, uint32_t y, Tile tileDefFill, std::stack<Coord> &stack);
-    };
-
-    ////////////////////////////////////////////////////////////////////////////
-
     struct PackTocEntry {
         DataType dtype  {};
         int      offset {};  // byte offset in pack file binary data
@@ -584,16 +463,15 @@ namespace data {
         // - music
         // - sprite defs
         // - tile defs
-        // - object defs
+        // - object defs (TODO)
         std::vector<GfxFile>  gfx_files  {};
         std::vector<MusFile>  mus_files  {};
         std::vector<SfxFile>  sfx_files  {};
+
         std::vector<GfxFrame> gfx_frames {};
         std::vector<GfxAnim>  gfx_anims  {};
         std::vector<Material> materials  {};
         std::vector<Sprite>   sprites    {};
-        std::vector<TileType> tile_types {};
-        std::vector<Tilemap>  tile_maps  {};
 
         // static entities? (objects?)
         // - doors
@@ -611,15 +489,20 @@ namespace data {
         // - monsters
         // - particles? maybe?
         std::vector<Entity> entities {};
+        std::vector<Tilemap>  tile_maps  {};
 
         std::unordered_map<std::string, size_t> gfx_file_by_id{};
-        std::unordered_map<std::string, size_t> gfx_frame_by_id{};
-        std::unordered_map<std::string, size_t> gfx_anim_by_id{};
         std::unordered_map<std::string, size_t> mus_file_by_id{};
         std::unordered_map<std::string, std::vector<size_t>> sfx_file_by_id{};  // vector holds variants
-        std::unordered_map<std::string, size_t> sprite_by_id{};
-        std::unordered_map<std::string, size_t> tile_map_by_name{};
 
+        std::unordered_map<std::string, size_t> gfx_frame_by_id{};
+        std::unordered_map<std::string, size_t> gfx_anim_by_id{};
+        std::unordered_map<std::string, size_t> material_by_id{};
+        std::unordered_map<std::string, size_t> sprite_by_id{};
+
+        std::unordered_map<std::string, size_t> tile_map_by_name{};
+        // HACK(dlb): Server gives seq ids to loaded maps so that it can tell the client about maps without
+        // sending strings. This needs to happen for tons of other stuff, need to find a consistent approach.
         size_t next_map_id = 1;
         std::unordered_map<uint32_t, size_t> tile_map_by_id{};
 
@@ -630,11 +513,12 @@ namespace data {
             gfx_files.emplace_back();
             mus_files.emplace_back();
             sfx_files.emplace_back();
+
             gfx_frames.emplace_back();
             gfx_anims.emplace_back();
             materials.emplace_back();
             sprites.emplace_back();
-            tile_types.emplace_back();
+
             tile_maps.emplace_back();
         }
 
@@ -645,26 +529,6 @@ namespace data {
             } else {
                 TraceLog(LOG_WARNING, "Missing graphic file: %s", id.c_str());
                 return gfx_files[0];
-            }
-        }
-
-        GfxFrame &FindGraphicFrame(std::string id) {
-            const auto &entry = gfx_frame_by_id.find(id);
-            if (entry != gfx_frame_by_id.end()) {
-                return gfx_frames[entry->second];
-            } else {
-                TraceLog(LOG_WARNING, "Missing graphic frame: %s", id.c_str());
-                return gfx_frames[0];
-            }
-        }
-
-        GfxAnim &FindGraphicAnim(std::string id) {
-            const auto &entry = gfx_anim_by_id.find(id);
-            if (entry != gfx_anim_by_id.end()) {
-                return gfx_anims[entry->second];
-            } else {
-                TraceLog(LOG_WARNING, "Missing graphic animation: %s", id.c_str());
-                return gfx_anims[0];
             }
         }
 
@@ -698,6 +562,36 @@ namespace data {
                     TraceLog(LOG_WARNING, "Missing sound: %s", id.c_str());
                 }
                 return sfx_files[0];
+            }
+        }
+
+        GfxFrame &FindGraphicFrame(std::string id) {
+            const auto &entry = gfx_frame_by_id.find(id);
+            if (entry != gfx_frame_by_id.end()) {
+                return gfx_frames[entry->second];
+            } else {
+                TraceLog(LOG_WARNING, "Missing graphic frame: %s", id.c_str());
+                return gfx_frames[0];
+            }
+        }
+
+        GfxAnim &FindGraphicAnim(std::string id) {
+            const auto &entry = gfx_anim_by_id.find(id);
+            if (entry != gfx_anim_by_id.end()) {
+                return gfx_anims[entry->second];
+            } else {
+                TraceLog(LOG_WARNING, "Missing graphic animation: %s", id.c_str());
+                return gfx_anims[0];
+            }
+        }
+
+        Material &FindMaterial(std::string id) {
+            const auto &entry = material_by_id.find(id);
+            if (entry != material_by_id.end()) {
+                return materials[entry->second];
+            } else {
+                TraceLog(LOG_WARNING, "Missing material: %s", id.c_str());
+                return materials[0];
             }
         }
 
@@ -763,7 +657,6 @@ namespace data {
     };
 
     const char *DataTypeStr(DataType type);
-    const char *TileTypeIdStr(TileTypeId id);
     const char *EntityTypeStr(EntityType type);
 
     extern std::vector<Pack *> packs;

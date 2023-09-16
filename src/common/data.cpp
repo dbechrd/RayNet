@@ -14,9 +14,8 @@ namespace data {
         }                                          \
     }
 
-    ENUM_STR_GENERATOR(DataType,   DATA_TYPES   , ENUM_GEN_CASE_RETURN_DESC);
-    ENUM_STR_GENERATOR(TileTypeId, TILE_TYPE_IDS, ENUM_GEN_CASE_RETURN_STR);
-    ENUM_STR_GENERATOR(EntityType, ENTITY_TYPES , ENUM_GEN_CASE_RETURN_STR);
+    ENUM_STR_GENERATOR(DataType,   DATA_TYPES,   ENUM_GEN_CASE_RETURN_DESC);
+    ENUM_STR_GENERATOR(EntityType, ENTITY_TYPES, ENUM_GEN_CASE_RETURN_STR);
 #undef ENUM_STR_GENERATOR
 
     Texture placeholderTex{};
@@ -104,6 +103,79 @@ namespace data {
 
         return err;
     }
+    Err LoadMusicIndex(std::string path, std::vector<MusFile> &mus_files)
+    {
+        Err err = RN_SUCCESS;
+
+        std::ifstream inputFile(path);
+        if (inputFile.is_open()) {
+            std::string line;
+            while (!err && std::getline(inputFile, line)) {
+                if (line[0] == '#') continue;
+                std::istringstream iss(line);
+
+                MusFile mus_file{};
+                if (iss
+                    >> mus_file.id
+                    >> std::quoted(mus_file.path)
+                    ) {
+                    mus_files.push_back(mus_file);
+                }
+            }
+
+            inputFile.close();
+        } else {
+            assert(!"failed to read file");
+            err = RN_BAD_FILE_READ;
+        }
+
+        return err;
+    }
+    Err LoadSoundIndex(std::string path, std::vector<SfxFile> &sfx_files)
+    {
+        Err err = RN_SUCCESS;
+
+        std::ifstream inputFile(path);
+        if (inputFile.is_open()) {
+            std::string line;
+            while (!err && std::getline(inputFile, line)) {
+                if (line[0] == '#') continue;
+                std::istringstream iss(line);
+
+                SfxFile sfx_file{};
+                if (iss
+                    >> sfx_file.id
+                    >> std::quoted(sfx_file.path)
+                    >> sfx_file.variations
+                    >> sfx_file.pitch_variance
+                    >> sfx_file.max_instances
+                    ) {
+                    if (sfx_file.variations > 1) {
+                        const char *file_dir = GetDirectoryPath(sfx_file.path.c_str());
+                        const char *file_name = GetFileNameWithoutExt(sfx_file.path.c_str());
+                        const char *file_ext = GetFileExtension(sfx_file.path.c_str());
+                        for (int i = 1; i <= sfx_file.variations; i++) {
+                            // Build variant path, e.g. chicken_cluck.wav -> chicken_cluck_01.wav
+                            const char *variant_path = TextFormat("%s/%s_%02d%s", file_dir, file_name, i, file_ext);
+                            SfxFile sfx_variant = sfx_file;
+                            sfx_variant.path = variant_path;
+                            sfx_files.push_back(sfx_variant);
+                        }
+                    } else {
+                        sfx_files.push_back(sfx_file);
+                    }
+                }
+            }
+
+            inputFile.close();
+        } else {
+            assert(!"failed to read file");
+            err = RN_BAD_FILE_READ;
+        }
+
+        return err;
+    }
+
     Err LoadFramesIndex(std::string path, std::vector<GfxFrame> &gfx_frames)
     {
         Err err = RN_SUCCESS;
@@ -188,78 +260,6 @@ namespace data {
 
         return err;
     }
-    Err LoadMusicIndex(std::string path, std::vector<MusFile> &mus_files)
-    {
-        Err err = RN_SUCCESS;
-
-        std::ifstream inputFile(path);
-        if (inputFile.is_open()) {
-            std::string line;
-            while (!err && std::getline(inputFile, line)) {
-                if (line[0] == '#') continue;
-                std::istringstream iss(line);
-
-                MusFile mus_file{};
-                if (iss
-                    >> mus_file.id
-                    >> std::quoted(mus_file.path)
-                ) {
-                    mus_files.push_back(mus_file);
-                }
-            }
-
-            inputFile.close();
-        } else {
-            assert(!"failed to read file");
-            err = RN_BAD_FILE_READ;
-        }
-
-        return err;
-    }
-    Err LoadSoundIndex(std::string path, std::vector<SfxFile> &sfx_files)
-    {
-        Err err = RN_SUCCESS;
-
-        std::ifstream inputFile(path);
-        if (inputFile.is_open()) {
-            std::string line;
-            while (!err && std::getline(inputFile, line)) {
-                if (line[0] == '#') continue;
-                std::istringstream iss(line);
-
-                SfxFile sfx_file{};
-                if (iss
-                    >> sfx_file.id
-                    >> std::quoted(sfx_file.path)
-                    >> sfx_file.variations
-                    >> sfx_file.pitch_variance
-                    >> sfx_file.max_instances
-                ) {
-                    if (sfx_file.variations > 1) {
-                        const char *file_dir = GetDirectoryPath(sfx_file.path.c_str());
-                        const char *file_name = GetFileNameWithoutExt(sfx_file.path.c_str());
-                        const char *file_ext = GetFileExtension(sfx_file.path.c_str());
-                        for (int i = 1; i <= sfx_file.variations; i++) {
-                            // Build variant path, e.g. chicken_cluck.wav -> chicken_cluck_01.wav
-                            const char *variant_path = TextFormat("%s/%s_%02d%s", file_dir, file_name, i, file_ext);
-                            SfxFile sfx_variant = sfx_file;
-                            sfx_variant.path = variant_path;
-                            sfx_files.push_back(sfx_variant);
-                        }
-                    } else {
-                        sfx_files.push_back(sfx_file);
-                    }
-                }
-            }
-
-            inputFile.close();
-        } else {
-            assert(!"failed to read file");
-            err = RN_BAD_FILE_READ;
-        }
-
-        return err;
-    }
     Err LoadMaterialIndex(std::string path, std::vector<Material> &materials)
     {
         Err err = RN_SUCCESS;
@@ -271,11 +271,21 @@ namespace data {
                 if (line[0] == '#') continue;
                 std::istringstream iss(line);
 
+                int flag_walk{};
+                int flag_swim{};
+
                 Material material{};
                 if (iss
                     >> material.id
                     >> material.footstep_sound
+                    >> flag_walk
+                    >> flag_swim
                 ) {
+                    if (material.footstep_sound == "-") material.footstep_sound = "";
+
+                    if (flag_walk) material.flags |= MATERIAL_FLAG_WALK;
+                    if (flag_swim) material.flags |= MATERIAL_FLAG_SWIM;
+
                     materials.push_back(material);
                 }
             }
@@ -326,6 +336,7 @@ namespace data {
 
         return err;
     }
+
     Err LoadTilemapIndex(std::string path, std::vector<Tilemap> &tile_maps)
     {
         Err err = RN_SUCCESS;
@@ -345,8 +356,7 @@ namespace data {
 
                 if (type == "map") {
                     iss >> tile_map.version
-                        >> tile_map.name
-                        >> tile_map.texture;
+                        >> tile_map.name;
                     if (iss.fail()) { err = RN_BAD_FILE_READ; break; }
                 } else if (type == "tile_defs") {
                     int tile_def_count = 0;
@@ -358,18 +368,11 @@ namespace data {
                         std::getline(inputFile, line);
                         iss = std::istringstream(line);
 
-                        int collide = 0;
-                        int auto_tile_mask = 0;
-
                         TileDef tile_def{};
-                        iss >> tile_def.x
-                            >> tile_def.y
-                            >> collide
-                            >> auto_tile_mask;
+                        iss >> tile_def.anim
+                            >> tile_def.material
+                            >> tile_def.auto_tile_mask;
                         if (iss.fail()) { err = RN_BAD_FILE_READ; break; }
-
-                        tile_def.collide = collide;
-                        tile_def.auto_tile_mask = auto_tile_mask;
 
                         tile_map.tileDefs.push_back(tile_def);
                     }
@@ -472,17 +475,16 @@ namespace data {
             }
 
             fprintf(file, "# map version name texture\n");
-            fprintf(file, "map %u %s %s\n", tilemap.version, tilemap.name.c_str(), tilemap.texture.c_str());
+            fprintf(file, "map %u %s\n", tilemap.version, tilemap.name.c_str());
             fputc('\n', file);
 
-            fprintf(file, "# tile_defs count [x y w h collide auto_tile_mask]\n");
+            fprintf(file, "# tile_defs count [anim material auto_tile_mask]\n");
             fprintf(file, "tile_defs %u\n", (uint32_t)tilemap.tileDefs.size());
             for (const TileDef &tile_def : tilemap.tileDefs) {
-                fprintf(file, "%-6u %-6u %u %u\n",
-                    (uint32_t)tile_def.x,
-                    (uint32_t)tile_def.y,
-                    (uint32_t)tile_def.collide,
-                    (uint32_t)tile_def.auto_tile_mask
+                fprintf(file, "%-32s %-32s %u\n",
+                    tile_def.anim.c_str(),
+                    tile_def.material.c_str(),
+                    tile_def.auto_tile_mask
                 );
             }
             fputc('\n', file);
@@ -576,95 +578,11 @@ namespace data {
         }
 
 #if DEV_BUILD_PACK_FILE
-        TileType tile_types[] = {
-            // id               gfx/anim                  material     auto_mask   flags
-            { TILE_GRASS,      "gfx_anim_til_grass",      "mat_grass", 0b00000000, TILE_FLAG_WALK },
-            { TILE_STONE_PATH, "gfx_anim_til_stone_path", "mat_stone", 0b00000000, TILE_FLAG_WALK },
-            { TILE_WATER,      "gfx_anim_til_water",      "mat_water", 0b00000000, TILE_FLAG_SWIM },
-            { TILE_WALL,       "gfx_anim_til_wall",       "mat_stone", 0b00000000, TILE_FLAG_COLLIDE },
-
-#if 0
-            { TILE_AUTO_GRASS_00, 0b00000010 },
-            { TILE_AUTO_GRASS_01, 0b01000010 },
-            { TILE_AUTO_GRASS_02, 0b01000000 },
-            { TILE_AUTO_GRASS_03, 0b00000000 },
-
-            { TILE_AUTO_GRASS_04, 0b00001010 },
-            { TILE_AUTO_GRASS_05, 0b01001010 },
-            { TILE_AUTO_GRASS_06, 0b01001000 },
-            { TILE_AUTO_GRASS_07, 0b00001000 },
-
-            { TILE_AUTO_GRASS_08, 0b00011010 },
-            { TILE_AUTO_GRASS_09, 0b01011010 },
-            { TILE_AUTO_GRASS_10, 0b01011000 },
-            { TILE_AUTO_GRASS_11, 0b00011000 },
-
-            { TILE_AUTO_GRASS_12, 0b00010010 },
-            { TILE_AUTO_GRASS_13, 0b01010010 },
-            { TILE_AUTO_GRASS_14, 0b01010000 },
-            { TILE_AUTO_GRASS_15, 0b00010000 },
-
-            { TILE_AUTO_GRASS_16, 0b11011010 },
-            { TILE_AUTO_GRASS_17, 0b01001011 },
-            { TILE_AUTO_GRASS_18, 0b01101010 },
-            { TILE_AUTO_GRASS_19, 0b01011110 },
-
-            { TILE_AUTO_GRASS_20, 0b00011011 },
-            { TILE_AUTO_GRASS_21, 0b01111111 },
-            { TILE_AUTO_GRASS_22, 0b11111011 },
-            { TILE_AUTO_GRASS_23, 0b01111000 },
-
-            { TILE_AUTO_GRASS_24, 0b00011110 },
-            { TILE_AUTO_GRASS_25, 0b11011111 },
-            { TILE_AUTO_GRASS_26, 0b11111110 },
-            { TILE_AUTO_GRASS_27, 0b11011000 },
-
-            { TILE_AUTO_GRASS_28, 0b01111010 },
-            { TILE_AUTO_GRASS_29, 0b01010110 },
-            { TILE_AUTO_GRASS_30, 0b11010010 },
-            { TILE_AUTO_GRASS_31, 0b01011011 },
-
-            { TILE_AUTO_GRASS_32, 0b00001011 },
-            { TILE_AUTO_GRASS_33, 0b01101011 },
-            { TILE_AUTO_GRASS_34, 0b01111011 },
-            { TILE_AUTO_GRASS_35, 0b01101000 },
-
-            { TILE_AUTO_GRASS_36, 0b01011111 },
-            { TILE_AUTO_GRASS_37, 0b01111110 },
-            { TILE_AUTO_GRASS_38, 0b11111111 },
-            { TILE_AUTO_GRASS_39, 0b11111000 },
-
-            { TILE_AUTO_GRASS_40, 0b00011111 },
-            { TILE_AUTO_GRASS_41, 0b00000000 },
-            { TILE_AUTO_GRASS_42, 0b11011011 },
-            { TILE_AUTO_GRASS_43, 0b11111010 },
-
-            { TILE_AUTO_GRASS_44, 0b00010110 },
-            { TILE_AUTO_GRASS_45, 0b11011110 },
-            { TILE_AUTO_GRASS_46, 0b11010110 },
-            { TILE_AUTO_GRASS_47, 0b11010000 },
-#endif
-        };
-
         std::vector<GfxFile> gfx_files{};
         err = LoadGraphicsIndex("resources/graphics.txt", gfx_files);
         if (err) {
             assert(!err);
             TraceLog(LOG_ERROR, "Failed to load graphics index.\n");
-        }
-
-        std::vector<GfxFrame> gfx_frames{};
-        err = LoadFramesIndex("resources/graphics_frames.txt", gfx_frames);
-        if (err) {
-            assert(!err);
-            TraceLog(LOG_ERROR, "Failed to load graphics frame index.\n");
-        }
-
-        std::vector<GfxAnim> gfx_anims{};
-        err = LoadAnimIndex("resources/graphics_anims.txt", gfx_anims);
-        if (err) {
-            assert(!err);
-            TraceLog(LOG_ERROR, "Failed to load graphics animation index.\n");
         }
 
         std::vector<MusFile> mus_files{};
@@ -679,6 +597,20 @@ namespace data {
         if (err) {
             assert(!err);
             TraceLog(LOG_ERROR, "Failed to load sound index.\n");
+        }
+
+        std::vector<GfxFrame> gfx_frames{};
+        err = LoadFramesIndex("resources/graphics_frames.txt", gfx_frames);
+        if (err) {
+            assert(!err);
+            TraceLog(LOG_ERROR, "Failed to load graphics frame index.\n");
+        }
+
+        std::vector<GfxAnim> gfx_anims{};
+        err = LoadAnimIndex("resources/graphics_anims.txt", gfx_anims);
+        if (err) {
+            assert(!err);
+            TraceLog(LOG_ERROR, "Failed to load graphics animation index.\n");
         }
 
         std::vector<Material> materials{};
@@ -710,22 +642,9 @@ namespace data {
         for (auto &i : gfx_anims)  packHardcoded.gfx_anims .push_back(i);
         for (auto &i : materials)  packHardcoded.materials .push_back(i);
         for (auto &i : sprites)    packHardcoded.sprites   .push_back(i);
-        for (auto &i : tile_types) packHardcoded.tile_types.push_back(i);
         for (auto &i : tile_maps)  packHardcoded.tile_maps .push_back(i);
 
         //SaveTilemap("resources/map/test_map.txt", packHardcoded.tile_maps[1]);
-
-        // Ensure every array element is initialized and in contiguous order by id
-#define ID_CHECK(type, name, arr)                       \
-            for (int i = 0; i < arr.size(); i++) {      \
-                const type name = arr[i];               \
-                if (name.id != i) {                     \
-                    assert(!"expected contiguous IDs"); \
-                }                                       \
-            }
-
-        ID_CHECK(TileType &, tile_type, packHardcoded.tile_types);
-#undef ID_CHECK
 
         LoadResources(packHardcoded);
 
@@ -933,6 +852,7 @@ namespace data {
             }
         }
     }
+
     void Process(PackStream &stream, GfxFile &gfx_file, int index)
     {
         PROC(gfx_file.id);
@@ -978,6 +898,7 @@ namespace data {
             sfx_variants.push_back(index);
         }
     }
+
     void Process(PackStream &stream, GfxFrame &gfx_frame, int index)
     {
         PROC(gfx_frame.id);
@@ -1011,6 +932,11 @@ namespace data {
     {
         PROC(material.id);
         PROC(material.footstep_sound);
+        PROC(material.flags);
+
+        if (stream.mode == PACK_MODE_READ) {
+            stream.pack->material_by_id[material.id] = index;
+        }
     }
     void Process(PackStream &stream, Sprite &sprite, int index) {
         PROC(sprite.id);
@@ -1023,14 +949,7 @@ namespace data {
             stream.pack->sprite_by_id[sprite.id] = index;
         }
     }
-    void Process(PackStream &stream, TileType &tile_type, int index)
-    {
-        PROC((uint16_t &)tile_type.id);
-        PROC(tile_type.anim);
-        PROC(tile_type.material);
-        PROC(tile_type.flags);
-        PROC(tile_type.auto_tile_mask);
-    }
+
     void Process(PackStream &stream, Entity &entity, int index)
     {
         bool alive = entity.id && !entity.despawned_at && entity.type;
@@ -1128,7 +1047,6 @@ namespace data {
 
         PROC(tile_map.version);
         PROC(tile_map.name);
-        PROC(tile_map.texture);
         PROC(tile_map.width);
         PROC(tile_map.height);
 
@@ -1159,9 +1077,8 @@ namespace data {
 
         for (uint32_t i = 0; i < tileDefCount; i++) {
             data::TileDef &tileDef = tile_map.tileDefs[i];
-            PROC(tileDef.x);
-            PROC(tileDef.y);
-            PROC(tileDef.collide);
+            PROC(tileDef.anim);
+            PROC(tileDef.material);
             PROC(tileDef.auto_tile_mask);
 
             // TODO: Idk where/how to do this, but we don't have the texture
@@ -1209,6 +1126,7 @@ namespace data {
             stream.pack->tile_map_by_name[tile_map.name] = index;
         }
     }
+
     Err Process(PackStream &stream)
     {
         static const int MAGIC = 0x9291BBDB;
@@ -1252,13 +1170,14 @@ namespace data {
             WRITE_ARRAY(pack.gfx_files);
             WRITE_ARRAY(pack.mus_files);
             WRITE_ARRAY(pack.sfx_files);
+
             WRITE_ARRAY(pack.gfx_frames);
             WRITE_ARRAY(pack.gfx_anims);
             WRITE_ARRAY(pack.materials);
             WRITE_ARRAY(pack.sprites);
-            WRITE_ARRAY(pack.tile_types);
-            WRITE_ARRAY(pack.tile_maps);
+
             WRITE_ARRAY(pack.entities);
+            WRITE_ARRAY(pack.tile_maps);
 
             #undef WRITE_ARRAY
 
@@ -1288,13 +1207,14 @@ namespace data {
             pack.gfx_files .resize(1 + typeCounts[DAT_TYP_GFX_FILE]);
             pack.mus_files .resize(1 + typeCounts[DAT_TYP_MUS_FILE]);
             pack.sfx_files .resize(1 + typeCounts[DAT_TYP_SFX_FILE]);
+
             pack.gfx_frames.resize(1 + typeCounts[DAT_TYP_GFX_FRAME]);
             pack.gfx_anims .resize(1 + typeCounts[DAT_TYP_GFX_ANIM]);
             pack.materials .resize(1 + typeCounts[DAT_TYP_MATERIAL]);
             pack.sprites   .resize(1 + typeCounts[DAT_TYP_SPRITE]);
-            pack.tile_types.resize(1 + typeCounts[DAT_TYP_TILE_TYPE]);
-            pack.tile_maps .resize(1 + typeCounts[DAT_TYP_TILE_MAP]);
+
             pack.entities  .resize(1 + typeCounts[DAT_TYP_ENTITY]);
+            pack.tile_maps .resize(1 + typeCounts[DAT_TYP_TILE_MAP]);
 
             int typeNextIndex[DAT_TYP_COUNT]{};
             // 0 slot is reserved, skip it when reading
@@ -1310,11 +1230,12 @@ namespace data {
                     case DAT_TYP_GFX_FILE:  Process(stream, pack.gfx_files [index], index); break;
                     case DAT_TYP_MUS_FILE:  Process(stream, pack.mus_files [index], index); break;
                     case DAT_TYP_SFX_FILE:  Process(stream, pack.sfx_files [index], index); break;
+
                     case DAT_TYP_GFX_FRAME: Process(stream, pack.gfx_frames[index], index); break;
                     case DAT_TYP_GFX_ANIM:  Process(stream, pack.gfx_anims [index], index); break;
                     case DAT_TYP_MATERIAL:  Process(stream, pack.materials [index], index); break;
                     case DAT_TYP_SPRITE:    Process(stream, pack.sprites   [index], index); break;
-                    case DAT_TYP_TILE_TYPE: Process(stream, pack.tile_types[index], index); break;
+
                     case DAT_TYP_ENTITY:    Process(stream, pack.entities  [index], index); break;
                     case DAT_TYP_TILE_MAP:  Process(stream, pack.tile_maps [index], index); break;
                 }
@@ -1347,25 +1268,6 @@ namespace data {
         return err;
     }
 
-    Err Validate(Pack &pack)
-    {
-        Err err = RN_SUCCESS;
-
-        // Ensure every array element is initialized and in contiguous order by id
-#define ID_CHECK(type, name, arr)                       \
-            for (int i = 0; i < arr.size(); i++) {      \
-                const type name = arr[i];               \
-                if (name.id != i) {                     \
-                    assert(!"expected contiguous IDs"); \
-                    return RN_BAD_FILE_READ;            \
-                }                                       \
-            }
-
-        ID_CHECK(TileType &, tile_type, pack.tile_types);
-#undef ID_CHECK
-
-        return err;
-    }
     Err LoadResources(Pack &pack)
     {
         Err err = RN_SUCCESS;
@@ -1443,9 +1345,6 @@ namespace data {
         PackStream stream{ &pack, file, PACK_MODE_READ, type };
         do {
             err = Process(stream);
-            if (err) break;
-
-            err = Validate(*stream.pack);
             if (err) break;
 
             err = LoadResources(*stream.pack);

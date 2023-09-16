@@ -1,4 +1,9 @@
-# id       footstep sound
-mat_grass  sfx_footstep_grass
-mat_stone  sfx_footstep_stone
-mat_water  sfx_footstep_grass
+# id            footstep_sound      flag_walk  flag_swim
+mat_void        -                   0          0
+mat_grass_path  sfx_footstep_grass  1          0
+mat_water       sfx_footstep_grass  0          1
+mat_stone_path  sfx_footstep_stone  1          0
+mat_dried_lake  -                   1          0
+mat_stone_wall  -                   0          0
+mat_foliage     -                   0          0
+mat_dirt        -                   1          0

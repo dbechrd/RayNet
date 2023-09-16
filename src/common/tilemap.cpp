@@ -408,6 +408,13 @@ void data::Tilemap::Fill(uint32_t x, uint32_t y, int tileDefId, double now)
     }
 }
 
+const data::GfxFrame &data::Tilemap::GetTileGfxFrame(Tile tile)
+{
+    const data::TileDef &tile_def = GetTileDef(tile);
+    const data::GfxAnim &gfx_anim = data::packs[0]->FindGraphicAnim(tile_def.anim);
+    const data::GfxFrame &gfx_frame = data::packs[0]->FindGraphicFrame(gfx_anim.frames[0]);
+    return gfx_frame;
+}
 const data::TileDef &data::Tilemap::GetTileDef(Tile tile)
 {
     if (tile >= tileDefs.size()) tile = 0;
@@ -415,14 +422,14 @@ const data::TileDef &data::Tilemap::GetTileDef(Tile tile)
 }
 Rectangle data::Tilemap::TileDefRect(Tile tile)
 {
-    const data::TileDef &tileDef = GetTileDef(tile);
-    const Rectangle rect{ (float)tileDef.x, (float)tileDef.y, TILE_W, TILE_W };
+    const data::GfxFrame &gfx_frame = GetTileGfxFrame(tile);
+    const Rectangle rect{ (float)gfx_frame.x, (float)gfx_frame.y, (float)gfx_frame.w, (float)gfx_frame.h };
     return rect;
 }
 Color data::Tilemap::TileDefAvgColor(Tile tile)
 {
-    const data::TileDef &tileDef = GetTileDef(tile);
-    return tileDef.color;
+    const data::TileDef &tile_def = GetTileDef(tile);
+    return tile_def.color;
 }
 
 data::AiPath *data::Tilemap::GetPath(uint32_t pathId) {
@@ -476,7 +483,8 @@ void data::Tilemap::ResolveEntityTerrainCollisions(data::Entity &entity)
                 Tile tile{};
                 if (AtTry(x, y, tile)) {
                     const data::TileDef &tileDef = GetTileDef(tile);
-                    if (tileDef.collide) {
+                    const data::Material &material = data::packs[0]->FindMaterial(tileDef.material);
+                    if (!material.flags) {
                         Rectangle tileRect{};
                         Vector2 tilePos = { (float)x * TILE_W, (float)y * TILE_W };
                         tileRect.x = tilePos.x;
@@ -529,19 +537,21 @@ void data::Tilemap::ResolveEntityTerrainCollisions(uint32_t entityId)
     ResolveEntityTerrainCollisions(*entity);
 }
 
-void data::Tilemap::DrawTile(Texture2D tex, Tile tile, Vector2 position)
+void data::Tilemap::DrawTile(Tile tile, Vector2 position)
 {
+    // TODO: Yikes.. that's a lot of lookups in a tight loop. Memoize some pointers or something man.
+    const data::GfxFrame &gfx_frame = GetTileGfxFrame(tile);
+    const GfxFile &gfx_file = data::packs[0]->FindGraphic(gfx_frame.gfx);
     const Rectangle texRect = TileDefRect(tile);
+
     //position.x = floorf(position.x);
     //position.y = floorf(position.y);
     if (position.x != floorf(position.x)) assert(!"floating x");
     if (position.y != floorf(position.y)) assert(!"floating y");
-    dlb_DrawTextureRec(tex, texRect, position, WHITE);
+    dlb_DrawTextureRec(gfx_file.texture, texRect, position, WHITE);
 }
 void data::Tilemap::Draw(Camera2D &camera)
 {
-    const data::GfxFile &gfx_file = data::packs[0]->FindGraphic(texture);
-
     Rectangle screenRect = GetScreenRectWorld(camera);
     int yMin = CLAMP(floorf(screenRect.y / TILE_W), 0, height);
     int yMax = CLAMP(ceilf((screenRect.y + screenRect.height) / TILE_W), 0, height);
@@ -551,7 +561,7 @@ void data::Tilemap::Draw(Camera2D &camera)
     for (int y = yMin; y < yMax; y++) {
         for (int x = xMin; x < xMax; x++) {
             Tile tile = At(x, y);
-            DrawTile(gfx_file.texture, tile, { (float)x * TILE_W, (float)y * TILE_W });
+            DrawTile(tile, { (float)x * TILE_W, (float)y * TILE_W });
         }
     }
 }
@@ -567,7 +577,8 @@ void data::Tilemap::DrawColliders(Camera2D &camera)
         for (int x = xMin; x < xMax; x++) {
             Tile tile = At(x, y);
             const data::TileDef &tileDef = GetTileDef(tile);
-            if (tileDef.collide) {
+            const data::Material &material = data::packs[0]->FindMaterial(tileDef.material);
+            if (!material.flags) {
                 Vector2 tilePos = { (float)x * TILE_W, (float)y * TILE_W };
                 const int pad = 1;
                 DrawRectangleLinesEx(

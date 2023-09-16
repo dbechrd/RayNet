@@ -1,4 +1,4 @@
-# id                       imagefile           x       y     w     h
+# id                       gfx_file            x       y     w     h
 # characters
 gfx_frame_chr_mage_e_0     gfx_chr_mage        0       0    64   128
 gfx_frame_chr_mage_w_0     gfx_chr_mage        64      0    64   128
@@ -33,3 +33,29 @@ gfx_frame_til_grass        gfx_til_overworld   0     192   64     64
 gfx_frame_til_stone_path   gfx_til_overworld   256     0   64     64
 gfx_frame_til_wall         gfx_til_overworld   256    64   64     64
 gfx_frame_til_water        gfx_til_overworld   256   192   64     64
+
+gfx_frame_til_void           gfx_til_overworld  0      0      64 64
+gfx_frame_til_grass_1        gfx_til_overworld  64     0      64 64
+gfx_frame_til_water_1        gfx_til_overworld  128    0      64 64
+gfx_frame_til_grass_2        gfx_til_overworld  192    0      64 64
+gfx_frame_til_stone_path     gfx_til_overworld  256    0      64 64
+gfx_frame_til_dried_lake     gfx_til_overworld  0      64     64 64
+gfx_frame_til_grass_3        gfx_til_overworld  64     64     64 64
+gfx_frame_til_grass_4        gfx_til_overworld  128    64     64 64
+gfx_frame_til_stone_wall_tl  gfx_til_overworld  192    64     64 64
+gfx_frame_til_stone_wall_tc  gfx_til_overworld  256    64     64 64
+gfx_frame_til_stone_wall_tr  gfx_til_overworld  0      128    64 64
+gfx_frame_til_tiny_tree      gfx_til_overworld  64     128    64 64
+gfx_frame_til_grass_flowers  gfx_til_overworld  128    128    64 64
+gfx_frame_til_dirt           gfx_til_overworld  192    128    64 64
+gfx_frame_til_grass_dark     gfx_til_overworld  256    128    64 64
+gfx_frame_til_grass_5        gfx_til_overworld  0      192    64 64
+gfx_frame_til_stone_wall_cl  gfx_til_overworld  64     192    64 64
+gfx_frame_til_stone_wall_cc  gfx_til_overworld  128    192    64 64
+gfx_frame_til_stone_wall_cr  gfx_til_overworld  192    192    64 64
+gfx_frame_til_water_dark     gfx_til_overworld  256    192    64 64
+gfx_frame_til_grass_6        gfx_til_overworld  0      256    64 64
+gfx_frame_til_invis          gfx_til_overworld  64     256    64 64
+gfx_frame_til_stone_wall_bl  gfx_til_overworld  128    256    64 64
+gfx_frame_til_stone_wall_bc  gfx_til_overworld  192    256    64 64
+gfx_frame_til_stone_wall_br  gfx_til_overworld  256    256    64 64

@@ -102,7 +102,7 @@ struct UI {
     UIState Text(const char *text);
     UIState Text(const char *text, Color fgColor, Color bgColor = BLANK);
     UIState Label(const char *text, int width);
-    UIState Image(Texture &texture, Rectangle srcRect = {});
+    UIState Image(const Texture &texture, Rectangle srcRect = {});
     UIState Button(const char *text);
     UIState Button(const char *text, Color bgColor);
     UIState Button(const char *text, bool pressed, Color bgColor, Color bgColorPressed);

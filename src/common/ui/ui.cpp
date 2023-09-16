@@ -257,7 +257,7 @@ UIState UI::Label(const char *text, int width)
     return state;
 }
 
-UIState UI::Image(Texture &texture, Rectangle srcRect)
+UIState UI::Image(const Texture &texture, Rectangle srcRect)
 {
     if (!srcRect.width) {
         srcRect = { 0, 0, (float)texture.width, (float)texture.height };
