@@ -41,7 +41,7 @@ void GameServer::OnClientJoin(int clientIdx)
         const Vector3 caveEntrance{ 3300, 870, 0 };
         const Vector3 townCenter{ 1660, 2360, 0 };
         player->position = townCenter;
-        player->radius = 10;
+        player->radius = 16;
         player->hp_max = 100;
         player->hp = player->hp_max;
         player->speed = 3000;
@@ -645,7 +645,7 @@ void GameServer::TickSpawnTownNPCs(std::string map_name)
         lily.type = data::ENTITY_NPC;
         lily.spec = data::ENTITY_SPEC_NPC_TOWNFOLK;
         lily.name = "Lily";
-        lily.radius = 10;
+        lily.radius = 16;
         lily.dialog_root_key = "DIALOG_LILY_INTRO";
         lily.hp_max = 777;
         lily.path_id = 0;
@@ -658,7 +658,7 @@ void GameServer::TickSpawnTownNPCs(std::string map_name)
         freye.type = data::ENTITY_NPC;
         freye.spec = data::ENTITY_SPEC_NPC_TOWNFOLK;
         freye.name = "Freye";
-        freye.radius = 10;
+        freye.radius = 16;
         freye.dialog_root_key = "DIALOG_FREYE_INTRO";
         freye.hp_max = 200;
         freye.path_id = 0;
@@ -671,7 +671,7 @@ void GameServer::TickSpawnTownNPCs(std::string map_name)
         nessa.type = data::ENTITY_NPC;
         nessa.spec = data::ENTITY_SPEC_NPC_TOWNFOLK;
         nessa.name = "Nessa";
-        nessa.radius = 10;
+        nessa.radius = 16;
         nessa.dialog_root_key = "DIALOG_NESSA_INTRO";
         nessa.hp_max = 150;
         nessa.path_id = 0;
@@ -684,7 +684,7 @@ void GameServer::TickSpawnTownNPCs(std::string map_name)
         elane.type = data::ENTITY_NPC;
         elane.spec = data::ENTITY_SPEC_NPC_TOWNFOLK;
         elane.name = "Elane";
-        elane.radius = 10;
+        elane.radius = 16;
         elane.dialog_root_key = "DIALOG_ELANE_INTRO";
         elane.hp_max = 100;
         elane.path_id = 0;

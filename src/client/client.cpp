@@ -536,6 +536,37 @@ int main(int argc, char *argv[])
             if (client->yj_client->IsDisconnected()) {
                 draw_menu_main(*client, quit);
                 reset_menu_connecting();
+
+                // Collision debug on menu screen
+                if (0) {
+                    static Vector2 cir_pos{};
+                    static float cir_radius = 20;
+                    static Rectangle rec{ 100, 100, 64, 64 };
+
+                    cir_pos = GetMousePosition();
+
+                    DrawCircleLines(cir_pos.x, cir_pos.y, cir_radius, BLUE);
+                    DrawRectangleLinesEx(rec, 1.0f, BLUE);
+
+                    Manifold manifold{};
+                    if (dlb_CheckCollisionCircleRec(cir_pos, cir_radius, rec, &manifold)) {
+                        DrawCircleV(manifold.contact, 3, GREEN);
+
+                        Vector2 manifold_vec = Vector2Scale(manifold.normal, manifold.depth);
+                        Vector2 manifold_end{
+                            manifold.contact.x + manifold_vec.x,
+                            manifold.contact.y + manifold_vec.y
+                        };
+                        DrawLine(
+                            manifold.contact.x,
+                            manifold.contact.y,
+                            manifold_end.x,
+                            manifold_end.y,
+                            ORANGE
+                        );
+                        DrawCircleV(manifold_end, 3, ORANGE);
+                    }
+                }
             } else if (client->yj_client->IsConnecting() || !client->world || !client->world->localPlayerEntityId) {
                 draw_menu_connecting(*client);
             } else if (client->yj_client->IsConnected()) {

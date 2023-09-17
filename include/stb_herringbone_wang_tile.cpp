@@ -537,7 +537,8 @@ static void stbhw__parse_h_rect(stbhw__process *p, int xpos, int ypos,
 {
     int len = p->c->short_side_len;
     stbhw_tile *h = (stbhw_tile *) malloc(sizeof(*h)); //-1 + 3 * (len*2) * len);
-    int i,j;
+    STB_HBWANG_ASSERT(h);
+    //int i,j;
     ++xpos;
     ++ypos;
     h->a = a, h->b = b, h->c = c, h->d = d, h->e = e, h->f = f;
@@ -555,7 +556,8 @@ static void stbhw__parse_v_rect(stbhw__process *p, int xpos, int ypos,
 {
     int len = p->c->short_side_len;
     stbhw_tile *h = (stbhw_tile *) malloc(sizeof(*h)); //-1 + 3 * (len*2) * len);
-    int i,j;
+    STB_HBWANG_ASSERT(h);
+    //int i,j;
     ++xpos;
     ++ypos;
     h->a = a, h->b = b, h->c = c, h->d = d, h->e = e, h->f = f;
@@ -571,7 +573,7 @@ static void stbhw__parse_v_rect(stbhw__process *p, int xpos, int ypos,
 STBHW_EXTERN int stbhw_build_tileset_from_image(stbhw_tileset *ts, Image image)
 {
     int i, h_count, v_count;
-    unsigned char header[9];
+    unsigned char header[9]{};
     stbhw_config c = { 0 };
     stbhw__process p = { 0 };
 
@@ -663,7 +665,7 @@ static void stbhw__set_pixel(unsigned char *data, int stride, int xpos, int ypos
 
 static void stbhw__stbhw__set_pixel_whiten(unsigned char *data, int stride, int xpos, int ypos, unsigned char color[3])
 {
-    unsigned char c2[3];
+    unsigned char c2[3]{};
     int i;
     for (i=0; i < 3; ++i)
         c2[i] = (color[i]*2 + 255)/3;
@@ -878,7 +880,7 @@ static void stbhw__corner_process_v_rect(stbhw__process *p, int xpos, int ypos,
 // generates a template image, assuming data is 3*w*h bytes long, RGB format
 STBHW_EXTERN int stbhw_make_template(stbhw_config *c, Image image)
 {
-    stbhw__process p;
+    stbhw__process p{};
     int i;
 
     stbhw_tileset ts = { 0 };

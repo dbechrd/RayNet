@@ -628,7 +628,7 @@ namespace data {
         }
 
         std::vector<Tilemap> tile_maps{};
-        err = LoadTilemapIndex("resources/map/overworld_map.txt", tile_maps);
+        err = LoadTilemapIndex("resources/map/overworld.txt", tile_maps);
         if (err) {
             assert(!err);
             TraceLog(LOG_ERROR, "Failed to load tile map index.\n");

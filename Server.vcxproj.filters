@@ -2,19 +2,10 @@
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
     <ClCompile Include="src\server\server.cpp" />
-    <ClCompile Include="include\tracy\TracyClient.cpp" />
     <ClCompile Include="include\tinyfiledialogs.c" />
-    <ClCompile Include="include\stb_herringbone_wang_tile.cpp" />
-    <ClCompile Include="src\common\md.cpp" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="res\server.ico" />
-  </ItemGroup>
-  <ItemGroup>
-    <ClInclude Include="src\common\audio\audio.h" />
-    <ClInclude Include="src\common\spritesheet.h" />
-    <ClInclude Include="src\common\spritesheet.cpp" />
-    <ClInclude Include="src\common\audio\audio.cpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="cpp.hint" />
