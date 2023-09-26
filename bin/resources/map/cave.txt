@@ -1,5 +1,5 @@
 # map version name
-map 8 map_overworld
+map 8 map_cave
 
 # tile_defs count [anim material auto_tile_mask]
 tile_defs 25
