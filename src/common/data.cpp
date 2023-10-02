@@ -1,6 +1,8 @@
 #include "data.h"
 #include "file_utils.h"
 #include "net/net.h"
+#define MD_HIJACK_STRING_CONSTANTS 0
+#include "md.h"
 #include <sstream>
 #include <iomanip>
 #include <type_traits>
@@ -534,7 +536,10 @@ namespace data {
     {
         Err err = RN_SUCCESS;
 
-#if 0
+#if defined(MD_H)
+
+        int foo = MD_ZERO_STRUCT;
+
         // setup the global arena
         static MD_Arena *arena = MD_ArenaAlloc();
 
