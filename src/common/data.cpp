@@ -532,6 +532,74 @@ namespace data {
         return err;
     }
 
+    void dlb_MD_PrintDebugDumpFromNode(FILE *file, MD_Node *node, MD_GenerateFlags flags)
+    {
+        MD_ArenaTemp scratch = MD_GetScratch(0, 0);
+        MD_String8List list = {0};
+        MD_DebugDumpFromNode(scratch.arena, &list, node, 0, MD_S8Lit("    "), flags);
+        MD_String8 string = MD_S8ListJoin(scratch.arena, list, 0);
+        fwrite(string.str, string.size, 1, file);
+        MD_ReleaseScratch(scratch);
+    }
+
+    void dlb_MD_PrintErrors(MD_ParseResult *parse_result)
+    {
+        for (MD_Message *message = parse_result->errors.first; message; message = message->next) {
+            MD_CodeLoc code_loc = MD_CodeLocFromNode(message->node);
+            MD_PrintMessage(stderr, code_loc, message->kind, message->string);
+        }
+    }
+
+    bool dlb_MD_Expect_Ident(MD_Node *node, std::string *result)
+    {
+        if (node->kind != MD_NodeKind_Main || !(node->flags & MD_NodeFlag_Identifier)) {
+            MD_CodeLoc loc = MD_CodeLocFromNode(node);
+            MD_PrintMessage(stderr, loc, MD_MessageKind_Error, MD_S8Lit("Expected identifier."));
+            return false;
+        }
+        if (result) {
+            *result = std::string((char *)node->string.str, node->string.size);
+        }
+        return true;
+    }
+
+    bool dlb_MD_Expect_String(MD_Node *node, std::string *result)
+    {
+        if (node->kind != MD_NodeKind_Main || !(node->flags & MD_NodeFlag_StringDoubleQuote)) {
+            MD_CodeLoc loc = MD_CodeLocFromNode(node);
+            MD_PrintMessage(stderr, loc, MD_MessageKind_Error, MD_S8Lit("Expected double-quoted string."));
+            return false;
+        }
+        if (result) {
+            *result = std::string((char *)node->string.str, node->string.size);
+        }
+        return true;
+    }
+
+
+    bool dlb_MD_Expect_Int(MD_Node *node, int *result)
+    {
+        if (node->kind != MD_NodeKind_Main || !(node->flags & MD_NodeFlag_Numeric) || !(MD_StringIsCStyleInt(node->string))) {
+            MD_CodeLoc loc = MD_CodeLocFromNode(node);
+            MD_PrintMessage(stderr, loc, MD_MessageKind_Error, MD_S8Lit("Expected integer literal."));
+            return false;
+        }
+        if (result) {
+            *result = (int)MD_CStyleIntFromString(node->string);
+        }
+        return true;
+    }
+
+    bool dlb_MD_Expect_Nil(MD_Node *node)
+    {
+        if (!MD_NodeIsNil(node)) {
+            MD_CodeLoc loc = MD_CodeLocFromNode(node);
+            MD_PrintMessageFmt(stderr, loc, MD_MessageKind_Error, (char *)"Expected end of scope.");
+            return false;
+        }
+        return true;
+    }
+
     void Init(void)
     {
         Err err = RN_SUCCESS;
@@ -543,20 +611,96 @@ namespace data {
         // setup the global arena
         static MD_Arena *arena = MD_ArenaAlloc();
 
-        printf("--- string ---\n");
+#if 0
+        printf("\n--- string ---\n");
         {
             // parse a string
             MD_String8 name = MD_S8Lit("<name>");
             MD_String8 hello_world = MD_S8Lit("hello world");
-            MD_ParseResult parse = MD_ParseWholeString(arena, name, hello_world);
-            MD_PrintDebugDumpFromNode(stdout, parse.node, MD_GenerateFlags_All);
+            MD_ParseResult parse_result = MD_ParseWholeString(arena, name, hello_world);
+            if (!parse_result.errors.node_count) {
+                dlb_MD_PrintDebugDumpFromNode(stdout, parse_result.node, MD_GenerateFlags_All);
+            } else {
+                dlb_MD_PrintErrors(&parse_result);
+            }
         }
-        printf("--- file ---\n");
+#endif
+
+#define META_IDENT(dest) \
+    if (!dlb_MD_Expect_Ident(node, &dest)) break;
+#define META_CHILDREN_BEGIN \
+    { \
+        MD_Node *parent = node; \
+        MD_Node *node = parent->first_child;
+#define META_STRING(dest) \
+        if (!dlb_MD_Expect_String(node, &dest)) break; \
+        node = node->next;
+#define META_INT(dest) \
+        if (!dlb_MD_Expect_Int(node, &dest)) break; \
+        node = node->next;
+#define META_CHILDREN_END \
+        dlb_MD_Expect_Nil(node); \
+    }
+
+        printf("\n--- file ---\n");
         {
+            std::vector<GfxFile> gfx_files{};
+            std::vector<Material> materials{};
+
             // parse a file
-            MD_String8 filename = MD_S8Lit("meta/hello_world.mdesk");
-            MD_ParseResult parse = MD_ParseWholeFile(arena, filename);
-            MD_PrintDebugDumpFromNode(stdout, parse.node, MD_GenerateFlags_All);
+            //MD_String8 filename = MD_S8Lit("resources/meta/hello_world.mdesk");
+            MD_String8 filename = MD_S8Lit("resources/graphics.mdesk");
+            MD_ParseResult parse_result = MD_ParseWholeFile(arena, filename);
+
+            if (!parse_result.errors.node_count) {
+                //dlb_MD_PrintDebugDumpFromNode(stdout, parse_result.node, MD_GenerateFlags_All);
+                for (MD_EachNode(node, parse_result.node->first_child)) {
+                    auto tag_count = MD_TagCountFromNode(node);
+                    if (tag_count != 1) {
+                        MD_CodeLoc loc = MD_CodeLocFromNode(node);
+                        MD_PrintMessageFmt(stderr, loc, MD_MessageKind_Error, (char *)"Expected exactly 1 tag.");
+                        break;
+                    }
+                    if (MD_NodeHasTag(node, MD_S8Lit("GfxFile"), 0)) {
+                        GfxFile gfx_file{};
+
+                        META_IDENT(gfx_file.id)
+                        META_CHILDREN_BEGIN
+                        META_STRING(gfx_file.path)
+                        META_CHILDREN_END
+
+                        gfx_files.push_back(gfx_file);
+                    }
+                    else if (MD_NodeHasTag(node, MD_S8Lit("Material"), 0)) {
+                        Material material{};
+
+                        META_IDENT(material.id)
+                        META_CHILDREN_BEGIN
+                        META_STRING(material.footstep_sound)
+                        int flag_walk = 0;
+                        META_INT(flag_walk)
+                        int flag_swim = 0;
+                        META_INT(flag_swim)
+                        if (flag_walk) material.flags |= MATERIAL_FLAG_WALK;
+                        if (flag_swim) material.flags |= MATERIAL_FLAG_SWIM;
+                        META_CHILDREN_END
+
+                        materials.push_back(material);
+                    }
+                }
+            } else {
+                dlb_MD_PrintErrors(&parse_result);
+            }
+
+            for (GfxFile &gfx_file : gfx_files) {
+                printf("%s %s\n", gfx_file.id.c_str(), gfx_file.path.c_str());
+            }
+            for (Material material : materials) {
+                printf("%-20s %-20s walk=%d swim=%d\n", material.id.c_str(), material.footstep_sound.c_str(),
+                    (bool)(material.flags & MATERIAL_FLAG_WALK),
+                    (bool)(material.flags & MATERIAL_FLAG_SWIM)
+                );
+            }
         }
 
         MD_ArenaRelease(arena);

@@ -1703,7 +1703,7 @@ MD_StringIsCStyleInt(MD_String8 string)
     if (ptr < opl)
     {
         MD_u8 c0 = *ptr;
-        if (c0 == '0')
+        if (c0 == '0' && string.size > 1)
         {
             ptr += 1;
             radix = 8;
