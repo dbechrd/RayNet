@@ -576,16 +576,34 @@ namespace data {
         return true;
     }
 
-
-    bool dlb_MD_Expect_Int(MD_Node *node, int *result)
+    bool dlb_MD_Expect_Int(MD_Node *node, int min, int max, int *result)
     {
         if (node->kind != MD_NodeKind_Main || !(node->flags & MD_NodeFlag_Numeric) || !(MD_StringIsCStyleInt(node->string))) {
             MD_CodeLoc loc = MD_CodeLocFromNode(node);
             MD_PrintMessage(stderr, loc, MD_MessageKind_Error, MD_S8Lit("Expected integer literal."));
             return false;
         }
+        int val = (int)MD_CStyleIntFromString(node->string);
+        if (val < min || val > max) {
+            MD_CodeLoc loc = MD_CodeLocFromNode(node);
+            MD_PrintMessageFmt(stderr, loc, MD_MessageKind_Error, (char *)"Expected integer in inclusive range [%d, %d].", min, max);
+            return false;
+        }
         if (result) {
-            *result = (int)MD_CStyleIntFromString(node->string);
+            *result = val;
+        }
+        return true;
+    }
+
+    bool dlb_MD_Expect_Float(MD_Node *node, float *result)
+    {
+        if (node->kind != MD_NodeKind_Main || !(node->flags & MD_NodeFlag_Numeric)) {
+            MD_CodeLoc loc = MD_CodeLocFromNode(node);
+            MD_PrintMessage(stderr, loc, MD_MessageKind_Error, MD_S8Lit("Expected float literal."));
+            return false;
+        }
+        if (result) {
+            *result = (float)MD_F64FromString(node->string);
         }
         return true;
     }
@@ -626,26 +644,45 @@ namespace data {
         }
 #endif
 
-#define META_IDENT(dest) \
+#define META_ID(dest) \
     if (!dlb_MD_Expect_Ident(node, &dest)) break;
 #define META_CHILDREN_BEGIN \
-    { \
+    do { \
         MD_Node *parent = node; \
         MD_Node *node = parent->first_child;
+#define META_IDENT(dest) \
+        if (!dlb_MD_Expect_Ident(node, &dest)) break; \
+        node = node->next;
 #define META_STRING(dest) \
         if (!dlb_MD_Expect_String(node, &dest)) break; \
         node = node->next;
+#define META_UINT8(dest) \
+        do { \
+            int val = 0; \
+            if (!dlb_MD_Expect_Int(node, 0, UINT8_MAX, &val)) break; \
+            dest = (uint8_t)val; \
+            node = node->next; \
+        } while(0);
+#define META_UINT16(dest) \
+        do { \
+            int val = 0; \
+            if (!dlb_MD_Expect_Int(node, 0, UINT16_MAX, &val)) break; \
+            dest = (uint16_t)val; \
+            node = node->next; \
+        } while(0);
 #define META_INT(dest) \
-        if (!dlb_MD_Expect_Int(node, &dest)) break; \
+        if (!dlb_MD_Expect_Int(node, INT32_MIN, INT32_MAX, &dest)) break; \
+        node = node->next;
+#define META_FLOAT(dest) \
+        if (!dlb_MD_Expect_Float(node, &dest)) break; \
         node = node->next;
 #define META_CHILDREN_END \
         dlb_MD_Expect_Nil(node); \
-    }
+    } while(0);
 
         printf("\n--- file ---\n");
         {
-            std::vector<GfxFile> gfx_files{};
-            std::vector<Material> materials{};
+            Pack pack_meta{ "foo" };
 
             // parse a file
             //MD_String8 filename = MD_S8Lit("resources/meta/hello_world.mdesk");
@@ -653,7 +690,7 @@ namespace data {
             MD_ParseResult parse_result = MD_ParseWholeFile(arena, filename);
 
             if (!parse_result.errors.node_count) {
-                //dlb_MD_PrintDebugDumpFromNode(stdout, parse_result.node, MD_GenerateFlags_All);
+                dlb_MD_PrintDebugDumpFromNode(stdout, parse_result.node, MD_GenerateFlags_All);
                 for (MD_EachNode(node, parse_result.node->first_child)) {
                     auto tag_count = MD_TagCountFromNode(node);
                     if (tag_count != 1) {
@@ -661,22 +698,86 @@ namespace data {
                         MD_PrintMessageFmt(stderr, loc, MD_MessageKind_Error, (char *)"Expected exactly 1 tag.");
                         break;
                     }
+
                     if (MD_NodeHasTag(node, MD_S8Lit("GfxFile"), 0)) {
                         GfxFile gfx_file{};
 
-                        META_IDENT(gfx_file.id)
+                        META_ID(gfx_file.id)
                         META_CHILDREN_BEGIN
-                        META_STRING(gfx_file.path)
+                            META_STRING(gfx_file.path)
                         META_CHILDREN_END
 
-                        gfx_files.push_back(gfx_file);
-                    }
-                    else if (MD_NodeHasTag(node, MD_S8Lit("Material"), 0)) {
+                        pack_meta.gfx_files.push_back(gfx_file);
+                    } else if (MD_NodeHasTag(node, MD_S8Lit("MusFile"), 0)) {
+                        MusFile mus_file{};
+
+                        META_ID(mus_file.id)
+                        META_CHILDREN_BEGIN
+                            META_STRING(mus_file.path)
+                        META_CHILDREN_END
+
+                        pack_meta.mus_files.push_back(mus_file);
+                    } else if (MD_NodeHasTag(node, MD_S8Lit("SfxFile"), 0)) {
+                        SfxFile sfx_file{};
+
+                        META_ID(sfx_file.id)
+                        META_CHILDREN_BEGIN
+                            META_STRING(sfx_file.path)
+                            META_INT(sfx_file.variations)
+                            META_FLOAT(sfx_file.pitch_variance);
+                            META_INT(sfx_file.max_instances)
+                        META_CHILDREN_END
+
+                        // NOTE(dlb): This is a bit janky, probably a better way to handle sound variants tbh
+                        if (sfx_file.variations > 1) {
+                            const char *file_dir = GetDirectoryPath(sfx_file.path.c_str());
+                            const char *file_name = GetFileNameWithoutExt(sfx_file.path.c_str());
+                            const char *file_ext = GetFileExtension(sfx_file.path.c_str());
+                            for (int i = 1; i <= sfx_file.variations; i++) {
+                                // Build variant path, e.g. chicken_cluck.wav -> chicken_cluck_01.wav
+                                const char *variant_path = TextFormat("%s/%s_%02d%s", file_dir, file_name, i, file_ext);
+                                SfxFile sfx_variant = sfx_file;
+                                sfx_variant.path = variant_path;
+                                pack_meta.sfx_files.push_back(sfx_variant);
+                            }
+                        } else {
+                            pack_meta.sfx_files.push_back(sfx_file);
+                        }
+                    } else if (MD_NodeHasTag(node, MD_S8Lit("GfxFrame"), 0)) {
+                        GfxFrame gfx_frame{};
+
+                        META_ID(gfx_frame.id)
+                        META_CHILDREN_BEGIN
+                            META_IDENT(gfx_frame.gfx)
+                            META_UINT16(gfx_frame.x);
+                            META_UINT16(gfx_frame.y);
+                            META_UINT16(gfx_frame.w);
+                            META_UINT16(gfx_frame.h);
+                        META_CHILDREN_END
+
+                        pack_meta.gfx_frames.push_back(gfx_frame);
+                    } else if (MD_NodeHasTag(node, MD_S8Lit("GfxAnim"), 0)) {
+                        GfxAnim gfx_anim{};
+
+                        META_ID(gfx_anim.id)
+                        META_CHILDREN_BEGIN
+                            META_IDENT(gfx_anim.sound)
+                            META_UINT8(gfx_anim.frame_rate);
+                            META_UINT8(gfx_anim.frame_count);
+                            META_UINT8(gfx_anim.frame_delay);
+                            gfx_anim.frames.resize(gfx_anim.frame_count);
+                            for (int i = 0; i < gfx_anim.frame_count; i++) {
+                                META_IDENT(gfx_anim.frames[i]);
+                            }
+                        META_CHILDREN_END
+
+                        pack_meta.gfx_anims.push_back(gfx_anim);
+                    } else if (MD_NodeHasTag(node, MD_S8Lit("Material"), 0)) {
                         Material material{};
 
-                        META_IDENT(material.id)
+                        META_ID(material.id)
                         META_CHILDREN_BEGIN
-                        META_STRING(material.footstep_sound)
+                        META_IDENT(material.footstep_sound)
                         int flag_walk = 0;
                         META_INT(flag_walk)
                         int flag_swim = 0;
@@ -685,20 +786,61 @@ namespace data {
                         if (flag_swim) material.flags |= MATERIAL_FLAG_SWIM;
                         META_CHILDREN_END
 
-                        materials.push_back(material);
+                        pack_meta.materials.push_back(material);
+                    } else if (MD_NodeHasTag(node, MD_S8Lit("Sprite"), 0)) {
+                        Sprite sprite{};
+
+                        META_ID(sprite.id)
+                        META_CHILDREN_BEGIN
+                        for (int i = 0; i < ARRAY_SIZE(sprite.anims); i++) {
+                            META_IDENT(sprite.anims[i]);
+                        }
+                        META_CHILDREN_END
+
+                        pack_meta.sprites.push_back(sprite);
                     }
                 }
             } else {
                 dlb_MD_PrintErrors(&parse_result);
             }
 
-            for (GfxFile &gfx_file : gfx_files) {
+            for (GfxFile &gfx_file : pack_meta.gfx_files) {
+                if (!gfx_file.id.size()) continue;
                 printf("%s %s\n", gfx_file.id.c_str(), gfx_file.path.c_str());
             }
-            for (Material material : materials) {
+            for (MusFile &mus_file : pack_meta.mus_files) {
+                if (!mus_file.id.size()) continue;
+                printf("%s %s\n", mus_file.id.c_str(), mus_file.path.c_str());
+            }
+            for (SfxFile &sfx_file : pack_meta.sfx_files) {
+                if (!sfx_file.id.size()) continue;
+                printf("%s %s %d %f %d\n", sfx_file.id.c_str(), sfx_file.path.c_str(), sfx_file.variations,
+                    sfx_file.pitch_variance, sfx_file.max_instances);
+            }
+            for (GfxFrame &gfx_frame : pack_meta.gfx_frames) {
+                if (!gfx_frame.id.size()) continue;
+                printf("%s %s %hu %hu %hu %hu\n", gfx_frame.id.c_str(), gfx_frame.gfx.c_str(), gfx_frame.x, gfx_frame.y,
+                    gfx_frame.w, gfx_frame.h);
+            }
+            for (Material material : pack_meta.materials) {
+                if (!material.id.size()) continue;
                 printf("%-20s %-20s walk=%d swim=%d\n", material.id.c_str(), material.footstep_sound.c_str(),
                     (bool)(material.flags & MATERIAL_FLAG_WALK),
                     (bool)(material.flags & MATERIAL_FLAG_SWIM)
+                );
+            }
+            for (Sprite &sprite : pack_meta.sprites) {
+                if (!sprite.id.size()) continue;
+                printf("%s %s %s %s %s %s %s %s %s\n",
+                    sprite.id.c_str(),
+                    sprite.anims[0].c_str(),
+                    sprite.anims[1].c_str(),
+                    sprite.anims[2].c_str(),
+                    sprite.anims[3].c_str(),
+                    sprite.anims[4].c_str(),
+                    sprite.anims[5].c_str(),
+                    sprite.anims[6].c_str(),
+                    sprite.anims[7].c_str()
                 );
             }
         }

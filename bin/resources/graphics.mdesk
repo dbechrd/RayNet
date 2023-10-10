@@ -11,12 +11,132 @@
 @GfxFile gfx_til_overworld  : "resources/graphics/tiles64.png"
 @GfxFile gfx_til_auto_grass : "resources/graphics/autotile_3x3_min.png"
 
-//        id               footstep_sound        flag_walk  flag_swim
-@Material mat_void       : ""                    0          0
-@Material mat_grass_path : "sfx_footstep_grass"  1          0
-@Material mat_water      : "sfx_footstep_grass"  0          1
-@Material mat_stone_path : "sfx_footstep_stone"  1          0
-@Material mat_dried_lake : ""                    1          0
-@Material mat_stone_wall : ""                    0          0
-@Material mat_foliage    : ""                    0          0
-@Material mat_dirt       : ""                    1          0
+//       id                      path
+@MusFile mus_ambient_outdoors : "resources/music/copyright/345470__philip_goddard__branscombe-landslip-birds-and-sea-echoes-ese-from-cave-track.ogg"
+@MusFile mus_ambient_cave     : "resources/music/copyright/69391__zixem__cave_amb.wav"
+
+//       id                    path                                            variations  pitch_variance  max_instances
+@SfxFile sfx_mic_test       : "resources/sound/mic_test.wav"                   1           0.00            10
+@SfxFile sfx_soft_tick      : "resources/sound/soft_tick.wav"                  1           0.03            5
+@SfxFile sfx_campfire       : "resources/sound/campfire.wav"                   1           0.00            1
+@SfxFile sfx_footstep_grass : "resources/sound/footstep_grass.wav"             1           0.00            1
+@SfxFile sfx_footstep_stone : "resources/sound/footstep_stone.wav"             1           0.00            1
+@SfxFile sfx_fireball       : "resources/sound/copyright/fireball.wav"         1           0.10            5
+@SfxFile sfx_chicken_squawk : "resources/sound/copyright/chicken_squawk.wav"   1           0.05            10
+@SfxFile sfx_chicken_cluck  : "resources/sound/copyright/chicken_cluck.wav"    5           0.05            10
+
+//        id                            gfx_file           x    y    w    h
+@GfxFrame gfx_frame_chr_mage_e_0      : gfx_chr_mage       0    0    64   128
+@GfxFrame gfx_frame_chr_mage_w_0      : gfx_chr_mage       64   0    64   128
+@GfxFrame gfx_frame_npc_lily_e_0      : gfx_npc_lily       0    0    64   128
+@GfxFrame gfx_frame_npc_lily_w_0      : gfx_npc_lily       64   0    64   128
+@GfxFrame gfx_frame_npc_freye_e_0     : gfx_npc_freye      0    0    64   128
+@GfxFrame gfx_frame_npc_freye_w_0     : gfx_npc_freye      64   0    64   128
+@GfxFrame gfx_frame_npc_nessa_e_0     : gfx_npc_nessa      0    0    64   128
+@GfxFrame gfx_frame_npc_nessa_w_0     : gfx_npc_nessa      64   0    64   128
+@GfxFrame gfx_frame_npc_elane_e_0     : gfx_npc_elane      0    0    64   128
+@GfxFrame gfx_frame_npc_elane_w_0     : gfx_npc_elane      64   0    64   128
+@GfxFrame gfx_frame_npc_chicken_e_0   : gfx_npc_chicken    0    0    64   64
+@GfxFrame gfx_frame_npc_chicken_w_0   : gfx_npc_chicken    64   0    64   64
+@GfxFrame gfx_frame_obj_campfire_0    : gfx_obj_campfire   0    0    256  256
+@GfxFrame gfx_frame_obj_campfire_1    : gfx_obj_campfire   256  0    256  256
+@GfxFrame gfx_frame_obj_campfire_2    : gfx_obj_campfire   512  0    256  256
+@GfxFrame gfx_frame_obj_campfire_3    : gfx_obj_campfire   768  0    256  256
+@GfxFrame gfx_frame_obj_campfire_4    : gfx_obj_campfire   1024 0    256  256
+@GfxFrame gfx_frame_obj_campfire_5    : gfx_obj_campfire   1280 0    256  256
+@GfxFrame gfx_frame_obj_campfire_6    : gfx_obj_campfire   1536 0    256  256
+@GfxFrame gfx_frame_obj_campfire_7    : gfx_obj_campfire   1792 0    256  256
+@GfxFrame gfx_frame_prj_fireball_0    : gfx_prj_fireball   0    0    16   16
+@GfxFrame gfx_frame_til_void          : gfx_til_overworld  0    0    64   64
+@GfxFrame gfx_frame_til_grass_1       : gfx_til_overworld  64   0    64   64
+@GfxFrame gfx_frame_til_water_1       : gfx_til_overworld  128  0    64   64
+@GfxFrame gfx_frame_til_grass_2       : gfx_til_overworld  192  0    64   64
+@GfxFrame gfx_frame_til_stone_path    : gfx_til_overworld  256  0    64   64
+@GfxFrame gfx_frame_til_dried_lake    : gfx_til_overworld  320  0    64   64
+@GfxFrame gfx_frame_til_grass_3       : gfx_til_overworld  384  0    64   64
+@GfxFrame gfx_frame_til_grass_4       : gfx_til_overworld  448  0    64   64
+@GfxFrame gfx_frame_til_stone_wall_tl : gfx_til_overworld  0    64   64   64
+@GfxFrame gfx_frame_til_stone_wall_tc : gfx_til_overworld  64   64   64   64
+@GfxFrame gfx_frame_til_stone_wall_tr : gfx_til_overworld  128  64   64   64
+@GfxFrame gfx_frame_til_tiny_tree     : gfx_til_overworld  192  64   64   64
+@GfxFrame gfx_frame_til_grass_flowers : gfx_til_overworld  256  64   64   64
+@GfxFrame gfx_frame_til_dirt          : gfx_til_overworld  320  64   64   64
+@GfxFrame gfx_frame_til_grass_dark    : gfx_til_overworld  384  64   64   64
+@GfxFrame gfx_frame_til_water_dark    : gfx_til_overworld  448  64   64   64
+@GfxFrame gfx_frame_til_stone_wall_cl : gfx_til_overworld  0    128  64   64
+@GfxFrame gfx_frame_til_stone_wall_cc : gfx_til_overworld  64   128  64   64
+@GfxFrame gfx_frame_til_stone_wall_cr : gfx_til_overworld  128  128  64   64
+@GfxFrame gfx_frame_til_grass_6       : gfx_til_overworld  192  128  64   64
+@GfxFrame gfx_frame_til_unused_4      : gfx_til_overworld  256  128  64   64
+@GfxFrame gfx_frame_til_unused_5      : gfx_til_overworld  320  128  64   64
+@GfxFrame gfx_frame_til_unused_6      : gfx_til_overworld  384  128  64   64
+@GfxFrame gfx_frame_til_unused_7      : gfx_til_overworld  448  128  64   64
+@GfxFrame gfx_frame_til_stone_wall_bl : gfx_til_overworld  0    192  64   64
+@GfxFrame gfx_frame_til_stone_wall_bc : gfx_til_overworld  64   192  64   64
+@GfxFrame gfx_frame_til_stone_wall_br : gfx_til_overworld  128  192  64   64
+@GfxFrame gfx_frame_til_unused_8      : gfx_til_overworld  192  192  64   64
+@GfxFrame gfx_frame_til_unused_9      : gfx_til_overworld  256  192  64   64
+@GfxFrame gfx_frame_til_unused_10     : gfx_til_overworld  320  192  64   64
+@GfxFrame gfx_frame_til_unused_11     : gfx_til_overworld  384  192  64   64
+@GfxFrame gfx_frame_til_unused_12     : gfx_til_overworld  448  192  64   64
+
+
+//       id                           sound_effect  frmrate  frmcount  frmdelay  frames
+@GfxAnim gfx_anim_chr_mage_e        : null          60       1         0         gfx_frame_chr_mage_e_0
+@GfxAnim gfx_anim_chr_mage_w        : null          60       1         0         gfx_frame_chr_mage_w_0
+@GfxAnim gfx_anim_npc_lily_e        : null          60       1         0         gfx_frame_npc_lily_e_0
+@GfxAnim gfx_anim_npc_lily_w        : null          60       1         0         gfx_frame_npc_lily_w_0
+@GfxAnim gfx_anim_npc_freye_e       : null          60       1         0         gfx_frame_npc_freye_e_0
+@GfxAnim gfx_anim_npc_freye_w       : null          60       1         0         gfx_frame_npc_freye_w_0
+@GfxAnim gfx_anim_npc_nessa_e       : null          60       1         0         gfx_frame_npc_nessa_e_0
+@GfxAnim gfx_anim_npc_nessa_w       : null          60       1         0         gfx_frame_npc_nessa_w_0
+@GfxAnim gfx_anim_npc_elane_e       : null          60       1         0         gfx_frame_npc_elane_e_0
+@GfxAnim gfx_anim_npc_elane_w       : null          60       1         0         gfx_frame_npc_elane_w_0
+@GfxAnim gfx_anim_npc_chicken_e     : null          60       1         0         gfx_frame_npc_chicken_e_0
+@GfxAnim gfx_anim_npc_chicken_w     : null          60       1         0         gfx_frame_npc_chicken_w_0
+@GfxAnim gfx_anim_obj_campfire      : sfx_campfire  60       8         4         gfx_frame_obj_campfire_0 gfx_frame_obj_campfire_1 gfx_frame_obj_campfire_2 gfx_frame_obj_campfire_3 gfx_frame_obj_campfire_4 gfx_frame_obj_campfire_5 gfx_frame_obj_campfire_6 gfx_frame_obj_campfire_7
+@GfxAnim gfx_anim_prj_fireball      : sfx_fireball  60       1         0         gfx_frame_prj_fireball_0
+@GfxAnim gfx_anim_til_void          : null          60       1         0         gfx_frame_til_void
+@GfxAnim gfx_anim_til_grass_1       : null          60       1         0         gfx_frame_til_grass_1
+@GfxAnim gfx_anim_til_water_1       : null          60       1         0         gfx_frame_til_water_1
+@GfxAnim gfx_anim_til_grass_2       : null          60       1         0         gfx_frame_til_grass_2
+@GfxAnim gfx_anim_til_stone_path    : null          60       1         0         gfx_frame_til_stone_path
+@GfxAnim gfx_anim_til_dried_lake    : null          60       1         0         gfx_frame_til_dried_lake
+@GfxAnim gfx_anim_til_grass_3       : null          60       1         0         gfx_frame_til_grass_3
+@GfxAnim gfx_anim_til_grass_4       : null          60       1         0         gfx_frame_til_grass_4
+@GfxAnim gfx_anim_til_stone_wall_tl : null          60       1         0         gfx_frame_til_stone_wall_tl
+@GfxAnim gfx_anim_til_stone_wall_tc : null          60       1         0         gfx_frame_til_stone_wall_tc
+@GfxAnim gfx_anim_til_stone_wall_tr : null          60       1         0         gfx_frame_til_stone_wall_tr
+@GfxAnim gfx_anim_til_tiny_tree     : null          60       1         0         gfx_frame_til_tiny_tree
+@GfxAnim gfx_anim_til_grass_flowers : null          60       1         0         gfx_frame_til_grass_flowers
+@GfxAnim gfx_anim_til_dirt          : null          60       1         0         gfx_frame_til_dirt
+@GfxAnim gfx_anim_til_grass_dark    : null          60       1         0         gfx_frame_til_grass_dark
+@GfxAnim gfx_anim_til_grass_5       : null          60       1         0         gfx_frame_til_grass_5
+@GfxAnim gfx_anim_til_stone_wall_cl : null          60       1         0         gfx_frame_til_stone_wall_cl
+@GfxAnim gfx_anim_til_stone_wall_cc : null          60       1         0         gfx_frame_til_stone_wall_cc
+@GfxAnim gfx_anim_til_stone_wall_cr : null          60       1         0         gfx_frame_til_stone_wall_cr
+@GfxAnim gfx_anim_til_water_dark    : null          60       1         0         gfx_frame_til_water_dark
+@GfxAnim gfx_anim_til_grass_6       : null          60       1         0         gfx_frame_til_grass_6
+@GfxAnim gfx_anim_til_invis         : null          60       1         0         gfx_frame_til_invis
+@GfxAnim gfx_anim_til_stone_wall_bl : null          60       1         0         gfx_frame_til_stone_wall_bl
+@GfxAnim gfx_anim_til_stone_wall_bc : null          60       1         0         gfx_frame_til_stone_wall_bc
+@GfxAnim gfx_anim_til_stone_wall_br : null          60       1         0         gfx_frame_til_stone_wall_br
+
+//        id               footstep_sound      flag_walk  flag_swim
+@Material mat_grass_path : sfx_footstep_grass  1          0
+@Material mat_water      : sfx_footstep_grass  0          1
+@Material mat_stone_path : sfx_footstep_stone  1          0
+@Material mat_dried_lake : null                1          0
+@Material mat_stone_wall : null                0          0
+@Material mat_foliage    : null                0          0
+@Material mat_dirt       : null                1          0
+
+//      id                    anim_n                anim_e                 anim_s anim_w                 anim_ne anim_se anim_sw anim_nw
+@Sprite sprite_chr_mage     : null                  gfx_anim_chr_mage_e    null   gfx_anim_chr_mage_w    null    null    null    null
+@Sprite sprite_npc_lily     : null                  gfx_anim_npc_lily_e    null   gfx_anim_npc_lily_w    null    null    null    null
+@Sprite sprite_npc_freye    : null                  gfx_anim_npc_freye_e   null   gfx_anim_npc_freye_w   null    null    null    null
+@Sprite sprite_npc_nessa    : null                  gfx_anim_npc_nessa_e   null   gfx_anim_npc_nessa_w   null    null    null    null
+@Sprite sprite_npc_elane    : null                  gfx_anim_npc_elane_e   null   gfx_anim_npc_elane_w   null    null    null    null
+@Sprite sprite_npc_chicken  : null                  gfx_anim_npc_chicken_e null   gfx_anim_npc_chicken_w null    null    null    null
+@Sprite sprite_obj_campfire : gfx_anim_obj_campfire null                   null   null                   null    null    null    null
+@Sprite sprite_prj_fireball : gfx_anim_prj_fireball null                   null   null                   null    null    null    null
