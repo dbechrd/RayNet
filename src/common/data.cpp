@@ -8,27 +8,54 @@
 #include <type_traits>
 
 namespace data {
-#define ENUM_STR_GENERATOR(type, enumDef, enumGen) \
-    const char *type##Str(type id) {               \
-        switch (id) {                              \
-            enumDef(enumGen)                       \
-            default: return "<unknown>";           \
-        }                                          \
-    }
-
-    ENUM_STR_GENERATOR(DataType,      DATA_TYPES,     ENUM_GEN_CASE_RETURN_DESC);
-    ENUM_STR_GENERATOR(EntityType,    ENTITY_TYPES,   ENUM_GEN_CASE_RETURN_STR);
-    ENUM_STR_GENERATOR(EntitySpecies, ENTITY_SPECIES, ENUM_GEN_CASE_RETURN_STR);
-#undef ENUM_STR_GENERATOR
+    struct GameState {
+        bool freye_introduced;
+    };
 
     Texture placeholderTex{};
     std::vector<Pack *> packs{};
+    GameState game_state{};
 
-    struct GameState {
-        bool freye_introduced;
-    } game_state{};
+    GhostSnapshot::GhostSnapshot(Msg_S_EntitySnapshot &msg)
+    {
+        server_time              = msg.server_time;
+        last_processed_input_cmd = msg.last_processed_input_cmd;
 
-    Err LoadResources(Pack &pack);
+        // Entity
+        map_name = msg.map_name;
+        position = msg.position;
+
+        // Life
+        hp_max   = msg.hp_max;
+        hp       = msg.hp;
+
+        // Physics
+        //speed    = msg.speed;
+        velocity = msg.velocity;
+    }
+
+    void GenPlaceholderTexture()
+    {
+        // Generate checkerboard image in slot 0 as a placeholder for when other images fail to load
+        Image placeholderImg = GenImageChecked(16, 16, 4, 4, MAGENTA, WHITE);
+        if (placeholderImg.width) {
+            placeholderTex = LoadTextureFromImage(placeholderImg);
+            if (placeholderTex.width) {
+                //pack.gfx_files[0].id = GFX_FILE_NONE;
+                //pack.gfx_files[0].texture = placeholderTex;
+
+                //pack.gfx_frames[0].id = GFX_FRAME_NONE;
+                //pack.gfx_frames[0].gfx = GFX_FILE_NONE;
+                //pack.gfx_frames[0].w = placeholderTex.width;
+                //pack.gfx_frames[0].h = placeholderTex.height;
+            } else {
+                printf("[data] WARN: Failed to generate placeholder texture\n");
+            }
+            UnloadImage(placeholderImg);
+        } else {
+            printf("[data] WARN: Failed to generate placeholder image\n");
+        }
+    }
 
     uint32_t FreyeIntroListener(uint32_t source_id, uint32_t target_id, uint32_t dialog_id) {
         uint32_t final_dialog_id = dialog_id;
@@ -57,268 +84,6 @@ namespace data {
             MemFree(datBuffer.bytes);
             datBuffer = {};
         }
-    }
-
-    Err LoadGraphicsIndex(std::string path, std::vector<GfxFile> &gfx_files)
-    {
-        Err err = RN_SUCCESS;
-
-        std::ifstream inputFile(path);
-        if (inputFile.is_open()) {
-            std::string line;
-            while (!err && std::getline(inputFile, line)) {
-                if (line[0] == '#') continue;
-                std::istringstream iss(line);
-
-                GfxFile gfx_file{};
-                if (iss
-                    >> gfx_file.id
-                    >> std::quoted(gfx_file.path)
-                ) {
-                    gfx_files.push_back(gfx_file);
-                }
-            }
-
-            inputFile.close();
-        } else {
-            assert(!"failed to read file");
-            err = RN_BAD_FILE_READ;
-        }
-
-        return err;
-    }
-    Err LoadMusicIndex(std::string path, std::vector<MusFile> &mus_files)
-    {
-        Err err = RN_SUCCESS;
-
-        std::ifstream inputFile(path);
-        if (inputFile.is_open()) {
-            std::string line;
-            while (!err && std::getline(inputFile, line)) {
-                if (line[0] == '#') continue;
-                std::istringstream iss(line);
-
-                MusFile mus_file{};
-                if (iss
-                    >> mus_file.id
-                    >> std::quoted(mus_file.path)
-                    ) {
-                    mus_files.push_back(mus_file);
-                }
-            }
-
-            inputFile.close();
-        } else {
-            assert(!"failed to read file");
-            err = RN_BAD_FILE_READ;
-        }
-
-        return err;
-    }
-    Err LoadSoundIndex(std::string path, std::vector<SfxFile> &sfx_files)
-    {
-        Err err = RN_SUCCESS;
-
-        std::ifstream inputFile(path);
-        if (inputFile.is_open()) {
-            std::string line;
-            while (!err && std::getline(inputFile, line)) {
-                if (line[0] == '#') continue;
-                std::istringstream iss(line);
-
-                SfxFile sfx_file{};
-                if (iss
-                    >> sfx_file.id
-                    >> std::quoted(sfx_file.path)
-                    >> sfx_file.variations
-                    >> sfx_file.pitch_variance
-                    >> sfx_file.max_instances
-                    ) {
-                    if (sfx_file.variations > 1) {
-                        const char *file_dir = GetDirectoryPath(sfx_file.path.c_str());
-                        const char *file_name = GetFileNameWithoutExt(sfx_file.path.c_str());
-                        const char *file_ext = GetFileExtension(sfx_file.path.c_str());
-                        for (int i = 1; i <= sfx_file.variations; i++) {
-                            // Build variant path, e.g. chicken_cluck.wav -> chicken_cluck_01.wav
-                            const char *variant_path = TextFormat("%s/%s_%02d%s", file_dir, file_name, i, file_ext);
-                            SfxFile sfx_variant = sfx_file;
-                            sfx_variant.path = variant_path;
-                            sfx_files.push_back(sfx_variant);
-                        }
-                    } else {
-                        sfx_files.push_back(sfx_file);
-                    }
-                }
-            }
-
-            inputFile.close();
-        } else {
-            assert(!"failed to read file");
-            err = RN_BAD_FILE_READ;
-        }
-
-        return err;
-    }
-
-    Err LoadFramesIndex(std::string path, std::vector<GfxFrame> &gfx_frames)
-    {
-        Err err = RN_SUCCESS;
-
-        std::ifstream inputFile(path);
-        if (inputFile.is_open()) {
-            std::string line;
-            while (!err && std::getline(inputFile, line)) {
-                if (line[0] == '#') continue;
-                std::istringstream iss(line);
-
-                GfxFrame gfx_frame{};
-                if (iss
-                    >> gfx_frame.id
-                    >> gfx_frame.gfx
-                    >> gfx_frame.x
-                    >> gfx_frame.y
-                    >> gfx_frame.w
-                    >> gfx_frame.h
-                ) {
-                    gfx_frames.push_back(gfx_frame);
-                }
-            }
-            inputFile.close();
-        } else {
-            assert(!"failed to read file");
-            err = RN_BAD_FILE_READ;
-        }
-
-        return err;
-    }
-    Err LoadAnimIndex(std::string path, std::vector<GfxAnim> &gfx_anims)
-    {
-        Err err = RN_SUCCESS;
-
-        std::ifstream inputFile(path);
-        if (inputFile.is_open()) {
-            std::string line;
-            while (!err && std::getline(inputFile, line)) {
-                if (line[0] == '#') continue;
-                std::istringstream iss(line);
-
-                int frame_rate = 0;
-                int frame_count = 0;
-                int frame_delay = 0;
-
-                GfxAnim gfx_anim{};
-                if (iss
-                    >> gfx_anim.id
-                    >> gfx_anim.sound
-                    >> frame_rate
-                    >> frame_count
-                    >> frame_delay
-                ) {
-                    if (gfx_anim.sound == "-") gfx_anim.sound = "";
-
-                    assert(frame_rate > 0 && frame_rate < UINT8_MAX);
-                    assert(frame_count > 0 && frame_count < UINT8_MAX);
-                    assert(frame_delay >= 0 && frame_delay < UINT8_MAX);
-                    gfx_anim.frame_rate  = CLAMP(frame_rate, 0, UINT8_MAX);
-                    gfx_anim.frame_count = CLAMP(frame_count, 0, UINT8_MAX);
-                    gfx_anim.frame_delay = CLAMP(frame_delay, 0, UINT8_MAX);
-
-                    std::string frame;
-                    while (iss >> frame && frame[0] != '#') {
-                        gfx_anim.frames.push_back(frame);
-                    }
-                    if (gfx_anim.frames.size() != gfx_anim.frame_count) {
-                        assert(!"number of frames does not match frame count");
-                        err = RN_BAD_ALLOC;
-                    }
-
-                    gfx_anims.push_back(gfx_anim);
-                }
-            }
-
-            inputFile.close();
-        } else {
-            assert(!"failed to read file");
-            err = RN_BAD_FILE_READ;
-        }
-
-        return err;
-    }
-    Err LoadMaterialIndex(std::string path, std::vector<Material> &materials)
-    {
-        Err err = RN_SUCCESS;
-
-        std::ifstream inputFile(path);
-        if (inputFile.is_open()) {
-            std::string line;
-            while (!err && std::getline(inputFile, line)) {
-                if (line[0] == '#') continue;
-                std::istringstream iss(line);
-
-                int flag_walk{};
-                int flag_swim{};
-
-                Material material{};
-                if (iss
-                    >> material.id
-                    >> material.footstep_sound
-                    >> flag_walk
-                    >> flag_swim
-                ) {
-                    if (material.footstep_sound == "-") material.footstep_sound = "";
-
-                    if (flag_walk) material.flags |= MATERIAL_FLAG_WALK;
-                    if (flag_swim) material.flags |= MATERIAL_FLAG_SWIM;
-
-                    materials.push_back(material);
-                }
-            }
-
-            inputFile.close();
-        } else {
-            assert(!"failed to read file");
-            err = RN_BAD_FILE_READ;
-        }
-
-        return err;
-    }
-    Err LoadSpriteIndex(std::string path, std::vector<Sprite> &sprites)
-    {
-        Err err = RN_SUCCESS;
-
-        std::ifstream inputFile(path);
-        if (inputFile.is_open()) {
-            std::string line;
-            while (!err && std::getline(inputFile, line)) {
-                if (line[0] == '#') continue;
-                std::istringstream iss(line);
-
-                Sprite sprite{};
-                if (iss
-                    >> sprite.id
-                    >> sprite.anims[DIR_N]
-                    >> sprite.anims[DIR_E]
-                    >> sprite.anims[DIR_S]
-                    >> sprite.anims[DIR_W]
-                    >> sprite.anims[DIR_NE]
-                    >> sprite.anims[DIR_SE]
-                    >> sprite.anims[DIR_SW]
-                    >> sprite.anims[DIR_NW]
-                ) {
-                    for (int i = 0; i < 8; i++) {
-                        if (sprite.anims[i] == "-") sprite.anims[i] = "";
-                    }
-                    sprites.push_back(sprite);
-                }
-            }
-
-            inputFile.close();
-        } else {
-            assert(!"failed to read file");
-            err = RN_BAD_FILE_READ;
-        }
-
-        return err;
     }
 
     Err LoadTilemapIndex(std::string path, std::vector<Tilemap> &tile_maps)
@@ -430,29 +195,11 @@ namespace data {
 
         return err;
     }
-
     Err SaveTilemap(std::string path, Tilemap &tilemap)
     {
         Err err = RN_SUCCESS;
-#if 0
-        std::ofstream stream(path);
 
-        do {
-            if (!stream.is_open()) {
-                err = RN_BAD_FILE_WRITE; break;
-            }
-
-            stream << "version " << tilemap.version << '\n';
-            stream << "size " << tilemap.width << " " << tilemap.height << '\n';
-            stream << "name " << tilemap.name << '\n';
-            stream << "texture " << tilemap.texture << '\n';
-           // stream << tilemap.tileDefs[0];
-        } while (0);
-
-        stream.close();
-#else
         FILE *file = fopen(path.c_str(), "w");
-
         do {
             if (ferror(file)) {
                 err = RN_BAD_FILE_WRITE; break;
@@ -510,7 +257,6 @@ namespace data {
         } while (0);
 
         if (file) fclose(file);
-#endif
         return err;
     }
 
@@ -825,29 +571,13 @@ namespace data {
         MemFree(compressed.bytes);
     }
 
+    Err LoadResources(Pack &pack);
+
     void Init(void)
     {
         Err err = RN_SUCCESS;
 
-        // Generate checkerboard image in slot 0 as a placeholder for when other images fail to load
-        Image placeholderImg = GenImageChecked(16, 16, 4, 4, MAGENTA, WHITE);
-        if (placeholderImg.width) {
-            placeholderTex = LoadTextureFromImage(placeholderImg);
-            if (placeholderTex.width) {
-                //pack.gfx_files[0].id = GFX_FILE_NONE;
-                //pack.gfx_files[0].texture = placeholderTex;
-
-                //pack.gfx_frames[0].id = GFX_FRAME_NONE;
-                //pack.gfx_frames[0].gfx = GFX_FILE_NONE;
-                //pack.gfx_frames[0].w = placeholderTex.width;
-                //pack.gfx_frames[0].h = placeholderTex.height;
-            } else {
-                printf("[data] WARN: Failed to generate placeholder texture\n");
-            }
-            UnloadImage(placeholderImg);
-        } else {
-            printf("[data] WARN: Failed to generate placeholder image\n");
-        }
+        GenPlaceholderTexture();
 
 #if DEV_BUILD_PACK_FILE
         Pack packHardcoded{ "pack/pack1.dat" };
@@ -1372,19 +1102,15 @@ namespace data {
                     Process(stream, entry, i); \
                 }
 
-            // TODO: These should all be pack.blah after we've removed the
-            // static data and switched to pack editing
             WRITE_ARRAY(pack.gfx_files);
             WRITE_ARRAY(pack.mus_files);
             WRITE_ARRAY(pack.sfx_files);
-
             WRITE_ARRAY(pack.gfx_frames);
             WRITE_ARRAY(pack.gfx_anims);
             WRITE_ARRAY(pack.materials);
             WRITE_ARRAY(pack.sprites);
-
-            WRITE_ARRAY(pack.entities);
             WRITE_ARRAY(pack.tile_maps);
+            WRITE_ARRAY(pack.entities);
 
             #undef WRITE_ARRAY
 
@@ -1414,14 +1140,12 @@ namespace data {
             pack.gfx_files .resize(1 + typeCounts[DAT_TYP_GFX_FILE]);
             pack.mus_files .resize(1 + typeCounts[DAT_TYP_MUS_FILE]);
             pack.sfx_files .resize(1 + typeCounts[DAT_TYP_SFX_FILE]);
-
             pack.gfx_frames.resize(1 + typeCounts[DAT_TYP_GFX_FRAME]);
             pack.gfx_anims .resize(1 + typeCounts[DAT_TYP_GFX_ANIM]);
             pack.materials .resize(1 + typeCounts[DAT_TYP_MATERIAL]);
             pack.sprites   .resize(1 + typeCounts[DAT_TYP_SPRITE]);
-
-            pack.entities  .resize(1 + typeCounts[DAT_TYP_ENTITY]);
             pack.tile_maps .resize(1 + typeCounts[DAT_TYP_TILE_MAP]);
+            pack.entities  .resize(1 + typeCounts[DAT_TYP_ENTITY]);
 
             int typeNextIndex[DAT_TYP_COUNT]{};
             // 0 slot is reserved, skip it when reading
@@ -1437,14 +1161,12 @@ namespace data {
                     case DAT_TYP_GFX_FILE:  Process(stream, pack.gfx_files [index], index); break;
                     case DAT_TYP_MUS_FILE:  Process(stream, pack.mus_files [index], index); break;
                     case DAT_TYP_SFX_FILE:  Process(stream, pack.sfx_files [index], index); break;
-
                     case DAT_TYP_GFX_FRAME: Process(stream, pack.gfx_frames[index], index); break;
                     case DAT_TYP_GFX_ANIM:  Process(stream, pack.gfx_anims [index], index); break;
                     case DAT_TYP_MATERIAL:  Process(stream, pack.materials [index], index); break;
                     case DAT_TYP_SPRITE:    Process(stream, pack.sprites   [index], index); break;
-
-                    case DAT_TYP_ENTITY:    Process(stream, pack.entities  [index], index); break;
                     case DAT_TYP_TILE_MAP:  Process(stream, pack.tile_maps [index], index); break;
+                    case DAT_TYP_ENTITY:    Process(stream, pack.entities  [index], index); break;
                 }
                 typeNextIndex[tocEntry.dtype]++;
             }
@@ -1704,4 +1426,16 @@ namespace data {
         const Rectangle frame_rec{ (float)frame.x, (float)frame.y, (float)frame.w, (float)frame.h };
         DrawTextureRec(gfx_file.texture, frame_rec, sprite_pos, WHITE);
     }
+
+#define ENUM_STR_GENERATOR(type, enumDef, enumGen) \
+    const char *type##Str(type id) {               \
+        switch (id) {                              \
+            enumDef(enumGen)                       \
+            default: return "<unknown>";           \
+        }                                          \
+    }
+    ENUM_STR_GENERATOR(DataType,      DATA_TYPES,     ENUM_GEN_CASE_RETURN_DESC);
+    ENUM_STR_GENERATOR(EntityType,    ENTITY_TYPES,   ENUM_GEN_CASE_RETURN_STR);
+    ENUM_STR_GENERATOR(EntitySpecies, ENTITY_SPECIES, ENUM_GEN_CASE_RETURN_STR);
+#undef ENUM_STR_GENERATOR
 }

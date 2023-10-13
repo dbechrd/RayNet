@@ -424,23 +424,7 @@ namespace data {
         uint32_t last_processed_input_cmd {};
 
         GhostSnapshot(void) {}
-
-        GhostSnapshot(Msg_S_EntitySnapshot &msg) {
-            server_time              = msg.server_time;
-            last_processed_input_cmd = msg.last_processed_input_cmd;
-
-            // Entity
-            map_name = msg.map_name;
-            position = msg.position;
-
-            // Life
-            hp_max   = msg.hp_max;
-            hp       = msg.hp;
-
-            // Physics
-            //speed    = msg.speed;
-            velocity = msg.velocity;
-        }
+        GhostSnapshot(Msg_S_EntitySnapshot &msg);
     };
     typedef RingBuffer<GhostSnapshot, CL_SNAPSHOT_COUNT> AspectGhost;
 
@@ -670,10 +654,6 @@ namespace data {
         };
     };
 
-    const char *DataTypeStr(DataType type);
-    const char *EntityTypeStr(EntityType type);
-    const char *EntitySpeciesStr(EntitySpecies type);
-
     extern std::vector<Pack *> packs;
 
     void ReadFileIntoDataBuffer(std::string filename, DatBuffer &datBuffer);
@@ -695,5 +675,9 @@ namespace data {
     void UpdateSprite(Entity &entity, double dt, bool newlySpawned);
     void ResetSprite(Entity &entity);
     void DrawSprite(const Entity &entity);
+
+    const char *DataTypeStr(DataType type);
+    const char *EntityTypeStr(EntityType type);
+    const char *EntitySpeciesStr(EntitySpecies type);
 }
 ////////////////////////////////////////////////////////////////////////////
