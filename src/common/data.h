@@ -8,19 +8,17 @@ struct WangMap;
 namespace data {
     // DO NOT re-order these! They are hard-coded in the TOC
 #define DATA_TYPES(gen) \
-        gen(DAT_TYP_UNUSED,    "UNUSED"   ) \
+        gen(DAT_TYP_GFX_FILE,  "GFXFILE ") \
+        gen(DAT_TYP_MUS_FILE,  "MUSFILE ") \
+        gen(DAT_TYP_SFX_FILE,  "SFXFILE ") \
 \
-        gen(DAT_TYP_GFX_FILE,  "GFX_FILE" ) \
-        gen(DAT_TYP_MUS_FILE,  "MUS_FILE" ) \
-        gen(DAT_TYP_SFX_FILE,  "SFX_FILE" ) \
+        gen(DAT_TYP_GFX_FRAME, "GFXFRAME") \
+        gen(DAT_TYP_GFX_ANIM,  "GFXANIM ") \
+        gen(DAT_TYP_MATERIAL,  "MATERIAL") \
+        gen(DAT_TYP_SPRITE,    "SPRITE  ") \
 \
-        gen(DAT_TYP_GFX_FRAME, "GFX_FRAME") \
-        gen(DAT_TYP_GFX_ANIM,  "GFX_ANIM" ) \
-        gen(DAT_TYP_MATERIAL,  "MATERIAL" ) \
-        gen(DAT_TYP_SPRITE,    "SPRITE"   ) \
-\
-        gen(DAT_TYP_TILE_MAP,  "TILE_MAP" ) \
-        gen(DAT_TYP_ENTITY,    "ENTITY"   )
+        gen(DAT_TYP_TILE_MAP,  "TILEMAP ") \
+        gen(DAT_TYP_ENTITY,    "ENTITY  ")
 
     enum DataType : uint8_t {
         DATA_TYPES(ENUM_GEN_VALUE_DESC)
@@ -426,7 +424,23 @@ namespace data {
         uint32_t last_processed_input_cmd {};
 
         GhostSnapshot(void) {}
-        GhostSnapshot(Msg_S_EntitySnapshot &msg);
+
+        GhostSnapshot(Msg_S_EntitySnapshot &msg) {
+            server_time              = msg.server_time;
+            last_processed_input_cmd = msg.last_processed_input_cmd;
+
+            // Entity
+            map_name = msg.map_name;
+            position = msg.position;
+
+            // Life
+            hp_max   = msg.hp_max;
+            hp       = msg.hp;
+
+            // Physics
+            //speed    = msg.speed;
+            velocity = msg.velocity;
+        }
     };
     typedef RingBuffer<GhostSnapshot, CL_SNAPSHOT_COUNT> AspectGhost;
 
@@ -658,6 +672,7 @@ namespace data {
 
     const char *DataTypeStr(DataType type);
     const char *EntityTypeStr(EntityType type);
+    const char *EntitySpeciesStr(EntitySpecies type);
 
     extern std::vector<Pack *> packs;
 

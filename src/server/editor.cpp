@@ -1465,19 +1465,15 @@ void Editor::DrawUI_PackFiles(UI &uiActionBar, double now)
             const char *text;
             Color color;
         } datTypeFilter[data::DAT_TYP_COUNT]{
-            { false, "UNU", ColorFromHSV(0 * (360.0f / (float)data::DAT_TYP_COUNT), 0.9f, 0.6f) },
-
-            { true,  "GFX", ColorFromHSV(1 * (360.0f / (float)data::DAT_TYP_COUNT), 0.9f, 0.6f) },
-            { true,  "MUS", ColorFromHSV(2 * (360.0f / (float)data::DAT_TYP_COUNT), 0.9f, 0.6f) },
-            { true,  "SFX", ColorFromHSV(3 * (360.0f / (float)data::DAT_TYP_COUNT), 0.9f, 0.6f) },
-
-            { true,  "FRM", ColorFromHSV(4 * (360.0f / (float)data::DAT_TYP_COUNT), 0.9f, 0.6f) },
-            { true,  "ANM", ColorFromHSV(5 * (360.0f / (float)data::DAT_TYP_COUNT), 0.9f, 0.6f) },
-            { true,  "MAT", ColorFromHSV(6 * (360.0f / (float)data::DAT_TYP_COUNT), 0.9f, 0.6f) },
-            { true,  "SPT", ColorFromHSV(7 * (360.0f / (float)data::DAT_TYP_COUNT), 0.9f, 0.6f) },
-
-            { true,  "MAP", ColorFromHSV(8 * (360.0f / (float)data::DAT_TYP_COUNT), 0.9f, 0.6f) },
-            { true,  "ENT", ColorFromHSV(9 * (360.0f / (float)data::DAT_TYP_COUNT), 0.9f, 0.6f) },
+            { true,  "GFX", ColorFromHSV(0 * (360.0f / (float)data::DAT_TYP_COUNT), 0.9f, 0.6f) },
+            { true,  "MUS", ColorFromHSV(1 * (360.0f / (float)data::DAT_TYP_COUNT), 0.9f, 0.6f) },
+            { true,  "SFX", ColorFromHSV(2 * (360.0f / (float)data::DAT_TYP_COUNT), 0.9f, 0.6f) },
+            { true,  "FRM", ColorFromHSV(3 * (360.0f / (float)data::DAT_TYP_COUNT), 0.9f, 0.6f) },
+            { true,  "ANM", ColorFromHSV(4 * (360.0f / (float)data::DAT_TYP_COUNT), 0.9f, 0.6f) },
+            { true,  "MAT", ColorFromHSV(5 * (360.0f / (float)data::DAT_TYP_COUNT), 0.9f, 0.6f) },
+            { true,  "SPT", ColorFromHSV(6 * (360.0f / (float)data::DAT_TYP_COUNT), 0.9f, 0.6f) },
+            { true,  "MAP", ColorFromHSV(7 * (360.0f / (float)data::DAT_TYP_COUNT), 0.9f, 0.6f) },
+            { true,  "ENT", ColorFromHSV(8 * (360.0f / (float)data::DAT_TYP_COUNT), 0.9f, 0.6f) },
         };
 
         uiActionBar.PushWidth(34);
