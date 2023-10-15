@@ -132,6 +132,11 @@ namespace data {
         bool soundPlayed{};
     };
 
+    struct GfxAnimState {
+        uint8_t frame {};  // current frame index
+        double  accum {};  // time since last update
+    };
+
     //apparition
     //phantom
     //shade
@@ -153,13 +158,14 @@ namespace data {
     ////////////////////////////////////////////////////////////////////////////
 
     struct TileDef {
-        std::string anim     {};
-        std::string material {};
+        std::string anim           {};
+        std::string material       {};
         uint8_t     auto_tile_mask {};  // not used atm, but this is where it would go once tiledefs are moved to tilesets
 
         //------------------------
         // Not serialized
-        Color color;  // color for minimap/wang tile editor (top left pixel of tile)
+        Color        color      {};  // color for minimap/wang tile editor (top left pixel of tile)
+        GfxAnimState anim_state {};
     };
 
     struct AiPathNode {
@@ -242,6 +248,8 @@ namespace data {
 
         void ResolveEntityTerrainCollisions(Entity &entity);
         void ResolveEntityTerrainCollisions(uint32_t entityId);
+
+        void UpdateAnimations(double dt);
 
         void DrawTile(Tile tile, Vector2 position);
         void Draw(Camera2D &camera);
@@ -389,10 +397,9 @@ namespace data {
         }
 
         //// Sprite ////
-        std::string sprite     {};  // sprite resource
-        Direction   direction  {};  // current facing direction
-        uint8_t     anim_frame {};  // current frame index
-        double      anim_accum {};  // time since last update
+        std::string  sprite     {};  // sprite resource
+        Direction    direction  {};  // current facing direction
+        GfxAnimState anim_state {};  // keep track of the animation as it plays
 
         //// Warp ////
         Rectangle warp_collider {};

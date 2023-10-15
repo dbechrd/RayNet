@@ -50,6 +50,7 @@ private:
         Vector3 cmdAccumForce;
     };
 
+    void UpdateMap(GameClient &client);
     void UpdateLocalPlayerHisto(GameClient &client, data::Entity &entity, HistoData &histoData);
     void UpdateLocalPlayer(GameClient &client, data::Entity &entity, data::AspectGhost &ghost);
     void UpdateLocalGhost(GameClient &client, data::Entity &entity, data::AspectGhost &ghost, data::Tilemap *localPlayerMap);

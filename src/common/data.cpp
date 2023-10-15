@@ -1350,7 +1350,7 @@ namespace data {
 
         std::string frame_id = "";
         if (!anim.frames.empty()) {
-            frame_id = anim.frames[entity.anim_frame];
+            frame_id = anim.frames[entity.anim_state.frame];
         }
         const GfxFrame &frame = packs[0]->FindGraphicFrame(frame_id);
 
@@ -1367,10 +1367,21 @@ namespace data {
         };
         return rect;
     }
+    void UpdateGfxAnim(const GfxAnim &anim, double dt, GfxAnimState &anim_state)
+    {
+        anim_state.accum += dt;
+
+        const double frame_time = (1.0 / anim.frame_rate) * anim.frame_delay;
+        if (anim_state.accum >= frame_time) {
+            anim_state.frame++;
+            if (anim_state.frame >= anim.frame_count) {
+                anim_state.frame = 0;
+            }
+            anim_state.accum -= frame_time;
+        }
+    }
     void UpdateSprite(Entity &entity, double dt, bool newlySpawned)
     {
-        entity.anim_accum += dt;
-
         // TODO: Make this more general and stop taking in entityType.
         switch (entity.type) {
             case ENTITY_PLAYER: case ENTITY_NPC: {
@@ -1387,14 +1398,7 @@ namespace data {
 
         const Sprite &sprite = packs[0]->FindSprite(entity.sprite);
         const GfxAnim &anim = packs[0]->FindGraphicAnim(sprite.anims[entity.direction]);
-        const double anim_frame_time = (1.0 / anim.frame_rate) * anim.frame_delay;
-        if (entity.anim_accum >= anim_frame_time) {
-            entity.anim_frame++;
-            if (entity.anim_frame >= anim.frame_count) {
-                entity.anim_frame = 0;
-            }
-            entity.anim_accum -= anim_frame_time;
-        }
+        UpdateGfxAnim(anim, dt, entity.anim_state);
 
         if (newlySpawned) {
             const SfxFile &sfx_file = packs[0]->FindSoundVariant(anim.sound);
@@ -1407,8 +1411,8 @@ namespace data {
         GfxAnim &anim = packs[0]->FindGraphicAnim(sprite.anims[entity.direction]);
         StopSound(anim.sound);
 
-        entity.anim_frame = 0;
-        entity.anim_accum = 0;
+        entity.anim_state.frame = 0;
+        entity.anim_state.accum = 0;
     }
     void DrawSprite(const Entity &entity)
     {

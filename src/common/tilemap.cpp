@@ -143,7 +143,7 @@ const data::GfxFrame &data::Tilemap::GetTileGfxFrame(Tile tile)
 {
     const data::TileDef &tile_def = GetTileDef(tile);
     const data::GfxAnim &gfx_anim = data::packs[0]->FindGraphicAnim(tile_def.anim);
-    const data::GfxFrame &gfx_frame = data::packs[0]->FindGraphicFrame(gfx_anim.frames[0]);
+    const data::GfxFrame &gfx_frame = data::packs[0]->FindGraphicFrame(gfx_anim.frames[tile_def.anim_state.frame]);
     return gfx_frame;
 }
 const data::TileDef &data::Tilemap::GetTileDef(Tile tile)
@@ -244,6 +244,14 @@ void data::Tilemap::ResolveEntityTerrainCollisions(uint32_t entityId)
     }
 
     ResolveEntityTerrainCollisions(*entity);
+}
+
+void data::Tilemap::UpdateAnimations(double dt)
+{
+    for (TileDef &tile_def : tileDefs) {
+        const GfxAnim &anim = packs[0]->FindGraphicAnim(tile_def.anim);
+        data::UpdateGfxAnim(anim, dt, tile_def.anim_state);
+    }
 }
 
 void data::Tilemap::DrawTile(Tile tile, Vector2 position)

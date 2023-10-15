@@ -122,6 +122,12 @@ Err ClientWorld::CreateDialog(uint32_t entityId, uint32_t dialogId, std::string 
     return RN_SUCCESS;
 }
 
+void ClientWorld::UpdateMap(GameClient &client)
+{
+    data::Tilemap *map = LocalPlayerMap();
+    map->UpdateAnimations(client.frameDt);
+}
+
 void ClientWorld::UpdateLocalPlayerHisto(GameClient &client, data::Entity &entity, HistoData &histoData)
 {
     if (Histogram::paused) {
@@ -299,6 +305,8 @@ void ClientWorld::UpdateEntities(GameClient &client)
 
 void ClientWorld::Update(GameClient &client)
 {
+    UpdateMap(client);
+
     io.PushScope(IO::IO_GameNPC);
     UpdateEntities(client);
     io.PopScope();

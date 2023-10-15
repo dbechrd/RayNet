@@ -1,9 +1,0 @@
-# id                path                                            variations  pitch_variance  max_instances
-sfx_mic_test       "resources/sound/mic_test.wav"                   1           0.00            10
-sfx_soft_tick      "resources/sound/soft_tick.wav"                  1           0.03            5
-sfx_campfire       "resources/sound/campfire.wav"                   1           0.00            1
-sfx_footstep_grass "resources/sound/footstep_grass.wav"             1           0.00            1
-sfx_footstep_stone "resources/sound/footstep_stone.wav"             1           0.00            1
-sfx_fireball       "resources/sound/copyright/fireball.wav"         1           0.10            5
-sfx_chicken_squawk "resources/sound/copyright/chicken_squawk.wav"   1           0.05            10
-sfx_chicken_cluck  "resources/sound/copyright/chicken_cluck.wav"    5           0.05            10

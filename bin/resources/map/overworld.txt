@@ -23,7 +23,7 @@ gfx_anim_til_stone_wall_cl  mat_stone_wall  0
 gfx_anim_til_stone_wall_cc  mat_stone_wall  0
 gfx_anim_til_stone_wall_cr  mat_stone_wall  0
 gfx_anim_til_water_dark     mat_water       0
-gfx_anim_til_grass_6        mat_grass_path  0
+gfx_anim_til_grass_weeds    mat_grass_path  0
 gfx_anim_til_invis          mat_void        0
 gfx_anim_til_stone_wall_bl  mat_stone_wall  0
 gfx_anim_til_stone_wall_bc  mat_stone_wall  0

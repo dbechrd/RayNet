@@ -62,15 +62,15 @@
 @GfxFrame gfx_frame_til_grass_flowers : gfx_til_overworld  256  64   64   64
 @GfxFrame gfx_frame_til_dirt          : gfx_til_overworld  320  64   64   64
 @GfxFrame gfx_frame_til_grass_dark    : gfx_til_overworld  384  64   64   64
-@GfxFrame gfx_frame_til_water_dark    : gfx_til_overworld  448  64   64   64
+@GfxFrame gfx_frame_til_water_dark_0  : gfx_til_overworld  448  64   64   64
 @GfxFrame gfx_frame_til_stone_wall_cl : gfx_til_overworld  0    128  64   64
 @GfxFrame gfx_frame_til_stone_wall_cc : gfx_til_overworld  64   128  64   64
 @GfxFrame gfx_frame_til_stone_wall_cr : gfx_til_overworld  128  128  64   64
-@GfxFrame gfx_frame_til_grass_6       : gfx_til_overworld  192  128  64   64
-@GfxFrame gfx_frame_til_unused_4      : gfx_til_overworld  256  128  64   64
-@GfxFrame gfx_frame_til_unused_5      : gfx_til_overworld  320  128  64   64
-@GfxFrame gfx_frame_til_unused_6      : gfx_til_overworld  384  128  64   64
-@GfxFrame gfx_frame_til_unused_7      : gfx_til_overworld  448  128  64   64
+@GfxFrame gfx_frame_til_grass_weeds_0 : gfx_til_overworld  192  128  64   64
+@GfxFrame gfx_frame_til_grass_weeds_1 : gfx_til_overworld  256  128  64   64
+@GfxFrame gfx_frame_til_grass_6       : gfx_til_overworld  320  128  64   64
+@GfxFrame gfx_frame_til_water_dark_1  : gfx_til_overworld  384  128  64   64
+@GfxFrame gfx_frame_til_water_dark_2  : gfx_til_overworld  448  128  64   64
 @GfxFrame gfx_frame_til_stone_wall_bl : gfx_til_overworld  0    192  64   64
 @GfxFrame gfx_frame_til_stone_wall_bc : gfx_til_overworld  64   192  64   64
 @GfxFrame gfx_frame_til_stone_wall_br : gfx_til_overworld  128  192  64   64
@@ -115,8 +115,8 @@
 @GfxAnim gfx_anim_til_stone_wall_cl : null          60       1         0         gfx_frame_til_stone_wall_cl
 @GfxAnim gfx_anim_til_stone_wall_cc : null          60       1         0         gfx_frame_til_stone_wall_cc
 @GfxAnim gfx_anim_til_stone_wall_cr : null          60       1         0         gfx_frame_til_stone_wall_cr
-@GfxAnim gfx_anim_til_water_dark    : null          60       1         0         gfx_frame_til_water_dark
-@GfxAnim gfx_anim_til_grass_6       : null          60       1         0         gfx_frame_til_grass_6
+@GfxAnim gfx_anim_til_water_dark    : null           2       4         1         gfx_frame_til_water_dark_0 gfx_frame_til_water_dark_1 gfx_frame_til_water_dark_2 gfx_frame_til_water_dark_1
+@GfxAnim gfx_anim_til_grass_weeds   : null           3       2         1         gfx_frame_til_grass_weeds_0 gfx_frame_til_grass_weeds_1
 @GfxAnim gfx_anim_til_invis         : null          60       1         0         gfx_frame_til_invis
 @GfxAnim gfx_anim_til_stone_wall_bl : null          60       1         0         gfx_frame_til_stone_wall_bl
 @GfxAnim gfx_anim_til_stone_wall_bc : null          60       1         0         gfx_frame_til_stone_wall_bc
