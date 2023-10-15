@@ -712,27 +712,32 @@ void Editor::DrawUI_Tilesheet(UI &uiActionBar, double now)
     // TODO(dlb): Support multi-select (big rectangle?), and figure out where this lives
     auto &map = data::packs[0]->FindTilemap(map_name);
 
-    // TODO(dlb): Replace with tileset logic one day
-    // HACK(dlb): Implicitly requires all tiledefs to be in same image
-    const data::GfxFrame &gfx_frame = map.GetTileGfxFrame(0);
-    const data::GfxFile &gfx_file = data::packs[0]->FindGraphic(gfx_frame.gfx);
-    const Texture &mapTex = gfx_file.texture;
+    size_t tile_def_count = map.tileDefs.size();
+    int tiles_x = 6;
+    int tiles_y = tile_def_count / 6 + (tile_def_count % 6 > 0);
+    int checker_w = TILE_W * tiles_x;
+    int checker_h = TILE_W * tiles_y;
 
-    static Texture checkerboard{};
-    if (checkerboard.width != mapTex.width || checkerboard.height != mapTex.height) {
-        checkerboard = LoadTextureFromImage(
-            GenImageChecked(mapTex.width, mapTex.height, 8, 8, GRAY, LIGHTGRAY)
-        );
+    static Texture checkerTex{};
+    if (checkerTex.width != checker_w || checkerTex.height != checker_h) {
+        Image checkerImg = GenImageChecked(checker_w, checker_h, 8, 8, GRAY, LIGHTGRAY);
+        checkerTex = LoadTextureFromImage(GenImageChecked(checker_w, checker_h, 8, 8, GRAY, LIGHTGRAY));
     }
 
     UIStyle blackBorderStyle{};
     blackBorderStyle.borderColor = BLACK;
     uiActionBar.PushStyle(blackBorderStyle);
 
-    UIState sheet = uiActionBar.Image(checkerboard);
+    UIState sheet = uiActionBar.Image(checkerTex);
     Vector2 imgTL{ sheet.contentRect.x, sheet.contentRect.y };
 
-    DrawTextureEx(mapTex, imgTL, 0, 1, WHITE);
+    // Draw tiledefs
+    for (int i = 0; i < map.tileDefs.size(); i++) {
+        int tile_x = TILE_W * (i % tiles_x);
+        int tile_y = TILE_W * (i / tiles_x);
+        map.DrawTile(i, { imgTL.x + tile_x, imgTL.y + tile_y });
+    }
+
     uiActionBar.PopStyle();
 
     // Draw collision overlay on tilesheet if we're in collision editing mode
@@ -802,15 +807,19 @@ void Editor::DrawUI_Tilesheet(UI &uiActionBar, double now)
         //DrawTextEx(fntHackBold20, TextFormat("%f, %f\n", mouseRel.x, mouseRel.y),
         //    Vector2Add(GetMousePosition(), { 10, 10 }), fntHackBold20.baseSize, 1, YELLOW);
 
-        // Draw hover highlight on tilesheet if mouse hovering a tile
-        const int tileX = (int)mouseRel.x / TILE_W;
-        const int tileY = (int)mouseRel.y / TILE_W;
-        if (state.tiles.tileEditMode != TileEditMode_AutoTileMask) {
-            DrawRectangleLinesEx(
-                { imgTL.x + tileX * TILE_W, imgTL.y + tileY * TILE_W, TILE_W, TILE_W },
-                2,
-                Fade(WHITE, 0.7f)
-            );
+        // Draw hover highlight on tilesheet if mouse hovering a valid tiledef
+        const int tile_x = (int)mouseRel.x / TILE_W;
+        const int tile_y = (int)mouseRel.y / TILE_W;
+        const int tileIdx = tile_y * tiles_x + tile_x;
+
+        if (tileIdx < tile_def_count) {
+            if (state.tiles.tileEditMode != TileEditMode_AutoTileMask) {
+                DrawRectangleLinesEx(
+                    { imgTL.x + tile_x * TILE_W, imgTL.y + tile_y * TILE_W, TILE_W, TILE_W },
+                    2,
+                    Fade(WHITE, 0.7f)
+                );
+            }
         }
 
         //DrawTextEx(fntHackBold20, TextFormat("%d, %d\n", tileX, tileY),
@@ -818,7 +827,6 @@ void Editor::DrawUI_Tilesheet(UI &uiActionBar, double now)
 
         // If mouse pressed, select tile, or change collision data, depending on mode
         if (sheet.pressed) {
-            const int tileIdx = tileY * (mapTex.width / TILE_W) + tileX;
             if (tileIdx >= 0 && tileIdx < map.tileDefs.size()) {
                 switch (state.tiles.tileEditMode) {
                     case TileEditMode_Select: {
@@ -867,9 +875,14 @@ void Editor::DrawUI_Tilesheet(UI &uiActionBar, double now)
 
     // Draw highlight around currently styleSelected tiledef in draw mode
     if (state.tiles.cursor.tileDefId >= 0) {
-        Rectangle tileDefRectScreen = map.TileDefRect(state.tiles.cursor.tileDefId);
-        tileDefRectScreen.x += imgTL.x;
-        tileDefRectScreen.y += imgTL.y;
+        int tile_x = state.tiles.cursor.tileDefId % tiles_x;
+        int tile_y = state.tiles.cursor.tileDefId / tiles_x;
+        Rectangle tileDefRectScreen{
+            imgTL.x + (TILE_W * tile_x),
+            imgTL.y + (TILE_W * tile_y),
+            TILE_W,
+            TILE_W
+        };
         DrawRectangleLinesEx(tileDefRectScreen, 2, WHITE);
     }
 }

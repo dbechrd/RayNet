@@ -532,7 +532,7 @@ namespace data {
             if (entry != gfx_file_by_id.end()) {
                 return gfx_files[entry->second];
             } else {
-                TraceLog(LOG_WARNING, "Missing graphic file: %s", id.c_str());
+                //TraceLog(LOG_WARNING, "Missing graphic file: %s", id.c_str());
                 return gfx_files[0];
             }
         }
@@ -542,7 +542,7 @@ namespace data {
             if (entry != mus_file_by_id.end()) {
                 return mus_files[entry->second];
             } else {
-                TraceLog(LOG_WARNING, "Missing music: %s", id.c_str());
+                //TraceLog(LOG_WARNING, "Missing music: %s", id.c_str());
                 return mus_files[0];
             }
         }
@@ -564,7 +564,7 @@ namespace data {
                 return sfx_files[sfx_idx];
             } else {
                 if (!id.empty()) {
-                    TraceLog(LOG_WARNING, "Missing sound: %s", id.c_str());
+                    //TraceLog(LOG_WARNING, "Missing sound: %s", id.c_str());
                 }
                 return sfx_files[0];
             }
@@ -575,7 +575,7 @@ namespace data {
             if (entry != gfx_frame_by_id.end()) {
                 return gfx_frames[entry->second];
             } else {
-                TraceLog(LOG_WARNING, "Missing graphic frame: %s", id.c_str());
+                //TraceLog(LOG_WARNING, "Missing graphic frame: %s", id.c_str());
                 return gfx_frames[0];
             }
         }
@@ -585,7 +585,7 @@ namespace data {
             if (entry != gfx_anim_by_id.end()) {
                 return gfx_anims[entry->second];
             } else {
-                TraceLog(LOG_WARNING, "Missing graphic animation: %s", id.c_str());
+                //TraceLog(LOG_WARNING, "Missing graphic animation: %s", id.c_str());
                 return gfx_anims[0];
             }
         }
@@ -595,7 +595,7 @@ namespace data {
             if (entry != material_by_id.end()) {
                 return materials[entry->second];
             } else {
-                TraceLog(LOG_WARNING, "Missing material: %s", id.c_str());
+                //TraceLog(LOG_WARNING, "Missing material: %s", id.c_str());
                 return materials[0];
             }
         }
@@ -605,7 +605,7 @@ namespace data {
             if (entry != sprite_by_id.end()) {
                 return sprites[entry->second];
             } else {
-                TraceLog(LOG_WARNING, "Missing sprite: %s", id.c_str());
+                //TraceLog(LOG_WARNING, "Missing sprite: %s", id.c_str());
                 return sprites[0];
             }
         }
@@ -615,7 +615,7 @@ namespace data {
             if (entry != tile_map_by_id.end()) {
                 return tile_maps[entry->second];
             } else {
-                TraceLog(LOG_WARNING, "Missing tilemap id: %u", id);
+                //TraceLog(LOG_WARNING, "Missing tilemap id: %u", id);
                 return tile_maps[0];
             }
         }
@@ -625,7 +625,7 @@ namespace data {
             if (entry != tile_map_by_name.end()) {
                 return tile_maps[entry->second];
             } else {
-                TraceLog(LOG_WARNING, "Missing tilemap name: %s", name.c_str());
+                //TraceLog(LOG_WARNING, "Missing tilemap name: %s", name.c_str());
                 return tile_maps[0];
             }
         }
