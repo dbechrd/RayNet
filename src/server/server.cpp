@@ -241,9 +241,15 @@ Err Play(GameServer &server)
         histoEntry.color = doNetTick ? DARKPURPLE : RAYWHITE;
         histoFps.Push(histoEntry);
 
-        while (server.tickAccum >= SV_TICK_DT) {
+        if (server.tickAccum >= SV_TICK_DT) {
             //printf("[%.2f][%.2f] ServerUpdate %d\n", server.tickAccum, now, (int)server.tick);
+            double accum = server.tickAccum;
+
             server.Update();
+
+            accum -= server.tickAccum;
+            auto &editor_map = data::packs[0]->FindTilemap(editor.map_id);
+            editor_map.UpdateAnimations(accum);
         }
 
         //--------------------
