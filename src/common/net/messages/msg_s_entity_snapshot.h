@@ -10,7 +10,7 @@ struct Msg_S_EntitySnapshot : public yojimbo::Message
     uint32_t            entity_id  {};
     data::EntityType    type       {};  // doesn't change, but needed for switch statements in deserializer
     data::EntitySpecies spec       {};
-    char                map_name   [SV_MAX_TILE_MAP_NAME_LEN + 1]{};
+    char                map_id   [SV_MAX_TILE_MAP_NAME_LEN + 1]{};
     Vector3             position   {};
 
     // Collision
@@ -38,7 +38,7 @@ struct Msg_S_EntitySnapshot : public yojimbo::Message
         serialize_uint32(stream, entity_id);
         serialize_uint32(stream, (uint32_t &)type);
         serialize_uint32(stream, (uint32_t &)spec);
-        serialize_string(stream, map_name, sizeof(map_name));
+        serialize_string(stream, map_id, sizeof(map_id));
         serialize_float(stream, position.x);
         serialize_float(stream, position.y);
         serialize_float(stream, position.z);

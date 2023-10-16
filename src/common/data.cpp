@@ -22,7 +22,7 @@ namespace data {
         last_processed_input_cmd = msg.last_processed_input_cmd;
 
         // Entity
-        map_name = msg.map_name;
+        map_id   = msg.map_id;
         position = msg.position;
 
         // Life
@@ -86,115 +86,6 @@ namespace data {
         }
     }
 
-    Err LoadTilemapIndex(std::string path, std::vector<Tilemap> &tile_maps)
-    {
-        Err err = RN_SUCCESS;
-
-        std::ifstream inputFile(path);
-        if (inputFile.is_open()) {
-            Tilemap tile_map{};
-
-            std::string line;
-            while (!err && std::getline(inputFile, line)) {
-                if (line.empty() || line[0] == '#') continue;
-                std::istringstream iss(line);
-
-                std::string type;
-                iss >> type;
-                if (iss.fail()) { err = RN_BAD_FILE_READ; break; }
-
-                if (type == "map") {
-                    iss >> tile_map.version
-                        >> tile_map.name;
-                    if (iss.fail()) { err = RN_BAD_FILE_READ; break; }
-                } else if (type == "tile_defs") {
-                    int tile_def_count = 0;
-                    iss >> tile_def_count;
-                    if (iss.fail()) { err = RN_BAD_FILE_READ; break; }
-
-                    tile_map.tileDefs.reserve(tile_def_count);
-                    for (int i = 0; i < tile_def_count; i++) {
-                        std::getline(inputFile, line);
-                        iss = std::istringstream(line);
-
-                        TileDef tile_def{};
-                        iss >> tile_def.anim
-                            >> tile_def.material
-                            >> tile_def.auto_tile_mask;
-                        if (iss.fail()) { err = RN_BAD_FILE_READ; break; }
-
-                        tile_map.tileDefs.push_back(tile_def);
-                    }
-                } else if (type == "tiles") {
-                    iss >> tile_map.width;
-                    iss >> tile_map.height;
-                    if (iss.fail()) { err = RN_BAD_FILE_READ; break; }
-
-                    tile_map.tiles.reserve(tile_map.width * tile_map.height);
-                    for (int y = 0; y < tile_map.height; y++) {
-                        std::getline(inputFile, line);
-                        iss = std::istringstream(line);
-
-                        for (int x = 0; x < tile_map.width; x++) {
-                            int tile = 0;
-                            iss >> tile;
-                            if (iss.fail()) { err = RN_BAD_FILE_READ; break; }
-
-                            tile_map.tiles.push_back(tile);
-                        }
-                    }
-                } else if (type == "path_nodes") {
-                    int count = 0;
-                    iss >> count;
-                    if (iss.fail()) { err = RN_BAD_FILE_READ; break; }
-
-                    tile_map.pathNodes.reserve(count);
-                    for (int i = 0; i < count; i++) {
-                        std::getline(inputFile, line);
-                        iss = std::istringstream(line);
-
-                        AiPathNode path_node{};
-                        iss >> path_node.pos.x
-                            >> path_node.pos.y
-                            >> path_node.pos.z
-                            >> path_node.waitFor;
-                        if (iss.fail()) { err = RN_BAD_FILE_READ; break; }
-                        tile_map.pathNodes.push_back(path_node);
-                    }
-                } else if (type == "paths") {
-                    int count = 0;
-                    iss >> count;
-                    if (iss.fail()) { err = RN_BAD_FILE_READ; break; }
-
-                    tile_map.paths.reserve(count);
-                    for (int i = 0; i < count; i++) {
-                        std::getline(inputFile, line);
-                        iss = std::istringstream(line);
-
-                        AiPath path{};
-                        iss >> path.pathNodeStart
-                            >> path.pathNodeCount;
-                        if (iss.fail()) { err = RN_BAD_FILE_READ; break; }
-                        tile_map.paths.push_back(path);
-                    }
-                } else {
-                    assert(!"unexpected line");
-                    err = RN_BAD_FILE_READ;
-                    break;
-                }
-            }
-
-            if (!err) {
-                tile_maps.push_back(tile_map);
-            }
-            inputFile.close();
-        } else {
-            assert(!"failed to read file");
-            err = RN_BAD_FILE_READ;
-        }
-
-        return err;
-    }
     Err SaveTilemap(std::string path, Tilemap &tilemap)
     {
         Err err = RN_SUCCESS;
@@ -205,8 +96,8 @@ namespace data {
                 err = RN_BAD_FILE_WRITE; break;
             }
 
-            fprintf(file, "# map version name texture\n");
-            fprintf(file, "map %u %s\n", tilemap.version, tilemap.name.c_str());
+            fprintf(file, "# map version id texture\n");
+            fprintf(file, "map %u %s\n", tilemap.version, tilemap.id.c_str());
             fputc('\n', file);
 
             fprintf(file, "# tile_defs count [anim material auto_tile_mask]\n");
@@ -318,6 +209,24 @@ namespace data {
         }
         return true;
     }
+    bool dlb_MD_Expect_Uint(MD_Node *node, uint32_t min, uint32_t max, uint32_t *result)
+    {
+        if (node->kind != MD_NodeKind_Main || !(node->flags & MD_NodeFlag_Numeric) || !(MD_StringIsCStyleInt(node->string))) {
+            MD_CodeLoc loc = MD_CodeLocFromNode(node);
+            MD_PrintMessage(stderr, loc, MD_MessageKind_Error, MD_S8Lit("Expected unsigned integer literal."));
+            return false;
+        }
+        MD_u64 val = MD_U64FromString(node->string, 10);
+        if (val < min || val > max) {
+            MD_CodeLoc loc = MD_CodeLocFromNode(node);
+            MD_PrintMessageFmt(stderr, loc, MD_MessageKind_Error, (char *)"Expected unsigned integer in inclusive range [%u, %u].", min, max);
+            return false;
+        }
+        if (result) {
+            *result = val;
+        }
+        return true;
+    }
     bool dlb_MD_Expect_Float(MD_Node *node, float *result)
     {
         if (node->kind != MD_NodeKind_Main || !(node->flags & MD_NodeFlag_Numeric)) {
@@ -327,6 +236,18 @@ namespace data {
         }
         if (result) {
             *result = (float)MD_F64FromString(node->string);
+        }
+        return true;
+    }
+    bool dlb_MD_Expect_Double(MD_Node *node, double *result)
+    {
+        if (node->kind != MD_NodeKind_Main || !(node->flags & MD_NodeFlag_Numeric)) {
+            MD_CodeLoc loc = MD_CodeLocFromNode(node);
+            MD_PrintMessage(stderr, loc, MD_MessageKind_Error, MD_S8Lit("Expected double literal."));
+            return false;
+        }
+        if (result) {
+            *result = MD_F64FromString(node->string);
         }
         return true;
     }
@@ -342,10 +263,6 @@ namespace data {
 
 #define META_ID(dest) \
     if (!dlb_MD_Expect_Ident(node, &dest)) break;
-#define META_CHILDREN_BEGIN \
-    do { \
-        MD_Node *parent = node; \
-        MD_Node *node = parent->first_child;
 #define META_IDENT(dest) \
         if (!dlb_MD_Expect_Ident(node, &dest)) break; \
         node = node->next;
@@ -354,16 +271,23 @@ namespace data {
         node = node->next;
 #define META_UINT8(dest) \
         do { \
-            int val = 0; \
-            if (!dlb_MD_Expect_Int(node, 0, UINT8_MAX, &val)) break; \
+            uint32_t val = 0; \
+            if (!dlb_MD_Expect_Uint(node, 0, UINT8_MAX, &val)) break; \
             dest = (uint8_t)val; \
             node = node->next; \
         } while(0);
 #define META_UINT16(dest) \
         do { \
-            int val = 0; \
-            if (!dlb_MD_Expect_Int(node, 0, UINT16_MAX, &val)) break; \
+            uint32_t val = 0; \
+            if (!dlb_MD_Expect_Uint(node, 0, UINT16_MAX, &val)) break; \
             dest = (uint16_t)val; \
+            node = node->next; \
+        } while(0);
+#define META_UINT32(dest) \
+        do { \
+            uint32_t val = 0; \
+            if (!dlb_MD_Expect_Uint(node, 0, UINT32_MAX, &val)) break; \
+            dest = (uint32_t)val; \
             node = node->next; \
         } while(0);
 #define META_INT(dest) \
@@ -372,9 +296,24 @@ namespace data {
 #define META_FLOAT(dest) \
         if (!dlb_MD_Expect_Float(node, &dest)) break; \
         node = node->next;
+#define META_DOUBLE(dest) \
+        if (!dlb_MD_Expect_Double(node, &dest)) break; \
+        node = node->next;
+#define META_CHILDREN_BEGIN \
+    do { \
+        MD_Node *parent = node; \
+        MD_Node *node = parent->first_child;
 #define META_CHILDREN_END \
         dlb_MD_Expect_Nil(node); \
     } while(0);
+#define META_CHILDREN_LOOP_BEGIN \
+    while (!MD_NodeIsNil(node)) {
+
+#define META_CHILDREN_LOOP_END \
+    }
+#define META_CHILDREN_LOOP_END_NEXT \
+        node = node->next; \
+    }
 
     void PackAddMeta(Pack &pack, const char *filename)
     {
@@ -384,7 +323,7 @@ namespace data {
         MD_ParseResult parse_result = MD_ParseWholeFile(arena, md_filename);
 
         if (!parse_result.errors.node_count) {
-            dlb_MD_PrintDebugDumpFromNode(stdout, parse_result.node, MD_GenerateFlags_All);
+            //dlb_MD_PrintDebugDumpFromNode(stdout, parse_result.node, MD_GenerateFlags_All);
             for (MD_EachNode(node, parse_result.node->first_child)) {
                 auto tag_count = MD_TagCountFromNode(node);
                 if (tag_count != 1) {
@@ -492,6 +431,73 @@ namespace data {
                     META_CHILDREN_END;
 
                     pack.sprites.push_back(sprite);
+                } else if (MD_NodeHasTag(node, MD_S8Lit("Tilemap"), 0)) {
+                    Tilemap map{};
+
+                    META_ID(map.id);
+                    META_CHILDREN_BEGIN;           // {}
+                        META_CHILDREN_LOOP_BEGIN;  // key: value
+                            std::string key{};
+                            META_ID(key);          // key
+
+                            META_CHILDREN_BEGIN;   // value
+                            if (key == "version") {
+                                META_UINT32(map.version);
+                            } else if (key == "width") {
+                                META_UINT32(map.width);
+                            } else if (key == "height") {
+                                META_UINT32(map.height);
+                            } else if (key == "tile_defs") {
+                                META_CHILDREN_LOOP_BEGIN; // []
+                                    TileDef tile_def{};
+
+                                    META_CHILDREN_BEGIN;  // {}
+                                        META_IDENT(tile_def.anim);
+                                        META_IDENT(tile_def.material);
+                                        META_UINT8(tile_def.auto_tile_mask);
+                                    META_CHILDREN_END;
+
+                                    map.tileDefs.push_back(tile_def);
+                                META_CHILDREN_LOOP_END_NEXT;
+                            } else if (key == "tiles") {
+                                META_CHILDREN_LOOP_BEGIN;  // []
+                                    Tile tile{};
+
+                                    META_UINT8(tile);
+
+                                    map.tiles.push_back(tile);
+                                META_CHILDREN_LOOP_END;
+                            } else if (key == "path_nodes") {
+                                META_CHILDREN_LOOP_BEGIN;  // []
+                                    AiPathNode path_node{};
+
+                                    META_CHILDREN_BEGIN;  // {}
+                                        META_FLOAT(path_node.pos.x);
+                                        META_FLOAT(path_node.pos.y);
+                                        META_FLOAT(path_node.pos.z);
+                                        META_DOUBLE(path_node.waitFor);
+                                    META_CHILDREN_END;
+
+                                    map.pathNodes.push_back(path_node);
+                                META_CHILDREN_LOOP_END_NEXT;
+                            } else if (key == "paths") {
+                                META_CHILDREN_LOOP_BEGIN;  // []
+                                    AiPath path{};
+
+                                    META_CHILDREN_BEGIN;  // {}
+                                    META_UINT32(path.pathNodeStart);
+                                    META_UINT32(path.pathNodeCount);
+                                    META_CHILDREN_END;
+
+                                    map.paths.push_back(path);
+                                META_CHILDREN_LOOP_END_NEXT;
+                            }
+                            META_CHILDREN_END;
+                        META_CHILDREN_LOOP_END_NEXT;
+                    META_CHILDREN_END;
+
+                    assert(map.tiles.size() == map.width * map.height);
+                    pack.tile_maps.push_back(map);
                 }
             }
         } else {
@@ -581,18 +587,19 @@ namespace data {
 
 #if DEV_BUILD_PACK_FILE
         Pack packHardcoded{ "pack/pack1.dat" };
+        PackAddMeta(packHardcoded, "resources/map/map_overworld.mdesk");
         PackAddMeta(packHardcoded, "resources/meta/overworld.mdesk");
         PackDebugPrint(packHardcoded);
 
-        std::vector<Tilemap> tile_maps{};
-        err = LoadTilemapIndex("resources/map/overworld.txt", tile_maps);
-        if (err) {
-            assert(!err);
-            TraceLog(LOG_ERROR, "Failed to load tile map index.\n");
-        }
-        for (auto &i : tile_maps) {
-            packHardcoded.tile_maps .push_back(i);
-        }
+        //std::vector<Tilemap> tile_maps{};
+        //err = LoadTilemapIndex("resources/map/overworld.txt", tile_maps);
+        //if (err) {
+        //    assert(!err);
+        //    TraceLog(LOG_ERROR, "Failed to load tile map index.\n");
+        //}
+        //for (auto &i : tile_maps) {
+        //    packHardcoded.tile_maps .push_back(i);
+        //}
 
         //SaveTilemap("resources/map/test_map.txt", packHardcoded.tile_maps[1]);
 
@@ -904,7 +911,7 @@ namespace data {
         PROC(entity.spawned_at);
         //PROC(entity.despawned_at);
 
-        PROC(entity.map_name);
+        PROC(entity.map_id);
         PROC(entity.position);
 
         PROC(entity.ambient_fx);
@@ -983,7 +990,7 @@ namespace data {
         }
 
         PROC(tile_map.version);
-        PROC(tile_map.name);
+        PROC(tile_map.id);
         PROC(tile_map.width);
         PROC(tile_map.height);
 
@@ -1058,9 +1065,9 @@ namespace data {
         assert(sentinel == Tilemap::SENTINEL);
 
         if (stream.mode == PACK_MODE_READ) {
-            tile_map.id = stream.pack->next_map_id++;  // HACK: Store this or something.. firebase?
-            stream.pack->tile_map_by_id[tile_map.id] = index;
-            stream.pack->tile_map_by_name[tile_map.name] = index;
+            tile_map.net_id = stream.pack->next_map_id++;  // HACK: Store this or something.. firebase?
+            stream.pack->tile_map_by_id[tile_map.net_id] = index;
+            stream.pack->tile_map_by_name[tile_map.id] = index;
         }
     }
 

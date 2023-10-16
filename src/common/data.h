@@ -196,7 +196,7 @@ namespace data {
         static const uint32_t SENTINEL = 0x12345678;
 
         uint32_t    version {};  // version on disk
-        std::string name    {};  // name of map area
+        std::string id      {};  // name of map area
         uint32_t    width   {};  // width of map in tiles
         uint32_t    height  {};  // height of map in tiles
 
@@ -209,7 +209,7 @@ namespace data {
         //-------------------------------
         // Not serialized
         //-------------------------------
-        uint32_t id                 {};  // for communicating efficiently w/ client about which map
+        uint32_t net_id             {};  // for communicating efficiently w/ client about which map
         double   chunkLastUpdatedAt {};  // used by server to know when chunks are dirty on clients
 
         //-------------------------------
@@ -316,7 +316,7 @@ namespace data {
         double        spawned_at   {};
         double        despawned_at {};
 
-        std::string   map_name     {};
+        std::string   map_id       {};
         Vector3       position     {};
 
         Vector2 ScreenPos(void) {
@@ -416,7 +416,7 @@ namespace data {
         double      server_time {};
 
         // Entity
-        std::string map_name    {};
+        std::string map_id      {};
         Vector3     position    {};
 
         // Physics

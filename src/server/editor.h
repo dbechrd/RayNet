@@ -92,9 +92,9 @@ struct Editor {
     bool          active   {};
     EditMode      mode     {};
     EditModeState state    {};
-    std::string   map_name {};
+    std::string   map_id   {};
 
-    Editor(std::string map_name) : map_name(map_name) {}
+    Editor(std::string map_id) : map_id(map_id) {}
     Err Init(void);
     void HandleInput(Camera2D &camera);
     void DrawGroundOverlays(Camera2D &camera, double now);

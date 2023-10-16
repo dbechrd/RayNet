@@ -67,7 +67,7 @@ void Editor::DrawGroundOverlays(Camera2D &camera, double now)
 {
     io.PushScope(IO::IO_EditorGroundOverlay);
 
-    auto &map = data::packs[0]->FindTilemap(map_name);
+    auto &map = data::packs[0]->FindTilemap(map_id);
 
     // Draw tile collision layer
     if (state.showColliders) {
@@ -114,7 +114,7 @@ void Editor::DrawGroundOverlay_Tiles(Camera2D &camera, double now)
 
         Tile &cursorTile = state.tiles.cursor.tileDefId;
         Tile hoveredTile{};
-        auto &map = data::packs[0]->FindTilemap(map_name);
+        auto &map = data::packs[0]->FindTilemap(map_id);
 
         if (map.AtWorld((int32_t)cursorWorldPos.x, (int32_t)cursorWorldPos.y, hoveredTile)) {
             data::Tilemap::Coord coord{};
@@ -144,7 +144,7 @@ void Editor::DrawGroundOverlay_Paths(Camera2D &camera, double now)
     const Vector2 cursorWorldPos = GetScreenToWorld2D({ (float)GetMouseX(), (float)GetMouseY() }, camera);
 
     // Draw path edges
-    auto &map = data::packs[0]->FindTilemap(map_name);
+    auto &map = data::packs[0]->FindTilemap(map_id);
     for (uint32_t aiPathId = 0; aiPathId < map.paths.size(); aiPathId++) {
         data::AiPath *aiPath = map.GetPath(aiPathId);
         if (!aiPath) {
@@ -258,15 +258,15 @@ void Editor::DrawEntityOverlays(Camera2D &camera, double now)
     io.PushScope(IO::IO_EditorEntityOverlay);
 
     data::Entity *selectedEntity = entityDb->FindEntity(state.entities.selectedId);
-    auto &map = data::packs[0]->FindTilemap(map_name);
-    if (selectedEntity && selectedEntity->map_name == map.name) {
+    auto &map = data::packs[0]->FindTilemap(map_id);
+    if (selectedEntity && selectedEntity->map_id == map.id) {
         DrawTextEx(fntSmall, TextFormat("[selected in editor]\n%u", selectedEntity->id),
             selectedEntity->ScreenPos(), fntSmall.baseSize / camera.zoom, 1 / camera.zoom, WHITE);
     }
 
     if (state.showEntityIds) {
         for (data::Entity &entity : entityDb->entities) {
-            if (entity.map_name == map.name && entity.id != state.entities.selectedId) {
+            if (entity.map_id == map.id && entity.id != state.entities.selectedId) {
                 entityDb->DrawEntityIds(entity.id, camera);
             }
         }
@@ -297,9 +297,9 @@ void Editor::DrawEntityOverlays(Camera2D &camera, double now)
 }
 void Editor::DrawEntityOverlay_Collision(Camera2D &camera, double now)
 {
-    auto &map = data::packs[0]->FindTilemap(map_name);
+    auto &map = data::packs[0]->FindTilemap(map_id);
     for (data::Entity &entity : entityDb->entities) {
-        if (entity.map_name != map.name) {
+        if (entity.map_id != map.id) {
             continue;
         }
         assert(entity.id && entity.type);
@@ -466,11 +466,11 @@ UIState Editor::DrawUI_ActionBar(Vector2 position, GameServer &server, double no
     static std::string openRequest;
     static std::string saveAsRequest;
 
-    auto &map = data::packs[0]->FindTilemap(map_name);
+    auto &map = data::packs[0]->FindTilemap(map_id);
 
     UIState openButton = uiActionBar.Button("Open");
     if (openButton.released) {
-        std::string filename = map.name;
+        std::string filename = map.id;
         std::thread openFileThread([filename, mapFileFilter]{
             const char *openRequestBuf = tinyfd_openFileDialog(
                 "Open File",
@@ -500,9 +500,9 @@ UIState Editor::DrawUI_ActionBar(Vector2 position, GameServer &server, double no
     if (saveButton.released) {
         //map.SaveKV(map.filename + ".txt");
         assert(!"not implemented with new map format");
-        Err err = RN_BAD_FILE_WRITE; // map.Save(map.name);
+        Err err = RN_BAD_FILE_WRITE; // map.Save(map.id);
         if (err) {
-            std::string filename = map.name;
+            std::string filename = map.id;
             std::thread errorThread([filename, err]{
                 const char *msg = TextFormat("Failed to save file %s. %s\n", filename.c_str(), ErrStr(err));
                 tinyfd_messageBox("Error", msg, "ok", "error", 1);
@@ -513,7 +513,7 @@ UIState Editor::DrawUI_ActionBar(Vector2 position, GameServer &server, double no
 
     UIState saveAsButton = uiActionBar.Button("Save As");
     if (saveAsButton.released) {
-        std::string filename = map.name;
+        std::string filename = map.id;
         std::thread saveAsThread([filename, mapFileFilter]{
             const char *saveAsRequestBuf = tinyfd_saveFileDialog(
                 "Save File",
@@ -541,9 +541,9 @@ UIState Editor::DrawUI_ActionBar(Vector2 position, GameServer &server, double no
     UIState reloadButton = uiActionBar.Button("Reload");
     if (reloadButton.released) {
         assert(!"not implemented with new map format");
-        Err err = RN_BAD_FILE_READ; // map.Load(map.name);
+        Err err = RN_BAD_FILE_READ; // map.Load(map.id);
         if (err) {
-            std::string filename = map.name;
+            std::string filename = map.id;
             std::thread errorThread([filename, err]{
                 const char *msg = TextFormat("Failed to reload file %s. %s\n", filename.c_str(), ErrStr(err));
                 tinyfd_messageBox("Error", msg, "ok", "error", 1);
@@ -553,7 +553,7 @@ UIState Editor::DrawUI_ActionBar(Vector2 position, GameServer &server, double no
     }
     uiActionBar.Newline();
 
-    UIState mapPath = uiActionBar.Text(GetFileName(map.name.c_str()), WHITE);
+    UIState mapPath = uiActionBar.Text(GetFileName(map.id.c_str()), WHITE);
     if (mapPath.released) {
         system("explorer maps");
     }
@@ -637,8 +637,8 @@ UIState Editor::DrawUI_ActionBar(Vector2 position, GameServer &server, double no
 void Editor::DrawUI_MapActions(UI &uiActionBar, GameServer &server, double now)
 {
     for (const data::Tilemap &map : data::packs[0]->tile_maps) {
-        if (uiActionBar.Button(TextFormat("[%d] %s", map.id, map.name.c_str())).pressed) {
-            map_name = map.name;
+        if (uiActionBar.Button(TextFormat("[%d] %s", map.net_id, map.id.c_str())).pressed) {
+            map_id = map.id;
         }
         uiActionBar.Newline();
     }
@@ -710,7 +710,7 @@ void DrawRectangleRectOffset(const Rectangle &rect, Vector2 &offset, Color color
 void Editor::DrawUI_Tilesheet(UI &uiActionBar, double now)
 {
     // TODO(dlb): Support multi-select (big rectangle?), and figure out where this lives
-    auto &map = data::packs[0]->FindTilemap(map_name);
+    auto &map = data::packs[0]->FindTilemap(map_id);
 
     size_t tile_def_count = map.tileDefs.size();
     int tiles_x = 6;
@@ -968,7 +968,7 @@ void Editor::DrawUI_Wang(UI &uiActionBar, double now)
     uiWangStyle2x.scale = 2;
     uiActionBar.PushStyle(uiWangStyle2x);
 
-    auto &map = data::packs[0]->FindTilemap(map_name);
+    auto &map = data::packs[0]->FindTilemap(map_id);
 
     if (uiActionBar.Button("Re-generate Map").pressed) {
         wangTileset.GenerateMap(map.width, map.height, wangMap);
@@ -1228,10 +1228,10 @@ void Editor::DrawUI_DialogActions(UI &uiActionBar, double now)
 }
 void Editor::DrawUI_EntityActions(UI &uiActionBar, double now)
 {
-    auto &map = data::packs[0]->FindTilemap(map_name);
+    auto &map = data::packs[0]->FindTilemap(map_id);
     if (uiActionBar.Button("Despawn all", ColorBrightness(MAROON, -0.3f)).pressed) {
         for (const data::Entity &entity : entityDb->entities) {
-            if (entity.type == data::ENTITY_PLAYER || entity.map_name != map.name) {
+            if (entity.type == data::ENTITY_PLAYER || entity.map_id != map.id) {
                 continue;
             }
             assert(entity.id && entity.type);
@@ -1258,7 +1258,7 @@ void Editor::DrawUI_EntityActions(UI &uiActionBar, double now)
 
     for (uint32_t i = 0; i < SV_MAX_ENTITIES; i++) {
         data::Entity &entity = entityDb->entities[i];
-        if (!entity.id || entity.map_name != map.name) {
+        if (!entity.id || entity.map_id != map.id) {
             continue;
         }
 
@@ -1572,7 +1572,7 @@ void Editor::DrawUI_PackFiles(UI &uiActionBar, double now)
                 case data::DAT_TYP_TILE_MAP:
                 {
                     data::Tilemap &tile_map = pack.tile_maps[entry.index];
-                    desc = tile_map.name.c_str();
+                    desc = tile_map.id.c_str();
                     break;
                 }
                 case data::DAT_TYP_ENTITY:

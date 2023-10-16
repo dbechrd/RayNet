@@ -29,7 +29,7 @@ struct ClientWorld {
     data::Entity *LocalPlayer(void);
     data::Tilemap *LocalPlayerMap(void);
 
-    data::Tilemap *FindOrLoadMap(std::string map_name);
+    data::Tilemap *FindOrLoadMap(std::string map_id);
 
     bool CopyEntityData(uint32_t entityId, data::EntityData &data);
 

@@ -10,7 +10,7 @@ struct Msg_S_EntitySpawn : public yojimbo::Message
     data::EntityType    type      {};
     data::EntitySpecies spec      {};
     char                name      [SV_MAX_ENTITY_NAME_LEN + 1]{};
-    char                map_name  [SV_MAX_TILE_MAP_NAME_LEN + 1]{};
+    char                map_id    [SV_MAX_TILE_MAP_NAME_LEN + 1]{};
     Vector3             position  {};
     // Collision
     float               radius    {};
@@ -33,7 +33,7 @@ struct Msg_S_EntitySpawn : public yojimbo::Message
         serialize_uint32(stream, (uint32_t&)type);
         serialize_uint32(stream, (uint32_t&)spec);
         serialize_string(stream, name, sizeof(name));
-        serialize_string(stream, map_name, sizeof(map_name));
+        serialize_string(stream, map_id, sizeof(map_id));
         serialize_float(stream, position.x);
         serialize_float(stream, position.y);
         serialize_float(stream, position.z);

@@ -252,7 +252,7 @@ Err Play(GameServer &server)
             ClearBackground(BLUE_DESAT);
             BeginMode2D(camera);
                 // [World] Tilemap
-                auto &editor_map = data::packs[0]->FindTilemap(editor.map_name);
+                auto &editor_map = data::packs[0]->FindTilemap(editor.map_id);
                 editor_map.Draw(camera);
 
                 // [Editor] Overlays
@@ -262,7 +262,7 @@ Err Play(GameServer &server)
                 // NOTE(dlb): We could build an array of { entityIndex, position.y } and sort it
                 // each frame, then render the entities in that order.
                 for (data::Entity &entity : entityDb->entities) {
-                    if (entity.map_name == editor_map.name) {
+                    if (entity.map_id == editor_map.id) {
                         entityDb->DrawEntity(entity.id);
                     }
                 }

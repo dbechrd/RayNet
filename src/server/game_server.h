@@ -85,10 +85,10 @@ struct GameServer {
 
     uint32_t GetPlayerEntityId(uint32_t clientIdx);
 
-    data::Tilemap *FindOrLoadMap(std::string map_name);
+    data::Tilemap *FindOrLoadMap(std::string map_id);
     Err Start(void);
 
-    data::Tilemap *FindMap(std::string map_name);
+    data::Tilemap *FindMap(std::string map_id);
 
     data::Entity *SpawnEntity(data::EntityType type);
     void DespawnEntity(uint32_t entityId);
@@ -120,10 +120,10 @@ private:
     // All part of Update()
     void RequestDialog(int clientIdx, data::Entity &entity, Dialog &dialog);
     void ProcessMessages(void);
-    data::Entity *SpawnProjectile(std::string map_name, Vector3 position, Vector2 direction, Vector3 initial_velocity);
+    data::Entity *SpawnProjectile(std::string map_id, Vector3 position, Vector2 direction, Vector3 initial_velocity);
     void UpdateServerPlayers(void);
-    void TickSpawnTownNPCs(std::string map_name);
-    void TickSpawnCaveNPCs(std::string map_name);
+    void TickSpawnTownNPCs(std::string map_id);
+    void TickSpawnCaveNPCs(std::string map_id);
     void TickEntityNPC(uint32_t entityIndex, double dt);
     void TickEntityPlayer(uint32_t entityIndex, double dt);
     void TickEntityProjectile(uint32_t entityIndex, double dt);

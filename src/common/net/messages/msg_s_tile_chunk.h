@@ -3,7 +3,7 @@
 
 struct Msg_S_TileChunk : public yojimbo::Message
 {
-    char     map_name [SV_MAX_TILE_MAP_NAME_LEN + 1]{};
+    char     map_id   [SV_MAX_TILE_MAP_NAME_LEN + 1]{};
     uint32_t x        {};
     uint32_t y        {};
     uint8_t  tileDefs [SV_TILE_CHUNK_WIDTH * SV_TILE_CHUNK_WIDTH]{};
@@ -14,7 +14,7 @@ struct Msg_S_TileChunk : public yojimbo::Message
         //strcpy(mapNameBuf, mapName.c_str());
         //serialize_string(stream, mapNameBuf, PATH_LEN_MAX);
         //mapName = mapNameBuf;
-        serialize_string(stream, map_name, sizeof(map_name));
+        serialize_string(stream, map_id, sizeof(map_id));
         serialize_uint32(stream, x);
         serialize_uint32(stream, y);
         serialize_bytes(stream, tileDefs, sizeof(tileDefs));
