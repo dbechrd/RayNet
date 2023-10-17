@@ -595,22 +595,9 @@ namespace data {
         Pack packHardcoded{ "pack/pack1.dat" };
         PackAddMeta(packHardcoded, "resources/map/map_overworld.mdesk");
         PackAddMeta(packHardcoded, "resources/meta/overworld.mdesk");
-        PackDebugPrint(packHardcoded);
-
-        //std::vector<Tilemap> tile_maps{};
-        //err = LoadTilemapIndex("resources/map/overworld.txt", tile_maps);
-        //if (err) {
-        //    assert(!err);
-        //    TraceLog(LOG_ERROR, "Failed to load tile map index.\n");
-        //}
-        //for (auto &i : tile_maps) {
-        //    packHardcoded.tile_maps .push_back(i);
-        //}
-
-        SaveTilemap("resources/map/map_overworld_save.mdesk", packHardcoded.tile_maps[1]);
-
-        LoadResources(packHardcoded);
-
+        //PackDebugPrint(packHardcoded);
+        
+        //LoadResources(packHardcoded);
         err = SavePack(packHardcoded, PACK_TYPE_BINARY);
         if (err) {
             assert(!err);
@@ -668,80 +655,7 @@ namespace data {
 
 #define PROC(v) Process(stream, v);
 
-    template<typename T>
-    concept BoolType =
-        std::is_same_v<T, bool>;
-
-    template<typename T>
-    concept CharType =
-        std::is_same_v<T, char>;
-
-    template<typename T>
-    concept IntType =
-        std::is_same_v<T, int8_t> ||
-        std::is_same_v<T, int16_t> ||
-        std::is_same_v<T, int32_t>;
-
-    template<typename T>
-    concept UintType =
-        std::is_same_v<T, uint8_t> ||
-        std::is_same_v<T, uint16_t> ||
-        std::is_same_v<T, uint32_t>;
-
-    template<typename T>
-    concept SizeType =
-        std::is_same_v<T, size_t>;
-
-    template<typename T>
-    concept FloatType =
-        std::is_same_v<T, float> ||
-        std::is_same_v<T, double>;
-
-    template<typename T>
-    concept SerializableTypes = BoolType<T> || CharType<T> || IntType<T> || UintType<T> || SizeType<T> || FloatType<T>;
-
-    template<BoolType T>
-    void TextAtom(PackStream &stream, T v)
-    {
-        fprintf(stream.file, "%s", v ? "true" : "false");
-        fputc('\n', stream.file);
-    }
-
-    template<CharType T>
-    void TextAtom(PackStream &stream, T v)
-    {
-        fprintf(stream.file, "%c", v);
-    }
-
-    template<IntType T>
-    void TextAtom(PackStream &stream, T v)
-    {
-        fprintf(stream.file, "%d", v);
-        fputc('\n', stream.file);
-    }
-
-    template<UintType T>
-    void TextAtom(PackStream &stream, T v)
-    {
-        fprintf(stream.file, "%u", v);
-        fputc('\n', stream.file);
-    }
-
-    template<SizeType T>
-    void TextAtom(PackStream &stream, T v)
-    {
-        fprintf(stream.file, "%zu", v);
-        fputc('\n', stream.file);
-    }
-
-    template<FloatType T>
-    void TextAtom(PackStream &stream, T v)
-    {
-        fprintf(stream.file, "%f", v);
-        fputc('\n', stream.file);
-    }
-
-    template<SerializableTypes T>
+    template<class T>
     void Process(PackStream &stream, T &v)
     {
         static_assert(std::is_fundamental_v<T> || std::is_enum_v<T>,
@@ -749,10 +663,9 @@ namespace data {
 
         if (stream.type == PACK_TYPE_BINARY) {
             stream.process(&v, sizeof(v), 1, stream.file);
-        } else if (stream.type == PACK_TYPE_TEXT) {
-            // text mode reading not yet implemented
-            assert(stream.mode == PACK_MODE_WRITE);
-            TextAtom(stream, v);
+        } else {
+            // text mode not implemented
+            assert("nope");
         }
 
         if (stream.mode == PACK_MODE_WRITE) {
@@ -766,9 +679,6 @@ namespace data {
         str.resize(strLen);
         for (int i = 0; i < strLen; i++) {
             PROC(str[i]);
-        }
-        if (stream.type == PACK_TYPE_TEXT) {
-            TextAtom(stream, '\n');
         }
     }
     void Process(PackStream &stream, Vector2 &vec)
@@ -1021,7 +931,7 @@ namespace data {
         assert(sentinel == Tilemap::SENTINEL);
 
         tile_map.tileDefs       .resize(tileDefCount);
-        tile_map.tiles          .resize(tile_map.width * tile_map.height);
+        tile_map.tiles          .resize((size_t)tile_map.width * tile_map.height);
         tile_map.pathNodes      .resize(pathNodeCount);
         tile_map.paths          .resize(pathCount);
 
@@ -1150,15 +1060,15 @@ namespace data {
                 typeCounts[tocEntry.dtype]++;
             }
 
-            pack.gfx_files .resize(1 + typeCounts[DAT_TYP_GFX_FILE]);
-            pack.mus_files .resize(1 + typeCounts[DAT_TYP_MUS_FILE]);
-            pack.sfx_files .resize(1 + typeCounts[DAT_TYP_SFX_FILE]);
-            pack.gfx_frames.resize(1 + typeCounts[DAT_TYP_GFX_FRAME]);
-            pack.gfx_anims .resize(1 + typeCounts[DAT_TYP_GFX_ANIM]);
-            pack.materials .resize(1 + typeCounts[DAT_TYP_MATERIAL]);
-            pack.sprites   .resize(1 + typeCounts[DAT_TYP_SPRITE]);
-            pack.tile_maps .resize(1 + typeCounts[DAT_TYP_TILE_MAP]);
-            pack.entities  .resize(1 + typeCounts[DAT_TYP_ENTITY]);
+            pack.gfx_files .resize((size_t)1 + typeCounts[DAT_TYP_GFX_FILE]);
+            pack.mus_files .resize((size_t)1 + typeCounts[DAT_TYP_MUS_FILE]);
+            pack.sfx_files .resize((size_t)1 + typeCounts[DAT_TYP_SFX_FILE]);
+            pack.gfx_frames.resize((size_t)1 + typeCounts[DAT_TYP_GFX_FRAME]);
+            pack.gfx_anims .resize((size_t)1 + typeCounts[DAT_TYP_GFX_ANIM]);
+            pack.materials .resize((size_t)1 + typeCounts[DAT_TYP_MATERIAL]);
+            pack.sprites   .resize((size_t)1 + typeCounts[DAT_TYP_SPRITE]);
+            pack.tile_maps .resize((size_t)1 + typeCounts[DAT_TYP_TILE_MAP]);
+            pack.entities  .resize((size_t)1 + typeCounts[DAT_TYP_ENTITY]);
 
             int typeNextIndex[DAT_TYP_COUNT]{};
             // 0 slot is reserved, skip it when reading

@@ -319,7 +319,7 @@ namespace data {
         std::string   map_id       {};
         Vector3       position     {};
 
-        Vector2 ScreenPos(void) {
+        inline Vector2 ScreenPos(void) {
             Vector2 screenPos{ position.x, position.y - position.z };
             return screenPos;
         }
@@ -349,7 +349,7 @@ namespace data {
         std::string dialog_title      {};  // name of NPC, submenu, etc.
         std::string dialog_message    {};  // what they're saying
 
-        void ClearDialog(void) {
+        inline void ClearDialog(void) {
             dialog_spawned_at = 0;
             dialog_title = {};
             dialog_message = {};
@@ -360,7 +360,7 @@ namespace data {
         float hp        {};
         float hp_smooth {};  // client-only to smoothly interpolate health changes
 
-        void TakeDamage(int damage) {
+        inline void TakeDamage(int damage) {
             if (damage >= hp) {
                 hp = 0;
             } else {
@@ -368,11 +368,11 @@ namespace data {
             }
         }
 
-        bool Alive(void) {
+        inline bool Alive(void) {
             return hp > 0;
         }
 
-        bool Dead(void) {
+        inline bool Dead(void) {
             return !Alive();
         }
 
@@ -392,7 +392,7 @@ namespace data {
         Vector3 force_accum {};
         Vector3 velocity    {};
 
-        void ApplyForce(Vector3 force) {
+        inline void ApplyForce(Vector3 force) {
             force_accum = Vector3Add(force_accum, force);
         }
 
@@ -555,7 +555,7 @@ namespace data {
 
                 size_t sfx_idx;
                 if (variants.size() > 1) {
-                    const size_t variant_idx = GetRandomValue(0, variants.size() - 1);
+                    const size_t variant_idx = (size_t)GetRandomValue(0, variants.size() - 1);
                     sfx_idx = variants[variant_idx];
                 } else {
                     sfx_idx = variants[0];
@@ -633,7 +633,7 @@ namespace data {
 
     enum PackStreamType {
         PACK_TYPE_BINARY,
-        PACK_TYPE_TEXT,
+        //PACK_TYPE_TEXT,
     };
 
     enum PackStreamMode {
