@@ -641,6 +641,18 @@ void GameServer::TickSpawnTownNPCs(std::string map_id)
     static data::EntityProto chicken;
     static uint32_t chicken_ids[10];
 
+    // TODO: put entities in some map mdesk file or something?
+    // when join game, make new save directory that copies all the datas:
+    //  "saves/20231016/map/overworld.mdesk"  (contains all entity states, modified blocks, etc.)
+    //  "saves/20231016/dungeon/cave.mdesk"   (contains RNG generated cave map for this playthrough)
+    // entities: [
+    //     {
+    //         proto_name: npc_chicken
+    //         position: 300 200 108
+    //         health: 300
+    //     }
+    // ]
+
     if (!lily.type) {
         lily.type = data::ENTITY_NPC;
         lily.spec = data::ENTITY_SPEC_NPC_TOWNFOLK;

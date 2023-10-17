@@ -462,7 +462,7 @@ UIState Editor::DrawUI_ActionBar(Vector2 position, GameServer &server, double no
 #endif
     uiState.hover = dlb_CheckCollisionPointRec(GetMousePosition(), actionBarRect);
 
-    const char *mapFileFilter[1] = { "*.dat" };
+    const char *mapFileFilter[1] = { "*.mdesk" };
     static std::string openRequest;
     static std::string saveAsRequest;
 
@@ -477,7 +477,7 @@ UIState Editor::DrawUI_ActionBar(Vector2 position, GameServer &server, double no
                 filename.c_str(),
                 ARRAY_SIZE(mapFileFilter),
                 mapFileFilter,
-                "RayNet Tilemap (*.dat)",
+                "RayNet Tilemap (*.mdesk)",
                 0
             );
             if (openRequestBuf) openRequest = openRequestBuf;
@@ -498,11 +498,9 @@ UIState Editor::DrawUI_ActionBar(Vector2 position, GameServer &server, double no
 
     UIState saveButton = uiActionBar.Button("Save");
     if (saveButton.released) {
-        //map.SaveKV(map.filename + ".txt");
-        assert(!"not implemented with new map format");
-        Err err = RN_BAD_FILE_WRITE; // map.Save(map.id);
+        std::string filename = "resources/map/" + map.id + ".mdesk";
+        Err err = data::SaveTilemap(filename, map);
         if (err) {
-            std::string filename = map.id;
             std::thread errorThread([filename, err]{
                 const char *msg = TextFormat("Failed to save file %s. %s\n", filename.c_str(), ErrStr(err));
                 tinyfd_messageBox("Error", msg, "ok", "error", 1);
@@ -513,21 +511,20 @@ UIState Editor::DrawUI_ActionBar(Vector2 position, GameServer &server, double no
 
     UIState saveAsButton = uiActionBar.Button("Save As");
     if (saveAsButton.released) {
-        std::string filename = map.id;
+        std::string filename = "resources/map/" + map.id + ".mdesk";
         std::thread saveAsThread([filename, mapFileFilter]{
             const char *saveAsRequestBuf = tinyfd_saveFileDialog(
                 "Save File",
                 filename.c_str(),
                 ARRAY_SIZE(mapFileFilter),
                 mapFileFilter,
-                "RayNet Tilemap (*.dat)");
+                "RayNet Tilemap (*.mdesk)");
             if (saveAsRequestBuf) saveAsRequest = saveAsRequestBuf;
         });
         saveAsThread.detach();
     }
     if (saveAsRequest.size()) {
-        assert(!"not implemented with new map format");
-        Err err = RN_BAD_FILE_WRITE; // map.Save(saveAsRequest);
+        Err err = data::SaveTilemap(saveAsRequest, map);
         if (err) {
             std::thread errorThread([err]{
                 const char *msg = TextFormat("Failed to save file %s. %s\n", saveAsRequest.c_str(), ErrStr(err));

@@ -96,55 +96,61 @@ namespace data {
                 err = RN_BAD_FILE_WRITE; break;
             }
 
-            fprintf(file, "# map version id texture\n");
-            fprintf(file, "map %u %s\n", tilemap.version, tilemap.id.c_str());
-            fputc('\n', file);
+            fprintf(file, "@Tilemap %s: {\n", tilemap.id.c_str());
+            fprintf(file, "    version: %u\n", tilemap.version);
+            fprintf(file, "    width: %u\n", tilemap.width);
+            fprintf(file, "    height: %u\n", tilemap.height);
 
-            fprintf(file, "# tile_defs count [anim material auto_tile_mask]\n");
-            fprintf(file, "tile_defs %u\n", (uint32_t)tilemap.tileDefs.size());
-            for (const TileDef &tile_def : tilemap.tileDefs) {
-                fprintf(file, "%-32s %-32s %u\n",
-                    tile_def.anim.c_str(),
-                    tile_def.material.c_str(),
-                    tile_def.auto_tile_mask
-                );
+            // tile_defs
+            fprintf(file, "    tile_defs: [\n");
+            int maxAnim = 0;
+            int maxMat = 0;
+            for (TileDef &tile_def : tilemap.tileDefs) {
+                maxAnim = MAX(maxAnim, tile_def.anim.size());
+                maxMat = MAX(maxMat, tile_def.material.size());
             }
-            fputc('\n', file);
+            fprintf(file, "        //%-*s %-*s %s\n", maxAnim, "animation", maxMat, "material", "auto_tile_mask");
+            for (TileDef &tile_def : tilemap.tileDefs) {
+                fprintf(file, "        { %-*s %-*s %u }\n", maxAnim, tile_def.anim.c_str(), maxMat, tile_def.material.c_str(), tile_def.auto_tile_mask);
+            }
+            fprintf(file, "    ]\n");
 
-            fprintf(file, "# tiles width height [indices]\n");
-            fprintf(file, "tiles %u %u\n", tilemap.width, tilemap.height);
+            // tiles
+            fprintf(file, "    tiles: [");
             for (int i = 0; i < tilemap.tiles.size(); i++) {
-                const Tile &tile = tilemap.tiles[i];
-                fprintf(file, "%-3u", tilemap.tiles[i]);
-                if (i % tilemap.width == tilemap.width - 1) {
-                    fprintf(file, "\n");
-                } else {
-                    fprintf(file, " ");
+                if (i % tilemap.width == 0) {
+                    fprintf(file, "\n        ");
                 }
-
+                fprintf(file, "%3u", tilemap.tiles[i]);
             }
-            fputc('\n', file);
+            fprintf(file, "\n");
+            fprintf(file, "    ]\n");
 
-            fprintf(file, "# path_nodes count [x y z wait_for]\n");
-            fprintf(file, "path_nodes %u\n", (uint32_t)tilemap.pathNodes.size());
-            for (const AiPathNode &path_node : tilemap.pathNodes) {
-                fprintf(file, "%f %f %f %f\n",
+            // path_nodes
+            fprintf(file, "    path_nodes: [\n");
+            fprintf(file, "        //%-6s %-6s %-6s %-4s\n", "x", "y", "z", "wait_for");
+            for (AiPathNode &path_node : tilemap.pathNodes) {
+                fprintf(file, "        { %-6.f %-6.f %-6.f %-4.1f }\n",
                     path_node.pos.x,
                     path_node.pos.y,
                     path_node.pos.z,
-                    (float)path_node.waitFor
+                    path_node.waitFor
                 );
             }
-            fputc('\n', file);
+            fprintf(file, "    ]\n");
 
-            fprintf(file, "# paths count [node_start node_count]\n");
-            fprintf(file, "paths %u\n", (uint32_t)tilemap.paths.size());
-            for (const AiPath &path : tilemap.paths) {
-                fprintf(file, "%u %u\n",
+            // paths
+            fprintf(file, "    paths: [\n");
+            fprintf(file, "        // node_start node_count\n");
+            for (AiPath &path : tilemap.paths) {
+                fprintf(file, "        { %u %u }\n",
                     path.pathNodeStart,
                     path.pathNodeCount
                 );
             }
+            fprintf(file, "    ]\n");
+
+            fprintf(file, "}\n");
         } while (0);
 
         if (file) fclose(file);
@@ -601,7 +607,7 @@ namespace data {
         //    packHardcoded.tile_maps .push_back(i);
         //}
 
-        //SaveTilemap("resources/map/test_map.txt", packHardcoded.tile_maps[1]);
+        SaveTilemap("resources/map/map_overworld_save.mdesk", packHardcoded.tile_maps[1]);
 
         LoadResources(packHardcoded);
 
