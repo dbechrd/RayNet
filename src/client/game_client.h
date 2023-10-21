@@ -22,6 +22,10 @@ struct GameClient {
     bool showF3Menu = false;
     bool showNetInfo = false;
     bool showTodoList = false;
+    
+    bool hudSpinner = false;
+    int hudSpinnerIndex = 0;  // which index is currently active
+    int hudSpinnerCount = 6;  // how many items in hud spinner
 
     Controller controller{};
     ClientWorld *world{};

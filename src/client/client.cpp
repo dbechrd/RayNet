@@ -186,6 +186,17 @@ void draw_game(GameClient &client)
     io.PushScope(IO::IO_GameHUD);
     //io.CaptureMouse();
 
+    if (client.hudSpinner) {
+        const Vector2 center{ GetRenderWidth() / 2.0f, GetRenderHeight() / 2.0f };
+        const float radius = 128;
+        DrawCircleV(center, radius, Fade(PINK, 0.7f));
+        const float pieSliceDeg = 360.0f / client.hudSpinnerCount;
+        const float raylibOffset = -90;
+        const float angleStart = pieSliceDeg * client.hudSpinnerIndex + raylibOffset;
+        const float angleEnd = angleStart + pieSliceDeg;
+        DrawCircleSector(center, radius, angleStart, angleEnd, 32, RED);
+    }
+
     UIStyle uiHUDMenuStyle{};
     UI uiHUDMenu{ {}, uiHUDMenuStyle };
 
@@ -330,6 +341,7 @@ int main(int argc, char *argv[])
     SetExitKey(0);  // must be called after InitWindow()
 
     InitAudioDevice();
+    SetMasterVolume(0.24f);
 
     // NOTE(dlb): yojimbo uses rand() for network simulator and random_int()/random_float()
     srand((unsigned int)GetTime());
@@ -459,8 +471,32 @@ int main(int argc, char *argv[])
         if (client->yj_client->IsConnected()) {
             data::Entity *localPlayer = client->world->LocalPlayer();
             if (localPlayer) {
+                io.PushScope(IO::IO_GameHUD);
+                io.CaptureMouse();
+                client->hudSpinner = io.KeyDown(KEY_TAB);
+                if (client->hudSpinner) {
+                    // TODO(dlb): Just use mouse position to figure out which segment is clicked
+                    float wheelMove = io.MouseWheelMove();
+                    if (wheelMove) {
+                        int delta = (int)CLAMP(wheelMove, -1, 1) * -1;
+
+                        if (io.KeyDown(KEY_LEFT_SHIFT)) {
+                            client->hudSpinnerCount += delta;
+                            client->hudSpinnerCount = CLAMP(client->hudSpinnerCount, 1, 20);
+                        } else {
+                            client->hudSpinnerIndex += delta;
+
+                            client->hudSpinnerIndex %= client->hudSpinnerCount;
+                            if (client->hudSpinnerIndex < 0) client->hudSpinnerIndex += client->hudSpinnerCount;
+                            assert(client->hudSpinnerIndex >= 0);
+                            assert(client->hudSpinnerIndex < client->hudSpinnerCount);
+                        }
+                    }
+                }
+                io.PopScope();
+                
                 // TODO: Update facing direction elsewhere, then just get localPlayer.facing here?
-                Camera2D &camera = client->world->camera2d;
+                Camera2D& camera = client->world->camera2d;
                 Vector2 cursorWorldPos = GetScreenToWorld2D(GetMousePosition(), camera);
                 cursorWorldPos = GetScreenToWorld2D(GetMousePosition(), camera);
                 Vector2 facing = Vector2Subtract(cursorWorldPos, localPlayer->ScreenPos());
@@ -468,9 +504,9 @@ int main(int argc, char *argv[])
                 client->controller.cmdAccum.facing = facing;
 
                 client->controller.cmdAccum.north |= io.KeyDown(KEY_W);
-                client->controller.cmdAccum.west  |= io.KeyDown(KEY_A);
+                client->controller.cmdAccum.west |= io.KeyDown(KEY_A);
                 client->controller.cmdAccum.south |= io.KeyDown(KEY_S);
-                client->controller.cmdAccum.east  |= io.KeyDown(KEY_D);
+                client->controller.cmdAccum.east |= io.KeyDown(KEY_D);
 
                 // TODO: Actually check hand
                 bool holdingWeapon = true;
@@ -484,7 +520,7 @@ int main(int argc, char *argv[])
                 if (holdingShovel) {
                     if (io.MouseButtonPressed(MOUSE_BUTTON_LEFT)) {
                         data::Tilemap::Coord coord{};
-                        data::Tilemap *map = client->world->LocalPlayerMap();
+                        data::Tilemap* map = client->world->LocalPlayerMap();
                         if (map && map->WorldToTileIndex(cursorWorldPos.x, cursorWorldPos.y, coord)) {
                             // TOOD: Send mapId too then validate server-side
                             client->SendTileInteract(map->id, coord.x, coord.y);
