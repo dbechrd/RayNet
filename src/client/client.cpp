@@ -188,13 +188,41 @@ void draw_game(GameClient &client)
 
     if (client.hudSpinner) {
         const Vector2 center{ GetRenderWidth() / 2.0f, GetRenderHeight() / 2.0f };
-        const float radius = 128;
-        DrawCircleV(center, radius, Fade(PINK, 0.7f));
+        Vector2 mousePos = GetMousePosition();
+        Vector2 toMouse = Vector2Subtract(mousePos, center);
+        Vector2 zeroDeg = { 1, 0 };
+
+        // Position on circle, normalized to 0.0 - 1.0 range, clockwise from 12 o'clock
+        float pieAlpha = 1.0f - (atan2f(toMouse.x, toMouse.y) / PI + 1.0f) / 2.0f;
+        client.hudSpinnerIndex = pieAlpha * client.hudSpinnerCount;
+        client.hudSpinnerIndex = CLAMP(client.hudSpinnerIndex, 0, client.hudSpinnerCount);
+
+#if 1
+        // TODO(cleanup): Debug code to increase/decrease # of pie entries
+        float wheelMove = io.MouseWheelMove();
+        if (wheelMove) {
+            int delta = (int)CLAMP(wheelMove, -1, 1) * -1;
+            client.hudSpinnerCount += delta;
+            client.hudSpinnerCount = CLAMP(client.hudSpinnerCount, 1, 20);
+        }
+#endif
+
+        const float radius = 150;
+        //DrawCircleV(center, radius, Fade(LIGHTGRAY, 0.6f));
+        DrawRing(center, radius / 2, radius, 0, 360, 32, Fade(LIGHTGRAY, 0.6f));
         const float pieSliceDeg = 360.0f / client.hudSpinnerCount;
-        const float raylibOffset = -90;
-        const float angleStart = pieSliceDeg * client.hudSpinnerIndex + raylibOffset;
+        const float angleStart = pieSliceDeg * client.hudSpinnerIndex - 90;
         const float angleEnd = angleStart + pieSliceDeg;
-        DrawCircleSector(center, radius, angleStart, angleEnd, 32, RED);
+        //DrawCircleSector(center, radius, angleStart, angleEnd, 32, Fade(SKYBLUE, 0.6f));
+        DrawRing(center, radius / 2, radius, angleStart, angleEnd, 32, Fade(SKYBLUE, 0.6f));
+
+#if 0
+        // TODO(cleanup): Draw debug text on pie menu
+        DrawTextShadowEx(fntMedium,
+            TextFormat("%.2f (%d of %d)", pieAlpha, client.hudSpinnerIndex + 1, client.hudSpinnerCount),
+            center, WHITE
+        );
+#endif
     }
 
     UIStyle uiHUDMenuStyle{};
@@ -472,26 +500,9 @@ int main(int argc, char *argv[])
             data::Entity *localPlayer = client->world->LocalPlayer();
             if (localPlayer) {
                 io.PushScope(IO::IO_GameHUD);
-                io.CaptureMouse();
                 client->hudSpinner = io.KeyDown(KEY_TAB);
                 if (client->hudSpinner) {
-                    // TODO(dlb): Just use mouse position to figure out which segment is clicked
-                    float wheelMove = io.MouseWheelMove();
-                    if (wheelMove) {
-                        int delta = (int)CLAMP(wheelMove, -1, 1) * -1;
-
-                        if (io.KeyDown(KEY_LEFT_SHIFT)) {
-                            client->hudSpinnerCount += delta;
-                            client->hudSpinnerCount = CLAMP(client->hudSpinnerCount, 1, 20);
-                        } else {
-                            client->hudSpinnerIndex += delta;
-
-                            client->hudSpinnerIndex %= client->hudSpinnerCount;
-                            if (client->hudSpinnerIndex < 0) client->hudSpinnerIndex += client->hudSpinnerCount;
-                            assert(client->hudSpinnerIndex >= 0);
-                            assert(client->hudSpinnerIndex < client->hudSpinnerCount);
-                        }
-                    }
+                    io.CaptureMouse();
                 }
                 io.PopScope();
                 
