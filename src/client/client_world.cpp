@@ -413,7 +413,7 @@ void ClientWorld::DrawDialogTips(std::vector<FancyTextTip> tips)
         tipRec = RectGrow(tipRec, 8);
 
         Vector2 constrainedOffset{};
-        tipRec = RectConstrainToScreen(tipRec, &constrainedOffset);
+        RectConstrainToScreen(tipRec, &constrainedOffset);
         tipPos = Vector2Add(tipPos, constrainedOffset);
 
         dlb_DrawNPatch(tipRec);
@@ -484,7 +484,7 @@ void ClientWorld::DrawDialog(GameClient &client, data::Entity &entity, Vector2 b
     };
 
     Vector2 constrainedOffset{};
-    bgRect = RectConstrainToScreen(bgRect, &constrainedOffset);
+    RectConstrainToScreen(bgRect, &constrainedOffset);
     titlePos = Vector2Add(titlePos, constrainedOffset);
     msgPos = Vector2Add(msgPos, constrainedOffset);
 

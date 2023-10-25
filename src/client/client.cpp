@@ -187,15 +187,24 @@ void draw_game(GameClient &client)
     //io.CaptureMouse();
 
     if (client.hudSpinner) {
-        const Vector2 center{ GetRenderWidth() / 2.0f, GetRenderHeight() / 2.0f };
+        const float innerRadius = 80;
+        const float outerRadius = innerRadius * 2;
+        
         Vector2 mousePos = GetMousePosition();
-        Vector2 toMouse = Vector2Subtract(mousePos, center);
-        Vector2 zeroDeg = { 1, 0 };
+        if (!client.hudSpinnerPrev) {
+            client.hudSpinnerPos = mousePos; //{ GetRenderWidth() / 2.0f, GetRenderHeight() / 2.0f };
+            CircleConstrainToScreen(client.hudSpinnerPos, outerRadius);
+        }
 
-        // Position on circle, normalized to 0.0 - 1.0 range, clockwise from 12 o'clock
-        float pieAlpha = 1.0f - (atan2f(toMouse.x, toMouse.y) / PI + 1.0f) / 2.0f;
-        client.hudSpinnerIndex = pieAlpha * client.hudSpinnerCount;
-        client.hudSpinnerIndex = CLAMP(client.hudSpinnerIndex, 0, client.hudSpinnerCount);
+        Vector2 toMouse = Vector2Subtract(mousePos, client.hudSpinnerPos);
+        float toMouseLen2 = Vector2LengthSqr(toMouse);
+
+        if (toMouseLen2 >= innerRadius*innerRadius) {
+            // Position on circle, normalized to 0.0 - 1.0 range, clockwise from 12 o'clock
+            float pieAlpha = 1.0f - (atan2f(toMouse.x, toMouse.y) / PI + 1.0f) / 2.0f;
+            client.hudSpinnerIndex = pieAlpha * client.hudSpinnerCount;
+            client.hudSpinnerIndex = CLAMP(client.hudSpinnerIndex, 0, client.hudSpinnerCount);
+        }
 
 #if 1
         // TODO(cleanup): Debug code to increase/decrease # of pie entries
@@ -207,14 +216,16 @@ void draw_game(GameClient &client)
         }
 #endif
 
-        const float radius = 150;
-        //DrawCircleV(center, radius, Fade(LIGHTGRAY, 0.6f));
-        DrawRing(center, radius / 2, radius, 0, 360, 32, Fade(LIGHTGRAY, 0.6f));
         const float pieSliceDeg = 360.0f / client.hudSpinnerCount;
         const float angleStart = pieSliceDeg * client.hudSpinnerIndex - 90;
         const float angleEnd = angleStart + pieSliceDeg;
-        //DrawCircleSector(center, radius, angleStart, angleEnd, 32, Fade(SKYBLUE, 0.6f));
-        DrawRing(center, radius / 2, radius, angleStart, angleEnd, 32, Fade(SKYBLUE, 0.6f));
+        const Color color = ColorFromHSV(angleStart, 0.7f, 0.7f);
+
+        //DrawCircleV(client.hudSpinnerPos, outerRadius, Fade(LIGHTGRAY, 0.6f));
+        DrawRing(client.hudSpinnerPos, innerRadius, outerRadius, 0, 360, 32, Fade(LIGHTGRAY, 0.6f));
+        
+        //DrawCircleSector(client.hudSpinnerPos, outerRadius, angleStart, angleEnd, 32, Fade(SKYBLUE, 0.6f));
+        DrawRing(client.hudSpinnerPos, innerRadius, outerRadius, angleStart, angleEnd, 32, Fade(color, 0.8f));
 
 #if 0
         // TODO(cleanup): Draw debug text on pie menu
@@ -500,6 +511,7 @@ int main(int argc, char *argv[])
             data::Entity *localPlayer = client->world->LocalPlayer();
             if (localPlayer) {
                 io.PushScope(IO::IO_GameHUD);
+                client->hudSpinnerPrev = client->hudSpinner;
                 client->hudSpinner = io.KeyDown(KEY_TAB);
                 if (client->hudSpinner) {
                     io.CaptureMouse();

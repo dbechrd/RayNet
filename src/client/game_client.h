@@ -23,7 +23,9 @@ struct GameClient {
     bool showNetInfo = false;
     bool showTodoList = false;
     
+    bool hudSpinnerPrev = false;
     bool hudSpinner = false;
+    Vector2 hudSpinnerPos{};
     int hudSpinnerIndex = 0;  // which index is currently active
     int hudSpinnerCount = 6;  // how many items in hud spinner
 

@@ -437,7 +437,7 @@ Rectangle RectGrow(const Rectangle &rect, float pixels)
     return grown;
 }
 
-Rectangle RectConstrainToScreen(const Rectangle &rect, Vector2 *resultOffset)
+void RectConstrainToScreen(Rectangle &rect, Vector2 *resultOffset)
 {
     Vector2 screenSize{ (float)GetRenderWidth(), (float)GetRenderHeight() };
     Rectangle newRect = rect;
@@ -446,7 +446,19 @@ Rectangle RectConstrainToScreen(const Rectangle &rect, Vector2 *resultOffset)
     if (resultOffset) {
         *resultOffset = { newRect.x - rect.x, newRect.y - rect.y };
     }
-    return newRect;
+    rect = newRect;
+}
+
+void CircleConstrainToScreen(Vector2 &center, float radius, Vector2 *resultOffset)
+{
+    Vector2 screenSize{ (float)GetRenderWidth(), (float)GetRenderHeight() };
+    Vector2 newCenter = center;
+    newCenter.x = CLAMP(newCenter.x, radius, screenSize.x - radius);
+    newCenter.y = CLAMP(newCenter.y, radius, screenSize.y - radius);
+    if (resultOffset) {
+        *resultOffset = { newCenter.x - center.x, newCenter.y - center.y };
+    }
+    center = newCenter;
 }
 
 // Draw a part of a texture (defined by a rectangle)

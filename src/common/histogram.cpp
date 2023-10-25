@@ -93,7 +93,7 @@ void Histogram::DrawHover(void)
         Vector2 tipSize = MeasureTextEx(fntTiny, tipStr, fntTiny.baseSize, 1);
         Rectangle tipRect{ tipPos.x, tipPos.y, tipSize.x, tipSize.y };
         tipRect = RectGrow(tipRect, tipPad);
-        tipRect = RectConstrainToScreen(tipRect);
+        RectConstrainToScreen(tipRect);
         tipPos.x = tipRect.x + tipPad;
         tipPos.y = tipRect.y + tipPad;
 

@@ -163,7 +163,8 @@ void DrawTextShadowEx(Font font, const char *text, Vector2 pos, Color color);
 Rectangle GetScreenRectWorld(Camera2D &camera);
 Rectangle RectShrink(const Rectangle &rect, float pixels);
 Rectangle RectGrow(const Rectangle &rect, float pixels);
-Rectangle RectConstrainToScreen(const Rectangle &rect, Vector2 *resultOffset = 0);
+void RectConstrainToScreen(Rectangle &rect, Vector2 *resultOffset = 0);
+void CircleConstrainToScreen(Vector2 &center, float radius, Vector2 *resultOffset = 0);
 
 void dlb_DrawTextureRec(Texture2D texture, Rectangle source, Vector2 position, Color tint);
 void dlb_DrawTexturePro(Texture2D texture, Rectangle source, Rectangle dest, Vector2 origin, Color tint);
