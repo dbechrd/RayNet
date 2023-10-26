@@ -23,11 +23,21 @@ struct GameClient {
     bool showNetInfo = false;
     bool showTodoList = false;
     
+    const char *hudSpinnerItems[2]{
+        "Fireball",
+        "Shovel"
+    };
+
     bool hudSpinnerPrev = false;
     bool hudSpinner = false;
     Vector2 hudSpinnerPos{};
     int hudSpinnerIndex = 0;  // which index is currently active
     int hudSpinnerCount = 6;  // how many items in hud spinner
+
+    inline const char *HudSpinnerItemName(void) {
+        const char *holdingItem = hudSpinnerIndex < ARRAY_SIZE(hudSpinnerItems) ? hudSpinnerItems[hudSpinnerIndex] : 0;
+        return holdingItem;
+    }
 
     Controller controller{};
     ClientWorld *world{};

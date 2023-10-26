@@ -189,6 +189,7 @@ void draw_game(GameClient &client)
     if (client.hudSpinner) {
         const float innerRadius = 80;
         const float outerRadius = innerRadius * 2;
+        const float centerRadius = innerRadius + (outerRadius - innerRadius) / 2;
         
         Vector2 mousePos = GetMousePosition();
         if (!client.hudSpinnerPrev) {
@@ -227,6 +228,26 @@ void draw_game(GameClient &client)
         //DrawCircleSector(client.hudSpinnerPos, outerRadius, angleStart, angleEnd, 32, Fade(SKYBLUE, 0.6f));
         DrawRing(client.hudSpinnerPos, innerRadius, outerRadius, angleStart, angleEnd, 32, Fade(color, 0.8f));
 
+        for (int i = 0; i < client.hudSpinnerCount; i++) {
+            // Find middle of pie slice as a percentage of total pie circumference
+            const float iconPieAlpha = (float)i / client.hudSpinnerCount - 0.25f + (1.0f / client.hudSpinnerCount * 0.5f);
+            const Vector2 iconCenter = {
+                client.hudSpinnerPos.x + centerRadius * cosf(2 * PI * iconPieAlpha),
+                client.hudSpinnerPos.y + centerRadius * sinf(2 * PI * iconPieAlpha),
+            };
+
+            const char *menuText = i < ARRAY_SIZE(client.hudSpinnerItems) ? client.hudSpinnerItems[i] : "-Empty-";
+
+            //DrawCircle(iconCenter.x, iconCenter.y, 2, BLACK);
+            Vector2 textSize = dlb_MeasureTextEx(fntMedium, menuText, strlen(menuText));
+            Vector2 textPos{
+                iconCenter.x - textSize.x / 2.0f,
+                iconCenter.y - textSize.y / 2.0f
+            };
+            //DrawTextShadowEx(fntMedium, TextFormat("%d %.2f", i, iconPieAlpha), iconCenter, RED);
+            DrawTextShadowEx(fntMedium, menuText, textPos, WHITE);
+        }
+
 #if 0
         // TODO(cleanup): Draw debug text on pie menu
         DrawTextShadowEx(fntMedium,
@@ -245,6 +266,12 @@ void draw_game(GameClient &client)
     uiHUDMenu.Button("Inventory");
     uiHUDMenu.Button("Map");
     uiHUDMenu.Newline();
+
+    const char *holdingItem = client.HudSpinnerItemName();
+    if (!holdingItem) {
+        holdingItem = "-Empty-";
+    }
+    uiHUDMenu.Text(holdingItem);
 
     io.PopScope();
 }
@@ -531,16 +558,17 @@ int main(int argc, char *argv[])
                 client->controller.cmdAccum.south |= io.KeyDown(KEY_S);
                 client->controller.cmdAccum.east |= io.KeyDown(KEY_D);
 
+                // TODO: Make function
+                const char *holdingItem = client->HudSpinnerItemName();
+
                 // TODO: Actually check hand
-                bool holdingWeapon = true;
-                if (holdingWeapon) {
+                if (holdingItem == "Fireball") {
                     client->controller.cmdAccum.fire |= io.MouseButtonDown(MOUSE_LEFT_BUTTON);
                     //client->controller.cmdAccum.fire |= io.MouseButtonPressed(MOUSE_LEFT_BUTTON);
                 }
 
                 // TODO: Actually check hand
-                bool holdingShovel = true;
-                if (holdingShovel) {
+                if (holdingItem == "Shovel") {
                     if (io.MouseButtonPressed(MOUSE_BUTTON_LEFT)) {
                         data::Tilemap::Coord coord{};
                         data::Tilemap* map = client->world->LocalPlayerMap();

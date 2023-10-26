@@ -637,7 +637,8 @@ void ClientWorld::Draw(GameClient &client)
 
     //--------------------
     // Draw entity info
-    if (hoveredEntityId) {
+    io.PushScope(IO::IO_GameNPC);
+    if (hoveredEntityId && !io.MouseCaptured()) {
         data::Entity *entity = entityDb->FindEntity(hoveredEntityId);
         if (entity) {
             entityDb->DrawEntityHoverInfo(hoveredEntityId);
@@ -647,4 +648,5 @@ void ClientWorld::Draw(GameClient &client)
             hoveredEntityId = 0;
         }
     }
+    io.PopScope();
 }
