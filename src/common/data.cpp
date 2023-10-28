@@ -103,15 +103,12 @@ namespace data {
 
             // tile_defs
             fprintf(file, "    tile_defs: [\n");
-            int maxAnim = 0;
-            int maxMat = 0;
-            for (TileDef &tile_def : tilemap.tileDefs) {
-                maxAnim = MAX(maxAnim, tile_def.anim.size());
-                maxMat = MAX(maxMat, tile_def.material.size());
+            int max_tile_def_id_len = 0;
+            for (std::string &tile_def_id : tilemap.tileDefs) {
+                max_tile_def_id_len = MAX(max_tile_def_id_len, tile_def_id.size());
             }
-            fprintf(file, "        //%-*s %-*s %s\n", maxAnim, "animation", maxMat, "material", "auto_tile_mask");
-            for (TileDef &tile_def : tilemap.tileDefs) {
-                fprintf(file, "        { %-*s %-*s %u }\n", maxAnim, tile_def.anim.c_str(), maxMat, tile_def.material.c_str(), tile_def.auto_tile_mask);
+            for (std::string &tile_def_id : tilemap.tileDefs) {
+                fprintf(file, "        %-*s\n", max_tile_def_id_len, tile_def_id.c_str());
             }
             fprintf(file, "    ]\n");
 
@@ -437,6 +434,17 @@ namespace data {
                     META_CHILDREN_END;
 
                     pack.sprites.push_back(sprite);
+                } else if (MD_NodeHasTag(node, MD_S8Lit("TileDef"), 0)) {
+                    TileDef tile_def{};
+
+                    META_ID(tile_def.id);
+                    META_CHILDREN_BEGIN;
+                    META_IDENT(tile_def.anim);
+                    META_IDENT(tile_def.material);
+                    META_UINT8(tile_def.auto_tile_mask);
+                    META_CHILDREN_END;
+
+                    pack.tile_defs.push_back(tile_def);
                 } else if (MD_NodeHasTag(node, MD_S8Lit("Tilemap"), 0)) {
                     Tilemap map{};
 
@@ -455,15 +463,9 @@ namespace data {
                                 META_UINT32(map.height);
                             } else if (key == "tile_defs") {
                                 META_CHILDREN_LOOP_BEGIN; // []
-                                    TileDef tile_def{};
-
-                                    META_CHILDREN_BEGIN;  // {}
-                                        META_IDENT(tile_def.anim);
-                                        META_IDENT(tile_def.material);
-                                        META_UINT8(tile_def.auto_tile_mask);
-                                    META_CHILDREN_END;
-
-                                    map.tileDefs.push_back(tile_def);
+                                    std::string tile_def_id{};
+                                    META_ID(tile_def_id);
+                                    map.tileDefs.push_back(tile_def_id);
                                 META_CHILDREN_LOOP_END_NEXT;
                             } else if (key == "tiles") {
                                 META_CHILDREN_LOOP_BEGIN;  // []
@@ -596,7 +598,7 @@ namespace data {
         PackAddMeta(packHardcoded, "resources/map/map_overworld.mdesk");
         PackAddMeta(packHardcoded, "resources/meta/overworld.mdesk");
         //PackDebugPrint(packHardcoded);
-        
+
         //LoadResources(packHardcoded);
         err = SavePack(packHardcoded, PACK_TYPE_BINARY);
         if (err) {
@@ -810,6 +812,21 @@ namespace data {
         }
     }
 
+    void Process(PackStream &stream, TileDef &tile_def, int index) {
+        PROC(tile_def.id);
+        PROC(tile_def.anim);
+        PROC(tile_def.material);
+        PROC(tile_def.auto_tile_mask);
+
+        // TODO: Idk where/how to do this, but we don't have the texture
+        //       loaded yet in this context, necessarily.
+        //tileDef.color = GetImageColor(texEntry.image, tileDef.x, tileDef.y);
+
+        if (stream.mode == PACK_MODE_READ) {
+            stream.pack->tile_def_by_id[tile_def.id] = index;
+        }
+    }
+
     void Process(PackStream &stream, Entity &entity, int index)
     {
         bool alive = entity.id && !entity.despawned_at && entity.type;
@@ -930,20 +947,13 @@ namespace data {
         PROC(sentinel);
         assert(sentinel == Tilemap::SENTINEL);
 
-        tile_map.tileDefs       .resize(tileDefCount);
-        tile_map.tiles          .resize((size_t)tile_map.width * tile_map.height);
-        tile_map.pathNodes      .resize(pathNodeCount);
-        tile_map.paths          .resize(pathCount);
+        tile_map.tileDefs  .resize(tileDefCount);
+        tile_map.tiles     .resize((size_t)tile_map.width * tile_map.height);
+        tile_map.pathNodes .resize(pathNodeCount);
+        tile_map.paths     .resize(pathCount);
 
-        for (uint32_t i = 0; i < tileDefCount; i++) {
-            data::TileDef &tileDef = tile_map.tileDefs[i];
-            PROC(tileDef.anim);
-            PROC(tileDef.material);
-            PROC(tileDef.auto_tile_mask);
-
-            // TODO: Idk where/how to do this, but we don't have the texture
-            //       loaded yet in this context, necessarily.
-            //tileDef.color = GetImageColor(texEntry.image, tileDef.x, tileDef.y);
+        for (std::string &tile_def_id : tile_map.tileDefs) {
+            PROC(tile_def_id);
         }
 
         PROC(sentinel);
@@ -981,9 +991,7 @@ namespace data {
         assert(sentinel == Tilemap::SENTINEL);
 
         if (stream.mode == PACK_MODE_READ) {
-            tile_map.net_id = stream.pack->next_map_id++;  // HACK: Store this or something.. firebase?
-            stream.pack->tile_map_by_id[tile_map.net_id] = index;
-            stream.pack->tile_map_by_name[tile_map.id] = index;
+            stream.pack->tile_map_by_id[tile_map.id] = index;
         }
     }
 
@@ -1032,6 +1040,7 @@ namespace data {
             WRITE_ARRAY(pack.gfx_anims);
             WRITE_ARRAY(pack.materials);
             WRITE_ARRAY(pack.sprites);
+            WRITE_ARRAY(pack.tile_defs);
             WRITE_ARRAY(pack.tile_maps);
             WRITE_ARRAY(pack.entities);
 
@@ -1067,6 +1076,7 @@ namespace data {
             pack.gfx_anims .resize((size_t)1 + typeCounts[DAT_TYP_GFX_ANIM]);
             pack.materials .resize((size_t)1 + typeCounts[DAT_TYP_MATERIAL]);
             pack.sprites   .resize((size_t)1 + typeCounts[DAT_TYP_SPRITE]);
+            pack.tile_defs .resize((size_t)1 + typeCounts[DAT_TYP_TILE_DEF]);
             pack.tile_maps .resize((size_t)1 + typeCounts[DAT_TYP_TILE_MAP]);
             pack.entities  .resize((size_t)1 + typeCounts[DAT_TYP_ENTITY]);
 
@@ -1088,6 +1098,7 @@ namespace data {
                     case DAT_TYP_GFX_ANIM:  Process(stream, pack.gfx_anims [index], index); break;
                     case DAT_TYP_MATERIAL:  Process(stream, pack.materials [index], index); break;
                     case DAT_TYP_SPRITE:    Process(stream, pack.sprites   [index], index); break;
+                    case DAT_TYP_TILE_DEF:  Process(stream, pack.tile_defs [index], index); break;
                     case DAT_TYP_TILE_MAP:  Process(stream, pack.tile_maps [index], index); break;
                     case DAT_TYP_ENTITY:    Process(stream, pack.entities  [index], index); break;
                 }
@@ -1264,6 +1275,20 @@ namespace data {
         }
     }
 
+    void UpdateGfxAnim(const GfxAnim &anim, double dt, GfxAnimState &anim_state)
+    {
+        anim_state.accum += dt;
+
+        const double frame_time = (1.0 / anim.frame_rate) * anim.frame_delay;
+        if (anim_state.accum >= frame_time) {
+            anim_state.frame++;
+            if (anim_state.frame >= anim.frame_count) {
+                anim_state.frame = 0;
+            }
+            anim_state.accum -= frame_time;
+        }
+    }
+
     const GfxFrame &GetSpriteFrame(const Entity &entity)
     {
         const Sprite &sprite = packs[0]->FindSprite(entity.sprite);
@@ -1289,19 +1314,6 @@ namespace data {
             (float)frame.h
         };
         return rect;
-    }
-    void UpdateGfxAnim(const GfxAnim &anim, double dt, GfxAnimState &anim_state)
-    {
-        anim_state.accum += dt;
-
-        const double frame_time = (1.0 / anim.frame_rate) * anim.frame_delay;
-        if (anim_state.accum >= frame_time) {
-            anim_state.frame++;
-            if (anim_state.frame >= anim.frame_count) {
-                anim_state.frame = 0;
-            }
-            anim_state.accum -= frame_time;
-        }
     }
     void UpdateSprite(Entity &entity, double dt, bool newlySpawned)
     {
@@ -1352,6 +1364,14 @@ namespace data {
         const Vector2 sprite_pos{ pos.x, pos.y - pos.z };
         const Rectangle frame_rec{ (float)frame.x, (float)frame.y, (float)frame.w, (float)frame.h };
         DrawTextureRec(gfx_file.texture, frame_rec, sprite_pos, WHITE);
+    }
+
+    void UpdateTileDefAnimations(double dt)
+    {
+        for (TileDef &tile_def : data::packs[0]->tile_defs) {
+            const GfxAnim &anim = packs[0]->FindGraphicAnim(tile_def.anim);
+            data::UpdateGfxAnim(anim, dt, tile_def.anim_state);
+        }
     }
 
 #define ENUM_STR_GENERATOR(type, enumDef, enumGen) \

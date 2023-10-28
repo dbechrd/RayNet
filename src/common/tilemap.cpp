@@ -146,10 +146,13 @@ const data::GfxFrame &data::Tilemap::GetTileGfxFrame(Tile tile)
     const data::GfxFrame &gfx_frame = data::packs[0]->FindGraphicFrame(gfx_anim.frames[tile_def.anim_state.frame]);
     return gfx_frame;
 }
-const data::TileDef &data::Tilemap::GetTileDef(Tile tile)
+data::TileDef &data::Tilemap::GetTileDef(Tile tile)
 {
-    if (tile >= tileDefs.size()) tile = 0;
-    return tileDefs[tile];
+    if (tile >= tileDefs.size()) {
+        tile = 0;
+    }
+    data::TileDef &tile_def = data::packs[0]->FindTileDef(tileDefs[tile]);
+    return tile_def;
 }
 Rectangle data::Tilemap::TileDefRect(Tile tile)
 {
@@ -244,14 +247,6 @@ void data::Tilemap::ResolveEntityTerrainCollisions(uint32_t entityId)
     }
 
     ResolveEntityTerrainCollisions(*entity);
-}
-
-void data::Tilemap::UpdateAnimations(double dt)
-{
-    for (TileDef &tile_def : tileDefs) {
-        const GfxAnim &anim = packs[0]->FindGraphicAnim(tile_def.anim);
-        data::UpdateGfxAnim(anim, dt, tile_def.anim_state);
-    }
 }
 
 void data::Tilemap::DrawTile(Tile tile, Vector2 position)

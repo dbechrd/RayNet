@@ -190,7 +190,7 @@ void draw_game(GameClient &client)
         const float innerRadius = 80;
         const float outerRadius = innerRadius * 2;
         const float centerRadius = innerRadius + (outerRadius - innerRadius) / 2;
-        
+
         Vector2 mousePos = GetMousePosition();
         if (!client.hudSpinnerPrev) {
             client.hudSpinnerPos = mousePos; //{ GetRenderWidth() / 2.0f, GetRenderHeight() / 2.0f };
@@ -224,7 +224,7 @@ void draw_game(GameClient &client)
 
         //DrawCircleV(client.hudSpinnerPos, outerRadius, Fade(LIGHTGRAY, 0.6f));
         DrawRing(client.hudSpinnerPos, innerRadius, outerRadius, 0, 360, 32, Fade(LIGHTGRAY, 0.6f));
-        
+
         //DrawCircleSector(client.hudSpinnerPos, outerRadius, angleStart, angleEnd, 32, Fade(SKYBLUE, 0.6f));
         DrawRing(client.hudSpinnerPos, innerRadius, outerRadius, angleStart, angleEnd, 32, Fade(color, 0.8f));
 
@@ -233,7 +233,7 @@ void draw_game(GameClient &client)
             const float iconPieAlpha = (float)i / client.hudSpinnerCount - 0.25f + (1.0f / client.hudSpinnerCount * 0.5f);
             const Vector2 iconCenter = {
                 client.hudSpinnerPos.x + centerRadius * cosf(2 * PI * iconPieAlpha),
-                client.hudSpinnerPos.y + centerRadius * sinf(2 * PI * iconPieAlpha),
+                client.hudSpinnerPos.y + centerRadius * sinf(2 * PI * iconPieAlpha)
             };
 
             const char *menuText = i < ARRAY_SIZE(client.hudSpinnerItems) ? client.hudSpinnerItems[i] : "-Empty-";
@@ -544,7 +544,7 @@ int main(int argc, char *argv[])
                     io.CaptureMouse();
                 }
                 io.PopScope();
-                
+
                 // TODO: Update facing direction elsewhere, then just get localPlayer.facing here?
                 Camera2D& camera = client->world->camera2d;
                 Vector2 cursorWorldPos = GetScreenToWorld2D(GetMousePosition(), camera);

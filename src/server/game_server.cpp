@@ -81,9 +81,9 @@ data::Tilemap *GameServer::FindOrLoadMap(std::string map_id)
 {
 #if 1
     // TODO: Go back to assuming it's not already loaded once we figure out packs
-    data::Tilemap *map = &data::packs[0]->FindTilemap(map_id);
-    if (map->net_id) {
-        return map;
+    data::Tilemap &map = data::packs[0]->FindTilemap(map_id);
+    if (!map.id.empty()) {
+        return &map;
     } else {
         return 0;
     }
@@ -508,7 +508,18 @@ void GameServer::ProcessMessages(void)
                         data::Tilemap *map = FindMap(msg->map_id);
                         Tile tile{};
                         if (map && map->AtTry(msg->x, msg->y, tile)) {
-                            //map.Set(msg->x, msg->y, 0);
+                            std::string tile_def_id = "til_stone_path";
+
+                            //data::TileDef &tile_def = data::packs[0]->FindTileDef(tile_def_id);
+
+                            // TODO(perf): Make some kind of map from string -> tile_def_index in the map?
+                            // * OR * make the maps all have global tile def ids instead of local tile def ids
+                            for (int i = 0; i < map->tileDefs.size(); i++) {
+                                if (map->tileDefs[i] == tile_def_id) {
+                                    map->Set(msg->x, msg->y, i, now);
+                                    break;
+                                }
+                            }
                         }
                         break;
                     }

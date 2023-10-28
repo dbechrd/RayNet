@@ -11,12 +11,13 @@ namespace data {
         gen(DAT_TYP_GFX_FILE,  "GFXFILE ") \
         gen(DAT_TYP_MUS_FILE,  "MUSFILE ") \
         gen(DAT_TYP_SFX_FILE,  "SFXFILE ") \
-\
+                                           \
         gen(DAT_TYP_GFX_FRAME, "GFXFRAME") \
         gen(DAT_TYP_GFX_ANIM,  "GFXANIM ") \
         gen(DAT_TYP_MATERIAL,  "MATERIAL") \
         gen(DAT_TYP_SPRITE,    "SPRITE  ") \
-\
+        gen(DAT_TYP_TILE_DEF,  "TILEDEF ") \
+                                           \
         gen(DAT_TYP_TILE_MAP,  "TILEMAP ") \
         gen(DAT_TYP_ENTITY,    "ENTITY  ")
 
@@ -158,6 +159,8 @@ namespace data {
     ////////////////////////////////////////////////////////////////////////////
 
     struct TileDef {
+        static const DataType dtype = DAT_TYP_TILE_DEF;
+        std::string id             {};
         std::string anim           {};
         std::string material       {};
         uint8_t     auto_tile_mask {};  // not used atm, but this is where it would go once tiledefs are moved to tilesets
@@ -201,15 +204,15 @@ namespace data {
         uint32_t    height  {};  // height of map in tiles
 
         // TODO(dlb): Move these to a global pool, each has its own textureId
-        std::vector<TileDef>    tileDefs  {};
-        std::vector<Tile>       tiles     {};
-        std::vector<AiPathNode> pathNodes {};  // 94 19 56 22 57
-        std::vector<AiPath>     paths     {};  // offset, length | 0, 3 | 3, 3
+        std::vector<std::string> tileDefs  {};
+        std::vector<Tile>        tiles     {};
+        std::vector<AiPathNode>  pathNodes {};  // 94 19 56 22 57
+        std::vector<AiPath>      paths     {};  // offset, length | 0, 3 | 3, 3
 
         //-------------------------------
         // Not serialized
         //-------------------------------
-        uint32_t net_id             {};  // for communicating efficiently w/ client about which map
+        //uint32_t net_id             {};  // for communicating efficiently w/ client about which map
         double   chunkLastUpdatedAt {};  // used by server to know when chunks are dirty on clients
 
         //-------------------------------
@@ -238,7 +241,7 @@ namespace data {
         void Fill(uint32_t x, uint32_t y, int tileDefId, double now);
 
         const GfxFrame &GetTileGfxFrame(Tile tile);
-        const TileDef &GetTileDef(Tile tile);
+        TileDef &GetTileDef(Tile tile);
         Rectangle TileDefRect(Tile tile);
         Color TileDefAvgColor(Tile tile);
 
@@ -248,8 +251,6 @@ namespace data {
 
         void ResolveEntityTerrainCollisions(Entity &entity);
         void ResolveEntityTerrainCollisions(uint32_t entityId);
-
-        void UpdateAnimations(double dt);
 
         void DrawTile(Tile tile, Vector2 position);
         void Draw(Camera2D &camera);
@@ -477,6 +478,7 @@ namespace data {
         std::vector<GfxAnim>  gfx_anims  {};
         std::vector<Material> materials  {};
         std::vector<Sprite>   sprites    {};
+        std::vector<TileDef>  tile_defs  {};
 
         // static entities? (objects?)
         // - doors
@@ -493,8 +495,8 @@ namespace data {
         // - fauna
         // - monsters
         // - particles? maybe?
-        std::vector<Entity> entities {};
-        std::vector<Tilemap>  tile_maps  {};
+        std::vector<Entity> entities{};
+        std::vector<Tilemap> tile_maps{};
 
         std::unordered_map<std::string, size_t> gfx_file_by_id{};
         std::unordered_map<std::string, size_t> mus_file_by_id{};
@@ -504,12 +506,8 @@ namespace data {
         std::unordered_map<std::string, size_t> gfx_anim_by_id{};
         std::unordered_map<std::string, size_t> material_by_id{};
         std::unordered_map<std::string, size_t> sprite_by_id{};
-
-        std::unordered_map<std::string, size_t> tile_map_by_name{};
-        // HACK(dlb): Server gives seq ids to loaded maps so that it can tell the client about maps without
-        // sending strings. This needs to happen for tons of other stuff, need to find a consistent approach.
-        size_t next_map_id = 1;
-        std::unordered_map<uint32_t, size_t> tile_map_by_id{};
+        std::unordered_map<std::string, size_t> tile_def_by_id{};
+        std::unordered_map<std::string, size_t> tile_map_by_id{};  // TODO: Integer ids to reduce network bandwidth
 
         PackToc toc {};
 
@@ -523,6 +521,7 @@ namespace data {
             gfx_anims.emplace_back();
             materials.emplace_back();
             sprites.emplace_back();
+            tile_defs.emplace_back();
 
             tile_maps.emplace_back();
         }
@@ -610,23 +609,32 @@ namespace data {
             }
         }
 
-        Tilemap &FindTilemap(uint32_t id) {
+        TileDef &FindTileDef(std::string id) {
+            const auto &entry = tile_def_by_id.find(id);
+            if (entry != tile_def_by_id.end()) {
+                return tile_defs[entry->second];
+            } else {
+                //TraceLog(LOG_WARNING, "Missing tile definition: %s", id.c_str());
+                return tile_defs[0];
+            }
+        }
+
+        Tilemap &FindTilemap(std::string id) {
             const auto &entry = tile_map_by_id.find(id);
             if (entry != tile_map_by_id.end()) {
                 return tile_maps[entry->second];
             } else {
-                //TraceLog(LOG_WARNING, "Missing tilemap id: %u", id);
+                //TraceLog(LOG_WARNING, "Missing tile map: %s", id.c_str());
                 return tile_maps[0];
             }
         }
 
-        Tilemap &FindTilemap(std::string name) {
-            const auto &entry = tile_map_by_name.find(name);
-            if (entry != tile_map_by_name.end()) {
-                return tile_maps[entry->second];
+        size_t FindTilemapIndex(std::string id) {
+            const auto &entry = tile_map_by_id.find(id);
+            if (entry != tile_map_by_id.end()) {
+                return entry->second;
             } else {
-                //TraceLog(LOG_WARNING, "Missing tilemap name: %s", name.c_str());
-                return tile_maps[0];
+                return 0;
             }
         }
     };
@@ -682,6 +690,8 @@ namespace data {
     void UpdateSprite(Entity &entity, double dt, bool newlySpawned);
     void ResetSprite(Entity &entity);
     void DrawSprite(const Entity &entity);
+
+    void UpdateTileDefAnimations(double dt);
 
     const char *DataTypeStr(DataType type);
     const char *EntityTypeStr(EntityType type);

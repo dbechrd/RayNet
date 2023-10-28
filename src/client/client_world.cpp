@@ -124,8 +124,9 @@ Err ClientWorld::CreateDialog(uint32_t entityId, uint32_t dialogId, std::string 
 
 void ClientWorld::UpdateMap(GameClient &client)
 {
-    data::Tilemap *map = LocalPlayerMap();
-    map->UpdateAnimations(client.frameDt);
+    // TODO(cleanup): What else is there to update now?
+    //data::Tilemap *map = LocalPlayerMap();
+    //map->UpdateAnimations(client.frameDt);
 }
 
 void ClientWorld::UpdateLocalPlayerHisto(GameClient &client, data::Entity &entity, HistoData &histoData)
@@ -305,6 +306,7 @@ void ClientWorld::UpdateEntities(GameClient &client)
 
 void ClientWorld::Update(GameClient &client)
 {
+    data::UpdateTileDefAnimations(client.frameDt);
     UpdateMap(client);
 
     io.PushScope(IO::IO_GameNPC);

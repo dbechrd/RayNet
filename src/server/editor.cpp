@@ -537,8 +537,20 @@ UIState Editor::DrawUI_ActionBar(Vector2 position, GameServer &server, double no
 
     UIState reloadButton = uiActionBar.Button("Reload");
     if (reloadButton.released) {
-        assert(!"not implemented with new map format");
-        Err err = RN_BAD_FILE_READ; // map.Load(map.id);
+        // HACK(dlb): Very hacky, but works for now (probably)
+        std::string map_path = TextFormat("resources/map/%s.mdesk", map.id.c_str());
+        data::Pack reload_pack{ "reload_pack.mem" };
+        data::PackAddMeta(reload_pack, map_path.c_str());
+
+        Err err = RN_BAD_FILE_READ;
+        if (reload_pack.tile_maps.size() == 2) {
+            size_t map_index = data::packs[0]->FindTilemapIndex(map.id);
+            if (map_index) {
+                data::packs[0]->tile_maps[map_index] = reload_pack.tile_maps[1];
+                err = RN_SUCCESS;
+            }
+        }
+
         if (err) {
             std::string filename = map.id;
             std::thread errorThread([filename, err]{
@@ -634,7 +646,7 @@ UIState Editor::DrawUI_ActionBar(Vector2 position, GameServer &server, double no
 void Editor::DrawUI_MapActions(UI &uiActionBar, GameServer &server, double now)
 {
     for (const data::Tilemap &map : data::packs[0]->tile_maps) {
-        if (uiActionBar.Button(TextFormat("[%d] %s", map.net_id, map.id.c_str())).pressed) {
+        if (uiActionBar.Button(TextFormat("%s", map.id.c_str())).pressed) {
             map_id = map.id;
         }
         uiActionBar.Newline();
@@ -741,7 +753,8 @@ void Editor::DrawUI_Tilesheet(UI &uiActionBar, double now)
     switch (state.tiles.tileEditMode) {
         case TileEditMode_Collision: {
             for (int i = 0; i < map.tileDefs.size(); i++) {
-                const data::Material &material = data::packs[0]->FindMaterial(map.tileDefs[i].material);
+                const data::TileDef &tile_def = map.GetTileDef(i);
+                const data::Material &material = data::packs[0]->FindMaterial(tile_def.material);
                 const float tileThird = TILE_W / 3;
                 const float tileSixth = tileThird / 2.0f;
                 Vector2 cursor{
@@ -788,6 +801,8 @@ void Editor::DrawUI_Tilesheet(UI &uiActionBar, double now)
         }
         case TileEditMode_AutoTileMask: {
             for (int i = 0; i < map.tileDefs.size(); i++) {
+                const data::TileDef &tile_def = map.GetTileDef(i);
+
                 const float tileThird = TILE_W / 3;
                 float tile_x = TILE_W * (i % tiles_x);
                 float tile_y = TILE_W * (i / tiles_x);
@@ -802,7 +817,7 @@ void Editor::DrawUI_Tilesheet(UI &uiActionBar, double now)
                 const Color color = Fade(MAROON, 0.7f);
 
                 Vector2 cursor{};
-                uint8_t mask = map.tileDefs[i].auto_tile_mask;
+                uint8_t mask = tile_def.auto_tile_mask;
                 if (mask & 0b10000000) DrawRectangleRectOffset(tileDefRectScreen, cursor, color);
                 cursor.x += tileThird;
 
@@ -870,8 +885,8 @@ void Editor::DrawUI_Tilesheet(UI &uiActionBar, double now)
                     }
                     case TileEditMode_Collision:
                     case TileEditMode_AutoTileMask: {
-                        data::TileDef &tileDef = map.tileDefs[tileIdx];
-                        
+                        data::TileDef &tile_def = map.GetTileDef(tileIdx);
+
                         const int tileXRemainder = (int)mouseRel.x % TILE_W - 1;
                         const int tileYRemainder = (int)mouseRel.y % TILE_W - 1;
                         if (tileXRemainder < 0 || tileXRemainder > (TILE_W - 3) ||
@@ -885,7 +900,7 @@ void Editor::DrawUI_Tilesheet(UI &uiActionBar, double now)
                         const int tileSegment = tileYSegment * 3 + tileXSegment;
 
                         if (state.tiles.tileEditMode == TileEditMode_Collision) {
-                            data::Material& mat = data::packs[0]->FindMaterial(tileDef.material);
+                            data::Material& mat = data::packs[0]->FindMaterial(tile_def.material);
                             if (!mat.id.empty()) {
                                 switch (tileSegment) {
                                     case 0: mat.flags ^= data::MATERIAL_FLAG_WALK; break;
@@ -895,15 +910,15 @@ void Editor::DrawUI_Tilesheet(UI &uiActionBar, double now)
                         } else if (state.tiles.tileEditMode == TileEditMode_AutoTileMask) {
                             //printf("x: %d, y: %d, s: %d\n", tileXSegment, tileYSegment, tileSegment);
                             switch (tileSegment) {
-                                case 0: tileDef.auto_tile_mask ^= 0b10000000; break;
-                                case 1: tileDef.auto_tile_mask ^= 0b01000000; break;
-                                case 2: tileDef.auto_tile_mask ^= 0b00100000; break;
-                                case 3: tileDef.auto_tile_mask ^= 0b00010000; break;
-                                case 4: tileDef.auto_tile_mask ^= 0b00000000; break;
-                                case 5: tileDef.auto_tile_mask ^= 0b00001000; break;
-                                case 6: tileDef.auto_tile_mask ^= 0b00000100; break;
-                                case 7: tileDef.auto_tile_mask ^= 0b00000010; break;
-                                case 8: tileDef.auto_tile_mask ^= 0b00000001; break;
+                                case 0: tile_def.auto_tile_mask ^= 0b10000000; break;
+                                case 1: tile_def.auto_tile_mask ^= 0b01000000; break;
+                                case 2: tile_def.auto_tile_mask ^= 0b00100000; break;
+                                case 3: tile_def.auto_tile_mask ^= 0b00010000; break;
+                                case 4: tile_def.auto_tile_mask ^= 0b00000000; break;
+                                case 5: tile_def.auto_tile_mask ^= 0b00001000; break;
+                                case 6: tile_def.auto_tile_mask ^= 0b00000100; break;
+                                case 7: tile_def.auto_tile_mask ^= 0b00000010; break;
+                                case 8: tile_def.auto_tile_mask ^= 0b00000001; break;
                             }
                         }
                         break;
