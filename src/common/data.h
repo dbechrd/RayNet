@@ -204,10 +204,12 @@ namespace data {
         uint32_t    height  {};  // height of map in tiles
 
         // TODO(dlb): Move these to a global pool, each has its own textureId
-        std::vector<std::string> tileDefs  {};
-        std::vector<Tile>        tiles     {};
-        std::vector<AiPathNode>  pathNodes {};  // 94 19 56 22 57
-        std::vector<AiPath>      paths     {};  // offset, length | 0, 3 | 3, 3
+        std::vector<std::string> tileDefs   {};
+        std::vector<std::string> objectDefs {};
+        std::vector<Tile>        tiles      {};
+        std::vector<uint8_t>     objects    {};
+        std::vector<AiPathNode>  pathNodes  {};  // 94 19 56 22 57
+        std::vector<AiPath>      paths      {};  // offset, length | 0, 3 | 3, 3
 
         //-------------------------------
         // Not serialized

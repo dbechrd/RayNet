@@ -1,3 +1,4 @@
+#include "../common/boot_screen.h"
 #include "../common/collision.h"
 #include "../common/data.h"
 #include "../common/histogram.h"
@@ -297,8 +298,9 @@ int main(int argc, char *argv[])
     SetWindowState(FLAG_WINDOW_RESIZABLE);
     SetWindowState(FLAG_WINDOW_MAXIMIZED);
     //SetWindowState(FLAG_FULLSCREEN_MODE);
-
     SetExitKey(0);  // must be called after InitWindow()
+
+    DrawBootScreen();
 
     InitAudioDevice();
     SetMasterVolume(0.24f);
@@ -579,6 +581,7 @@ int main(int argc, char *argv[])
 }
 
 #include "../common/common.cpp"
+#include "../common/boot_screen.cpp"
 #include "client_world.cpp"
 #include "game_client.cpp"
 #include "menu.cpp"

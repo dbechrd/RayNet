@@ -112,6 +112,17 @@ namespace data {
             }
             fprintf(file, "    ]\n");
 
+            // object_defs
+            fprintf(file, "    object_defs: [\n");
+            int max_object_def_id_len = 0;
+            for (std::string &object_def_id : tilemap.objectDefs) {
+                max_object_def_id_len = MAX(max_object_def_id_len, object_def_id.size());
+            }
+            for (std::string &object_def_id : tilemap.objectDefs) {
+                fprintf(file, "        %-*s\n", max_object_def_id_len, object_def_id.c_str());
+            }
+            fprintf(file, "    ]\n");
+
             // tiles
             fprintf(file, "    tiles: [");
             for (int i = 0; i < tilemap.tiles.size(); i++) {
@@ -119,6 +130,17 @@ namespace data {
                     fprintf(file, "\n        ");
                 }
                 fprintf(file, "%3u", tilemap.tiles[i]);
+            }
+            fprintf(file, "\n");
+            fprintf(file, "    ]\n");
+
+            // objects
+            fprintf(file, "    objects: [");
+            for (int i = 0; i < tilemap.objects.size(); i++) {
+                if (i % tilemap.width == 0) {
+                    fprintf(file, "\n        ");
+                }
+                fprintf(file, "%3u", tilemap.objects[i]);
             }
             fprintf(file, "\n");
             fprintf(file, "    ]\n");
@@ -330,8 +352,11 @@ namespace data {
             for (MD_EachNode(node, parse_result.node->first_child)) {
                 auto tag_count = MD_TagCountFromNode(node);
                 if (tag_count != 1) {
-                    MD_CodeLoc loc = MD_CodeLocFromNode(node);
-                    MD_PrintMessageFmt(stderr, loc, MD_MessageKind_Error, (char *)"Expected exactly 1 tag.");
+                    MD_Message *md_err = MD_MakeNodeError(arena, node, MD_MessageKind_Error, MD_S8CString((char *)"Expected exactly 1 tag."));
+                    MD_MessageListPush(&parse_result.errors, md_err);
+
+                    //MD_CodeLoc loc = MD_CodeLocFromNode(node);
+                    //MD_PrintMessageFmt(stderr, loc, MD_MessageKind_Error, (char *)"Expected exactly 1 tag.");
                     break;
                 }
 
@@ -467,6 +492,12 @@ namespace data {
                                     META_ID(tile_def_id);
                                     map.tileDefs.push_back(tile_def_id);
                                 META_CHILDREN_LOOP_END_NEXT;
+                            } else if (key == "object_defs") {
+                                META_CHILDREN_LOOP_BEGIN; // []
+                                std::string object_def_id{};
+                                META_ID(object_def_id);
+                                map.objectDefs.push_back(object_def_id);
+                                META_CHILDREN_LOOP_END_NEXT;
                             } else if (key == "tiles") {
                                 META_CHILDREN_LOOP_BEGIN;  // []
                                     Tile tile{};
@@ -474,6 +505,14 @@ namespace data {
                                     META_UINT8(tile);
 
                                     map.tiles.push_back(tile);
+                                META_CHILDREN_LOOP_END;
+                            } else if (key == "objects") {
+                                META_CHILDREN_LOOP_BEGIN;  // []
+                                    uint8_t object{};
+
+                                    META_UINT8(object);
+
+                                    map.objects.push_back(object);
                                 META_CHILDREN_LOOP_END;
                             } else if (key == "path_nodes") {
                                 META_CHILDREN_LOOP_BEGIN;  // []
@@ -505,11 +544,21 @@ namespace data {
                     META_CHILDREN_END;
 
                     assert(map.tiles.size() == map.width * map.height);
+                    if (map.objects.size() == 0) {
+                        map.objects.resize(4096);
+                    }
+                    assert(map.objects.size() == map.width * map.height);
                     pack.tile_maps.push_back(map);
                 }
             }
-        } else {
+        }
+
+        //MD_push
+        //parse_result.errors
+
+        if (parse_result.errors.node_count) {
             dlb_MD_PrintErrors(&parse_result);
+            assert(!"MD parse failed");
         }
         MD_ArenaRelease(arena);
     }
@@ -626,7 +675,7 @@ namespace data {
         }
 #endif
 
-#if 0
+#if 1
         CompressFile("pack/pack1.dat", "pack/pack1.smol");
 #endif
 
@@ -920,6 +969,7 @@ namespace data {
 
         if (stream.mode == PackStreamMode::PACK_MODE_WRITE) {
             assert(tile_map.width * tile_map.height == tile_map.tiles.size());
+            assert(tile_map.width * tile_map.height == tile_map.objects.size());
         }
 
         PROC(tile_map.version);
@@ -936,11 +986,13 @@ namespace data {
         //    err = RN_INVALID_SIZE; break;
         //}
 
-        uint32_t tileDefCount       = tile_map.tileDefs.size();
-        uint32_t pathNodeCount      = tile_map.pathNodes.size();
-        uint32_t pathCount          = tile_map.paths.size();
+        uint32_t tileDefCount   = tile_map.tileDefs.size();
+        uint32_t objectDefCount = tile_map.objectDefs.size();
+        uint32_t pathNodeCount  = tile_map.pathNodes.size();
+        uint32_t pathCount      = tile_map.paths.size();
 
         PROC(tileDefCount);
+        PROC(objectDefCount);
         PROC(pathNodeCount);
         PROC(pathCount);
 
@@ -948,7 +1000,9 @@ namespace data {
         assert(sentinel == Tilemap::SENTINEL);
 
         tile_map.tileDefs  .resize(tileDefCount);
+        tile_map.objectDefs.resize(objectDefCount);
         tile_map.tiles     .resize((size_t)tile_map.width * tile_map.height);
+        tile_map.objects   .resize((size_t)tile_map.width * tile_map.height);
         tile_map.pathNodes .resize(pathNodeCount);
         tile_map.paths     .resize(pathCount);
 
@@ -959,10 +1013,28 @@ namespace data {
         PROC(sentinel);
         assert(sentinel == Tilemap::SENTINEL);
 
+        for (std::string &object_def_id : tile_map.objectDefs) {
+            PROC(object_def_id);
+        }
+
+        PROC(sentinel);
+        assert(sentinel == Tilemap::SENTINEL);
+
         for (Tile &tile : tile_map.tiles) {
             PROC(tile);
             if (tile >= tileDefCount) {
                 tile = 0;
+                //err = RN_OUT_OF_BOUNDS; break;
+            }
+        }
+
+        PROC(sentinel);
+        assert(sentinel == Tilemap::SENTINEL);
+
+        for (uint8_t &object : tile_map.objects) {
+            PROC(object);
+            if (object >= objectDefCount) {
+                object = 0;
                 //err = RN_OUT_OF_BOUNDS; break;
             }
         }

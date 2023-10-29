@@ -39,7 +39,7 @@
 #define TEXT_LINE_SPACING 1.0f
 
 #define TILE_W 64
-typedef uint8_t Tile;
+typedef uint8_t Tile;  // TODO: Remove this?
 
 #define TODO_LIST_PATH "todo.txt"
 

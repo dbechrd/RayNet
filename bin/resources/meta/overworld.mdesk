@@ -126,6 +126,22 @@
 @Material mat_stone_wall : null                0          0
 @Material mat_tiny_tree  : null                0          0
 
+//         id                 rolls items
+@LootTable loot_basic     : { 5     [{ null 0.2 }{ item_sword     0.2 }{ item_axe     0.1 }] }
+@LootTable loot_uncommon  : { 4     [{ null 0.3 }{ item_ruby      0.2 }{ item_saphire 0.1 }] }
+@LootTable loot_rare      : { 3     [{ null 0.4 }{ item_gold      0.2 }{ item_diamond 0.1 }] }
+@LootTable loot_legendary : { 2     [{ null 0.5 }{ item_excalibur 0.2 }{ item_hamaxe  0.1 }] }
+
+//      id                    type
+@Object obj_void            : null
+//                                      loot_table
+@Object obj_chest_basic     : container loot_basic
+@Object obj_chest_uncommon  : container loot_uncommon
+@Object obj_chest_rare      : container loot_rate
+@Object obj_chest_legendary : container loot_legendary
+//                                      dest_map_id dest_pos
+@Object wrp_to_cave         : { warp    map_cave    { 100 200 } }
+
 //      id                    anim_n                anim_e                 anim_s anim_w                 anim_ne anim_se anim_sw anim_nw
 @Sprite sprite_chr_mage     : null                  gfx_anim_chr_mage_e    null   gfx_anim_chr_mage_w    null    null    null    null
 @Sprite sprite_npc_lily     : null                  gfx_anim_npc_lily_e    null   gfx_anim_npc_lily_w    null    null    null    null
@@ -136,7 +152,7 @@
 @Sprite sprite_obj_campfire : gfx_anim_obj_campfire null                   null   null                   null    null    null    null
 @Sprite sprite_prj_fireball : gfx_anim_prj_fireball null                   null   null                   null    null    null    null
 
-//       id                animation                  material       auto_tile_mask
+//       id                  animation                  material       auto_tile_mask
 @TileDef til_void          : gfx_anim_til_void          mat_void       0
 @TileDef til_stone_path    : gfx_anim_til_stone_path    mat_stone_path 0
 @TileDef til_water_dark    : gfx_anim_til_water_dark    mat_water      0

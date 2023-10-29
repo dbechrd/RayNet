@@ -1,3 +1,4 @@
+#include "../common/boot_screen.h"
 #include "../common/collision.h"
 #include "../common/histogram.h"
 #include "../common/io.h"
@@ -328,6 +329,8 @@ int main(int argc, char *argv[])
         SetWindowState(FLAG_WINDOW_MAXIMIZED);
         SetExitKey(0);  // must be called after InitWindow()
 
+        DrawBootScreen();
+
         InitAudioDevice();
         SetMasterVolume(0);
 
@@ -418,5 +421,6 @@ int main(int argc, char *argv[])
 }
 
 #include "../common/common.cpp"
+#include "../common/boot_screen.cpp"
 #include "game_server.cpp"
 #include "editor.cpp"
