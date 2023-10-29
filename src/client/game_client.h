@@ -3,6 +3,7 @@
 #include "../common/input_command.h"
 #include "../common/net/net.h"
 #include "client_world.h"
+#include "menu.h"
 #include "todo.h"
 
 struct GameClient {
@@ -19,10 +20,12 @@ struct GameClient {
     double frameDtSmooth = 60;
     double animAccum = 0;
 
+    Menu menu{};
+
     bool showF3Menu = false;
     bool showNetInfo = false;
     bool showTodoList = false;
-    
+
     const char *hudSpinnerItems[2]{
         "Fireball",
         "Shovel"

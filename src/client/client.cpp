@@ -5,114 +5,8 @@
 #include "../common/ui/ui.h"
 #include "client_world.h"
 #include "game_client.h"
+#include "menu.h"
 #include "todo.h"
-
-void draw_menu_main(GameClient &client, bool &quit)
-{
-    Vector2 uiPosition{ floorf(GetRenderWidth() / 2.0f), floorf(GetRenderHeight() / 2.0f) };
-    uiPosition.y -= 50;
-    UIStyle uiStyleMenu {};
-    uiStyleMenu.margin = {};
-    uiStyleMenu.pad = { 16, 4 };
-    uiStyleMenu.bgColor[UI_CtrlTypeButton] = BLANK;
-    uiStyleMenu.fgColor = RAYWHITE;
-    uiStyleMenu.font = &fntBig;
-    uiStyleMenu.alignH = TextAlign_Center;
-    UI uiMenu{ uiPosition, uiStyleMenu };
-
-#if 0
-    // Draw weird squares animation
-    const Vector2 screenHalfSize{ GetRenderWidth()/2.0f, GetRenderHeight()/2.0f };
-    const Vector2 screenCenter{ screenHalfSize.x, screenHalfSize.y };
-    for (float scale = 0.0f; scale < 1.1f; scale += 0.1f) {
-        const float modScale = fmodf(texMenuBgScale + scale, 1);
-        Rectangle menuBgRect{
-            screenCenter.x - screenHalfSize.x * modScale,
-            screenCenter.y - screenHalfSize.y * modScale,
-            GetRenderWidth() * modScale,
-            GetRenderHeight() * modScale
-        };
-        DrawRectangleLinesEx(menuBgRect, 20, BLACK);
-    }
-#endif
-    UIState connectButton = uiMenu.Button("Play");
-    if (connectButton.released) {
-        //rnSoundCatalog.Play(RN_Sound_Lily_Introduction);
-        client.TryConnect();
-    }
-    uiMenu.Newline();
-    uiMenu.Button("Options");
-    uiMenu.Newline();
-    UIState quitButton = uiMenu.Button("Quit");
-    if (quitButton.released) {
-        quit = true;
-    }
-
-    // Draw font atlas for SDF font
-    //DrawTexture(fntBig.texture, GetRenderWidth() - fntBig.texture.width, 0, WHITE);
-}
-
-static data::Entity campfire{};
-
-static const char *connectingStrs[] = {
-    "Connecting",
-    ". Connecting .",
-    ".. Connecting ..",
-    "... Connecting ..."
-};
-static int connectingDotIdx = 0;
-static double connectingDotIdxLastUpdatedAt = 0;
-
-void draw_menu_connecting(GameClient &client)
-{
-    if (campfire.sprite.empty()) {
-        campfire.sprite = "sprite_obj_campfire";
-    }
-
-    data::UpdateSprite(campfire, client.frameDt, !connectingDotIdxLastUpdatedAt);
-    if (!connectingDotIdxLastUpdatedAt) {
-        connectingDotIdxLastUpdatedAt = client.now;
-    } else if (client.now > connectingDotIdxLastUpdatedAt + 0.5) {
-        connectingDotIdxLastUpdatedAt = client.now;
-        connectingDotIdx = ((size_t)connectingDotIdx + 1) % ARRAY_SIZE(connectingStrs);
-    }
-
-    const data::GfxFrame &campfireFrame = data::GetSpriteFrame(campfire);
-
-    UIStyle uiStyleMenu {};
-    uiStyleMenu.margin = {};
-    uiStyleMenu.pad = { 16, 4 };
-    uiStyleMenu.bgColor[UI_CtrlTypeButton] = BLANK;
-    uiStyleMenu.fgColor = RAYWHITE;
-    uiStyleMenu.font = &fntBig;
-    uiStyleMenu.alignH = TextAlign_Center;
-
-    Vector2 uiPosition{ floorf(GetRenderWidth() / 2.0f), floorf(GetRenderHeight() - uiStyleMenu.font->baseSize * 4) };
-    UI uiMenu{ uiPosition, uiStyleMenu };
-
-    const Vector2 cursorScreen = uiMenu.CursorScreen();
-    const Vector2 campfirePos = cursorScreen; //Vector2Subtract(cursorScreen, { (float)(campfireFrame.w / 2), 0 });
-    campfire.position.x = campfirePos.x;
-    campfire.position.y = campfirePos.y;
-    campfire.position.z = 0;
-
-    data::DrawSprite(campfire);
-    uiMenu.Space({ 0, (float)uiStyleMenu.font->baseSize / 2 });
-
-    if (client.yj_client->IsConnecting()) {
-        uiMenu.Text(connectingStrs[connectingDotIdx]);
-    } else {
-        uiMenu.Text("   Loading...");
-    }
-    uiMenu.Newline();
-}
-
-void reset_menu_connecting(void)
-{
-    data::ResetSprite(campfire);
-    connectingDotIdx = 0;
-    connectingDotIdxLastUpdatedAt = 0;
-}
 
 void update_camera(Camera2D &camera, data::Tilemap *map, Vector2 target, float frameDt)
 {
@@ -444,6 +338,7 @@ int main(int argc, char *argv[])
     // Client
     GameClient *client = new GameClient(GetTime());
     client->Start();
+    client->menu.TransitionTo(Menu::MENU_MAIN);
 
     static float texMenuBgScale = 0;
 
@@ -615,51 +510,25 @@ int main(int argc, char *argv[])
             }
         }
 
+        if (client->yj_client->IsDisconnected()) {
+            client->menu.TransitionTo(Menu::MENU_MAIN);
+        } else if (client->yj_client->IsConnecting() || !client->world || !client->world->localPlayerEntityId) {
+            client->menu.TransitionTo(Menu::MENU_CONNECTING);
+        } else if (client->yj_client->IsConnected()) {
+            client->menu.TransitionTo(Menu::MENU_NONE);
+        }
+
         //--------------------
         // Draw
         BeginDrawing();
             ClearBackground(GRAYISH_BLUE);
 
-            if (client->yj_client->IsDisconnected()) {
-                draw_menu_main(*client, quit);
-                reset_menu_connecting();
-
-                // Collision debug on menu screen
-                if (0) {
-                    static Vector2 cir_pos{};
-                    static float cir_radius = 20;
-                    static Rectangle rec{ 100, 100, 64, 64 };
-
-                    cir_pos = GetMousePosition();
-
-                    DrawCircleLines(cir_pos.x, cir_pos.y, cir_radius, BLUE);
-                    DrawRectangleLinesEx(rec, 1.0f, BLUE);
-
-                    Manifold manifold{};
-                    if (dlb_CheckCollisionCircleRec(cir_pos, cir_radius, rec, &manifold)) {
-                        DrawCircleV(manifold.contact, 3, GREEN);
-
-                        Vector2 manifold_vec = Vector2Scale(manifold.normal, manifold.depth);
-                        Vector2 manifold_end{
-                            manifold.contact.x + manifold_vec.x,
-                            manifold.contact.y + manifold_vec.y
-                        };
-                        DrawLine(
-                            manifold.contact.x,
-                            manifold.contact.y,
-                            manifold_end.x,
-                            manifold_end.y,
-                            ORANGE
-                        );
-                        DrawCircleV(manifold_end, 3, ORANGE);
-                    }
-                }
-            } else if (client->yj_client->IsConnecting() || !client->world || !client->world->localPlayerEntityId) {
-                draw_menu_connecting(*client);
-            } else if (client->yj_client->IsConnected()) {
+            if (client->yj_client->IsConnected()) {
                 draw_game(*client);
-                reset_menu_connecting();
             }
+
+            bool back = false;
+            client->menu.Draw(*client, back);
 
             if (client->showF3Menu) {
                 draw_f3_menu(*client);
@@ -712,4 +581,5 @@ int main(int argc, char *argv[])
 #include "../common/common.cpp"
 #include "client_world.cpp"
 #include "game_client.cpp"
+#include "menu.cpp"
 #include "todo.cpp"

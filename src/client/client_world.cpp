@@ -175,9 +175,10 @@ void ClientWorld::UpdateLocalPlayer(GameClient &client, data::Entity &entity, da
         latestSnapInputSeq = latestSnapshot.last_processed_input_cmd;
     }
 
-#if CL_CLIENT_SIDE_PREDICT
     double cmdAccumDt{};
     Vector3 cmdAccumForce{};
+
+#if CL_CLIENT_SIDE_PREDICT
     data::Tilemap *map = FindOrLoadMap(entity.map_id);
     if (map) {
         // Apply unacked input
