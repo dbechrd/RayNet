@@ -15,6 +15,7 @@ namespace data {
         gen(DAT_TYP_GFX_FRAME, "GFXFRAME") \
         gen(DAT_TYP_GFX_ANIM,  "GFXANIM ") \
         gen(DAT_TYP_MATERIAL,  "MATERIAL") \
+        gen(DAT_TYP_OBJECT,    "OBJECT  ") \
         gen(DAT_TYP_SPRITE,    "SPRITE  ") \
         gen(DAT_TYP_TILE_DEF,  "TILEDEF ") \
                                            \
@@ -98,19 +99,6 @@ namespace data {
         std::vector<::Sound> instances      {};  // "SoundAlias" in raylib, shares buffer, replaces PlaySoundMulti API
     };
 
-    typedef uint32_t MaterialFlags;
-    enum {
-        MATERIAL_FLAG_WALK = 0x01,
-        MATERIAL_FLAG_SWIM = 0x02,
-    };
-
-    struct Material {
-        static const DataType dtype = DAT_TYP_MATERIAL;
-        std::string   id             {};
-        std::string   footstep_sound {};
-        MaterialFlags flags          {};
-    };
-
     struct GfxFrame {
         static const DataType dtype = DAT_TYP_GFX_FRAME;
         std::string id  {};
@@ -138,6 +126,37 @@ namespace data {
         double  accum {};  // time since last update
     };
 
+    typedef uint32_t MaterialFlags;
+    enum {
+        MATERIAL_FLAG_WALK = 0x01,
+        MATERIAL_FLAG_SWIM = 0x02,
+    };
+
+    struct Material {
+        static const DataType dtype = DAT_TYP_MATERIAL;
+        std::string   id             {};
+        std::string   footstep_sound {};
+        MaterialFlags flags          {};
+    };
+
+    struct Object {
+        static const DataType dtype = DAT_TYP_OBJECT;
+        std::string id        {};
+        std::string type      {};
+        std::string animation {};
+
+        // type == "lootable"
+        std::string loot_table_id {};
+
+        // type == "warp"
+        std::string warp_map_id   {};
+        Vector3     warp_dest_pos {};
+
+        //------------------------
+        // Not serialized
+        GfxAnimState anim_state {};
+    };
+
     //apparition
     //phantom
     //shade
@@ -156,8 +175,6 @@ namespace data {
         std::string anims[8] {};  // for each direction
     };
 
-    ////////////////////////////////////////////////////////////////////////////
-
     struct TileDef {
         static const DataType dtype = DAT_TYP_TILE_DEF;
         std::string id             {};
@@ -170,6 +187,8 @@ namespace data {
         Color        color      {};  // color for minimap/wang tile editor (top left pixel of tile)
         GfxAnimState anim_state {};
     };
+
+    ////////////////////////////////////////////////////////////////////////////
 
     struct AiPathNode {
         Vector3 pos;
@@ -238,14 +257,20 @@ namespace data {
         bool WorldToTileIndex(uint32_t world_x, uint32_t world_y, Coord &coord);
         bool AtWorld(uint32_t world_x, uint32_t world_y, Tile &tile);
 
+        // Objects
+        uint8_t ObjectAt(uint32_t x, uint32_t y);
+
         void Set(uint32_t x, uint32_t y, Tile tile, double now);
         void SetFromWangMap(WangMap &wangMap, double now);
         void Fill(uint32_t x, uint32_t y, int tileDefId, double now);
 
-        const GfxFrame &GetTileGfxFrame(Tile tile);
         TileDef &GetTileDef(Tile tile);
+        const GfxFrame &GetTileGfxFrame(Tile tile);
         Rectangle TileDefRect(Tile tile);
         Color TileDefAvgColor(Tile tile);
+
+        Object &GetObject(uint8_t object_idx);
+        const GfxFrame &GetObjectGfxFrame(uint8_t object_idx);
 
         AiPath *GetPath(uint32_t pathId);
         uint32_t GetNextPathNodeIndex(uint32_t pathId, uint32_t pathNodeIndex);
@@ -255,6 +280,7 @@ namespace data {
         void ResolveEntityTerrainCollisions(uint32_t entityId);
 
         void DrawTile(Tile tile, Vector2 position);
+        void DrawObject(uint8_t object_idx, Vector2 position);
         void Draw(Camera2D &camera);
         void DrawColliders(Camera2D &camera);
         void DrawTileIds(Camera2D &camera);
@@ -333,9 +359,11 @@ namespace data {
         double      ambient_fx_delay_max {};
 
         //// Collision ////
-        float radius    {};  // collision
-        bool  colliding {};  // not sync'd, local flag for debugging colliders
-        bool  on_warp   {};  // currently colliding with a warp (used to prevent ping-ponging)
+        float radius      {};  // collision
+        bool  colliding   {};  // not sync'd, local flag for debugging colliders
+        bool  on_warp     {};  // [deprecated] currently colliding with a warp (used to prevent ping-ponging)
+        std::string on_warp_id       {};  // id of first detected warp we're standing on
+        bool        on_warp_cooldown {};  // true when we've already warped but have not stepped off all warps yet (to prevent ping-ponging)
 
         //// Combat ////
         double last_attacked_at {};
@@ -479,6 +507,7 @@ namespace data {
         std::vector<GfxFrame> gfx_frames {};
         std::vector<GfxAnim>  gfx_anims  {};
         std::vector<Material> materials  {};
+        std::vector<Object>   objects    {};
         std::vector<Sprite>   sprites    {};
         std::vector<TileDef>  tile_defs  {};
 
@@ -507,6 +536,7 @@ namespace data {
         std::unordered_map<std::string, size_t> gfx_frame_by_id{};
         std::unordered_map<std::string, size_t> gfx_anim_by_id{};
         std::unordered_map<std::string, size_t> material_by_id{};
+        std::unordered_map<std::string, size_t> object_by_id{};
         std::unordered_map<std::string, size_t> sprite_by_id{};
         std::unordered_map<std::string, size_t> tile_def_by_id{};
         std::unordered_map<std::string, size_t> tile_map_by_id{};  // TODO: Integer ids to reduce network bandwidth
@@ -598,6 +628,16 @@ namespace data {
             } else {
                 //TraceLog(LOG_WARNING, "Missing material: %s", id.c_str());
                 return materials[0];
+            }
+        }
+
+        Object &FindObject(std::string id) {
+            const auto &entry = object_by_id.find(id);
+            if (entry != object_by_id.end()) {
+                return objects[entry->second];
+            } else {
+                //TraceLog(LOG_WARNING, "Missing object: %s", id.c_str());
+                return objects[0];
             }
         }
 

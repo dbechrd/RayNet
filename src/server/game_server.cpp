@@ -952,20 +952,21 @@ void GameServer::TickEntityProjectile(uint32_t entityId, double dt)
         }
     }
 }
-void GameServer::WarpEntity(data::Tilemap &map, uint32_t entityId, data::Entity &warp)
+void GameServer::WarpEntity(uint32_t entityId, std::string dest_map_id, Vector3 dest_pos)
 {
     assert(entityId);
+    assert(!dest_map_id.empty());
 
     data::Entity *victim = entityDb->FindEntity(entityId);
     if (!victim) return;
 
-    if (warp.warp_dest_map.size()) {
+    if (!dest_map_id.empty()) {
         // TODO: We need to move our victim to the new map
-        data::Tilemap *map = FindOrLoadMap(warp.warp_dest_map);
-        if (map) {
+        data::Tilemap *dest_map = FindOrLoadMap(dest_map_id);
+        if (dest_map) {
             // TODO: Move victim to other map?
-            victim->map_id = map->id;
-            victim->position = warp.warp_dest_pos;
+            victim->map_id = dest_map->id;
+            victim->position = dest_pos;
             victim->force_accum = {};
             victim->velocity = {};
         } else {
@@ -1020,17 +1021,28 @@ void GameServer::TickResolveEntityWarpCollisions(data::Tilemap &map, uint32_t en
     if (!victim) {
         return;
     }
+    if (victim->on_warp_id.empty()) {
+        return;
+    }
+    if (victim->on_warp_cooldown) {
+        return;
+    }
     if (victim->type != data::ENTITY_PLAYER) {
         return;
     }
-    if (!victim->radius) {
-        return;
-    }
+
+    data::Object &object = data::packs[0]->FindObject(victim->on_warp_id);
+    assert(object.type == "warp");
+    WarpEntity(victim->id, object.warp_map_id, object.warp_dest_pos);
+    victim->on_warp_cooldown = true;
+
+#if 0
     if (victim->on_warp) {
         // De-bounce warps. Only allow warping after victim has moved off any warps
         // they may have just used to get here.
         return;
     }
+    victim->on_warp = false;
 
     for (data::Entity &entity : entityDb->entities) {
         // TODO: Make a better way to find matching entities, e.g. FindEntity(map_id, type, alive)
@@ -1046,10 +1058,11 @@ void GameServer::TickResolveEntityWarpCollisions(data::Tilemap &map, uint32_t en
         const bool on_warp = dlb_CheckCollisionCircleRec(victim->ScreenPos(), victim->radius, warp.warp_collider, 0);
         if (on_warp) {
             victim->on_warp = true;
-            WarpEntity(map, entityId, warp);
+            WarpEntity(victim->id, warp.warp_dest_map, warp.warp_dest_pos);
             break;
         }
     }
+#endif
 }
 void GameServer::Tick(void)
 {

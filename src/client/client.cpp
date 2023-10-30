@@ -9,8 +9,10 @@
 #include "menu.h"
 #include "todo.h"
 
-void update_camera(Camera2D &camera, data::Tilemap *map, Vector2 target, float frameDt)
+void update_camera(Camera2D &camera, data::Tilemap &map, data::Entity &target, float frameDt)
 {
+    Vector2 targetPos = target.ScreenPos();
+
     camera.offset = {
         /*floorf(*/GetRenderWidth ()/2.0f/*)*/,
         /*floorf(*/GetRenderHeight()/2.0f/*)*/
@@ -21,8 +23,8 @@ void update_camera(Camera2D &camera, data::Tilemap *map, Vector2 target, float f
         // https://www.gamedeveloper.com/programming/improved-lerp-smoothing-
         const float halfLife = 8.0f;
         float alpha = 1.0f - exp2f(-halfLife * frameDt);
-        camera.target.x = LERP(camera.target.x, target.x, alpha);
-        camera.target.y = LERP(camera.target.y, target.y, alpha);
+        camera.target.x = LERP(camera.target.x, targetPos.x, alpha);
+        camera.target.y = LERP(camera.target.y, targetPos.y, alpha);
 
 #else
         camera.target.x = target.x;
@@ -30,10 +32,21 @@ void update_camera(Camera2D &camera, data::Tilemap *map, Vector2 target, float f
 #endif
     }
 
-    if (map) {
-        Vector2 mapSize = { (float)map->width * TILE_W, map->height * (float)TILE_W };
-        camera.target.x = CLAMP(camera.target.x, camera.offset.x / camera.zoom, mapSize.x - camera.offset.x / camera.zoom);
-        camera.target.y = CLAMP(camera.target.y, camera.offset.y / camera.zoom, mapSize.y - camera.offset.y / camera.zoom);
+    // Some maps are too small for this to work.. so I just disabled it for now
+    //if (map) {
+        //Vector2 mapSize = { (float)map->width * TILE_W, map->height * (float)TILE_W };
+        //camera.target.x = CLAMP(camera.target.x, camera.offset.x / camera.zoom, mapSize.x - camera.offset.x / camera.zoom);
+        //camera.target.y = CLAMP(camera.target.y, camera.offset.y / camera.zoom, mapSize.y - camera.offset.y / camera.zoom);
+    //}
+
+    // Snap camera when new entity target, or target entity changes maps
+    static uint32_t last_target_id = 0;
+    static std::string last_target_map = "";
+    if (target.id != last_target_id || target.map_id != last_target_map) {
+        camera.target.x = targetPos.x;
+        camera.target.y = targetPos.y;
+        last_target_id = target.id;
+        last_target_map = target.map_id;
     }
 
     // Zoom based on mouse wheel
@@ -41,7 +54,7 @@ void update_camera(Camera2D &camera, data::Tilemap *map, Vector2 target, float f
     float wheel = io.MouseWheelMove();
     if (wheel != 0) {
         // Get the world point that is under the mouse
-        Vector2 mouseWorldPos = GetScreenToWorld2D(GetMousePosition(), camera );
+        Vector2 mouseWorldPos = GetScreenToWorld2D(GetMousePosition(), camera);
 
         // Zoom increment
         const float zoomIncrement = 0.1f;
@@ -428,6 +441,11 @@ int main(int argc, char *argv[])
             // TODO: fpsHistogram.update() which checks input and calls TogglePause?
             Histogram::paused = !Histogram::paused;
         }
+        if (io.KeyPressed(KEY_F)) {
+            client->fadeDirection = -1;
+            client->fadeDuration = SV_WARP_FADE_DURATION;
+            client->fadeValue = 1;
+        }
 
         //--------------------
         // Accmulate input every frame
@@ -507,9 +525,22 @@ int main(int argc, char *argv[])
                 // Update world
                 client->world->Update(*client);
                 // Update camera
-                update_camera(client->world->camera2d, client->world->LocalPlayerMap(),
-                    localPlayer->ScreenPos(), client->frameDt);
+                update_camera(client->world->camera2d, *client->world->LocalPlayerMap(),
+                    *localPlayer, client->frameDt);
             }
+        }
+
+        if (client->fadeDuration) {
+            client->fadeValue += (1.0f / (client->fadeDuration * 0.5f)) * client->fadeDirection * client->frameDt;
+            if (client->fadeDirection < 0 && client->fadeValue < 0) {
+                client->fadeDirection = 1;
+                client->fadeValue = 0;
+            } else if (client->fadeDirection > 0 && client->fadeValue > 1) {
+                client->fadeDirection = 0;
+                client->fadeDuration = 0;
+                client->fadeValue = 0;
+            }
+            printf("now = %f, fadeAccum = %f\n", client->now, client->fadeValue);
         }
 
         if (client->yj_client->IsDisconnected()) {
@@ -529,8 +560,15 @@ int main(int argc, char *argv[])
                 draw_game(*client);
             }
 
+            if (client->fadeDuration) {
+                DrawRectangle(0, 0, GetRenderWidth(), GetRenderHeight(), Fade(BLACK, 1.0f - client->fadeValue));
+            }
+
             bool back = false;
             client->menu.Draw(*client, back);
+            if (client->menu.id == Menu::MENU_MAIN && back) {
+                quit = true;
+            }
 
             if (client->showF3Menu) {
                 draw_f3_menu(*client);

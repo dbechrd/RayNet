@@ -116,10 +116,10 @@ void Editor::DrawGroundOverlay_Tiles(Camera2D &camera, double now)
         Tile hoveredTile{};
         auto &map = data::packs[0]->FindTilemap(map_id);
 
-        if (map.AtWorld((int32_t)cursorWorldPos.x, (int32_t)cursorWorldPos.y, hoveredTile)) {
-            data::Tilemap::Coord coord{};
-            bool validCoord = map.WorldToTileIndex(cursorWorldPos.x, cursorWorldPos.y, coord);
-            assert(validCoord);  // should always be true when hoveredTile != null
+        data::Tilemap::Coord coord{};
+        bool validCoord = map.WorldToTileIndex(cursorWorldPos.x, cursorWorldPos.y, coord);
+        if (validCoord) {
+            hoveredTile = map.At(coord.x, coord.y);
 
             if (editorPlaceTile) {
                 map.Set(coord.x, coord.y, cursorTile, now);

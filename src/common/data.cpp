@@ -448,6 +448,25 @@ namespace data {
                     META_CHILDREN_END;
 
                     pack.materials.push_back(material);
+                 } else if (MD_NodeHasTag(node, MD_S8Lit("Object"), 0)) {
+                    Object object{};
+
+                    META_ID(object.id);
+                    META_CHILDREN_BEGIN;
+                        META_IDENT(object.type);
+                        if (object.type == "lootable") {
+                            META_IDENT(object.animation);
+                            META_IDENT(object.loot_table_id);
+                        } else if (object.type == "warp") {
+                            META_IDENT(object.animation);
+                            META_IDENT(object.warp_map_id);
+                            META_FLOAT(object.warp_dest_pos.x);
+                            META_FLOAT(object.warp_dest_pos.y);
+                            META_FLOAT(object.warp_dest_pos.z);
+                        }
+                    META_CHILDREN_END;
+
+                    pack.objects.push_back(object);
                 } else if (MD_NodeHasTag(node, MD_S8Lit("Sprite"), 0)) {
                     Sprite sprite{};
 
@@ -563,6 +582,7 @@ namespace data {
         MD_ArenaRelease(arena);
     }
 
+#if 0
     void PackDebugPrint(Pack &pack)
     {
         printf("\n--- %s ---\n", pack.path.c_str());
@@ -615,6 +635,7 @@ namespace data {
             );
         }
     }
+#endif
 
     void CompressFile(const char *src, const char *dst)
     {
@@ -645,6 +666,7 @@ namespace data {
 #if DEV_BUILD_PACK_FILE
         Pack packHardcoded{ "pack/pack1.dat" };
         PackAddMeta(packHardcoded, "resources/map/map_overworld.mdesk");
+        PackAddMeta(packHardcoded, "resources/map/map_cave.mdesk");
         PackAddMeta(packHardcoded, "resources/meta/overworld.mdesk");
         //PackDebugPrint(packHardcoded);
 
@@ -675,7 +697,7 @@ namespace data {
         }
 #endif
 
-#if 1
+#if 0
         CompressFile("pack/pack1.dat", "pack/pack1.smol");
 #endif
 
@@ -849,6 +871,22 @@ namespace data {
             stream.pack->material_by_id[material.id] = index;
         }
     }
+    void Process(PackStream &stream, Object &object, int index) {
+        PROC(object.id);
+        PROC(object.type);
+        PROC(object.animation);
+
+        if (object.type == "lootable") {
+            PROC(object.loot_table_id);
+        } else if (object.type == "warp") {
+            PROC(object.warp_map_id);
+            PROC(object.warp_dest_pos);
+        }
+
+        if (stream.mode == PACK_MODE_READ) {
+            stream.pack->object_by_id[object.id] = index;
+        }
+    }
     void Process(PackStream &stream, Sprite &sprite, int index) {
         PROC(sprite.id);
         assert(ARRAY_SIZE(sprite.anims) == 8); // if this changes, version must increment
@@ -860,7 +898,6 @@ namespace data {
             stream.pack->sprite_by_id[sprite.id] = index;
         }
     }
-
     void Process(PackStream &stream, TileDef &tile_def, int index) {
         PROC(tile_def.id);
         PROC(tile_def.anim);
@@ -1111,6 +1148,7 @@ namespace data {
             WRITE_ARRAY(pack.gfx_frames);
             WRITE_ARRAY(pack.gfx_anims);
             WRITE_ARRAY(pack.materials);
+            WRITE_ARRAY(pack.objects);
             WRITE_ARRAY(pack.sprites);
             WRITE_ARRAY(pack.tile_defs);
             WRITE_ARRAY(pack.tile_maps);
@@ -1147,6 +1185,7 @@ namespace data {
             pack.gfx_frames.resize((size_t)1 + typeCounts[DAT_TYP_GFX_FRAME]);
             pack.gfx_anims .resize((size_t)1 + typeCounts[DAT_TYP_GFX_ANIM]);
             pack.materials .resize((size_t)1 + typeCounts[DAT_TYP_MATERIAL]);
+            pack.objects   .resize((size_t)1 + typeCounts[DAT_TYP_OBJECT]);
             pack.sprites   .resize((size_t)1 + typeCounts[DAT_TYP_SPRITE]);
             pack.tile_defs .resize((size_t)1 + typeCounts[DAT_TYP_TILE_DEF]);
             pack.tile_maps .resize((size_t)1 + typeCounts[DAT_TYP_TILE_MAP]);
@@ -1169,6 +1208,7 @@ namespace data {
                     case DAT_TYP_GFX_FRAME: Process(stream, pack.gfx_frames[index], index); break;
                     case DAT_TYP_GFX_ANIM:  Process(stream, pack.gfx_anims [index], index); break;
                     case DAT_TYP_MATERIAL:  Process(stream, pack.materials [index], index); break;
+                    case DAT_TYP_OBJECT:    Process(stream, pack.objects   [index], index); break;
                     case DAT_TYP_SPRITE:    Process(stream, pack.sprites   [index], index); break;
                     case DAT_TYP_TILE_DEF:  Process(stream, pack.tile_defs [index], index); break;
                     case DAT_TYP_TILE_MAP:  Process(stream, pack.tile_maps [index], index); break;

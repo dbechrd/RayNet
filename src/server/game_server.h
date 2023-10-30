@@ -127,7 +127,7 @@ private:
     void TickEntityNPC(uint32_t entityIndex, double dt);
     void TickEntityPlayer(uint32_t entityIndex, double dt);
     void TickEntityProjectile(uint32_t entityIndex, double dt);
-    void WarpEntity(data::Tilemap &map, uint32_t entityId, data::Entity &warp);
+    void WarpEntity(uint32_t entityId, std::string dest_map_id, Vector3 dest_pos);
     void TickResolveEntityWarpCollisions(data::Tilemap &map, uint32_t entityId, double now);
     void Tick(void);
     void SerializeSnapshot(uint32_t entityId, Msg_S_EntitySnapshot &entitySnapshot);

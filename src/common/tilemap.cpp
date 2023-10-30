@@ -61,6 +61,12 @@ bool data::Tilemap::AtWorld(uint32_t world_x, uint32_t world_y, Tile &tile)
     }
     return false;
 }
+uint8_t data::Tilemap::ObjectAt(uint32_t x, uint32_t y)
+{
+    assert(x < width);
+    assert(y < height);
+    return objects[(size_t)y * width + x];
+}
 
 void data::Tilemap::Set(uint32_t x, uint32_t y, Tile tile, double now)
 {
@@ -139,13 +145,6 @@ void data::Tilemap::Fill(uint32_t x, uint32_t y, int tileDefId, double now)
     }
 }
 
-const data::GfxFrame &data::Tilemap::GetTileGfxFrame(Tile tile)
-{
-    const data::TileDef &tile_def = GetTileDef(tile);
-    const data::GfxAnim &gfx_anim = data::packs[0]->FindGraphicAnim(tile_def.anim);
-    const data::GfxFrame &gfx_frame = data::packs[0]->FindGraphicFrame(gfx_anim.frames[tile_def.anim_state.frame]);
-    return gfx_frame;
-}
 data::TileDef &data::Tilemap::GetTileDef(Tile tile)
 {
     if (tile >= tileDefs.size()) {
@@ -153,6 +152,13 @@ data::TileDef &data::Tilemap::GetTileDef(Tile tile)
     }
     data::TileDef &tile_def = data::packs[0]->FindTileDef(tileDefs[tile]);
     return tile_def;
+}
+const data::GfxFrame &data::Tilemap::GetTileGfxFrame(Tile tile)
+{
+    const data::TileDef &tile_def = GetTileDef(tile);
+    const data::GfxAnim &gfx_anim = data::packs[0]->FindGraphicAnim(tile_def.anim);
+    const data::GfxFrame &gfx_frame = data::packs[0]->FindGraphicFrame(gfx_anim.frames[tile_def.anim_state.frame]);
+    return gfx_frame;
 }
 Rectangle data::Tilemap::TileDefRect(Tile tile)
 {
@@ -164,6 +170,22 @@ Color data::Tilemap::TileDefAvgColor(Tile tile)
 {
     const data::TileDef &tile_def = GetTileDef(tile);
     return tile_def.color;
+}
+
+data::Object &data::Tilemap::GetObject(uint8_t object_idx)
+{
+    if (object_idx >= objectDefs.size()) {
+        object_idx = 0;
+    }
+    data::Object &object = data::packs[0]->FindObject(objectDefs[object_idx]);
+    return object;
+}
+const data::GfxFrame &data::Tilemap::GetObjectGfxFrame(uint8_t object_idx)
+{
+    const data::Object &object = GetObject(object_idx);
+    const data::GfxAnim &gfx_anim = data::packs[0]->FindGraphicAnim(object.animation);
+    const data::GfxFrame &gfx_frame = data::packs[0]->FindGraphicFrame(gfx_anim.frames[object.anim_state.frame]);
+    return gfx_frame;
 }
 
 data::AiPath *data::Tilemap::GetPath(uint32_t pathId) {
@@ -209,33 +231,59 @@ void data::Tilemap::ResolveEntityTerrainCollisions(data::Entity &entity)
     int xMin = CLAMP(floorf(topLeft.x / TILE_W) - 1, 0, width);
     int xMax = CLAMP(ceilf(bottomRight.x / TILE_W) + 1, 0, width);
 
-    for (int iters = 0; iters < 1; iters++) {
-        for (int y = yMin; y < yMax; y++) {
-            for (int x = xMin; x < xMax; x++) {
-                Tile tile{};
-                if (AtTry(x, y, tile)) {
-                    const data::TileDef &tileDef = GetTileDef(tile);
-                    const data::Material &material = data::packs[0]->FindMaterial(tileDef.material);
-                    if (!material.flags) {
-                        Rectangle tileRect{};
-                        Vector2 tilePos = { (float)x * TILE_W, (float)y * TILE_W };
-                        tileRect.x = tilePos.x;
-                        tileRect.y = tilePos.y;
-                        tileRect.width = TILE_W;
-                        tileRect.height = TILE_W;
-                        Manifold manifold{};
-                        if (dlb_CheckCollisionCircleRec(entity.ScreenPos(), entity.radius, tileRect, &manifold)) {
-                            const Vector2 resolve = Vector2Scale(manifold.normal, manifold.depth);
-                            entity.position.x += resolve.x;
-                            entity.position.y += resolve.y;
-                            if (resolve.x) entity.velocity.x *= 0.5f;
-                            if (resolve.y) entity.velocity.y *= 0.5f;
-                            entity.colliding = true;
-                        }
+    for (int y = yMin; y < yMax; y++) {
+        for (int x = xMin; x < xMax; x++) {
+            const Tile tile = At(x, y);
+            const data::TileDef &tileDef = GetTileDef(tile);
+            const data::Material &material = data::packs[0]->FindMaterial(tileDef.material);
+
+            if (!material.flags) {
+                Rectangle tileRect{};
+                Vector2 tilePos = { (float)x * TILE_W, (float)y * TILE_W };
+                tileRect.x = tilePos.x;
+                tileRect.y = tilePos.y;
+                tileRect.width = TILE_W;
+                tileRect.height = TILE_W;
+
+                Manifold manifold{};
+                if (dlb_CheckCollisionCircleRec(entity.ScreenPos(), entity.radius, tileRect, &manifold)) {
+                    const Vector2 resolve = Vector2Scale(manifold.normal, manifold.depth);
+                    entity.position.x += resolve.x;
+                    entity.position.y += resolve.y;
+                    if (resolve.x) entity.velocity.x *= 0.5f;
+                    if (resolve.y) entity.velocity.y *= 0.5f;
+                    entity.colliding = true;
+                }
+            }
+        }
+    }
+
+    if (entity.type == data::ENTITY_PLAYER) {
+        assert(entity.radius);
+
+        entity.on_warp_id = "";
+        for (int y = yMin; y < yMax && entity.on_warp_id.empty(); y++) {
+            for (int x = xMin; x < xMax && entity.on_warp_id.empty(); x++) {
+                const uint8_t object_idx = ObjectAt(x, y);
+                const data::Object &object = GetObject(object_idx);
+                if (object.type == "warp") {
+                    Rectangle tileRect{};
+                    Vector2 tilePos = { (float)x * TILE_W, (float)y * TILE_W };
+                    tileRect.x = tilePos.x;
+                    tileRect.y = tilePos.y;
+                    tileRect.width = TILE_W;
+                    tileRect.height = TILE_W;
+
+                    if (dlb_CheckCollisionCircleRec(entity.ScreenPos(), entity.radius, tileRect, 0)) {
+                        entity.on_warp_id = object.id;
                     }
                 }
             }
         }
+    }
+
+    if (entity.on_warp_id.empty()) {
+        entity.on_warp_cooldown = false;
     }
 }
 void data::Tilemap::ResolveEntityTerrainCollisions(uint32_t entityId)
@@ -254,12 +302,17 @@ void data::Tilemap::DrawTile(Tile tile, Vector2 position)
     // TODO: Yikes.. that's a lot of lookups in a tight loop. Memoize some pointers or something man.
     const data::GfxFrame &gfx_frame = GetTileGfxFrame(tile);
     const GfxFile &gfx_file = data::packs[0]->FindGraphic(gfx_frame.gfx);
-    const Rectangle texRect = TileDefRect(tile);
+    const Rectangle texRect{ (float)gfx_frame.x, (float)gfx_frame.y, (float)gfx_frame.w, (float)gfx_frame.h };
 
-    //position.x = floorf(position.x);
-    //position.y = floorf(position.y);
-    if (position.x != floorf(position.x)) assert(!"floating x");
-    if (position.y != floorf(position.y)) assert(!"floating y");
+    dlb_DrawTextureRec(gfx_file.texture, texRect, position, WHITE);
+}
+void data::Tilemap::DrawObject(uint8_t object_idx, Vector2 position)
+{
+    // TODO: This is the same as DrawTile essentially, can we de-dupe somehow?
+    const data::GfxFrame &gfx_frame = GetObjectGfxFrame(object_idx);
+    const GfxFile &gfx_file = data::packs[0]->FindGraphic(gfx_frame.gfx);
+    const Rectangle texRect{ (float)gfx_frame.x, (float)gfx_frame.y, (float)gfx_frame.w, (float)gfx_frame.h };
+
     dlb_DrawTextureRec(gfx_file.texture, texRect, position, WHITE);
 }
 void data::Tilemap::Draw(Camera2D &camera)
@@ -274,6 +327,15 @@ void data::Tilemap::Draw(Camera2D &camera)
         for (int x = xMin; x < xMax; x++) {
             Tile tile = At(x, y);
             DrawTile(tile, { (float)x * TILE_W, (float)y * TILE_W });
+        }
+    }
+
+    for (int y = yMin; y < yMax; y++) {
+        for (int x = xMin; x < xMax; x++) {
+            uint8_t object = ObjectAt(x, y);
+            if (object) {
+                DrawObject(object, { (float)x * TILE_W, (float)y * TILE_W });
+            }
         }
     }
 }

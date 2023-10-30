@@ -21,7 +21,7 @@ void Menu::Draw(GameClient &client, bool &back)
     }
 }
 
-void Menu::DrawMenuMain(GameClient &client, bool &quit)
+void Menu::DrawMenuMain(GameClient &client, bool &back)
 {
     Vector2 uiPosition{ floorf(GetRenderWidth() / 2.0f), floorf(GetRenderHeight() / 2.0f) };
     uiPosition.y -= 50;
@@ -59,7 +59,7 @@ void Menu::DrawMenuMain(GameClient &client, bool &quit)
     uiMenu.Newline();
     UIState quitButton = uiMenu.Button("Quit");
     if (quitButton.released) {
-        quit = true;
+        back = true;
     }
 
     // Draw font atlas for SDF font

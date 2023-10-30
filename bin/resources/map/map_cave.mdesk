@@ -1,0 +1,34 @@
+@Tilemap map_cave: {
+    version: 8
+    width: 8
+    height: 8
+    tile_defs: [
+        til_void
+        til_stone_path
+        til_water_dark
+    ]
+    object_defs: [
+        obj_void
+        wrp_cave_to_overworld
+    ]
+    tiles: [
+          1  1  1  1  1  1  1  1
+          1  1  1  1  2  1  1  1
+          1  1  1  2  2  2  1  1
+          1  1  1  2  2  2  2  1
+          1  1  1  1  2  2  1  1
+          1  1  1  1  1  1  1  1
+          1  1  1  1  1  1  1  1
+          1  1  1  1  1  1  1  1
+    ]
+    objects: [
+          0  0  0  0  0  0  0  0
+          0  0  0  0  0  0  0  0
+          0  0  0  0  0  0  0  0
+          0  0  0  0  0  0  0  0
+          0  0  0  0  0  0  0  0
+          0  0  0  0  0  0  0  0
+          0  0  0  0  0  0  0  0
+          0  0  1  0  0  0  0  0
+    ]
+}

@@ -245,5 +245,13 @@ void EntityDB::DrawEntity(uint32_t entityId)
     if (entity) {
         const Rectangle rect = data::GetSpriteRect(*entity);
         data::DrawSprite(*entity);
+        if (entity->type == data::ENTITY_PLAYER) {
+            DrawTextShadowEx(
+                fntSmall,
+                TextFormat("%s (%s)", entity->on_warp_id.c_str(), entity->on_warp_cooldown ? "cooldown" : "ready"),
+                entity->ScreenPos(),
+                WHITE
+            );
+        }
     }
 }

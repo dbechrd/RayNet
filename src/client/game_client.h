@@ -20,6 +20,10 @@ struct GameClient {
     double frameDtSmooth = 60;
     double animAccum = 0;
 
+    double fadeDirection = 0;
+    double fadeDuration = 0;
+    double fadeValue = 0;
+
     Menu menu{};
 
     bool showF3Menu = false;

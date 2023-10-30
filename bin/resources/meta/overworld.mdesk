@@ -119,6 +119,12 @@
 @GfxAnim gfx_anim_til_stone_wall_bc : null          60       1         0         gfx_frame_til_stone_wall_bc
 @GfxAnim gfx_anim_til_stone_wall_br : null          60       1         0         gfx_frame_til_stone_wall_br
 
+//         id                 rolls items
+@LootTable loot_basic     : { 5     [{ null 0.2 }{ item_sword     0.2 }{ item_axe     0.1 }] }
+@LootTable loot_uncommon  : { 4     [{ null 0.3 }{ item_ruby      0.2 }{ item_saphire 0.1 }] }
+@LootTable loot_rare      : { 3     [{ null 0.4 }{ item_gold      0.2 }{ item_diamond 0.1 }] }
+@LootTable loot_legendary : { 2     [{ null 0.5 }{ item_excalibur 0.2 }{ item_hamaxe  0.1 }] }
+
 //        id               footstep_sound      flag_walk  flag_swim
 @Material mat_stone_path : sfx_footstep_stone  1          0
 @Material mat_water      : sfx_footstep_grass  0          1
@@ -126,21 +132,16 @@
 @Material mat_stone_wall : null                0          0
 @Material mat_tiny_tree  : null                0          0
 
-//         id                 rolls items
-@LootTable loot_basic     : { 5     [{ null 0.2 }{ item_sword     0.2 }{ item_axe     0.1 }] }
-@LootTable loot_uncommon  : { 4     [{ null 0.3 }{ item_ruby      0.2 }{ item_saphire 0.1 }] }
-@LootTable loot_rare      : { 3     [{ null 0.4 }{ item_gold      0.2 }{ item_diamond 0.1 }] }
-@LootTable loot_legendary : { 2     [{ null 0.5 }{ item_excalibur 0.2 }{ item_hamaxe  0.1 }] }
-
-//      id                    type
-@Object obj_void            : null
-//                                      loot_table
-@Object obj_chest_basic     : container loot_basic
-@Object obj_chest_uncommon  : container loot_uncommon
-@Object obj_chest_rare      : container loot_rate
-@Object obj_chest_legendary : container loot_legendary
-//                                      dest_map_id dest_pos
-@Object wrp_to_cave         : { warp    map_cave    { 100 200 } }
+//      id                      type
+@Object obj_void              : null
+//                              type     animation              loot_table
+@Object obj_chest_basic       : lootable null                   loot_basic
+@Object obj_chest_uncommon    : lootable null                   loot_uncommon
+@Object obj_chest_rare        : lootable null                   loot_rate
+@Object obj_chest_legendary   : lootable null                   loot_legendary
+//                              type     animation                dest_map_id   dest_x dest_y dest_z
+@Object wrp_overworld_to_cave : warp     gfx_anim_til_grass_weeds map_cave      160    480    0
+@Object wrp_cave_to_overworld : warp     gfx_anim_til_grass_weeds map_overworld 3300   800    0
 
 //      id                    anim_n                anim_e                 anim_s anim_w                 anim_ne anim_se anim_sw anim_nw
 @Sprite sprite_chr_mage     : null                  gfx_anim_chr_mage_e    null   gfx_anim_chr_mage_w    null    null    null    null
