@@ -85,10 +85,10 @@ struct GameServer {
 
     uint32_t GetPlayerEntityId(uint32_t clientIdx);
 
-    data::Tilemap *FindOrLoadMap(std::string map_id);
+    data::Tilemap *FindOrLoadMap(const std::string &map_id);
     Err Start(void);
 
-    data::Tilemap *FindMap(std::string map_id);
+    data::Tilemap *FindMap(const std::string &map_id);
 
     data::Entity *SpawnEntity(data::EntityType type);
     void DespawnEntity(uint32_t entityId);
@@ -111,8 +111,8 @@ private:
 
     void SendEntityDespawnTest(int clientIdx, uint32_t testId);
 
-    void SendEntitySay(int clientIdx, uint32_t entityId, uint32_t dialogId, std::string message);
-    void BroadcastEntitySay(uint32_t entityId, std::string message);
+    void SendEntitySay(int clientIdx, uint32_t entityId, uint32_t dialogId, const std::string &message);
+    void BroadcastEntitySay(uint32_t entityId, const std::string &message);
 
     void SendTileChunk(int clientIdx, data::Tilemap &map, uint32_t x, uint32_t y);
     void BroadcastTileChunk(data::Tilemap &map, uint32_t x, uint32_t y);
@@ -120,14 +120,14 @@ private:
     // All part of Update()
     void RequestDialog(int clientIdx, data::Entity &entity, Dialog &dialog);
     void ProcessMessages(void);
-    data::Entity *SpawnProjectile(std::string map_id, Vector3 position, Vector2 direction, Vector3 initial_velocity);
+    data::Entity *SpawnProjectile(const std::string &map_id, Vector3 position, Vector2 direction, Vector3 initial_velocity);
     void UpdateServerPlayers(void);
-    void TickSpawnTownNPCs(std::string map_id);
-    void TickSpawnCaveNPCs(std::string map_id);
+    void TickSpawnTownNPCs(const std::string &map_id);
+    void TickSpawnCaveNPCs(const std::string &map_id);
     void TickEntityNPC(uint32_t entityIndex, double dt);
     void TickEntityPlayer(uint32_t entityIndex, double dt);
     void TickEntityProjectile(uint32_t entityIndex, double dt);
-    void WarpEntity(uint32_t entityId, std::string dest_map_id, Vector3 dest_pos);
+    void WarpEntity(uint32_t entityId, const std::string &dest_map_id, Vector3 dest_pos);
     void TickResolveEntityWarpCollisions(data::Tilemap &map, uint32_t entityId, double now);
     void Tick(void);
     void SerializeSnapshot(uint32_t entityId, Msg_S_EntitySnapshot &entitySnapshot);

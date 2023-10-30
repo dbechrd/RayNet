@@ -108,7 +108,7 @@ void GameClient::SendEntityInteractDialogOption(data::Entity &entity, uint32_t o
 }
 
 
-void GameClient::SendTileInteract(std::string map_id, uint32_t x, uint32_t y)
+void GameClient::SendTileInteract(const std::string &map_id, uint32_t x, uint32_t y)
 {
     if (yj_client->CanSendMessage(MSG_C_TILE_INTERACT)) {
         Msg_C_TileInteract *msg = (Msg_C_TileInteract *)yj_client->CreateMessage(MSG_C_TILE_INTERACT);

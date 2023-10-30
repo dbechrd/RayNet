@@ -4,7 +4,7 @@ void DrawBootScreen(void)
 {
     BeginDrawing();
     ClearBackground(BLACK);
-    std::string loadingText = "Loading...";
+    static const std::string loadingText = "Loading...";
     Vector2 loadingTextSize = MeasureTextEx(GetFontDefault(), loadingText.c_str(), 96.0f, 4.0f);
     DrawTextEx(
         GetFontDefault(),

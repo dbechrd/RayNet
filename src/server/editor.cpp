@@ -470,7 +470,7 @@ UIState Editor::DrawUI_ActionBar(Vector2 position, GameServer &server, double no
 
     UIState openButton = uiActionBar.Button("Open");
     if (openButton.released) {
-        std::string filename = map.id;
+        std::string filename = "resources/map/" + map.id + ".mdesk";
         std::thread openFileThread([filename, mapFileFilter]{
             const char *openRequestBuf = tinyfd_openFileDialog(
                 "Open File",
@@ -537,11 +537,11 @@ UIState Editor::DrawUI_ActionBar(Vector2 position, GameServer &server, double no
 
     UIState reloadButton = uiActionBar.Button("Reload");
     if (reloadButton.released) {
-        // HACK(dlb): Very hacky, but works for now (probably)
-        std::string map_path = TextFormat("resources/map/%s.mdesk", map.id.c_str());
+        std::string filename = "resources/map/" + map.id + ".mdesk";
         data::Pack reload_pack{ "reload_pack.mem" };
-        data::PackAddMeta(reload_pack, map_path.c_str());
+        data::PackAddMeta(reload_pack, filename.c_str());
 
+        // HACK(dlb): What the hell is size() == 2?
         Err err = RN_BAD_FILE_READ;
         if (reload_pack.tile_maps.size() == 2) {
             size_t map_index = data::packs[0]->FindTilemapIndex(map.id);
@@ -658,7 +658,7 @@ void Editor::DrawUI_TileActions(UI &uiActionBar, double now)
     static const char *openRequest = 0;
 
 #if 0
-    std::string tilesetPath = rnStringCatalog.GetString(map.textureId);
+    const std::string &tilesetPath = rnStringCatalog.GetString(map.textureId);
     uiActionBar.Text(tilesetPath.c_str());
     if (uiActionBar.Button("Change tileset", ColorBrightness(ORANGE, -0.3f)).released) {
         std::thread openFileThread([tilesetPath, mapFileFilter]{

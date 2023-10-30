@@ -246,11 +246,6 @@ namespace data {
         void SV_SerializeChunk(Msg_S_TileChunk &tileChunk, uint32_t x, uint32_t y);
         void CL_DeserializeChunk(Msg_S_TileChunk &tileChunk);
 
-#if 0
-        Err Save(std::string path);
-        Err Load(std::string path);
-#endif
-
         // Tiles
         Tile At(uint32_t x, uint32_t y);
         bool AtTry(uint32_t x, uint32_t y, Tile &tile);
@@ -543,7 +538,7 @@ namespace data {
 
         PackToc toc {};
 
-        Pack(std::string path) : path(path) {
+        Pack(const std::string &path) : path(path) {
             // Reserve slot 0 in all resource arrays for a placeholder asset
             gfx_files.emplace_back();
             mus_files.emplace_back();
@@ -558,7 +553,7 @@ namespace data {
             tile_maps.emplace_back();
         }
 
-        GfxFile &FindGraphic(std::string id) {
+        GfxFile &FindGraphic(const std::string &id) {
             const auto &entry = gfx_file_by_id.find(id);
             if (entry != gfx_file_by_id.end()) {
                 return gfx_files[entry->second];
@@ -568,7 +563,7 @@ namespace data {
             }
         }
 
-        MusFile &FindMusic(std::string id) {
+        MusFile &FindMusic(const std::string &id) {
             const auto &entry = mus_file_by_id.find(id);
             if (entry != mus_file_by_id.end()) {
                 return mus_files[entry->second];
@@ -578,7 +573,7 @@ namespace data {
             }
         }
 
-        SfxFile &FindSoundVariant(std::string id) {
+        SfxFile &FindSoundVariant(const std::string &id) {
             const auto &entry = sfx_file_by_id.find(id);
             if (entry != sfx_file_by_id.end()) {
                 const auto &variants = entry->second;
@@ -601,7 +596,7 @@ namespace data {
             }
         }
 
-        GfxFrame &FindGraphicFrame(std::string id) {
+        GfxFrame &FindGraphicFrame(const std::string &id) {
             const auto &entry = gfx_frame_by_id.find(id);
             if (entry != gfx_frame_by_id.end()) {
                 return gfx_frames[entry->second];
@@ -611,7 +606,7 @@ namespace data {
             }
         }
 
-        GfxAnim &FindGraphicAnim(std::string id) {
+        GfxAnim &FindGraphicAnim(const std::string &id) {
             const auto &entry = gfx_anim_by_id.find(id);
             if (entry != gfx_anim_by_id.end()) {
                 return gfx_anims[entry->second];
@@ -621,7 +616,7 @@ namespace data {
             }
         }
 
-        Material &FindMaterial(std::string id) {
+        Material &FindMaterial(const std::string &id) {
             const auto &entry = material_by_id.find(id);
             if (entry != material_by_id.end()) {
                 return materials[entry->second];
@@ -631,7 +626,7 @@ namespace data {
             }
         }
 
-        Object &FindObject(std::string id) {
+        Object &FindObject(const std::string &id) {
             const auto &entry = object_by_id.find(id);
             if (entry != object_by_id.end()) {
                 return objects[entry->second];
@@ -641,7 +636,7 @@ namespace data {
             }
         }
 
-        Sprite &FindSprite(std::string id) {
+        Sprite &FindSprite(const std::string &id) {
             const auto &entry = sprite_by_id.find(id);
             if (entry != sprite_by_id.end()) {
                 return sprites[entry->second];
@@ -651,7 +646,7 @@ namespace data {
             }
         }
 
-        TileDef &FindTileDef(std::string id) {
+        TileDef &FindTileDef(const std::string &id) {
             const auto &entry = tile_def_by_id.find(id);
             if (entry != tile_def_by_id.end()) {
                 return tile_defs[entry->second];
@@ -661,7 +656,7 @@ namespace data {
             }
         }
 
-        Tilemap &FindTilemap(std::string id) {
+        Tilemap &FindTilemap(const std::string &id) {
             const auto &entry = tile_map_by_id.find(id);
             if (entry != tile_map_by_id.end()) {
                 return tile_maps[entry->second];
@@ -671,7 +666,7 @@ namespace data {
             }
         }
 
-        size_t FindTilemapIndex(std::string id) {
+        size_t FindTilemapIndex(const std::string &id) {
             const auto &entry = tile_map_by_id.find(id);
             if (entry != tile_map_by_id.end()) {
                 return entry->second;
@@ -713,7 +708,7 @@ namespace data {
 
     extern std::vector<Pack *> packs;
 
-    void ReadFileIntoDataBuffer(std::string filename, DatBuffer &datBuffer);
+    void ReadFileIntoDataBuffer(const std::string &filename, DatBuffer &datBuffer);
     void FreeDataBuffer(DatBuffer &datBuffer);
 
     void Init(void);
@@ -723,9 +718,9 @@ namespace data {
     Err LoadPack(Pack &pack, PackStreamType type);
     void UnloadPack(Pack &pack);
 
-    void PlaySound(std::string id, float pitchVariance = 0.0f);
-    bool IsSoundPlaying(std::string id);
-    void StopSound(std::string id);
+    void PlaySound(const std::string &id, float pitchVariance = 0.0f);
+    bool IsSoundPlaying(const std::string &id);
+    void StopSound(const std::string &id);
 
     const GfxFrame &GetSpriteFrame(const Entity &entity);
     Rectangle GetSpriteRect(const Entity &entity);

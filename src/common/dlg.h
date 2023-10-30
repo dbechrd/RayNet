@@ -89,4 +89,4 @@ struct DialogLibrary {
 extern DialogLibrary dialog_library;
 
 Err ParseMessage(char *&buf, DialogNodeList &nodes);
-Err LoadDialogFile(std::string path);
+Err LoadDialogFile(const std::string &path);

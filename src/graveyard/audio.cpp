@@ -25,9 +25,8 @@ void SoundCatalog::Load(StringId id, float pitchVariance)
 {
     size_t entryIdx = entriesById[id];
     if (!entryIdx) {
-        std::string str = rnStringCatalog.GetString(id);
-        const char *filename = str.c_str();
-        Sound sound = LoadSound(filename);
+        const std::string &filename = rnStringCatalog.GetString(id);
+        Sound sound = LoadSound(filename.c_str());
         if (sound.frameCount) {
             Entry entry{};
             entry.id = id;
@@ -38,7 +37,7 @@ void SoundCatalog::Load(StringId id, float pitchVariance)
             entries.push_back(entry);
             entriesById[id] = entryIdx;
         } else {
-            printf("[sound_system] Failed to load sound %s\n", filename);
+            printf("[sound_system] Failed to load sound %s\n", filename.c_str());
         }
     }
 }

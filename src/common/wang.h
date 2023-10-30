@@ -25,9 +25,9 @@ struct WangTileset {
 
     ~WangTileset(void);
 
-    Err Load(std::string path);
+    Err Load(const std::string &path);
 
-    static Err GenerateTemplate(std::string path);
+    static Err GenerateTemplate(const std::string &path);
     Texture GenerateColorizedTexture(Image &image);
     Err GenerateMap(uint32_t w, uint32_t h, WangMap &wangMap);
 

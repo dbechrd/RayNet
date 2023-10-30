@@ -40,7 +40,7 @@ Err TextureCatalog::Load(StringId id)
             break;  // already loaded
         }
 
-        std::string path = rnStringCatalog.GetString(id);
+        const std::string &path = rnStringCatalog.GetString(id);
         Image image = LoadImage(path.c_str());
         if (!image.width) {
             UnloadImage(image);

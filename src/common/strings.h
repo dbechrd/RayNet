@@ -19,9 +19,9 @@ enum {
 
 struct StringCatalog {
     void Init(void);
-    std::string GetString(StringId stringId);
+    const std::string &GetString(StringId stringId);
     //StringId GetStringId(std::string value);
-    StringId AddString(std::string value);
+    StringId AddString(const std::string &value);
 
 private:
     //void SetString(StringId stringId, std::string value);

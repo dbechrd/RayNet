@@ -16,7 +16,7 @@ void StringCatalog::Init(void)
     entries[STR_LILY_HELLO] = "Hello, welcome to the wonderful world of RayNet!";
 }
 
-std::string StringCatalog::GetString(StringId stringId)
+const std::string &StringCatalog::GetString(StringId stringId)
 {
     if (stringId >= 0 && stringId < entries.size()) {
         return entries[stringId];
@@ -48,7 +48,7 @@ void StringCatalog::SetString(StringId stringId, std::string value)
     }
 }
 #endif
-StringId StringCatalog::AddString(std::string value)
+StringId StringCatalog::AddString(const std::string &value)
 {
     if (!value.size()) {
         return STR_NULL;

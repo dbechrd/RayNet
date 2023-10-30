@@ -20,7 +20,7 @@ void data::Tilemap::SV_SerializeChunk(Msg_S_TileChunk &tileChunk, uint32_t x, ui
 }
 void data::Tilemap::CL_DeserializeChunk(Msg_S_TileChunk &tileChunk)
 {
-    if (id == std::string(tileChunk.map_id)) {
+    if (id.compare(tileChunk.map_id) == 0) {
         for (uint32_t ty = tileChunk.y; ty < tileChunk.w; ty++) {
             for (uint32_t tx = tileChunk.x; tx < tileChunk.h; tx++) {
                 Set(tileChunk.x + tx, tileChunk.y + ty, tileChunk.tileDefs[ty * tileChunk.w + tx], 0);

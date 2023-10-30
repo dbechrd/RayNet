@@ -258,7 +258,7 @@ Err ParseDialogFile(char *buf)
     return err;
 }
 
-Err LoadDialogFile(std::string path)
+Err LoadDialogFile(const std::string &path)
 {
     Err err = RN_SUCCESS;
 

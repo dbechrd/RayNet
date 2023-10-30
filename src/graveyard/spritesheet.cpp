@@ -45,7 +45,7 @@ struct TokenStream {
     putchar('\n'); \
 }
 
-Err ReadKVFile(std::string path, TokenStream &tokenStream)
+Err ReadKVFile(const std::string &path, TokenStream &tokenStream)
 {
     Err err = RN_SUCCESS;
 
@@ -319,7 +319,7 @@ Err ParseSpritesheet(TokenStream &tokenStream, Spritesheet &spritesheet)
     return err;
 }
 
-Err Spritesheet::Load(std::string path)
+Err Spritesheet::Load(const std::string &path)
 {
     Err err = RN_SUCCESS;
     printf("Loading spritesheet %s...\n", path.c_str());

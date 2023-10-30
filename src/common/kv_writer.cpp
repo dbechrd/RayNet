@@ -2,7 +2,7 @@ struct KVWriter {
     int indent = 0;
     std::ofstream file;
 
-    KVWriter(std::string path)
+    KVWriter(const std::string &path)
         : file{ path } //, std::ifstream::binary }
     {
     }
@@ -13,7 +13,7 @@ struct KVWriter {
         }
     }
 
-    void ObjStart(std::string key) {
+    void ObjStart(const std::string &key) {
         WriteIndent();
         file << key << " {\n";
         ++indent;
@@ -24,7 +24,7 @@ struct KVWriter {
         file << "}\n";
     }
 
-    void ArrayStart(std::string key) {
+    void ArrayStart(const std::string &key) {
         WriteIndent();
         file << key << " [\n";
         ++indent;
@@ -46,7 +46,7 @@ struct KVWriter {
     }
 
     template <typename T>
-    void Write(std::string key, T value) {
+    void Write(const std::string &key, T value) {
         WriteIndent();
         file << key << std::string(std::max(1, 16 - (int)key.size()), ' ');
         WriteValue(value);
@@ -54,7 +54,7 @@ struct KVWriter {
     }
 
     template <typename T>
-    void WriteArray(std::string key, std::vector<T> values, std::string delim = ",", int rowWidth = 1) {
+    void WriteArray(const std::string &key, std::vector<T> values, const std::string &delim = ",", int rowWidth = 1) {
         ArrayStart(key);
         WriteIndent();
         int valuesLen = (int)values.size();
@@ -72,7 +72,7 @@ struct KVWriter {
         ArrayEnd();
     }
 
-    void WriteArrayHex(std::string key, std::vector<uint8_t> values, int rowWidth = 32) {
+    void WriteArrayHex(const std::string &key, std::vector<uint8_t> values, int rowWidth = 32) {
         ArrayStart(key);
         WriteIndent();
         int valuesLen = (int)values.size();
@@ -93,7 +93,7 @@ struct KVWriter {
     }
 };
 
-Err Tilemap::SaveKV(std::string path)
+Err Tilemap::SaveKV(const std::string &path)
 {
     Err err = RN_SUCCESS;
 

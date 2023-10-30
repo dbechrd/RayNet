@@ -77,7 +77,7 @@ uint32_t GameServer::GetPlayerEntityId(uint32_t clientIdx)
     return clientIdx + 1;
 }
 
-data::Tilemap *GameServer::FindOrLoadMap(std::string map_id)
+data::Tilemap *GameServer::FindOrLoadMap(const std::string &map_id)
 {
 #if 1
     // TODO: Go back to assuming it's not already loaded once we figure out packs
@@ -192,7 +192,7 @@ Err GameServer::Start(void)
     return RN_SUCCESS;
 }
 
-data::Tilemap *GameServer::FindMap(std::string map_id)
+data::Tilemap *GameServer::FindMap(const std::string &map_id)
 {
     // TODO: Remove this alias and call data::* directly?
     auto &tile_map = data::packs[0]->FindTilemap(map_id);
@@ -341,7 +341,7 @@ void GameServer::BroadcastEntityDespawnTest(uint32_t testId)
     }
 }
 
-void GameServer::SendEntitySay(int clientIdx, uint32_t entityId, uint32_t dialogId, std::string message)
+void GameServer::SendEntitySay(int clientIdx, uint32_t entityId, uint32_t dialogId, const std::string &message)
 {
     // TODO: Send only if the client is nearby, or the message is a global event
     data::Entity *entity = entityDb->FindEntity(entityId);
@@ -360,7 +360,7 @@ void GameServer::SendEntitySay(int clientIdx, uint32_t entityId, uint32_t dialog
         }
     }
 }
-void GameServer::BroadcastEntitySay(uint32_t entityId, std::string message)
+void GameServer::BroadcastEntitySay(uint32_t entityId, const std::string &message)
 {
     for (int clientIdx = 0; clientIdx < SV_MAX_PLAYERS; clientIdx++) {
         if (!yj_server->IsClientConnected(clientIdx)) {
@@ -508,7 +508,7 @@ void GameServer::ProcessMessages(void)
                         data::Tilemap *map = FindMap(msg->map_id);
                         Tile tile{};
                         if (map && map->AtTry(msg->x, msg->y, tile)) {
-                            std::string tile_def_id = "til_stone_path";
+                            const std::string &tile_def_id = "til_stone_path";
 
                             //data::TileDef &tile_def = data::packs[0]->FindTileDef(tile_def_id);
 
@@ -531,7 +531,7 @@ void GameServer::ProcessMessages(void)
     }
 }
 
-data::Entity *GameServer::SpawnProjectile(std::string map_id, Vector3 position, Vector2 direction, Vector3 initial_velocity)
+data::Entity *GameServer::SpawnProjectile(const std::string &map_id, Vector3 position, Vector2 direction, Vector3 initial_velocity)
 {
     data::Entity *projectile = SpawnEntity(data::ENTITY_PROJECTILE);
     if (!projectile) return 0;
@@ -605,7 +605,7 @@ void GameServer::UpdateServerPlayers(void)
     }
 }
 
-data::Entity *SpawnEntityProto(GameServer &server, std::string map_id, Vector3 position, data::EntityProto &proto)
+data::Entity *SpawnEntityProto(GameServer &server, const std::string &map_id, Vector3 position, data::EntityProto &proto)
 {
     data::Tilemap *map = server.FindMap(map_id);
     if (!map) return 0;
@@ -638,7 +638,7 @@ data::Entity *SpawnEntityProto(GameServer &server, std::string map_id, Vector3 p
 
     return entity;
 }
-void GameServer::TickSpawnTownNPCs(std::string map_id)
+void GameServer::TickSpawnTownNPCs(const std::string &map_id)
 {
     static data::EntityProto lily;
     static data::EntityProto freye;
@@ -773,7 +773,7 @@ void GameServer::TickSpawnTownNPCs(std::string map_id)
         }
     }
 }
-void GameServer::TickSpawnCaveNPCs(std::string map_id)
+void GameServer::TickSpawnCaveNPCs(const std::string &map_id)
 {
     static uint32_t eid_bots[1];
     for (int i = 0; i < ARRAY_SIZE(eid_bots); i++) {
@@ -952,7 +952,7 @@ void GameServer::TickEntityProjectile(uint32_t entityId, double dt)
         }
     }
 }
-void GameServer::WarpEntity(uint32_t entityId, std::string dest_map_id, Vector3 dest_pos)
+void GameServer::WarpEntity(uint32_t entityId, const std::string &dest_map_id, Vector3 dest_pos)
 {
     assert(entityId);
     assert(!dest_map_id.empty());

@@ -72,7 +72,7 @@ namespace data {
         return final_dialog_id;
     }
 
-    void ReadFileIntoDataBuffer(std::string filename, DatBuffer &datBuffer)
+    void ReadFileIntoDataBuffer(const std::string &filename, DatBuffer &datBuffer)
     {
         int bytes_read = 0;
         datBuffer.bytes = LoadFileData(filename.c_str(), &bytes_read);
@@ -86,7 +86,7 @@ namespace data {
         }
     }
 
-    Err SaveTilemap(std::string path, Tilemap &tilemap)
+    Err SaveTilemap(const std::string &path, Tilemap &tilemap)
     {
         Err err = RN_SUCCESS;
 
@@ -1225,12 +1225,12 @@ namespace data {
     Err SavePack(Pack &pack, PackStreamType type)
     {
         Err err = RN_SUCCESS;
-
+#if 0
         if (FileExists(pack.path.c_str())) {
             err = MakeBackup(pack.path.c_str());
             if (err) return err;
         }
-
+#endif
         FILE *file = fopen(pack.path.c_str(), type == PACK_TYPE_BINARY ? "wb" : "w");
         if (!file) {
             return RN_BAD_FILE_WRITE;
@@ -1349,7 +1349,7 @@ namespace data {
         }
     }
 
-    void PlaySound(std::string id, float pitchVariance)
+    void PlaySound(const std::string &id, float pitchVariance)
     {
         const SfxFile &sfx_file = packs[0]->FindSoundVariant(id);
         assert(sfx_file.instances.size() == sfx_file.max_instances);
@@ -1364,7 +1364,7 @@ namespace data {
             }
         }
     }
-    bool IsSoundPlaying(std::string id)
+    bool IsSoundPlaying(const std::string &id)
     {
         // TODO: Does this work still with SoundAlias stuff?
         const SfxFile &sfx_file = packs[0]->FindSoundVariant(id);
@@ -1377,7 +1377,7 @@ namespace data {
         }
         return playing;
     }
-    void StopSound(std::string id)
+    void StopSound(const std::string &id)
     {
         const SfxFile &sfx_file = packs[0]->FindSoundVariant(id);
         assert(sfx_file.instances.size() == sfx_file.max_instances);
@@ -1405,14 +1405,14 @@ namespace data {
     {
         const Sprite &sprite = packs[0]->FindSprite(entity.sprite);
 
-        const std::string anim_id = sprite.anims[entity.direction];
+        const std::string &anim_id = sprite.anims[entity.direction];
         const GfxAnim &anim = packs[0]->FindGraphicAnim(anim_id);
 
-        std::string frame_id = "";
+        const std::string *frame_id = 0;
         if (!anim.frames.empty()) {
-            frame_id = anim.frames[entity.anim_state.frame];
+            frame_id = &anim.frames[entity.anim_state.frame];
         }
-        const GfxFrame &frame = packs[0]->FindGraphicFrame(frame_id);
+        const GfxFrame &frame = packs[0]->FindGraphicFrame(frame_id ? *frame_id : "");
 
         return frame;
     }

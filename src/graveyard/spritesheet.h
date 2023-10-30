@@ -20,7 +20,7 @@ struct Spritesheet {
     int frameHeight;
     std::vector<Animation> animations;  // TODO(dlb): Make this an unordered_map by StringId?
 
-    Err Load(std::string path);
+    Err Load(const std::string &path);
 };
 
 struct SpritesheetCatalog {

@@ -369,7 +369,7 @@ int main(int argc, char *argv[])
             client->frameDt = refreshDt;
         }
 
-        client->frameDtSmooth = LERP(client->frameDtSmooth, client->frameDt, 0.01);
+        client->frameDtSmooth = LERP(client->frameDtSmooth, client->frameDt, 0.1);
         client->frameStart = client->now;
 
         client->controller.sampleInputAccum += client->frameDt;

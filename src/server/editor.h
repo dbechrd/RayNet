@@ -94,7 +94,7 @@ struct Editor {
     EditModeState state    {};
     std::string   map_id   {};
 
-    Editor(std::string map_id) : map_id(map_id) {}
+    Editor(const std::string &map_id) : map_id(map_id) {}
     Err Init(void);
     void HandleInput(Camera2D &camera);
     void DrawGroundOverlays(Camera2D &camera, double now);

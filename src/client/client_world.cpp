@@ -27,7 +27,7 @@ data::Tilemap *ClientWorld::LocalPlayerMap(void)
     return 0;
 }
 
-data::Tilemap *ClientWorld::FindOrLoadMap(std::string map_id)
+data::Tilemap *ClientWorld::FindOrLoadMap(const std::string &map_id)
 {
     data::Tilemap &map = data::packs[0]->FindTilemap(map_id);
 
@@ -107,7 +107,7 @@ void ClientWorld::ApplyStateInterpolated(uint32_t entityId,
     ApplyStateInterpolated(*entity, a, b, alpha, dt);
 }
 
-Err ClientWorld::CreateDialog(uint32_t entityId, uint32_t dialogId, std::string message, double now)
+Err ClientWorld::CreateDialog(uint32_t entityId, uint32_t dialogId, const std::string &message, double now)
 {
     data::Entity *entity = entityDb->FindEntity(entityId);
     if (!entity) {
