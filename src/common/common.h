@@ -97,7 +97,7 @@ typedef uint8_t Tile;  // TODO: Remove this?
 #define SV_MAX_SPRITE_NAME_LEN               63
 // how long this entity stays interested in a conversation before returning to pathfinding
 #define SV_ENTITY_DIALOG_INTERESTED_DURATION 30
-#define SV_TILE_CHUNK_WIDTH                  64
+#define SV_MAX_TILE_CHUNK_WIDTH              64
 #define SV_WARP_FADE_DURATION                1.0  // delay in seconds for fade transition to be black
 
 //#define CL_PORT                 30000

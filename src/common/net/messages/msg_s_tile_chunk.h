@@ -6,7 +6,9 @@ struct Msg_S_TileChunk : public yojimbo::Message
     char     map_id   [SV_MAX_TILE_MAP_NAME_LEN + 1]{};
     uint32_t x        {};
     uint32_t y        {};
-    uint8_t  tileDefs [SV_TILE_CHUNK_WIDTH * SV_TILE_CHUNK_WIDTH]{};
+    uint32_t w        {};
+    uint32_t h        {};
+    uint8_t  tileDefs [SV_MAX_TILE_CHUNK_WIDTH * SV_MAX_TILE_CHUNK_WIDTH]{};
 
     template <typename Stream> bool Serialize(Stream &stream)
     {
@@ -17,6 +19,8 @@ struct Msg_S_TileChunk : public yojimbo::Message
         serialize_string(stream, map_id, sizeof(map_id));
         serialize_uint32(stream, x);
         serialize_uint32(stream, y);
+        serialize_uint32(stream, w);
+        serialize_uint32(stream, h);
         serialize_bytes(stream, tileDefs, sizeof(tileDefs));
         return true;
     }

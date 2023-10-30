@@ -10,18 +10,20 @@ void data::Tilemap::SV_SerializeChunk(Msg_S_TileChunk &tileChunk, uint32_t x, ui
     strncpy(tileChunk.map_id, id.c_str(), SV_MAX_TILE_MAP_NAME_LEN);
     tileChunk.x = x;
     tileChunk.y = y;
-    for (uint32_t ty = y; ty < SV_TILE_CHUNK_WIDTH; ty++) {
-        for (uint32_t tx = x; tx < SV_TILE_CHUNK_WIDTH; tx++) {
-            AtTry(tx, ty, tileChunk.tileDefs[ty * SV_TILE_CHUNK_WIDTH + tx]);
+    tileChunk.w = MIN(width, SV_MAX_TILE_CHUNK_WIDTH);
+    tileChunk.h = MIN(height, SV_MAX_TILE_CHUNK_WIDTH);
+    for (uint32_t ty = y; ty < tileChunk.h; ty++) {
+        for (uint32_t tx = x; tx < tileChunk.w; tx++) {
+            AtTry(tx, ty, tileChunk.tileDefs[ty * tileChunk.w + tx]);
         }
     }
 }
 void data::Tilemap::CL_DeserializeChunk(Msg_S_TileChunk &tileChunk)
 {
     if (id == std::string(tileChunk.map_id)) {
-        for (uint32_t ty = tileChunk.y; ty < SV_TILE_CHUNK_WIDTH; ty++) {
-            for (uint32_t tx = tileChunk.x; tx < SV_TILE_CHUNK_WIDTH; tx++) {
-                Set(tileChunk.x + tx, tileChunk.y + ty, tileChunk.tileDefs[ty * SV_TILE_CHUNK_WIDTH + tx], 0);
+        for (uint32_t ty = tileChunk.y; ty < tileChunk.w; ty++) {
+            for (uint32_t tx = tileChunk.x; tx < tileChunk.h; tx++) {
+                Set(tileChunk.x + tx, tileChunk.y + ty, tileChunk.tileDefs[ty * tileChunk.w + tx], 0);
             }
         }
     } else {
