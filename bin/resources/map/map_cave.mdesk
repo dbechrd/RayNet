@@ -11,6 +11,10 @@
     object_defs: [
         obj_void
         wrp_cave_to_overworld
+        obj_chest_basic
+        obj_chest_uncommon
+        obj_chest_rare
+        obj_chest_legendary
     ]
     tiles: [
           1  1  1  1  1  1  1  1
@@ -23,7 +27,7 @@
           1  1  1  1  1  1  1  1
     ]
     objects: [
-          0  0  0  0  0  0  0  0
+          0  0  0  0  0  0  2  0
           0  0  0  0  0  0  0  0
           0  0  0  0  0  0  0  0
           0  0  0  0  0  0  0  0

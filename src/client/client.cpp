@@ -316,7 +316,7 @@ int main(int argc, char *argv[])
     DrawBootScreen();
 
     InitAudioDevice();
-    //SetMasterVolume(0.24f);
+    SetMasterVolume(0.5f);
 
     // NOTE(dlb): yojimbo uses rand() for network simulator and random_int()/random_float()
     srand((unsigned int)GetTime());
@@ -326,7 +326,7 @@ int main(int argc, char *argv[])
         printf("Failed to load common resources\n");
     }
 
-    Image icon = LoadImage("resources/client.png");
+    Image icon = LoadImage("../res/client.png");
     SetWindowIcon(icon);
     UnloadImage(icon);
 

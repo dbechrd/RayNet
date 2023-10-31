@@ -145,6 +145,9 @@ namespace data {
         std::string type      {};
         std::string animation {};
 
+        // type == "decoration"
+        // no extra fields atm
+
         // type == "lootable"
         std::string loot_table_id {};
 

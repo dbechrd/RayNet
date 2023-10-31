@@ -455,7 +455,9 @@ namespace data {
                     META_ID(object.id);
                     META_CHILDREN_BEGIN;
                         META_IDENT(object.type);
-                        if (object.type == "lootable") {
+                        if (object.type == "decoration") {
+                            META_IDENT(object.animation);
+                        } else if (object.type == "lootable") {
                             META_IDENT(object.animation);
                             META_IDENT(object.loot_table_id);
                         } else if (object.type == "warp") {
@@ -877,11 +879,14 @@ namespace data {
     void Process(PackStream &stream, Object &object, int index) {
         PROC(object.id);
         PROC(object.type);
-        PROC(object.animation);
 
-        if (object.type == "lootable") {
+        if (object.type == "decoration") {
+            PROC(object.animation);
+        } else if (object.type == "lootable") {
+            PROC(object.animation);
             PROC(object.loot_table_id);
         } else if (object.type == "warp") {
+            PROC(object.animation);
             PROC(object.warp_map_id);
             PROC(object.warp_dest_pos);
         }

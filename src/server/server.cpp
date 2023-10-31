@@ -343,7 +343,7 @@ int main(int argc, char *argv[])
             break;
         }
 
-        Image icon = LoadImage("resources/server.png");
+        Image icon = LoadImage("../res/server.png");
         SetWindowIcon(icon);
         UnloadImage(icon);
 
