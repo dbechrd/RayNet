@@ -31,10 +31,7 @@ data::Tilemap *ClientWorld::FindOrLoadMap(const std::string &map_id)
 {
     data::Tilemap &map = data::packs[0]->FindTilemap(map_id);
 
-    if (map.id == LEVEL_001) {
-        musBackgroundMusic = "mus_ambient_outdoors";
-    }
-    //case 2: musBackgroundMusic = "mus_ambient_cave"; break;
+    musBackgroundMusic = map.background_music;
 
     return &map;
 }

@@ -45,6 +45,7 @@ typedef uint8_t Tile;  // TODO: Remove this?
 
 #define PATH_LEN_MAX 1024
 #define LEVEL_001  "map_overworld"
+#define LEVEL_002  "map_cave"
 
 // Developer macros
 

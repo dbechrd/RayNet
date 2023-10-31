@@ -38,9 +38,9 @@ void GameServer::OnClientJoin(int clientIdx)
 
         player->type = data::ENTITY_PLAYER;
         player->map_id = LEVEL_001;  // TODO: Something smarter
-        const Vector3 caveEntrance{ 3300, 870, 0 };
+        const Vector3 caveEntrance{ 3100, 1100, 0 };
         const Vector3 townCenter{ 1660, 2360, 0 };
-        player->position = townCenter;
+        player->position = caveEntrance;
         player->radius = 16;
         player->hp_max = 100;
         player->hp = player->hp_max;

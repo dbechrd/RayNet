@@ -316,7 +316,7 @@ int main(int argc, char *argv[])
     DrawBootScreen();
 
     InitAudioDevice();
-    SetMasterVolume(0.24f);
+    //SetMasterVolume(0.24f);
 
     // NOTE(dlb): yojimbo uses rand() for network simulator and random_int()/random_float()
     srand((unsigned int)GetTime());
@@ -353,7 +353,7 @@ int main(int argc, char *argv[])
     // Client
     GameClient *client = new GameClient(GetTime());
     client->Start();
-    client->menu.TransitionTo(Menu::MENU_MAIN);
+    client->menu_system.TransitionTo(Menu::MENU_MAIN);
 
     static float texMenuBgScale = 0;
 
@@ -544,11 +544,11 @@ int main(int argc, char *argv[])
         }
 
         if (client->yj_client->IsDisconnected()) {
-            client->menu.TransitionTo(Menu::MENU_MAIN);
+            client->menu_system.TransitionTo(Menu::MENU_MAIN);
         } else if (client->yj_client->IsConnecting() || !client->world || !client->world->localPlayerEntityId) {
-            client->menu.TransitionTo(Menu::MENU_CONNECTING);
+            client->menu_system.TransitionTo(Menu::MENU_CONNECTING);
         } else if (client->yj_client->IsConnected()) {
-            client->menu.TransitionTo(Menu::MENU_NONE);
+            client->menu_system.TransitionTo(Menu::MENU_NONE);
         }
 
         //--------------------
@@ -565,8 +565,8 @@ int main(int argc, char *argv[])
             }
 
             bool back = false;
-            client->menu.Draw(*client, back);
-            if (client->menu.id == Menu::MENU_MAIN && back) {
+            client->menu_system.Draw(*client, back);
+            if (client->menu_system.active_menu_id == Menu::MENU_MAIN && back) {
                 quit = true;
             }
 

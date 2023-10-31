@@ -217,10 +217,11 @@ namespace data {
         static const uint32_t VERSION = 9;
         static const uint32_t SENTINEL = 0x12345678;
 
-        uint32_t    version {};  // version on disk
-        std::string id      {};  // name of map area
-        uint32_t    width   {};  // width of map in tiles
-        uint32_t    height  {};  // height of map in tiles
+        uint32_t    version          {};  // version on disk
+        std::string id               {};  // name of map area
+        uint32_t    width            {};  // width of map in tiles
+        uint32_t    height           {};  // height of map in tiles
+        std::string background_music {};  // background music
 
         // TODO(dlb): Move these to a global pool, each has its own textureId
         std::vector<std::string> tileDefs   {};

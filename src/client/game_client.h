@@ -16,15 +16,15 @@ struct GameClient {
     uint64_t frame{};
 
     double frameStart{};
-    double frameDt = 0;
+    double frameDt{};
     double frameDtSmooth = 60;
-    double animAccum = 0;
+    double animAccum{};
 
-    double fadeDirection = 0;
-    double fadeDuration = 0;
-    double fadeValue = 0;
+    double fadeDirection{};
+    double fadeDuration{};
+    double fadeValue{};
 
-    Menu menu{};
+    MenuSystem menu_system{};
 
     bool showF3Menu = false;
     bool showNetInfo = false;

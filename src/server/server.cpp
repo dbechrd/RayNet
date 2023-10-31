@@ -380,10 +380,10 @@ int main(int argc, char *argv[])
 
         //--------------------
         // Load necessary maps
-        if (!server->FindOrLoadMap(LEVEL_001)) {
-            err = RN_BAD_FILE_READ;
-            break;
-        }
+        //if (!server->FindOrLoadMap(LEVEL_001)) {
+        //    err = RN_BAD_FILE_READ;
+        //    break;
+        //}
         //if (!server->FindOrLoadMap(LEVEL_002)) break;
 
         //--------------------

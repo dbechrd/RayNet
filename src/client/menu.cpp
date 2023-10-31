@@ -1,27 +1,38 @@
 #include "menu.h"
 
-void Menu::TransitionTo(MenuID to_id)
+MenuSystem::MenuSystem(void)
 {
-    if (to_id == id) {
+    menus_by_id[Menu::MENU_MAIN] = &menu_main;
+    menus_by_id[Menu::MENU_CONNECTING] = &menu_connecting;
+}
+
+void MenuSystem::TransitionTo(Menu::ID to_id)
+{
+    if (to_id == active_menu_id) {
         return;
     }
 
-    switch (to_id) {
-        case MenuID::MENU_MAIN:       main       = {}; break;
-        case MenuID::MENU_CONNECTING: connecting = {}; break;
+    Menu *menu = menus_by_id[active_menu_id];
+    if (menu) {
+        menu->OnLeave();
     }
-    id = to_id;
-}
 
-void Menu::Draw(GameClient &client, bool &back)
-{
-    switch (id) {
-        case MenuID::MENU_MAIN:       DrawMenuMain(client, back);       break;
-        case MenuID::MENU_CONNECTING: DrawMenuConnecting(client, back); break;
+    active_menu_id = to_id;
+
+    menu = menus_by_id[active_menu_id];
+    if (menu) {
+        menu->OnEnter();
     }
 }
 
-void Menu::DrawMenuMain(GameClient &client, bool &back)
+void MenuSystem::Draw(GameClient &client, bool &back) {
+    Menu *menu = menus_by_id[active_menu_id];
+    if (menu) {
+        menu->Draw(client, back);
+    }
+}
+
+void MenuMain::Draw(GameClient &client, bool &back)
 {
     Vector2 uiPosition{ floorf(GetRenderWidth() / 2.0f), floorf(GetRenderHeight() / 2.0f) };
     uiPosition.y -= 50;
@@ -66,23 +77,29 @@ void Menu::DrawMenuMain(GameClient &client, bool &back)
     //DrawTexture(fntBig.texture, GetRenderWidth() - fntBig.texture.width, 0, WHITE);
 }
 
-void Menu::DrawMenuConnecting(GameClient &client, bool &back)
+void MenuConnecting::OnEnter(void) {
+    msg_index        = 0;
+    msg_last_updated = 0;
+    if (campfire.sprite.empty()) {
+        campfire.sprite = "sprite_obj_campfire";
+    }
+}
+
+void MenuConnecting::OnLeave(void) {
+    data::ResetSprite(campfire);
+}
+
+void MenuConnecting::Draw(GameClient &client, bool &back)
 {
-    MenuConnecting &s = connecting;
-
-    if (s.campfire.sprite.empty()) {
-        s.campfire.sprite = "sprite_obj_campfire";
+    data::UpdateSprite(campfire, client.frameDt, !msg_last_updated);
+    if (!msg_last_updated) {
+        msg_last_updated = client.now;
+    } else if (client.now > msg_last_updated + 0.5) {
+        msg_last_updated = client.now;
+        msg_index = ((size_t)msg_index + 1) % ARRAY_SIZE(connecting_msgs);
     }
 
-    data::UpdateSprite(s.campfire, client.frameDt, !s.msg_last_updated);
-    if (!s.msg_last_updated) {
-        s.msg_last_updated = client.now;
-    } else if (client.now > s.msg_last_updated + 0.5) {
-        s.msg_last_updated = client.now;
-        s.msg_index = ((size_t)s.msg_index + 1) % ARRAY_SIZE(s.connecting_msgs);
-    }
-
-    const data::GfxFrame &campfireFrame = data::GetSpriteFrame(s.campfire);
+    const data::GfxFrame &campfireFrame = data::GetSpriteFrame(campfire);
 
     UIStyle uiStyleMenu {};
     uiStyleMenu.margin = {};
@@ -97,15 +114,15 @@ void Menu::DrawMenuConnecting(GameClient &client, bool &back)
 
     const Vector2 cursorScreen = uiMenu.CursorScreen();
     const Vector2 campfirePos = cursorScreen; //Vector2Subtract(cursorScreen, { (float)(campfireFrame.w / 2), 0 });
-    s.campfire.position.x = campfirePos.x;
-    s.campfire.position.y = campfirePos.y;
-    s.campfire.position.z = 0;
+    campfire.position.x = campfirePos.x;
+    campfire.position.y = campfirePos.y;
+    campfire.position.z = 0;
 
-    data::DrawSprite(s.campfire);
+    data::DrawSprite(campfire);
     uiMenu.Space({ 0, (float)uiStyleMenu.font->baseSize / 2 });
 
     if (client.yj_client->IsConnecting()) {
-        uiMenu.Text(s.connecting_msgs[s.msg_index]);
+        uiMenu.Text(connecting_msgs[msg_index]);
     } else {
         uiMenu.Text("   Loading...");
     }

@@ -2,6 +2,7 @@
     version: 8
     width: 64
     height: 64
+    background_music: "mus_ambient_outdoors"
     tile_defs: [
         til_void
         til_stone_path

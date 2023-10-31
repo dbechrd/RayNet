@@ -18,10 +18,11 @@ void StringCatalog::Init(void)
 
 const std::string &StringCatalog::GetString(StringId stringId)
 {
+    static const std::string nullstr = "<null>";
     if (stringId >= 0 && stringId < entries.size()) {
         return entries[stringId];
     }
-    return "<null>";
+    return nullstr;
 }
 #if 0
 StringId StringCatalog::GetStringId(std::string value)

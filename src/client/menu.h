@@ -1,11 +1,37 @@
 #pragma once
 #include "game_client.h"
 
-struct MenuMain {
-    int unused;
+struct Menu {
+    enum ID {
+        MENU_NONE,
+        MENU_MAIN,
+        MENU_CONNECTING,
+        MENU_COUNT,
+    };
+
+    ID id{};
+
+    Menu(Menu::ID id) : id(id) {}
+
+    virtual void OnEnter(void) {}
+    virtual void OnLeave(void) {}
+    virtual void Draw(GameClient &client, bool &back) {}
 };
 
-struct MenuConnecting {
+struct MenuMain : public Menu {
+    MenuMain(void) : Menu(Menu::MENU_MAIN) {}
+
+    void Draw(GameClient &client, bool &back) override;
+};
+
+struct MenuConnecting : public Menu {
+    MenuConnecting(void) : Menu(Menu::MENU_CONNECTING) {}
+
+    void OnEnter(void) override;
+    void OnLeave(void) override;
+    void Draw(GameClient &client, bool &back) override;
+
+private:
     const char *connecting_msgs[4] = {
         "Connecting",
         ". Connecting .",
@@ -18,22 +44,19 @@ struct MenuConnecting {
     data::Entity campfire   {};
 };
 
-struct Menu {
-    enum MenuID {
-        MENU_NONE,
-        MENU_MAIN,
-        MENU_CONNECTING,
-    };
+struct MenuSystem {
+    Menu::ID active_menu_id{};
 
-    MenuID id{};
-
-    MenuMain main{};
-    MenuConnecting connecting{};
-
-    void TransitionTo(MenuID to_id);
+    MenuSystem(void);
+    void TransitionTo(Menu::ID to_id);
     void Draw(GameClient &client, bool &back);
 
 private:
-    void DrawMenuMain(GameClient &client, bool &back);
-    void DrawMenuConnecting(GameClient &client, bool &back);
+    Menu *menus_by_id[Menu::MENU_COUNT]{};
+
+    MenuMain       menu_main{};
+    MenuConnecting menu_connecting{};
 };
+
+extern MenuMain       menu_main;
+extern MenuConnecting menu_connecting;

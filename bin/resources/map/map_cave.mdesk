@@ -2,13 +2,14 @@
     version: 8
     width: 8
     height: 8
+    background_music: "mus_ambient_cave"
     tile_defs: [
-        til_void      
+        til_void
         til_stone_path
         til_water_dark
     ]
     object_defs: [
-        obj_void             
+        obj_void
         wrp_cave_to_overworld
     ]
     tiles: [
