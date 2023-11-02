@@ -1021,20 +1021,25 @@ void GameServer::TickResolveEntityWarpCollisions(data::Tilemap &map, uint32_t en
     if (!victim) {
         return;
     }
-    if (victim->on_warp_id.empty()) {
-        return;
-    }
-    if (victim->on_warp_cooldown) {
+    if (!victim->on_warp || victim->on_warp_cooldown) {
         return;
     }
     if (victim->type != data::ENTITY_PLAYER) {
         return;
     }
 
-    data::Object &object = data::packs[0]->FindObject(victim->on_warp_id);
-    assert(object.type == "warp");
-    WarpEntity(victim->id, object.warp_map_id, object.warp_dest_pos);
-    victim->on_warp_cooldown = true;
+    data::ObjectData *obj_data = map.GetObjectData(victim->on_warp_coord.x, victim->on_warp_coord.y);
+    if (obj_data) {
+        assert(obj_data->type == "warp");
+        Vector3 dest{};
+        dest.x = obj_data->warp_dest_x * TILE_W + TILE_W * 0.5f;
+        dest.y = obj_data->warp_dest_y * TILE_W + TILE_W * 0.5f;
+        dest.z = obj_data->warp_dest_z;
+        WarpEntity(victim->id, obj_data->warp_map_id, dest);
+        victim->on_warp_cooldown = true;
+    } else {
+        TraceLog(LOG_WARNING, "We're on a warp, but there's no warp object found at that coord. Did it disappear?");
+    }
 
 #if 0
     if (victim->on_warp) {

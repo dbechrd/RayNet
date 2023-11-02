@@ -113,17 +113,6 @@ namespace data {
             }
             fprintf(file, "    ]\n");
 
-            // object_defs
-            fprintf(file, "    object_defs: [\n");
-            int max_object_def_id_len = 0;
-            for (std::string &object_def_id : tilemap.objectDefs) {
-                max_object_def_id_len = MAX(max_object_def_id_len, object_def_id.size());
-            }
-            for (std::string &object_def_id : tilemap.objectDefs) {
-                fprintf(file, "        %-*s\n", max_object_def_id_len, object_def_id.c_str());
-            }
-            fprintf(file, "    ]\n");
-
             // tiles
             fprintf(file, "    tiles: [");
             for (int i = 0; i < tilemap.tiles.size(); i++) {
@@ -440,36 +429,9 @@ namespace data {
                     META_ID(material.id);
                     META_CHILDREN_BEGIN;
                         META_IDENT(material.footstep_sound);
-                        int flag_walk = 0;
-                        META_INT(flag_walk);
-                        int flag_swim = 0;
-                        META_INT(flag_swim);
-                        if (flag_walk) material.flags |= MATERIAL_FLAG_WALK;
-                        if (flag_swim) material.flags |= MATERIAL_FLAG_SWIM;
                     META_CHILDREN_END;
 
                     pack.materials.push_back(material);
-                 } else if (MD_NodeHasTag(node, MD_S8Lit("Object"), 0)) {
-                    Object object{};
-
-                    META_ID(object.id);
-                    META_CHILDREN_BEGIN;
-                        META_IDENT(object.type);
-                        if (object.type == "decoration") {
-                            META_IDENT(object.animation);
-                        } else if (object.type == "lootable") {
-                            META_IDENT(object.animation);
-                            META_IDENT(object.loot_table_id);
-                        } else if (object.type == "warp") {
-                            META_IDENT(object.animation);
-                            META_IDENT(object.warp_map_id);
-                            META_FLOAT(object.warp_dest_pos.x);
-                            META_FLOAT(object.warp_dest_pos.y);
-                            META_FLOAT(object.warp_dest_pos.z);
-                        }
-                    META_CHILDREN_END;
-
-                    pack.objects.push_back(object);
                 } else if (MD_NodeHasTag(node, MD_S8Lit("Sprite"), 0)) {
                     Sprite sprite{};
 
@@ -488,6 +450,12 @@ namespace data {
                     META_CHILDREN_BEGIN;
                     META_IDENT(tile_def.anim);
                     META_IDENT(tile_def.material);
+                    uint8_t flag_solid = 0;
+                    META_UINT8(flag_solid);
+                    uint8_t flag_liquid = 0;
+                    META_UINT8(flag_liquid);
+                    if (flag_solid)  tile_def.flags |= TILEDEF_FLAG_SOLID;
+                    if (flag_liquid) tile_def.flags |= TILEDEF_FLAG_LIQUID;
                     META_UINT8(tile_def.auto_tile_mask);
                     META_CHILDREN_END;
 
@@ -516,13 +484,7 @@ namespace data {
                                     META_ID(tile_def_id);
                                     map.tileDefs.push_back(tile_def_id);
                                 META_CHILDREN_LOOP_END_NEXT;
-                            } else if (key == "object_defs") {
-                                META_CHILDREN_LOOP_BEGIN; // []
-                                std::string object_def_id{};
-                                META_ID(object_def_id);
-                                map.objectDefs.push_back(object_def_id);
-                                META_CHILDREN_LOOP_END_NEXT;
-                            } else if (key == "tiles") {
+                            } else if (key == "ground_tiles") {
                                 META_CHILDREN_LOOP_BEGIN;  // []
                                     Tile tile{};
 
@@ -530,7 +492,7 @@ namespace data {
 
                                     map.tiles.push_back(tile);
                                 META_CHILDREN_LOOP_END;
-                            } else if (key == "objects") {
+                            } else if (key == "object_tiles") {
                                 META_CHILDREN_LOOP_BEGIN;  // []
                                     uint8_t object{};
 
@@ -538,6 +500,26 @@ namespace data {
 
                                     map.objects.push_back(object);
                                 META_CHILDREN_LOOP_END;
+                            } else if (key == "object_data") {
+                                META_CHILDREN_LOOP_BEGIN;  // []
+                                    ObjectData obj_data{};
+
+                                    META_CHILDREN_BEGIN;  // {}
+                                        META_UINT32(obj_data.x);
+                                        META_UINT32(obj_data.y);
+                                        META_IDENT(obj_data.type);
+                                        if (obj_data.type == "lootable") {
+                                            META_IDENT(obj_data.loot_table_id);
+                                        } else if (obj_data.type == "warp") {
+                                            META_IDENT(obj_data.warp_map_id);
+                                            META_UINT32(obj_data.warp_dest_x);
+                                            META_UINT32(obj_data.warp_dest_y);
+                                            META_UINT32(obj_data.warp_dest_z);
+                                        }
+                                    META_CHILDREN_END;
+
+                                    map.object_data.push_back(obj_data);
+                                META_CHILDREN_LOOP_END_NEXT;
                             } else if (key == "path_nodes") {
                                 META_CHILDREN_LOOP_BEGIN;  // []
                                     AiPathNode path_node{};
@@ -870,29 +852,9 @@ namespace data {
     {
         PROC(material.id);
         PROC(material.footstep_sound);
-        PROC(material.flags);
 
         if (stream.mode == PACK_MODE_READ) {
             stream.pack->material_by_id[material.id] = index;
-        }
-    }
-    void Process(PackStream &stream, Object &object, int index) {
-        PROC(object.id);
-        PROC(object.type);
-
-        if (object.type == "decoration") {
-            PROC(object.animation);
-        } else if (object.type == "lootable") {
-            PROC(object.animation);
-            PROC(object.loot_table_id);
-        } else if (object.type == "warp") {
-            PROC(object.animation);
-            PROC(object.warp_map_id);
-            PROC(object.warp_dest_pos);
-        }
-
-        if (stream.mode == PACK_MODE_READ) {
-            stream.pack->object_by_id[object.id] = index;
         }
     }
     void Process(PackStream &stream, Sprite &sprite, int index) {
@@ -910,6 +872,7 @@ namespace data {
         PROC(tile_def.id);
         PROC(tile_def.anim);
         PROC(tile_def.material);
+        PROC(tile_def.flags);
         PROC(tile_def.auto_tile_mask);
 
         // TODO: Idk where/how to do this, but we don't have the texture
@@ -1033,34 +996,27 @@ namespace data {
         //}
 
         uint32_t tileDefCount   = tile_map.tileDefs.size();
-        uint32_t objectDefCount = tile_map.objectDefs.size();
+        uint32_t objDataCount   = tile_map.object_data.size();
         uint32_t pathNodeCount  = tile_map.pathNodes.size();
         uint32_t pathCount      = tile_map.paths.size();
 
         PROC(tileDefCount);
-        PROC(objectDefCount);
+        PROC(objDataCount);
         PROC(pathNodeCount);
         PROC(pathCount);
 
         PROC(sentinel);
         assert(sentinel == Tilemap::SENTINEL);
 
-        tile_map.tileDefs  .resize(tileDefCount);
-        tile_map.objectDefs.resize(objectDefCount);
-        tile_map.tiles     .resize((size_t)tile_map.width * tile_map.height);
-        tile_map.objects   .resize((size_t)tile_map.width * tile_map.height);
-        tile_map.pathNodes .resize(pathNodeCount);
-        tile_map.paths     .resize(pathCount);
+        tile_map.tileDefs   .resize(tileDefCount);
+        tile_map.tiles      .resize((size_t)tile_map.width * tile_map.height);
+        tile_map.objects    .resize((size_t)tile_map.width * tile_map.height);
+        tile_map.object_data.resize(objDataCount);
+        tile_map.pathNodes  .resize(pathNodeCount);
+        tile_map.paths      .resize(pathCount);
 
         for (std::string &tile_def_id : tile_map.tileDefs) {
             PROC(tile_def_id);
-        }
-
-        PROC(sentinel);
-        assert(sentinel == Tilemap::SENTINEL);
-
-        for (std::string &object_def_id : tile_map.objectDefs) {
-            PROC(object_def_id);
         }
 
         PROC(sentinel);
@@ -1079,9 +1035,27 @@ namespace data {
 
         for (uint8_t &object : tile_map.objects) {
             PROC(object);
-            if (object >= objectDefCount) {
+            if (object >= tileDefCount) {
                 object = 0;
                 //err = RN_OUT_OF_BOUNDS; break;
+            }
+        }
+
+        PROC(sentinel);
+        assert(sentinel == Tilemap::SENTINEL);
+
+        for (data::ObjectData &obj_data : tile_map.object_data) {
+            PROC(obj_data.x);
+            PROC(obj_data.y);
+            PROC(obj_data.type);
+
+            if (obj_data.type == "lootable") {
+                PROC(obj_data.loot_table_id);
+            } else if (obj_data.type == "warp") {
+                PROC(obj_data.warp_map_id);
+                PROC(obj_data.warp_dest_x);
+                PROC(obj_data.warp_dest_y);
+                PROC(obj_data.warp_dest_z);
             }
         }
 
@@ -1157,7 +1131,6 @@ namespace data {
             WRITE_ARRAY(pack.gfx_frames);
             WRITE_ARRAY(pack.gfx_anims);
             WRITE_ARRAY(pack.materials);
-            WRITE_ARRAY(pack.objects);
             WRITE_ARRAY(pack.sprites);
             WRITE_ARRAY(pack.tile_defs);
             WRITE_ARRAY(pack.tile_maps);
@@ -1194,7 +1167,6 @@ namespace data {
             pack.gfx_frames.resize((size_t)1 + typeCounts[DAT_TYP_GFX_FRAME]);
             pack.gfx_anims .resize((size_t)1 + typeCounts[DAT_TYP_GFX_ANIM]);
             pack.materials .resize((size_t)1 + typeCounts[DAT_TYP_MATERIAL]);
-            pack.objects   .resize((size_t)1 + typeCounts[DAT_TYP_OBJECT]);
             pack.sprites   .resize((size_t)1 + typeCounts[DAT_TYP_SPRITE]);
             pack.tile_defs .resize((size_t)1 + typeCounts[DAT_TYP_TILE_DEF]);
             pack.tile_maps .resize((size_t)1 + typeCounts[DAT_TYP_TILE_MAP]);
@@ -1217,7 +1189,6 @@ namespace data {
                     case DAT_TYP_GFX_FRAME: Process(stream, pack.gfx_frames[index], index); break;
                     case DAT_TYP_GFX_ANIM:  Process(stream, pack.gfx_anims [index], index); break;
                     case DAT_TYP_MATERIAL:  Process(stream, pack.materials [index], index); break;
-                    case DAT_TYP_OBJECT:    Process(stream, pack.objects   [index], index); break;
                     case DAT_TYP_SPRITE:    Process(stream, pack.sprites   [index], index); break;
                     case DAT_TYP_TILE_DEF:  Process(stream, pack.tile_defs [index], index); break;
                     case DAT_TYP_TILE_MAP:  Process(stream, pack.tile_maps [index], index); break;

@@ -248,7 +248,7 @@ void EntityDB::DrawEntity(uint32_t entityId)
         if (entity->type == data::ENTITY_PLAYER) {
             DrawTextShadowEx(
                 fntSmall,
-                TextFormat("%s (%s)", entity->on_warp_id.c_str(), entity->on_warp_cooldown ? "cooldown" : "ready"),
+                TextFormat("%s (%s)", entity->on_warp ? "on_warp" : "not_on_warp", entity->on_warp_cooldown ? "cooldown" : "ready"),
                 entity->ScreenPos(),
                 WHITE
             );

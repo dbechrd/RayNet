@@ -15,7 +15,6 @@ namespace data {
         gen(DAT_TYP_GFX_FRAME, "GFXFRAME") \
         gen(DAT_TYP_GFX_ANIM,  "GFXANIM ") \
         gen(DAT_TYP_MATERIAL,  "MATERIAL") \
-        gen(DAT_TYP_OBJECT,    "OBJECT  ") \
         gen(DAT_TYP_SPRITE,    "SPRITE  ") \
         gen(DAT_TYP_TILE_DEF,  "TILEDEF ") \
                                            \
@@ -126,38 +125,10 @@ namespace data {
         double  accum {};  // time since last update
     };
 
-    typedef uint32_t MaterialFlags;
-    enum {
-        MATERIAL_FLAG_WALK = 0x01,
-        MATERIAL_FLAG_SWIM = 0x02,
-    };
-
     struct Material {
         static const DataType dtype = DAT_TYP_MATERIAL;
         std::string   id             {};
         std::string   footstep_sound {};
-        MaterialFlags flags          {};
-    };
-
-    struct Object {
-        static const DataType dtype = DAT_TYP_OBJECT;
-        std::string id        {};
-        std::string type      {};
-        std::string animation {};
-
-        // type == "decoration"
-        // no extra fields atm
-
-        // type == "lootable"
-        std::string loot_table_id {};
-
-        // type == "warp"
-        std::string warp_map_id   {};
-        Vector3     warp_dest_pos {};
-
-        //------------------------
-        // Not serialized
-        GfxAnimState anim_state {};
     };
 
     //apparition
@@ -178,12 +149,19 @@ namespace data {
         std::string anims[8] {};  // for each direction
     };
 
+    typedef uint32_t TileDefFlags;
+    enum {
+        TILEDEF_FLAG_SOLID  = 0x01,
+        TILEDEF_FLAG_LIQUID = 0x02,
+    };
+
     struct TileDef {
         static const DataType dtype = DAT_TYP_TILE_DEF;
-        std::string id             {};
-        std::string anim           {};
-        std::string material       {};
-        uint8_t     auto_tile_mask {};  // not used atm, but this is where it would go once tiledefs are moved to tilesets
+        std::string  id             {};
+        std::string  anim           {};
+        std::string  material       {};
+        TileDefFlags flags          {};
+        uint8_t      auto_tile_mask {};  // not used atm, but this is where it would go once tiledefs are moved to tilesets
 
         //------------------------
         // Not serialized
@@ -192,6 +170,24 @@ namespace data {
     };
 
     ////////////////////////////////////////////////////////////////////////////
+
+    struct ObjectData {
+        uint32_t x {};
+        uint32_t y {};
+        std::string type {};
+
+        // type == "decoration"
+        // no extra fields atm
+
+        // type == "lootable"
+        std::string loot_table_id {};
+
+        // type == "warp"
+        std::string warp_map_id {};
+        uint32_t    warp_dest_x {};
+        uint32_t    warp_dest_y {};
+        uint32_t    warp_dest_z {};
+    };
 
     struct AiPathNode {
         Vector3 pos;
@@ -227,12 +223,13 @@ namespace data {
         std::string background_music {};  // background music
 
         // TODO(dlb): Move these to a global pool, each has its own textureId
-        std::vector<std::string> tileDefs   {};
-        std::vector<std::string> objectDefs {};
-        std::vector<Tile>        tiles      {};
-        std::vector<uint8_t>     objects    {};
-        std::vector<AiPathNode>  pathNodes  {};  // 94 19 56 22 57
-        std::vector<AiPath>      paths      {};  // offset, length | 0, 3 | 3, 3
+        std::vector<std::string> tileDefs    {};
+        std::vector<Tile>        tiles       {};
+        std::vector<uint8_t>     objects     {};
+        std::vector<ObjectData>  object_data {};
+        // TODO(dlb): Consider having vector<Warp>, vector<Lootable> etc. and having vector<ObjectData> be pointers/indices into those tables?
+        std::vector<AiPathNode>  pathNodes   {};  // 94 19 56 22 57
+        std::vector<AiPath>      paths       {};  // offset, length | 0, 3 | 3, 3
 
         //-------------------------------
         // Not serialized
@@ -252,12 +249,10 @@ namespace data {
 
         // Tiles
         Tile At(uint32_t x, uint32_t y);
+        uint8_t At_Obj(uint32_t x, uint32_t y);
         bool AtTry(uint32_t x, uint32_t y, Tile &tile);
         bool WorldToTileIndex(uint32_t world_x, uint32_t world_y, Coord &coord);
         bool AtWorld(uint32_t world_x, uint32_t world_y, Tile &tile);
-
-        // Objects
-        uint8_t ObjectAt(uint32_t x, uint32_t y);
 
         void Set(uint32_t x, uint32_t y, Tile tile, double now);
         void SetFromWangMap(WangMap &wangMap, double now);
@@ -268,8 +263,8 @@ namespace data {
         Rectangle TileDefRect(Tile tile);
         Color TileDefAvgColor(Tile tile);
 
-        Object &GetObject(uint8_t object_idx);
-        const GfxFrame &GetObjectGfxFrame(uint8_t object_idx);
+        // Objects
+        ObjectData *GetObjectData(uint32_t x, uint32_t y);
 
         AiPath *GetPath(uint32_t pathId);
         uint32_t GetNextPathNodeIndex(uint32_t pathId, uint32_t pathNodeIndex);
@@ -279,7 +274,6 @@ namespace data {
         void ResolveEntityTerrainCollisions(uint32_t entityId);
 
         void DrawTile(Tile tile, Vector2 position);
-        void DrawObject(uint8_t object_idx, Vector2 position);
         void Draw(Camera2D &camera);
         void DrawColliders(Camera2D &camera);
         void DrawTileIds(Camera2D &camera);
@@ -360,9 +354,12 @@ namespace data {
         //// Collision ////
         float radius      {};  // collision
         bool  colliding   {};  // not sync'd, local flag for debugging colliders
-        bool  on_warp     {};  // [deprecated] currently colliding with a warp (used to prevent ping-ponging)
-        std::string on_warp_id       {};  // id of first detected warp we're standing on
-        bool        on_warp_cooldown {};  // true when we've already warped but have not stepped off all warps yet (to prevent ping-ponging)
+        bool  on_warp     {};  // currently colliding with a warp
+        struct {
+            uint32_t x {};
+            uint32_t y {};
+        } on_warp_coord;  // coord of first detected warp we're standing on
+        bool  on_warp_cooldown {};  // true when we've already warped but have not stepped off all warps yet (to prevent ping-ponging)
 
         //// Combat ////
         double last_attacked_at {};
@@ -506,7 +503,6 @@ namespace data {
         std::vector<GfxFrame> gfx_frames {};
         std::vector<GfxAnim>  gfx_anims  {};
         std::vector<Material> materials  {};
-        std::vector<Object>   objects    {};
         std::vector<Sprite>   sprites    {};
         std::vector<TileDef>  tile_defs  {};
 
@@ -627,16 +623,6 @@ namespace data {
             } else {
                 //TraceLog(LOG_WARNING, "Missing material: %s", id.c_str());
                 return materials[0];
-            }
-        }
-
-        Object &FindObject(const std::string &id) {
-            const auto &entry = object_by_id.find(id);
-            if (entry != object_by_id.end()) {
-                return objects[entry->second];
-            } else {
-                //TraceLog(LOG_WARNING, "Missing object: %s", id.c_str());
-                return objects[0];
             }
         }
 

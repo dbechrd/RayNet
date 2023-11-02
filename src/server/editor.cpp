@@ -754,7 +754,6 @@ void Editor::DrawUI_Tilesheet(UI &uiActionBar, double now)
         case TileEditMode_Collision: {
             for (int i = 0; i < map.tileDefs.size(); i++) {
                 const data::TileDef &tile_def = map.GetTileDef(i);
-                const data::Material &material = data::packs[0]->FindMaterial(tile_def.material);
                 const float tileThird = TILE_W / 3;
                 const float tileSixth = tileThird / 2.0f;
                 Vector2 cursor{
@@ -766,7 +765,7 @@ void Editor::DrawUI_Tilesheet(UI &uiActionBar, double now)
                 cursor.y++;
 
                 // TODO: Make this a loop + LUT if we start adding more flags
-                if (!material.flags) {
+                if (!tile_def.flags) {
                     DrawRectangle(cursor.x, cursor.y, tileThird, tileThird, Fade(MAROON, 0.7f));
 
                     Vector2 size = dlb_MeasureTextEx(fntSmall, "X", 1, 0);
@@ -775,24 +774,24 @@ void Editor::DrawUI_Tilesheet(UI &uiActionBar, double now)
                     pos.y += tileSixth - size.y / 2.0f;
                     DrawTextShadowEx(fntSmall, "X", pos, WHITE);
                 } else {
-                    if (material.flags & data::MATERIAL_FLAG_WALK) {
+                    if (tile_def.flags & data::TILEDEF_FLAG_SOLID) {
                         DrawRectangle(cursor.x, cursor.y, tileThird, tileThird, Fade(DARKGREEN, 0.7f));
-
-                        Vector2 size = dlb_MeasureTextEx(fntSmall, "W", 1, 0);
-                        Vector2 pos = cursor;
-                        pos.x += tileSixth - size.x / 2.0f;
-                        pos.y += tileSixth - size.y / 2.0f;
-                        DrawTextShadowEx(fntSmall, "W", pos, WHITE);
-                    }
-                    cursor.x += tileThird + 1;
-                    if (material.flags & data::MATERIAL_FLAG_SWIM) {
-                        DrawRectangle(cursor.x, cursor.y, tileThird, tileThird, Fade(SKYBLUE, 0.7f));
 
                         Vector2 size = dlb_MeasureTextEx(fntSmall, "S", 1, 0);
                         Vector2 pos = cursor;
                         pos.x += tileSixth - size.x / 2.0f;
                         pos.y += tileSixth - size.y / 2.0f;
                         DrawTextShadowEx(fntSmall, "S", pos, WHITE);
+                    }
+                    cursor.x += tileThird + 1;
+                    if (tile_def.flags & data::TILEDEF_FLAG_LIQUID) {
+                        DrawRectangle(cursor.x, cursor.y, tileThird, tileThird, Fade(SKYBLUE, 0.7f));
+
+                        Vector2 size = dlb_MeasureTextEx(fntSmall, "L", 1, 0);
+                        Vector2 pos = cursor;
+                        pos.x += tileSixth - size.x / 2.0f;
+                        pos.y += tileSixth - size.y / 2.0f;
+                        DrawTextShadowEx(fntSmall, "L", pos, WHITE);
                     }
                     cursor.x += tileThird + 1;
                 }
@@ -900,12 +899,9 @@ void Editor::DrawUI_Tilesheet(UI &uiActionBar, double now)
                         const int tileSegment = tileYSegment * 3 + tileXSegment;
 
                         if (state.tiles.tileEditMode == TileEditMode_Collision) {
-                            data::Material& mat = data::packs[0]->FindMaterial(tile_def.material);
-                            if (!mat.id.empty()) {
-                                switch (tileSegment) {
-                                    case 0: mat.flags ^= data::MATERIAL_FLAG_WALK; break;
-                                    case 1: mat.flags ^= data::MATERIAL_FLAG_SWIM; break;
-                                }
+                            switch (tileSegment) {
+                                case 0: tile_def.flags ^= data::TILEDEF_FLAG_SOLID;  break;
+                                case 1: tile_def.flags ^= data::TILEDEF_FLAG_LIQUID; break;
                             }
                         } else if (state.tiles.tileEditMode == TileEditMode_AutoTileMask) {
                             //printf("x: %d, y: %d, s: %d\n", tileXSegment, tileYSegment, tileSegment);
@@ -1790,9 +1786,6 @@ void Editor::DrawUI_PackFiles(UI &uiActionBar, double now)
                         uiActionBar.Text(material.footstep_sound.c_str());
                         uiActionBar.Newline();
 
-                        uiActionBar.Label("flags", detailsLabelWidth);
-                        uiActionBar.Button("walk", material.flags & data::MATERIAL_FLAG_WALK, DARKGRAY, BLUE);
-                        uiActionBar.Button("swim", material.flags & data::MATERIAL_FLAG_SWIM, DARKGRAY, BLUE);
                         uiActionBar.Newline();
                         break;
                     }

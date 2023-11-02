@@ -7,16 +7,10 @@
         til_void
         til_stone_path
         til_water_dark
+        til_chest_basic
+        til_portal
     ]
-    object_defs: [
-        obj_void
-        wrp_cave_to_overworld
-        obj_chest_basic
-        obj_chest_uncommon
-        obj_chest_rare
-        obj_chest_legendary
-    ]
-    tiles: [
+    ground_tiles: [
           1  1  1  1  1  1  1  1
           1  1  1  1  1  1  1  1
           1  1  1  2  2  2  1  1
@@ -26,15 +20,21 @@
           1  1  1  1  1  1  1  1
           1  1  1  1  1  1  1  1
     ]
-    objects: [
-          0  0  0  0  0  0  2  0
+    object_tiles: [
+          0  0  0  0  0  0  3  0
           0  0  0  0  0  0  0  0
           0  0  0  0  0  0  0  0
           0  0  0  0  0  0  0  0
           0  0  0  0  0  0  0  0
           0  0  0  0  0  0  0  0
           0  0  0  0  0  0  0  0
-          0  0  1  0  0  0  0  0
+          0  0  4  0  0  0  0  0
+    ]
+    object_data: [
+        //x y type     loot_table
+        { 6 0 lootable loot_basic }
+        //x y type     dest_map_id   dest_x dest_y dest_z
+        { 2 7 warp     map_overworld 51     12     0      }
     ]
     path_nodes: [
         //x      y      z      wait_for

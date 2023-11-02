@@ -37,6 +37,12 @@ Tile data::Tilemap::At(uint32_t x, uint32_t y)
     assert(y < height);
     return tiles[(size_t)y * width + x];
 }
+uint8_t data::Tilemap::At_Obj(uint32_t x, uint32_t y)
+{
+    assert(x < width);
+    assert(y < height);
+    return objects[(size_t)y * width + x];
+}
 bool data::Tilemap::AtTry(uint32_t x, uint32_t y, Tile &tile)
 {
     if (x < width && y < height) {
@@ -62,12 +68,6 @@ bool data::Tilemap::AtWorld(uint32_t world_x, uint32_t world_y, Tile &tile)
         return true;
     }
     return false;
-}
-uint8_t data::Tilemap::ObjectAt(uint32_t x, uint32_t y)
-{
-    assert(x < width);
-    assert(y < height);
-    return objects[(size_t)y * width + x];
 }
 
 void data::Tilemap::Set(uint32_t x, uint32_t y, Tile tile, double now)
@@ -174,21 +174,22 @@ Color data::Tilemap::TileDefAvgColor(Tile tile)
     return tile_def.color;
 }
 
-data::Object &data::Tilemap::GetObject(uint8_t object_idx)
+data::ObjectData *data::Tilemap::GetObjectData(uint32_t x, uint32_t y)
 {
-    if (object_idx >= objectDefs.size()) {
-        object_idx = 0;
+    for (data::ObjectData &obj_data : object_data) {
+        if (obj_data.x == x && obj_data.y == y) {
+            return &obj_data;
+        }
     }
-    data::Object &object = data::packs[0]->FindObject(objectDefs[object_idx]);
-    return object;
+    return 0;
 }
-const data::GfxFrame &data::Tilemap::GetObjectGfxFrame(uint8_t object_idx)
-{
-    const data::Object &object = GetObject(object_idx);
-    const data::GfxAnim &gfx_anim = data::packs[0]->FindGraphicAnim(object.animation);
-    const data::GfxFrame &gfx_frame = data::packs[0]->FindGraphicFrame(gfx_anim.frames[object.anim_state.frame]);
-    return gfx_frame;
-}
+//const data::GfxFrame &data::Tilemap::GetObjectGfxFrame(uint8_t object_idx)
+//{
+//    const data::Object &object = GetObject(object_idx);
+//    const data::GfxAnim &gfx_anim = data::packs[0]->FindGraphicAnim(object.animation);
+//    const data::GfxFrame &gfx_frame = data::packs[0]->FindGraphicFrame(gfx_anim.frames[object.anim_state.frame]);
+//    return gfx_frame;
+//}
 
 data::AiPath *data::Tilemap::GetPath(uint32_t pathId) {
     if (pathId < paths.size()) {
@@ -228,18 +229,28 @@ void data::Tilemap::ResolveEntityTerrainCollisions(data::Entity &entity)
         entity.position.y + entity.radius
     };
 
-    int yMin = CLAMP(floorf(topLeft.y / TILE_W) - 1, 0, height);
-    int yMax = CLAMP(ceilf(bottomRight.y / TILE_W) + 1, 0, height);
-    int xMin = CLAMP(floorf(topLeft.x / TILE_W) - 1, 0, width);
-    int xMax = CLAMP(ceilf(bottomRight.x / TILE_W) + 1, 0, width);
+    int yMin = floorf(topLeft.y / TILE_W) - 1;
+    int yMax = ceilf(bottomRight.y / TILE_W) + 1;
+    int xMin = floorf(topLeft.x / TILE_W) - 1;
+    int xMax = ceilf(bottomRight.x / TILE_W) + 1;
 
     for (int y = yMin; y < yMax; y++) {
         for (int x = xMin; x < xMax; x++) {
-            const Tile tile = At(x, y);
-            const data::TileDef &tileDef = GetTileDef(tile);
-            const data::Material &material = data::packs[0]->FindMaterial(tileDef.material);
+            bool solid = true;
 
-            if (!material.flags) {
+            // Out of bounds tiles are considered solid tiles
+            if (x >= 0 && x < width && y >= 0 && y < height) {
+                const Tile tile = At(x, y);
+                const data::TileDef &tileDef = GetTileDef(tile);
+                solid = tileDef.flags & data::TILEDEF_FLAG_SOLID;
+                if (!solid) {
+                    const uint8_t obj = At_Obj(x, y);
+                    const data::TileDef &objTileDef = GetTileDef(obj);
+                    solid = objTileDef.flags & data::TILEDEF_FLAG_SOLID;
+                }
+            }
+
+            if (solid) {
                 Rectangle tileRect{};
                 Vector2 tilePos = { (float)x * TILE_W, (float)y * TILE_W };
                 tileRect.x = tilePos.x;
@@ -263,12 +274,12 @@ void data::Tilemap::ResolveEntityTerrainCollisions(data::Entity &entity)
     if (entity.type == data::ENTITY_PLAYER) {
         assert(entity.radius);
 
-        entity.on_warp_id = "";
-        for (int y = yMin; y < yMax && entity.on_warp_id.empty(); y++) {
-            for (int x = xMin; x < xMax && entity.on_warp_id.empty(); x++) {
-                const uint8_t object_idx = ObjectAt(x, y);
-                const data::Object &object = GetObject(object_idx);
-                if (object.type == "warp") {
+        entity.on_warp = false;
+        entity.on_warp_coord = {};
+        for (int y = yMin; y < yMax && !entity.on_warp; y++) {
+            for (int x = xMin; x < xMax && !entity.on_warp; x++) {
+                const data::ObjectData *object = GetObjectData(x, y);
+                if (object && object->type == "warp") {
                     Rectangle tileRect{};
                     Vector2 tilePos = { (float)x * TILE_W, (float)y * TILE_W };
                     tileRect.x = tilePos.x;
@@ -277,15 +288,17 @@ void data::Tilemap::ResolveEntityTerrainCollisions(data::Entity &entity)
                     tileRect.height = TILE_W;
 
                     if (dlb_CheckCollisionCircleRec(entity.ScreenPos(), entity.radius, tileRect, 0)) {
-                        entity.on_warp_id = object.id;
+                        entity.on_warp = true;
+                        entity.on_warp_coord.x = object->x;
+                        entity.on_warp_coord.y = object->y;
                     }
                 }
             }
         }
     }
 
-    if (entity.on_warp_id.empty()) {
-        entity.on_warp_cooldown = false;
+    if (!entity.on_warp) {
+        entity.on_warp_cooldown = false;  // ready to warp again
     }
 }
 void data::Tilemap::ResolveEntityTerrainCollisions(uint32_t entityId)
@@ -308,15 +321,15 @@ void data::Tilemap::DrawTile(Tile tile, Vector2 position)
 
     dlb_DrawTextureRec(gfx_file.texture, texRect, position, WHITE);
 }
-void data::Tilemap::DrawObject(uint8_t object_idx, Vector2 position)
-{
-    // TODO: This is the same as DrawTile essentially, can we de-dupe somehow?
-    const data::GfxFrame &gfx_frame = GetObjectGfxFrame(object_idx);
-    const GfxFile &gfx_file = data::packs[0]->FindGraphic(gfx_frame.gfx);
-    const Rectangle texRect{ (float)gfx_frame.x, (float)gfx_frame.y, (float)gfx_frame.w, (float)gfx_frame.h };
-
-    dlb_DrawTextureRec(gfx_file.texture, texRect, position, WHITE);
-}
+//void data::Tilemap::DrawObject(uint8_t object_idx, Vector2 position)
+//{
+//    // TODO: This is the same as DrawTile essentially, can we de-dupe somehow?
+//    const data::GfxFrame &gfx_frame = GetObjectGfxFrame(object_idx);
+//    const GfxFile &gfx_file = data::packs[0]->FindGraphic(gfx_frame.gfx);
+//    const Rectangle texRect{ (float)gfx_frame.x, (float)gfx_frame.y, (float)gfx_frame.w, (float)gfx_frame.h };
+//
+//    dlb_DrawTextureRec(gfx_file.texture, texRect, position, WHITE);
+//}
 void data::Tilemap::Draw(Camera2D &camera)
 {
     Rectangle screenRect = GetScreenRectWorld(camera);
@@ -334,9 +347,9 @@ void data::Tilemap::Draw(Camera2D &camera)
 
     for (int y = yMin; y < yMax; y++) {
         for (int x = xMin; x < xMax; x++) {
-            uint8_t object = ObjectAt(x, y);
+            uint8_t object = At_Obj(x, y);
             if (object) {
-                DrawObject(object, { (float)x * TILE_W, (float)y * TILE_W });
+                DrawTile(object, { (float)x * TILE_W, (float)y * TILE_W });
             }
         }
     }
@@ -353,8 +366,7 @@ void data::Tilemap::DrawColliders(Camera2D &camera)
         for (int x = xMin; x < xMax; x++) {
             Tile tile = At(x, y);
             const data::TileDef &tileDef = GetTileDef(tile);
-            const data::Material &material = data::packs[0]->FindMaterial(tileDef.material);
-            if (!material.flags) {
+            if (tileDef.flags & data::TILEDEF_FLAG_SOLID) {
                 Vector2 tilePos = { (float)x * TILE_W, (float)y * TILE_W };
                 const int pad = 1;
                 DrawRectangleLinesEx(

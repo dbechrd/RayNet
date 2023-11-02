@@ -305,11 +305,10 @@ int main(int argc, char *argv[])
 
     //SetTraceLogLevel(LOG_WARNING);
 
-    InitWindow(800, 600, "RayNet Client");
-    //InitWindow(1920, 1017, "RayNet Client");
-    SetWindowState(FLAG_VSYNC_HINT);  // Gahhhhhh Windows fucking sucks at this
+    InitWindow(1920, 1017, "RayNet Client");
     SetWindowState(FLAG_WINDOW_RESIZABLE);
-    SetWindowState(FLAG_WINDOW_MAXIMIZED);
+    //SetWindowState(FLAG_BORDERLESS_WINDOWED_MODE);
+    SetWindowState(FLAG_VSYNC_HINT);  // Gahhhhhh Windows sucks at this
     //SetWindowState(FLAG_FULLSCREEN_MODE);
     SetExitKey(0);  // must be called after InitWindow()
 
@@ -554,7 +553,7 @@ int main(int argc, char *argv[])
         //--------------------
         // Draw
         BeginDrawing();
-            ClearBackground(GRAYISH_BLUE);
+            ClearBackground(BLACK); //GRAYISH_BLUE);
 
             if (client->yj_client->IsConnected()) {
                 draw_game(*client);

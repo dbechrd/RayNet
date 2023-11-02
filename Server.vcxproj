@@ -79,7 +79,7 @@
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>raylib.lib;yojimbo.lib;kernel32.lib;comdlg32.lib;ole32.lib;user32.lib;gdi32.lib;shell32.lib;ws2_32.lib;winmm.lib</AdditionalDependencies>
+      <AdditionalDependencies>raylib.lib;yojimbo_d.lib;kernel32.lib;comdlg32.lib;ole32.lib;user32.lib;gdi32.lib;shell32.lib;ws2_32.lib;winmm.lib</AdditionalDependencies>
       <AdditionalLibraryDirectories>lib</AdditionalLibraryDirectories>
       <AdditionalOptions>/NODEFAULTLIB:library /ignore:4098 /ignore:4099 %(AdditionalOptions)</AdditionalOptions>
       <SubSystem>Console</SubSystem>
