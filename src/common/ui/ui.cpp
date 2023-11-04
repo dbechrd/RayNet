@@ -6,6 +6,7 @@ STB_TexteditState *UI::prevActiveEditor{};
 STB_TexteditState *UI::activeEditor{};
 
 bool UI::tabToNextEditor{};
+bool UI::tabHandledThisFrame{};
 STB_TexteditState *UI::lastDrawnEditor{};
 STB_TexteditState *UI::tabToPrevEditor{};
 
@@ -23,6 +24,7 @@ UI::UI(Vector2 position, UIStyle style)
 {
     this->position = position;
     styleStack.push(style);
+    tabHandledThisFrame = false;
 }
 
 void UI::PushStyle(UIStyle style)
@@ -755,7 +757,7 @@ UIState UI::Textbox(STB_TexteditState &stbState, std::string &text, KeyCallback 
                     }
                 }
             }
-            if (io.KeyPressed(KEY_TAB, true)) {
+            if (io.KeyPressed(KEY_TAB, true) && !tabHandledThisFrame) {
                 if (shift) {
                     // tell previously drawn textbox to activate next frame
                     tabToPrevEditor = lastDrawnEditor;
@@ -763,6 +765,7 @@ UIState UI::Textbox(STB_TexteditState &stbState, std::string &text, KeyCallback 
                     // tell next textbox that draws to activate
                     tabToNextEditor = true;
                 }
+                tabHandledThisFrame = true;
             }
 #endif
 
@@ -790,7 +793,7 @@ UIState UI::Textbox(STB_TexteditState &stbState, std::string &text, KeyCallback 
     // Draw
     //--------------------------------------------------------------------------
     // Background
-    const Color bgColor = style.bgColor[UI_CtrlTypeDefault];
+    const Color bgColor = style.bgColor[UI_CtrlTypeTextbox];
     if (!bgColor.a) {
         // TODO(dlb)[cleanup]: What da heck is dis??
         //bgColor = DARKGRAY;

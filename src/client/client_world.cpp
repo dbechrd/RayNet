@@ -664,7 +664,7 @@ void ClientWorld::Draw(GameClient &client)
 
             UIStyle uiSignEditorStyle{};
             uiSignEditorStyle.borderColor = BLANK;
-            uiSignEditorStyle.bgColor[UI_CtrlTypeDefault] = BLANK;
+            uiSignEditorStyle.size.x = uiSignEditorSize.x;
             UI uiSignEditor{ uiSignEditorPos, uiSignEditorStyle };
 
             const Rectangle uiSignedEditorRect{
@@ -685,10 +685,22 @@ void ClientWorld::Draw(GameClient &client)
             UIState uiState{};
             uiState.hover = dlb_CheckCollisionPointRec(GetMousePosition(), uiSignedEditorRect);
 
-            static STB_TexteditState txtEditSign{};
-            static std::string signText{};
-            uiSignEditor.Textbox(txtEditSign, signText);
-            uiSignEditor.Newline();
+            static STB_TexteditState txtEditSign[4]{};
+            static std::string signText[4]{};
+
+            UIPad margin = uiSignEditorStyle.margin;
+            margin.left -= 4;
+            margin.bottom -= 4;
+            uiSignEditor.PushMargin(margin);
+            uiSignEditor.PushWidth(uiSignEditorSize.x); // - (uiSignEditorStyle.margin.left + uiSignEditorStyle.margin.right));
+            uiSignEditor.PushBgColor(Fade(PINK, 0.2f), UI_CtrlTypeTextbox);
+            for (int i = 0; i < 4; i++) {
+                uiSignEditor.Textbox(txtEditSign[i], signText[i]);
+                uiSignEditor.Newline();
+            }
+            uiSignEditor.PopStyle();
+            uiSignEditor.PopStyle();
+            uiSignEditor.PopStyle();
 
             if (io.KeyPressed(KEY_ESCAPE)) {
                 editingSign = false;

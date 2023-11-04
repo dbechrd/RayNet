@@ -4,6 +4,7 @@
 enum UI_CtrlType {
     UI_CtrlTypeDefault,
     UI_CtrlTypeButton,
+    UI_CtrlTypeTextbox,
     UI_CtrlTypeCount,
 };
 
@@ -65,7 +66,7 @@ struct UIStyle {
     UIPad pad{ 8, 2 };
     float scale{ 1 };
     Vector2 size{ 0, 0 };
-    Color bgColor[UI_CtrlTypeCount]{ BLANK, BLUE_DESAT };
+    Color bgColor[UI_CtrlTypeCount]{ BLANK, BLUE_DESAT, DARKGRAY };
     Color fgColor{ WHITE };
     Font *font{ &fntSmall };
     bool buttonPressed{};
@@ -128,6 +129,7 @@ private:
     static STB_TexteditState *activeEditor;
 
     static bool tabToNextEditor;  // for tab
+    static bool tabHandledThisFrame;  // to de-dupe
     static STB_TexteditState *lastDrawnEditor;  // for shift-tab (1 frame delay)
     static STB_TexteditState *tabToPrevEditor;  // for shift-tab (1 frame delay)
 

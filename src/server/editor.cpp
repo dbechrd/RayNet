@@ -1344,11 +1344,11 @@ void Editor::DrawUI_EntityActions(UI &uiActionBar, double now)
             uiActionBar.Newline();
 
             uiActionBar.Label("position", labelWidth);
-            uiActionBar.PushBgColor({ 127, 0, 0, 255 }, UI_CtrlTypeDefault);
+            uiActionBar.PushBgColor({ 127, 0, 0, 255 }, UI_CtrlTypeTextbox);
             static STB_TexteditState txtPosX{};
             uiActionBar.TextboxFloat(txtPosX, entity->position.x, 80);
             uiActionBar.PopStyle();
-            uiActionBar.PushBgColor({ 0, 127, 0, 255 }, UI_CtrlTypeDefault);
+            uiActionBar.PushBgColor({ 0, 127, 0, 255 }, UI_CtrlTypeTextbox);
             static STB_TexteditState txtPosY{};
             uiActionBar.TextboxFloat(txtPosY, entity->position.y, 80);
             uiActionBar.PopStyle();
@@ -1407,11 +1407,11 @@ void Editor::DrawUI_EntityActions(UI &uiActionBar, double now)
             uiActionBar.Newline();
 
             uiActionBar.Label("velocity", labelWidth);
-            uiActionBar.PushBgColor({ 127, 0, 0, 255 }, UI_CtrlTypeDefault);
+            uiActionBar.PushBgColor({ 127, 0, 0, 255 }, UI_CtrlTypeTextbox);
             static STB_TexteditState txtVelX{};
             uiActionBar.TextboxFloat(txtVelX, entity->velocity.x, 80);
             uiActionBar.PopStyle();
-            uiActionBar.PushBgColor({ 0, 127, 0, 255 }, UI_CtrlTypeDefault);
+            uiActionBar.PushBgColor({ 0, 127, 0, 255 }, UI_CtrlTypeTextbox);
             static STB_TexteditState txtVelY{};
             uiActionBar.TextboxFloat(txtVelY, entity->velocity.y, 80);
             uiActionBar.PopStyle();
@@ -1720,14 +1720,14 @@ void Editor::DrawUI_PackFiles(UI &uiActionBar, double now)
 
                         uiActionBar.Label("rect", detailsLabelWidth);
 
-                        uiActionBar.PushBgColor({ 127, 0, 0, 255 }, UI_CtrlTypeDefault);
+                        uiActionBar.PushBgColor({ 127, 0, 0, 255 }, UI_CtrlTypeTextbox);
                         static STB_TexteditState txtX{};
                         float x = (float)gfxFrame.x;
                         uiActionBar.TextboxFloat(txtX, x, 40, "%.f");
                         gfxFrame.x = CLAMP(x, 0, UINT16_MAX);
                         uiActionBar.PopStyle();
 
-                        uiActionBar.PushBgColor({ 0, 127, 0, 255 }, UI_CtrlTypeDefault);
+                        uiActionBar.PushBgColor({ 0, 127, 0, 255 }, UI_CtrlTypeTextbox);
                         static STB_TexteditState txtY{};
                         float y = (float)gfxFrame.y;
                         uiActionBar.TextboxFloat(txtY, y, 40, "%.f");
