@@ -474,7 +474,8 @@ bool RN_stb_is_space(char ch)
 #define STB_TEXTEDIT_IMPLEMENTATION
 #include "stb_textedit.h"
 
-UIState UI::Textbox(STB_TexteditState &stbState, std::string &text, KeyCallback keyCallback, void *userData)
+UIState UI::Textbox(STB_TexteditState &stbState, std::string &text, KeyPreCallback preCallback,
+    KeyPostCallback postCallback, void *userData)
 {
     const Vector2 textOffset{ 8, 2 };
     const UIStyle &style = GetStyle();
@@ -630,11 +631,8 @@ UIState UI::Textbox(STB_TexteditState &stbState, std::string &text, KeyCallback 
         // Keyboard
         //--------------------------------------------------------------------------
         bool keyHandled = false;
-        if (!io.KeyboardCaptured() && keyCallback) {
-            const char *newStr = keyCallback(userData, keyHandled);
-            if (newStr) {
-                str.data = newStr;
-            }
+        if (!io.KeyboardCaptured() && preCallback) {
+            preCallback(str.data, userData, keyHandled);
         }
 
         if (!io.KeyboardCaptured() && !keyHandled) {
@@ -787,6 +785,10 @@ UIState UI::Textbox(STB_TexteditState &stbState, std::string &text, KeyCallback 
                 ch = GetCharPressed();
             }
         }
+
+        if (!io.KeyboardCaptured() && postCallback) {
+            postCallback(str.data, userData);
+        }
     }
 
     //--------------------------------------------------------------------------
@@ -878,23 +880,20 @@ struct TextboxFloatCallbackData {
     float increment;
 };
 
-const char *AdjustFloat(void *userData, bool &keyHandled)
+void AdjustFloat(std::string &str, void *userData, bool &keyHandled)
 {
     TextboxFloatCallbackData *data = (TextboxFloatCallbackData *)userData;
-    const char *newStr = 0;
 
     if (io.KeyPressed(KEY_UP, true)) {
         *data->val += data->increment;
-        newStr = TextFormat(data->fmt, *data->val);
+        str = TextFormat(data->fmt, *data->val);
         keyHandled = true;
     }
     if (io.KeyPressed(KEY_DOWN, true)) {
         *data->val -= data->increment;
-        newStr = TextFormat(data->fmt, *data->val);
+        str = TextFormat(data->fmt, *data->val);
         keyHandled = true;
     }
-
-    return newStr;
 }
 
 UIState UI::TextboxFloat(STB_TexteditState &stbState, float &value, float width, const char *fmt, float increment)
@@ -936,7 +935,7 @@ UIState UI::TextboxFloat(STB_TexteditState &stbState, float &value, float width,
     std::string valueStr{valueCstr};
     if (width) PushWidth(width);
     TextboxFloatCallbackData data{ fmt, &value, increment };
-    UIState state = Textbox(stbState, valueStr, AdjustFloat, (void *)&data);
+    UIState state = Textbox(stbState, valueStr, AdjustFloat, 0, (void *)&data);
     if (width) PopStyle();
     char *end = 0;
     float newValue = strtof(valueStr.c_str(), &end);

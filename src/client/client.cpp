@@ -27,8 +27,8 @@ void update_camera(Camera2D &camera, data::Tilemap &map, data::Entity &target, f
         camera.target.y = LERP(camera.target.y, targetPos.y, alpha);
 
 #else
-        camera.target.x = target.x;
-        camera.target.y = target.y;
+        camera.target.x = targetPos.x;
+        camera.target.y = targetPos.y;
 #endif
     }
 
@@ -73,10 +73,10 @@ void update_camera(Camera2D &camera, data::Tilemap &map, data::Entity &target, f
         zoomTarget = 2;
     }
 
-    //camera.target.x = floorf(camera.target.x);
-    //camera.target.y = floorf(camera.target.y);
-    //camera.offset.x = floorf(camera.offset.x);
-    //camera.offset.y = floorf(camera.offset.y);
+    camera.target.x = floorf(camera.target.x);
+    camera.target.y = floorf(camera.target.y);
+    camera.offset.x = floorf(camera.offset.x);
+    camera.offset.y = floorf(camera.offset.y);
 }
 
 void draw_game(GameClient &client)

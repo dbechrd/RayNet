@@ -246,13 +246,5 @@ void EntityDB::DrawEntity(uint32_t entityId, data::DrawCmdQueue &sortedDraws)
     if (entity) {
         const Rectangle rect = data::GetSpriteRect(*entity);
         data::DrawSprite(*entity, &sortedDraws);
-        if (entity->type == data::ENTITY_PLAYER) {
-            DrawTextShadowEx(
-                fntSmall,
-                TextFormat("%s (%s)", entity->on_warp ? "on_warp" : "not_on_warp", entity->on_warp_cooldown ? "cooldown" : "ready"),
-                entity->ScreenPos(),
-                WHITE
-            );
-        }
     }
 }

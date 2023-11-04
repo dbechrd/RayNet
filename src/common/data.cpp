@@ -1416,8 +1416,8 @@ namespace data {
     {
         const data::GfxFrame &frame = GetSpriteFrame(entity);
         const Rectangle rect{
-            entity.position.x - (float)(frame.w / 2),
-            entity.position.y - entity.position.z - (float)frame.h,
+            floorf(entity.position.x - (float)(frame.w / 2)),
+            floorf(entity.position.y - entity.position.z - (float)frame.h),
             (float)frame.w,
             (float)frame.h
         };
@@ -1464,6 +1464,8 @@ namespace data {
 
         Rectangle sprite_rect = GetSpriteRect(entity);
         Vector3 pos = { sprite_rect.x, sprite_rect.y };
+        pos.x = floorf(pos.x);
+        pos.y = floorf(pos.y);
         //if (Vector3LengthSqr(entity.velocity) < 0.0001f) {
         //    pos.x = floorf(pos.x);
         //    pos.y = floorf(pos.y);

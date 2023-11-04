@@ -108,7 +108,7 @@ typedef uint8_t Tile;  // TODO: Remove this?
 #define CL_SEND_INPUT_DT                SV_TICK_DT //(1.0/120.0)
 #define CL_SNAPSHOT_COUNT               16
 #define CL_RENDER_DISTANCE              1
-#define CL_CAMERA_LERP                  1
+#define CL_CAMERA_LERP                  0
 #define CL_CLIENT_SIDE_PREDICT          1
 #define CL_DIALOG_DURATION_MIN          1.0
 #define CL_DIALOG_DURATION_PER_CHAR     0.1

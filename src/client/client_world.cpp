@@ -345,9 +345,13 @@ void ClientWorld::DrawEntitySnapshotShadows(uint32_t entityId, Controller &contr
         }
         ApplyStateInterpolated(ghostData.entity, ghost[i], ghost[i], 0, dt);
 
-        const float scalePer = 1.0f / (CL_SNAPSHOT_COUNT + 1);
+        //const float scalePer = 1.0f / (CL_SNAPSHOT_COUNT + 1);
         Rectangle ghostRect = data::GetSpriteRect(ghostData.entity);
-        ghostRect = RectShrink(ghostRect, scalePer);
+        //ghostRect = RectShrink(ghostRect, scalePer);
+        ghostRect.x = floorf(ghostRect.x);
+        ghostRect.y = floorf(ghostRect.y);
+        ghostRect.width = floorf(ghostRect.width);
+        ghostRect.height = floorf(ghostRect.height);
         DrawRectangleRec(ghostRect, Fade(RED, 0.1f));
         DrawRectangleLinesEx(ghostRect, 1, Fade(RED, 0.8f));
     }
@@ -391,8 +395,10 @@ void ClientWorld::DrawEntitySnapshotShadows(uint32_t entityId, Controller &contr
             ghostData.entity.position.x = LERP(posBefore.x, ghostData.entity.position.x, cmdAccumDt / SV_TICK_DT);
         }
         Rectangle ghostRect = data::GetSpriteRect(ghostData.entity);
-        //ghostRect.x = floorf(ghostRect.x);
-        //ghostRect.y = floorf(ghostRect.y);
+        ghostRect.x = floorf(ghostRect.x);
+        ghostRect.y = floorf(ghostRect.y);
+        ghostRect.width = floorf(ghostRect.width);
+        ghostRect.height = floorf(ghostRect.height);
         DrawRectangleLinesEx(ghostRect, 1, Fade(BLUE, 0.8f));
 #endif
 #endif
@@ -582,6 +588,14 @@ void ClientWorld::DrawDialogs(GameClient &client, Camera2D &camera)
     io.PopScope();
 }
 
+void LimitStringLength(std::string &str, void *userData)
+{
+    size_t maxLength = (size_t)userData;
+    if (str.size() > maxLength) {
+        str.resize(maxLength, 0);
+    }
+}
+
 void ClientWorld::Draw(GameClient &client)
 {
     data::Tilemap *map = LocalPlayerMap();
@@ -661,6 +675,8 @@ void ClientWorld::Draw(GameClient &client)
                 playerTopScreen.x - uiSignEditorSize.x / 2.0f,
                 playerTopScreen.y - uiSignEditorSize.y
             };
+            uiSignEditorPos.x = floorf(uiSignEditorPos.x);
+            uiSignEditorPos.y = floorf(uiSignEditorPos.y);
 
             UIStyle uiSignEditorStyle{};
             uiSignEditorStyle.borderColor = BLANK;
@@ -689,13 +705,14 @@ void ClientWorld::Draw(GameClient &client)
             static std::string signText[4]{};
 
             UIPad margin = uiSignEditorStyle.margin;
-            margin.left -= 4;
-            margin.bottom -= 4;
+            //margin.left -= 4;
+            //margin.bottom -= 4;
             uiSignEditor.PushMargin(margin);
             uiSignEditor.PushWidth(uiSignEditorSize.x); // - (uiSignEditorStyle.margin.left + uiSignEditorStyle.margin.right));
-            uiSignEditor.PushBgColor(Fade(PINK, 0.2f), UI_CtrlTypeTextbox);
+            //uiSignEditor.PushBgColor(Fade(PINK, 0.2f), UI_CtrlTypeTextbox);
+            uiSignEditor.PushBgColor(BLANK, UI_CtrlTypeTextbox);
             for (int i = 0; i < 4; i++) {
-                uiSignEditor.Textbox(txtEditSign[i], signText[i]);
+                uiSignEditor.Textbox(txtEditSign[i], signText[i], 0, LimitStringLength, (void *)15);
                 uiSignEditor.Newline();
             }
             uiSignEditor.PopStyle();

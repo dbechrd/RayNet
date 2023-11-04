@@ -369,7 +369,10 @@ namespace data {
         Vector3       position     {};
 
         inline Vector2 ScreenPos(void) {
-            Vector2 screenPos{ position.x, position.y - position.z };
+            Vector2 screenPos{
+                floorf(position.x),
+                floorf(position.y - position.z)
+            };
             return screenPos;
         }
 
