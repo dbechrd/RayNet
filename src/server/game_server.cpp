@@ -41,7 +41,7 @@ void GameServer::OnClientJoin(int clientIdx)
         const Vector3 caveEntrance{ 3100, 1100, 0 };
         const Vector3 townCenter{ 1660, 2360, 0 };
         player->position = caveEntrance;
-        player->radius = 16;
+        player->radius = 8;
         player->hp_max = 100;
         player->hp = player->hp_max;
         player->speed = 3000;
@@ -1033,7 +1033,7 @@ void GameServer::TickResolveEntityWarpCollisions(data::Tilemap &map, uint32_t en
         assert(obj_data->type == "warp");
         Vector3 dest{};
         dest.x = obj_data->warp_dest_x * TILE_W + TILE_W * 0.5f;
-        dest.y = obj_data->warp_dest_y * TILE_W + TILE_W * 0.5f;
+        dest.y = obj_data->warp_dest_y * TILE_W + TILE_W - victim->radius; // * 0.5f;
         dest.z = obj_data->warp_dest_z;
         WarpEntity(victim->id, obj_data->warp_map_id, dest);
         victim->on_warp_cooldown = true;
@@ -1122,6 +1122,7 @@ void GameServer::SerializeSnapshot(uint32_t entityId, Msg_S_EntitySnapshot &enti
     entitySnapshot.type      = entity->type;
     strncpy(entitySnapshot.map_id, entity->map_id.c_str(), SV_MAX_TILE_MAP_NAME_LEN);
     entitySnapshot.position  = entity->position;
+    entitySnapshot.on_warp_cooldown = entity->on_warp_cooldown;
 
     // Collision
     //entitySnapshot.radius = projectile->radius;

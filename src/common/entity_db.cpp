@@ -1,6 +1,7 @@
 #include "entity_db.h"
 #include <cassert>
 
+// TODO: Move this into GameClient prolly, eh?
 EntityDB *entityDb{};
 
 size_t EntityDB::FindEntityIndex(uint32_t entityId)
@@ -239,12 +240,12 @@ void EntityDB::DrawEntityHoverInfo(uint32_t entityId)
     };
     DrawTextShadowEx(fntMedium, entity->name.c_str(), labelPos, WHITE);
 }
-void EntityDB::DrawEntity(uint32_t entityId)
+void EntityDB::DrawEntity(uint32_t entityId, data::DrawCmdQueue &sortedDraws)
 {
     data::Entity *entity = FindEntity(entityId);
     if (entity) {
         const Rectangle rect = data::GetSpriteRect(*entity);
-        data::DrawSprite(*entity);
+        data::DrawSprite(*entity, &sortedDraws);
         if (entity->type == data::ENTITY_PLAYER) {
             DrawTextShadowEx(
                 fntSmall,

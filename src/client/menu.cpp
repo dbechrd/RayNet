@@ -118,7 +118,7 @@ void MenuConnecting::Draw(GameClient &client, bool &back)
     campfire.position.y = campfirePos.y;
     campfire.position.z = 0;
 
-    data::DrawSprite(campfire);
+    data::DrawSprite(campfire, 0);
     uiMenu.Space({ 0, (float)uiStyleMenu.font->baseSize / 2 });
 
     if (client.yj_client->IsConnecting()) {

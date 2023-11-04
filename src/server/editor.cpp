@@ -130,7 +130,7 @@ void Editor::DrawGroundOverlay_Tiles(Camera2D &camera, double now)
             }
 
             Vector2 drawPos{ (float)coord.x * TILE_W, (float)coord.y * TILE_W };
-            map.DrawTile(cursorTile, drawPos);
+            map.DrawTile(cursorTile, drawPos, 0);
             DrawRectangleLinesEx({ drawPos.x, drawPos.y, TILE_W, TILE_W }, 2, WHITE);
         }
     }
@@ -744,7 +744,7 @@ void Editor::DrawUI_Tilesheet(UI &uiActionBar, double now)
     for (int i = 0; i < map.tileDefs.size(); i++) {
         int tile_x = TILE_W * (i % tiles_x);
         int tile_y = TILE_W * (i / tiles_x);
-        map.DrawTile(i, { imgTL.x + tile_x, imgTL.y + tile_y });
+        map.DrawTile(i, { imgTL.x + tile_x, imgTL.y + tile_y }, 0);
     }
 
     uiActionBar.PopStyle();

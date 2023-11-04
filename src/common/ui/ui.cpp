@@ -790,14 +790,19 @@ UIState UI::Textbox(STB_TexteditState &stbState, std::string &text, KeyCallback 
     // Draw
     //--------------------------------------------------------------------------
     // Background
-    Color bgColor = style.bgColor[UI_CtrlTypeDefault];
+    const Color bgColor = style.bgColor[UI_CtrlTypeDefault];
     if (!bgColor.a) {
-        bgColor = DARKGRAY;
+        // TODO(dlb)[cleanup]: What da heck is dis??
+        //bgColor = DARKGRAY;
     }
-    DrawRectangleRec(ctrlRect, bgColor);
+    if (bgColor.a) {
+        DrawRectangleRec(ctrlRect, bgColor);
+    }
 
     // Border
-    DrawRectangleLinesEx(ctrlRect, 1, BLACK);
+    if (style.borderColor.a) {
+        DrawRectangleLinesEx(ctrlRect, 1, style.borderColor);
+    }
 
     // Text
     DrawTextShadowEx(*style.font, text.c_str(), { ctrlPosition.x + textOffset.x, ctrlPosition.y + textOffset.y }, RAYWHITE);

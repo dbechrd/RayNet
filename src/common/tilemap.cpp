@@ -312,14 +312,23 @@ void data::Tilemap::ResolveEntityTerrainCollisions(uint32_t entityId)
     ResolveEntityTerrainCollisions(*entity);
 }
 
-void data::Tilemap::DrawTile(Tile tile, Vector2 position)
+void data::Tilemap::DrawTile(Tile tile, Vector2 position, data::DrawCmdQueue *sortedDraws)
 {
     // TODO: Yikes.. that's a lot of lookups in a tight loop. Memoize some pointers or something man.
     const data::GfxFrame &gfx_frame = GetTileGfxFrame(tile);
     const GfxFile &gfx_file = data::packs[0]->FindGraphic(gfx_frame.gfx);
     const Rectangle texRect{ (float)gfx_frame.x, (float)gfx_frame.y, (float)gfx_frame.w, (float)gfx_frame.h };
 
-    dlb_DrawTextureRec(gfx_file.texture, texRect, position, WHITE);
+    if (sortedDraws) {
+        DrawCmd cmd{};
+        cmd.texture = gfx_file.texture;
+        cmd.rect = texRect;
+        cmd.position = { position.x, position.y, 0 };
+        cmd.color = WHITE;
+        sortedDraws->push(cmd);
+    } else {
+        dlb_DrawTextureRec(gfx_file.texture, texRect, position, WHITE);
+    }
 }
 //void data::Tilemap::DrawObject(uint8_t object_idx, Vector2 position)
 //{
@@ -330,7 +339,7 @@ void data::Tilemap::DrawTile(Tile tile, Vector2 position)
 //
 //    dlb_DrawTextureRec(gfx_file.texture, texRect, position, WHITE);
 //}
-void data::Tilemap::Draw(Camera2D &camera)
+void data::Tilemap::Draw(Camera2D &camera, data::DrawCmdQueue &sortedDraws)
 {
     Rectangle screenRect = GetScreenRectWorld(camera);
     int yMin = CLAMP(floorf(screenRect.y / TILE_W), 0, height);
@@ -341,15 +350,20 @@ void data::Tilemap::Draw(Camera2D &camera)
     for (int y = yMin; y < yMax; y++) {
         for (int x = xMin; x < xMax; x++) {
             Tile tile = At(x, y);
-            DrawTile(tile, { (float)x * TILE_W, (float)y * TILE_W });
+            DrawTile(tile, { (float)x * TILE_W, (float)y * TILE_W }, 0);
         }
     }
 
+    // NOTE(dlb): Give obj layer an extra padding on all sides to prevent culling 2-tall things
+    yMin = CLAMP(-1 + floorf(screenRect.y / TILE_W), 0, height);
+    yMax = CLAMP( 1 + ceilf((screenRect.y + screenRect.height) / TILE_W), 0, height);
+    xMin = CLAMP(-1 + floorf(screenRect.x / TILE_W), 0, width);
+    xMax = CLAMP( 1 + ceilf((screenRect.x + screenRect.width) / TILE_W), 0, width);
     for (int y = yMin; y < yMax; y++) {
         for (int x = xMin; x < xMax; x++) {
             uint8_t object = At_Obj(x, y);
             if (object) {
-                DrawTile(object, { (float)x * TILE_W, (float)y * TILE_W });
+                DrawTile(object, { (float)x * TILE_W, (float)y * TILE_W }, &sortedDraws);
             }
         }
     }

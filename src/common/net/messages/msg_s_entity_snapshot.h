@@ -12,6 +12,7 @@ struct Msg_S_EntitySnapshot : public yojimbo::Message
     data::EntitySpecies spec       {};
     char                map_id   [SV_MAX_TILE_MAP_NAME_LEN + 1]{};
     Vector3             position   {};
+    bool                on_warp_cooldown {};
 
     // Collision
     //float       radius     {};  // when would this ever change? doesn't.. for now.
@@ -42,6 +43,7 @@ struct Msg_S_EntitySnapshot : public yojimbo::Message
         serialize_float(stream, position.x);
         serialize_float(stream, position.y);
         serialize_float(stream, position.z);
+        serialize_bool(stream, on_warp_cooldown);
 
         // Life
         serialize_varint32(stream, hp_max);

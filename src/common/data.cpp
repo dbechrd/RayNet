@@ -24,6 +24,7 @@ namespace data {
         // Entity
         map_id   = msg.map_id;
         position = msg.position;
+        on_warp_cooldown = msg.on_warp_cooldown;
 
         // Life
         hp_max   = msg.hp_max;
@@ -1456,7 +1457,7 @@ namespace data {
         entity.anim_state.frame = 0;
         entity.anim_state.accum = 0;
     }
-    void DrawSprite(const Entity &entity)
+    void DrawSprite(const Entity &entity, data::DrawCmdQueue *sortedDraws)
     {
         const GfxFrame &frame = GetSpriteFrame(entity);
         const GfxFile &gfx_file = packs[0]->FindGraphic(frame.gfx);
@@ -1468,9 +1469,23 @@ namespace data {
         //    pos.y = floorf(pos.y);
         //}
 
-        const Vector2 sprite_pos{ pos.x, pos.y - pos.z };
+        Color color = WHITE;
+        if (entity.on_warp_cooldown) {
+            color = ColorTint(color, SKYBLUE);
+        }
+
         const Rectangle frame_rec{ (float)frame.x, (float)frame.y, (float)frame.w, (float)frame.h };
-        DrawTextureRec(gfx_file.texture, frame_rec, sprite_pos, WHITE);
+        if (sortedDraws) {
+            DrawCmd cmd{};
+            cmd.texture = gfx_file.texture;
+            cmd.rect = frame_rec;
+            cmd.position = pos;
+            cmd.color = color;
+            sortedDraws->push(cmd);
+        } else {
+            const Vector2 sprite_pos{ pos.x, pos.y - pos.z };
+            dlb_DrawTextureRec(gfx_file.texture, frame_rec, sprite_pos, color);
+        }
     }
 
     void UpdateTileDefAnimations(double dt)

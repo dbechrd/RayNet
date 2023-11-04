@@ -6,6 +6,33 @@ struct Msg_S_EntitySnapshot;
 struct WangMap;
 
 namespace data {
+    struct DrawCmd {
+        Texture2D texture{};
+        Rectangle rect{};
+        Vector3   position{};
+        Color     color{};
+
+        bool operator<(const DrawCmd& rhs) const {
+            const float me = position.y + position.z + rect.height;
+            const float other = rhs.position.y + rhs.position.z + rhs.rect.height;
+            return other < me;
+        }
+    };
+    struct DrawCmdQueue : public std::priority_queue<DrawCmd> {
+        void Draw(void) {
+            while (!empty()) {
+                const data::DrawCmd &cmd = top();
+                const Vector2 pos = {
+                    cmd.position.x,
+                    cmd.position.y - cmd.position.z
+                };
+                dlb_DrawTextureRec(cmd.texture, cmd.rect, pos, cmd.color);
+                //DrawCircle(pos.x, pos.y + cmd.rect.height, 3, PINK);
+                pop();
+            }
+        }
+    };
+
     // DO NOT re-order these! They are hard-coded in the TOC
 #define DATA_TYPES(gen) \
         gen(DAT_TYP_GFX_FILE,  "GFXFILE ") \
@@ -273,8 +300,8 @@ namespace data {
         void ResolveEntityTerrainCollisions(Entity &entity);
         void ResolveEntityTerrainCollisions(uint32_t entityId);
 
-        void DrawTile(Tile tile, Vector2 position);
-        void Draw(Camera2D &camera);
+        void DrawTile(Tile tile, Vector2 position, DrawCmdQueue *sortedDraws);
+        void Draw(Camera2D &camera, DrawCmdQueue &sortedDraws);
         void DrawColliders(Camera2D &camera);
         void DrawTileIds(Camera2D &camera);
 
@@ -445,6 +472,7 @@ namespace data {
         // Entity
         std::string map_id      {};
         Vector3     position    {};
+        bool        on_warp_cooldown {};
 
         // Physics
         float       speed       {};  // max walk speed or something
@@ -716,7 +744,7 @@ namespace data {
     Rectangle GetSpriteRect(const Entity &entity);
     void UpdateSprite(Entity &entity, double dt, bool newlySpawned);
     void ResetSprite(Entity &entity);
-    void DrawSprite(const Entity &entity);
+    void DrawSprite(const Entity &entity, data::DrawCmdQueue *sortedDraws);
 
     void UpdateTileDefAnimations(double dt);
 

@@ -68,17 +68,17 @@
 @GfxFrame gfx_frame_til_stone_wall_tr   : gfx_til_overworld  128  128  64   64
 @GfxFrame gfx_frame_til_bush            : gfx_til_overworld  192  128  64   64
 @GfxFrame null                          : gfx_til_overworld  256  128  64   64
-@GfxFrame gfx_frame_til_chest_closed    : gfx_til_overworld  320  128  64   64
-@GfxFrame gfx_frame_til_portal          : gfx_til_overworld  384  128  64   64
-@GfxFrame gfx_frame_til_sign            : gfx_til_overworld  448  128  64   64
+@GfxFrame gfx_frame_til_portal_top_0    : gfx_til_overworld  320  128  64   128
+@GfxFrame gfx_frame_til_portal_top_1    : gfx_til_overworld  384  128  64   128
+@GfxFrame gfx_frame_til_portal_top_2    : gfx_til_overworld  448  128  64   128
 @GfxFrame gfx_frame_til_stone_wall_cl   : gfx_til_overworld  0    192  64   64
 @GfxFrame gfx_frame_til_stone_wall_cc   : gfx_til_overworld  64   192  64   64
 @GfxFrame gfx_frame_til_stone_wall_cr   : gfx_til_overworld  128  192  64   64
-@GfxFrame null                          : gfx_til_overworld  192  192  64   64
-@GfxFrame null                          : gfx_til_overworld  256  192  64   64
-@GfxFrame null                          : gfx_til_overworld  320  192  64   64
-@GfxFrame null                          : gfx_til_overworld  384  192  64   64
-@GfxFrame null                          : gfx_til_overworld  448  192  64   64
+@GfxFrame gfx_frame_til_sign            : gfx_til_overworld  192  192  64   64
+@GfxFrame gfx_frame_til_chest_closed    : gfx_til_overworld  256  192  64   64
+@GfxFrame gfx_frame_til_portal_bottom_0 : gfx_til_overworld  320  192  64   64
+@GfxFrame gfx_frame_til_portal_bottom_1 : gfx_til_overworld  384  192  64   64
+@GfxFrame gfx_frame_til_portal_bottom_2 : gfx_til_overworld  448  192  64   64
 @GfxFrame gfx_frame_til_stone_wall_bl   : gfx_til_overworld  0    256  64   64
 @GfxFrame gfx_frame_til_stone_wall_bc   : gfx_til_overworld  64   256  64   64
 @GfxFrame gfx_frame_til_stone_wall_br   : gfx_til_overworld  128  256  64   64
@@ -113,7 +113,8 @@
 @GfxAnim gfx_anim_til_stone_wall_tr : null          60       1         0         gfx_frame_til_stone_wall_tr
 @GfxAnim gfx_anim_til_bush          : null          60       1         0         gfx_frame_til_bush
 @GfxAnim gfx_anim_til_chest_closed  : null          60       1         0         gfx_frame_til_chest_closed
-@GfxAnim gfx_anim_til_portal        : null          60       1         0         gfx_frame_til_portal
+@GfxAnim gfx_anim_til_portal_top    : null          60       3         6         gfx_frame_til_portal_top_0 gfx_frame_til_portal_top_1 gfx_frame_til_portal_top_2
+@GfxAnim gfx_anim_til_portal_bottom : null          60       3         6         gfx_frame_til_portal_bottom_0 gfx_frame_til_portal_bottom_1 gfx_frame_til_portal_bottom_2
 @GfxAnim gfx_anim_til_sign          : null          60       1         0         gfx_frame_til_sign
 @GfxAnim gfx_anim_til_stone_wall_cl : null          60       1         0         gfx_frame_til_stone_wall_cl
 @GfxAnim gfx_anim_til_stone_wall_cc : null          60       1         0         gfx_frame_til_stone_wall_cc
@@ -173,7 +174,8 @@
 @TileDef til_stone_wall_bc : gfx_anim_til_stone_wall_bc mat_stone 1     0      0
 @TileDef til_stone_wall_br : gfx_anim_til_stone_wall_br mat_stone 1     0      0
 @TileDef til_chest_basic   : gfx_anim_til_chest_closed  mat_wood  1     0      0
-@TileDef til_portal        : gfx_anim_til_portal        mat_void  0     0      0
+@TileDef til_portal_top    : gfx_anim_til_portal_top    mat_void  0     0      0
+@TileDef til_portal_bottom : gfx_anim_til_portal_bottom mat_void  0     0      0
 @TileDef til_sign          : gfx_anim_til_sign          mat_wood  0     0      0
 
 // 1st sub: 0x29

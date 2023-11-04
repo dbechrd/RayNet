@@ -82,6 +82,7 @@ void ClientWorld::ApplyStateInterpolated(data::Entity &entity,
     entity.map_id = b.map_id;
     entity.position.x = LERP(a.position.x, b.position.x, alpha);
     entity.position.y = LERP(a.position.y, b.position.y, alpha);
+    entity.on_warp_cooldown = b.on_warp_cooldown;
 
     entity.velocity.x = LERP(a.velocity.x, b.velocity.x, alpha);
     entity.velocity.y = LERP(a.velocity.y, b.velocity.y, alpha);
@@ -322,77 +323,79 @@ void ClientWorld::DrawEntitySnapshotShadows(uint32_t entityId, Controller &contr
     // want to modify the actual entity... so perhaps we need a "temp" entity that we can
     // use for drawing shadows? Or some other way to simulate the entity moving without
     // modifying the actual entity.
-    if (showSnapshotShadows) {
-        size_t entityIndex = entityDb->FindEntityIndex(entityId);
-        if (!entityIndex) return;
+    if (!showSnapshotShadows) {
+        return;
+    }
 
-        data::Entity &entity = entityDb->entities[entityIndex];
-        data::AspectGhost &ghost = entityDb->ghosts[entityIndex];
+    size_t entityIndex = entityDb->FindEntityIndex(entityId);
+    if (!entityIndex) return;
 
-        data::EntityData ghostData{};
-        CopyEntityData(entity.id, ghostData);
-        // Prevents accidentally overwriting real entities if someone we pass a tuple
-        // to decides to look up the entity by id instead of using the tuple's data.
-        ghostData.entity.id = 0;
+    data::Entity &entity = entityDb->entities[entityIndex];
+    data::AspectGhost &ghost = entityDb->ghosts[entityIndex];
 
-        for (int i = 0; i < ghost.size(); i++) {
-            if (!ghost[i].server_time) {
-                continue;
-            }
-            ApplyStateInterpolated(ghostData.entity, ghost[i], ghost[i], 0, dt);
+    data::EntityData ghostData{};
+    CopyEntityData(entity.id, ghostData);
+    // Prevents accidentally overwriting real entities if someone we pass a tuple
+    // to decides to look up the entity by id instead of using the tuple's data.
+    ghostData.entity.id = 0;
 
-            const float scalePer = 1.0f / (CL_SNAPSHOT_COUNT + 1);
-            Rectangle ghostRect = data::GetSpriteRect(ghostData.entity);
-            ghostRect = RectShrink(ghostRect, scalePer);
-            DrawRectangleRec(ghostRect, Fade(RED, 0.1f));
-            DrawRectangleLinesEx(ghostRect, 1, Fade(RED, 0.8f));
+    for (int i = 0; i < ghost.size(); i++) {
+        if (!ghost[i].server_time) {
+            continue;
         }
+        ApplyStateInterpolated(ghostData.entity, ghost[i], ghost[i], 0, dt);
 
-        // NOTE(dlb): These aren't actually snapshot shadows, they're client-side prediction shadows
-        if (entity.id == localPlayerEntityId) {
+        const float scalePer = 1.0f / (CL_SNAPSHOT_COUNT + 1);
+        Rectangle ghostRect = data::GetSpriteRect(ghostData.entity);
+        ghostRect = RectShrink(ghostRect, scalePer);
+        DrawRectangleRec(ghostRect, Fade(RED, 0.1f));
+        DrawRectangleLinesEx(ghostRect, 1, Fade(RED, 0.8f));
+    }
+
+    // NOTE(dlb): These aren't actually snapshot shadows, they're client-side prediction shadows
+    if (entity.id == localPlayerEntityId) {
 #if CL_CLIENT_SIDE_PREDICT
-            data::Tilemap *map = FindOrLoadMap(entity.map_id);
-            if (map) {
-                uint32_t lastProcessedInputCmd = 0;
-                const data::GhostSnapshot &latestSnapshot = ghost.newest();
-                if (latestSnapshot.server_time) {
-                    ApplyStateInterpolated(ghostData.entity, latestSnapshot, latestSnapshot, 0, dt);
-                    lastProcessedInputCmd = latestSnapshot.last_processed_input_cmd;
-                }
+        data::Tilemap *map = FindOrLoadMap(entity.map_id);
+        if (map) {
+            uint32_t lastProcessedInputCmd = 0;
+            const data::GhostSnapshot &latestSnapshot = ghost.newest();
+            if (latestSnapshot.server_time) {
+                ApplyStateInterpolated(ghostData.entity, latestSnapshot, latestSnapshot, 0, dt);
+                lastProcessedInputCmd = latestSnapshot.last_processed_input_cmd;
+            }
 
-                for (size_t cmdIndex = 0; cmdIndex < controller.cmdQueue.size(); cmdIndex++) {
-                    InputCmd &inputCmd = controller.cmdQueue[cmdIndex];
-                    if (inputCmd.seq > lastProcessedInputCmd) {
-                        ghostData.entity.ApplyForce(inputCmd.GenerateMoveForce(ghostData.entity.speed));
-                        entityDb->EntityTick(ghostData.entity, SV_TICK_DT);
-                        map->ResolveEntityTerrainCollisions(ghostData.entity);
-                        Rectangle ghostRect = data::GetSpriteRect(ghostData.entity);
-                        DrawRectangleRec(ghostRect, Fade(GREEN, 0.1f));
-                        DrawRectangleLinesEx(ghostRect, 1, Fade(GREEN, 0.8f));
-                    }
+            for (size_t cmdIndex = 0; cmdIndex < controller.cmdQueue.size(); cmdIndex++) {
+                InputCmd &inputCmd = controller.cmdQueue[cmdIndex];
+                if (inputCmd.seq > lastProcessedInputCmd) {
+                    ghostData.entity.ApplyForce(inputCmd.GenerateMoveForce(ghostData.entity.speed));
+                    entityDb->EntityTick(ghostData.entity, SV_TICK_DT);
+                    map->ResolveEntityTerrainCollisions(ghostData.entity);
+                    Rectangle ghostRect = data::GetSpriteRect(ghostData.entity);
+                    DrawRectangleRec(ghostRect, Fade(GREEN, 0.1f));
+                    DrawRectangleLinesEx(ghostRect, 1, Fade(GREEN, 0.8f));
                 }
             }
+        }
 
 #if 1
-            // We don't really need to draw a blue rect at currently entity position unless
-            // the entity is invisible.
-             const double cmdAccumDt = now - controller.lastInputSampleAt;
-            if (cmdAccumDt > 0) {
-                Vector3 posBefore = ghostData.entity.position;
-                Vector3 cmdAccumForce = controller.cmdAccum.GenerateMoveForce(ghostData.entity.speed);
-                ghostData.entity.ApplyForce(cmdAccumForce);
-                entityDb->EntityTick(ghostData.entity, SV_TICK_DT);
-                map->ResolveEntityTerrainCollisions(ghostData.entity);
-                ghostData.entity.position.y = LERP(posBefore.y, ghostData.entity.position.y, cmdAccumDt / SV_TICK_DT);
-                ghostData.entity.position.x = LERP(posBefore.x, ghostData.entity.position.x, cmdAccumDt / SV_TICK_DT);
-            }
-            Rectangle ghostRect = data::GetSpriteRect(ghostData.entity);
-            //ghostRect.x = floorf(ghostRect.x);
-            //ghostRect.y = floorf(ghostRect.y);
-            DrawRectangleLinesEx(ghostRect, 1, Fade(BLUE, 0.8f));
-#endif
-#endif
+        // We don't really need to draw a blue rect at currently entity position unless
+        // the entity is invisible.
+            const double cmdAccumDt = now - controller.lastInputSampleAt;
+        if (cmdAccumDt > 0) {
+            Vector3 posBefore = ghostData.entity.position;
+            Vector3 cmdAccumForce = controller.cmdAccum.GenerateMoveForce(ghostData.entity.speed);
+            ghostData.entity.ApplyForce(cmdAccumForce);
+            entityDb->EntityTick(ghostData.entity, SV_TICK_DT);
+            map->ResolveEntityTerrainCollisions(ghostData.entity);
+            ghostData.entity.position.y = LERP(posBefore.y, ghostData.entity.position.y, cmdAccumDt / SV_TICK_DT);
+            ghostData.entity.position.x = LERP(posBefore.x, ghostData.entity.position.x, cmdAccumDt / SV_TICK_DT);
         }
+        Rectangle ghostRect = data::GetSpriteRect(ghostData.entity);
+        //ghostRect.x = floorf(ghostRect.x);
+        //ghostRect.y = floorf(ghostRect.y);
+        DrawRectangleLinesEx(ghostRect, 1, Fade(BLUE, 0.8f));
+#endif
+#endif
     }
 }
 
@@ -567,7 +570,6 @@ void ClientWorld::DrawDialogs(GameClient &client, Camera2D &camera)
         }
         assert(entity.id);
 
-        size_t entityIndex = entityDb->FindEntityIndex(entity.id);
         if (entity.dialog_spawned_at) {
             const Vector2 topCenter = entityDb->EntityTopCenter(entity.id);
             const Vector2 topCenterScreen = GetWorldToScreen2D(topCenter, camera);
@@ -589,46 +591,30 @@ void ClientWorld::Draw(GameClient &client)
 
     Vector2 cursorWorldPos = GetScreenToWorld2D(GetMousePosition(), camera2d);
 
+
+    BeginMode2D(camera2d);
+    data::DrawCmdQueue sortedDraws{};
+
     //--------------------
     // Draw the map
-    BeginMode2D(camera2d);
-
     //BeginShaderMode(shdPixelFixer);
-    map->Draw(camera2d);
+    map->Draw(camera2d, sortedDraws);
     //EndShaderMode();
 
     //--------------------
     // Draw the entities
     cursorWorldPos = GetScreenToWorld2D(GetMousePosition(), camera2d);
 
-    struct EntityDrawCmd {
-        uint32_t entity_id {};
-        Vector3  position  {};
-
-        EntityDrawCmd(uint32_t entity_id, Vector3 position) : entity_id(entity_id), position(position) {}
-        bool operator<(const EntityDrawCmd& rhs) const {
-            const float me = position.y + position.z;
-            const float other = rhs.position.y + rhs.position.z;
-            return other < me;
-        }
-    };
-    std::priority_queue<EntityDrawCmd> sortedEntityIds{};
-
     for (data::Entity &entity : entityDb->entities) {
         if (!entity.type || entity.despawned_at || entity.map_id != map->id) {
             continue;
         }
         assert(entity.id);
-        sortedEntityIds.emplace(entity.id, entity.position);
+        DrawEntitySnapshotShadows(entity.id, client.controller, client.now, client.frameDt);
+        entityDb->DrawEntity(entity.id, sortedDraws);
     }
 
-    while (!sortedEntityIds.empty()) {
-        const EntityDrawCmd &drawCmd = sortedEntityIds.top();
-        DrawEntitySnapshotShadows(drawCmd.entity_id, client.controller, client.now, client.frameDt);
-        entityDb->DrawEntity(drawCmd.entity_id);
-        sortedEntityIds.pop();
-    }
-
+    sortedDraws.Draw();
     EndMode2D();
 
     //--------------------
@@ -646,6 +632,67 @@ void ClientWorld::Draw(GameClient &client)
             // We were probably hovering an entity while it was despawning?
             assert(!"huh? how can we hover an entity that doesn't exist");
             hoveredEntityId = 0;
+        }
+    }
+    io.PopScope();
+
+    //--------------------
+    // Draw the sign editor
+    static bool editingSign = false;
+
+    io.PushScope(IO::IO_EditorUI);
+    {
+        if (!editingSign) {
+            if (io.KeyPressed(KEY_ONE)) {
+                editingSign = true;
+            }
+        } else {
+            io.CaptureKeyboard();
+            io.CaptureMouse();
+
+            data::Entity *player = LocalPlayer();
+            assert(player);
+
+            Vector2 playerTopWorld = entityDb->EntityTopCenter(player->id);
+            Vector2 playerTopScreen = GetWorldToScreen2D(playerTopWorld, camera2d);
+
+            Vector2 uiSignEditorSize{ 200, 100 };
+            Vector2 uiSignEditorPos{
+                playerTopScreen.x - uiSignEditorSize.x / 2.0f,
+                playerTopScreen.y - uiSignEditorSize.y
+            };
+
+            UIStyle uiSignEditorStyle{};
+            uiSignEditorStyle.borderColor = BLANK;
+            uiSignEditorStyle.bgColor[UI_CtrlTypeDefault] = BLANK;
+            UI uiSignEditor{ uiSignEditorPos, uiSignEditorStyle };
+
+            const Rectangle uiSignedEditorRect{
+                uiSignEditorPos.x,
+                uiSignEditorPos.y,
+                uiSignEditorSize.x,
+                uiSignEditorSize.y
+            };
+    #if 0
+            DrawRectangleRounded(actionBarRect, 0.15f, 8, ASESPRITE_BEIGE);
+            DrawRectangleRoundedLines(actionBarRect, 0.15f, 8, 2.0f, BLACK);
+    #else
+            DrawRectangleRec(uiSignedEditorRect, ColorBrightness(BROWN, -0.1f));
+            //DrawRectangleRec(uiSignedEditorRect, GRAYISH_BLUE);
+            DrawRectangleLinesEx(uiSignedEditorRect, 2.0f, BLACK);
+    #endif
+
+            UIState uiState{};
+            uiState.hover = dlb_CheckCollisionPointRec(GetMousePosition(), uiSignedEditorRect);
+
+            static STB_TexteditState txtEditSign{};
+            static std::string signText{};
+            uiSignEditor.Textbox(txtEditSign, signText);
+            uiSignEditor.Newline();
+
+            if (io.KeyPressed(KEY_ESCAPE)) {
+                editingSign = false;
+            }
         }
     }
     io.PopScope();

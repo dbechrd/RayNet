@@ -259,21 +259,24 @@ Err Play(GameServer &server)
         BeginDrawing();
             ClearBackground(BLUE_DESAT);
             BeginMode2D(camera);
-                // [World] Tilemap
                 auto &editor_map = data::packs[0]->FindTilemap(editor.map_id);
-                editor_map.Draw(camera);
+
+                data::DrawCmdQueue sortedDraws{};
+
+                // [World] Draw ground tiles
+                editor_map.Draw(camera, sortedDraws);
 
                 // [Editor] Overlays
                 editor.DrawGroundOverlays(camera, server.now);
 
-                // [World] Entities
-                // NOTE(dlb): We could build an array of { entityIndex, position.y } and sort it
-                // each frame, then render the entities in that order.
                 for (data::Entity &entity : entityDb->entities) {
                     if (entity.map_id == editor_map.id) {
-                        entityDb->DrawEntity(entity.id);
+                        entityDb->DrawEntity(entity.id, sortedDraws);
                     }
                 }
+
+                // [World] Draw sorted object tiles and entities
+                sortedDraws.Draw();
 
                 // [Editor] Overlays
                 editor.DrawEntityOverlays(camera, server.now);

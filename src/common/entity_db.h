@@ -23,7 +23,7 @@ struct EntityDB {
 
     void DrawEntityIds(uint32_t map_id, Camera2D &camera);
     void DrawEntityHoverInfo(uint32_t entityId);
-    void DrawEntity(uint32_t entityId);
+    void DrawEntity(uint32_t entityId, data::DrawCmdQueue &sortedDraws);
 };
 
 extern EntityDB *entityDb;

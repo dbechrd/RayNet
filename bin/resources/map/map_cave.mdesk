@@ -8,7 +8,8 @@
         til_stone_path
         til_water_dark
         til_chest_basic
-        til_portal
+        til_portal_top
+        til_portal_bottom
         til_sign
     ]
     ground_tiles: [
@@ -22,14 +23,14 @@
           1  1  1  1  1  1  1  1
     ]
     object_tiles: [
-          0  0  5  0  0  0  3  0
-          0  0  0  0  0  0  0  0
+          0  0  6  0  0  0  3  0
           0  0  0  0  0  0  0  0
           0  0  0  0  0  0  0  0
           0  0  0  0  0  0  0  0
           0  0  0  0  0  0  0  0
           0  0  0  0  0  0  0  0
           0  0  4  0  0  0  0  0
+          0  0  0  0  0  0  0  0
     ]
     object_data: [
         //x y type [type_data]
