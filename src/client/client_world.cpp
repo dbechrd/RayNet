@@ -387,8 +387,8 @@ void ClientWorld::DrawEntitySnapshotShadows(uint32_t entityId, Controller &contr
                 ghostData.entity.position.x = LERP(posBefore.x, ghostData.entity.position.x, cmdAccumDt / SV_TICK_DT);
             }
             Rectangle ghostRect = data::GetSpriteRect(ghostData.entity);
-            ghostRect.x = floorf(ghostRect.x);
-            ghostRect.y = floorf(ghostRect.y);
+            //ghostRect.x = floorf(ghostRect.x);
+            //ghostRect.y = floorf(ghostRect.y);
             DrawRectangleLinesEx(ghostRect, 1, Fade(BLUE, 0.8f));
 #endif
 #endif

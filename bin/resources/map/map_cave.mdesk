@@ -2,13 +2,14 @@
     version: 8
     width: 8
     height: 8
-    background_music: "mus_ambient_cave"
+    background_music: mus_ambient_cave
     tile_defs: [
         til_void
         til_stone_path
         til_water_dark
         til_chest_basic
         til_portal
+        til_sign
     ]
     ground_tiles: [
           1  1  1  1  1  1  1  1
@@ -21,7 +22,7 @@
           1  1  1  1  1  1  1  1
     ]
     object_tiles: [
-          0  0  0  0  0  0  3  0
+          0  0  5  0  0  0  3  0
           0  0  0  0  0  0  0  0
           0  0  0  0  0  0  0  0
           0  0  0  0  0  0  0  0
@@ -31,10 +32,11 @@
           0  0  4  0  0  0  0  0
     ]
     object_data: [
-        //x y type     loot_table
+        //x y type [type_data]
+        //    lootable loot_table_id
+        //    warp     dest_map_id dest_x dest_y dest_z
         { 6 0 lootable loot_basic }
-        //x y type     dest_map_id   dest_x dest_y dest_z
-        { 2 7 warp     map_overworld 51     12     0      }
+        { 2 7 warp map_overworld 51 12 0 }
     ]
     path_nodes: [
         //x      y      z      wait_for

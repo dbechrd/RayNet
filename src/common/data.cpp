@@ -102,19 +102,13 @@ namespace data {
             fprintf(file, "    height: %u\n", tilemap.height);
             fprintf(file, "    background_music: %s\n", tilemap.background_music.c_str());
 
-            // tile_defs
             fprintf(file, "    tile_defs: [\n");
-            int max_tile_def_id_len = 0;
             for (std::string &tile_def_id : tilemap.tileDefs) {
-                max_tile_def_id_len = MAX(max_tile_def_id_len, tile_def_id.size());
-            }
-            for (std::string &tile_def_id : tilemap.tileDefs) {
-                fprintf(file, "        %-*s\n", max_tile_def_id_len, tile_def_id.c_str());
+                fprintf(file, "        %s\n", tile_def_id.c_str());
             }
             fprintf(file, "    ]\n");
 
-            // tiles
-            fprintf(file, "    tiles: [");
+            fprintf(file, "    ground_tiles: [");
             for (int i = 0; i < tilemap.tiles.size(); i++) {
                 if (i % tilemap.width == 0) {
                     fprintf(file, "\n        ");
@@ -124,8 +118,7 @@ namespace data {
             fprintf(file, "\n");
             fprintf(file, "    ]\n");
 
-            // objects
-            fprintf(file, "    objects: [");
+            fprintf(file, "    object_tiles: [");
             for (int i = 0; i < tilemap.objects.size(); i++) {
                 if (i % tilemap.width == 0) {
                     fprintf(file, "\n        ");
@@ -135,7 +128,30 @@ namespace data {
             fprintf(file, "\n");
             fprintf(file, "    ]\n");
 
-            // path_nodes
+            fprintf(file, "    object_data: [\n");
+            fprintf(file, "        //x y type [type_data]\n");
+            fprintf(file, "        //    lootable loot_table_id\n");
+            fprintf(file, "        //    warp     dest_map_id dest_x dest_y dest_z\n");
+            for (ObjectData &obj_data : tilemap.object_data) {
+                fprintf(file, "        { %u %u %s ",
+                    obj_data.x,
+                    obj_data.y,
+                    obj_data.type.c_str()
+                );
+                if (obj_data.type == "lootable") {
+                    fprintf(file, "%s ", obj_data.loot_table_id.c_str());
+                } else if (obj_data.type == "warp") {
+                    fprintf(file, "%s %u %u %u ",
+                        obj_data.warp_map_id.c_str(),
+                        obj_data.warp_dest_x,
+                        obj_data.warp_dest_y,
+                        obj_data.warp_dest_z
+                    );
+                }
+                fprintf(file, "}\n");
+            }
+            fprintf(file, "    ]\n");
+
             fprintf(file, "    path_nodes: [\n");
             fprintf(file, "        //%-6s %-6s %-6s %-4s\n", "x", "y", "z", "wait_for");
             for (AiPathNode &path_node : tilemap.pathNodes) {
@@ -148,7 +164,6 @@ namespace data {
             }
             fprintf(file, "    ]\n");
 
-            // paths
             fprintf(file, "    paths: [\n");
             fprintf(file, "        // node_start node_count\n");
             for (AiPath &path : tilemap.paths) {
@@ -477,7 +492,7 @@ namespace data {
                             } else if (key == "height") {
                                 META_UINT32(map.height);
                             } else if (key == "background_music") {
-                                META_STRING(map.background_music);
+                                META_IDENT(map.background_music);
                             } else if (key == "tile_defs") {
                                 META_CHILDREN_LOOP_BEGIN; // []
                                     std::string tile_def_id{};
@@ -1448,10 +1463,10 @@ namespace data {
 
         Rectangle sprite_rect = GetSpriteRect(entity);
         Vector3 pos = { sprite_rect.x, sprite_rect.y };
-        if (Vector3LengthSqr(entity.velocity) < 0.0001f) {
-            pos.x = floorf(pos.x);
-            pos.y = floorf(pos.y);
-        }
+        //if (Vector3LengthSqr(entity.velocity) < 0.0001f) {
+        //    pos.x = floorf(pos.x);
+        //    pos.y = floorf(pos.y);
+        //}
 
         const Vector2 sprite_pos{ pos.x, pos.y - pos.z };
         const Rectangle frame_rec{ (float)frame.x, (float)frame.y, (float)frame.w, (float)frame.h };
