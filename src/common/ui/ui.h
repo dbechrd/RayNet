@@ -83,6 +83,7 @@ struct UIState {
 };
 
 struct UI {
+    static bool IsActiveEditor(STB_TexteditState &state);
     static bool UnfocusActiveEditor(void);
 
     UI(Vector2 position, UIStyle style);

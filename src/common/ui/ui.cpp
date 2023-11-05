@@ -10,6 +10,11 @@ bool UI::tabHandledThisFrame{};
 STB_TexteditState *UI::lastDrawnEditor{};
 STB_TexteditState *UI::tabToPrevEditor{};
 
+bool UI::IsActiveEditor(STB_TexteditState &state)
+{
+    return &state == activeEditor;
+}
+
 bool UI::UnfocusActiveEditor(void)
 {
     if (activeEditor) {

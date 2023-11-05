@@ -687,6 +687,52 @@ void Editor::DrawUI_TileActions(UI &uiActionBar, double now)
     uiActionBar.Newline();
 #endif
 
+    data::Tilemap &map = data::packs[0]->FindTilemap(map_id);
+
+    static float width = 0;
+    static float height = 0;
+
+    static STB_TexteditState txtWidth{};
+    static STB_TexteditState txtHeight{};
+
+    if (!UI::IsActiveEditor(txtWidth) && !UI::IsActiveEditor(txtHeight)) {
+        width = map.width;
+        height = map.height;
+    }
+
+    uiActionBar.Text("Size");
+    uiActionBar.TextboxFloat(txtWidth, width, 100.0f);
+    uiActionBar.TextboxFloat(txtHeight, height, 100.0f);
+    if (uiActionBar.Button("Resize!").pressed) {
+        uint32_t newWidth = (uint32_t)width;
+        uint32_t newHeight = (uint32_t)height;
+
+        std::vector<Tile> tilesNew{};
+        std::vector<uint8_t> objectsNew{};
+        tilesNew.resize(newWidth * newHeight);
+        objectsNew.resize(newWidth * newHeight);
+        for (uint32_t y = 0; y < map.height && y < newHeight; y++) {
+            for (uint32_t x = 0; x < map.width && x < newWidth; x++) {
+                tilesNew[y * newWidth + x] = map.tiles[y * map.width + x];
+                objectsNew[y * newWidth + x] = map.objects[y * map.width + x];
+            }
+        }
+
+        std::vector<data::ObjectData> objDataNew{};
+        for (data::ObjectData &obj_data : map.object_data) {
+            if (obj_data.x < newWidth && obj_data.y < newHeight) {
+                objDataNew.push_back(obj_data);
+            }
+        }
+
+        map.tiles = tilesNew;
+        map.objects = objectsNew;
+        map.object_data = objDataNew;
+        map.width = (uint32_t)newWidth;
+        map.height = (uint32_t)newHeight;
+    }
+    uiActionBar.Newline();
+
     uiActionBar.Text("Flag");
 
     auto &tileEditMode = state.tiles.tileEditMode;
@@ -719,7 +765,7 @@ void DrawRectangleRectOffset(const Rectangle &rect, Vector2 &offset, Color color
 void Editor::DrawUI_Tilesheet(UI &uiActionBar, double now)
 {
     // TODO(dlb): Support multi-select (big rectangle?), and figure out where this lives
-    auto &map = data::packs[0]->FindTilemap(map_id);
+    data::Tilemap &map = data::packs[0]->FindTilemap(map_id);
 
     size_t tile_def_count = map.tileDefs.size();
     int tiles_x = 6;

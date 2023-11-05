@@ -312,6 +312,7 @@ void ClientWorld::Update(GameClient &client)
     UpdateEntities(client);
     io.PopScope();
 
+    // TODO: Idk how to make this frame independent, but it's a hack so wutevs. Fix it one day.
     if ((int)fmod(client.now * 100, 100) == GetRandomValue(0, 9)) {
         data::PlaySound("sfx_chicken_cluck");
     }
