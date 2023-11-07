@@ -85,19 +85,15 @@ struct GameServer {
 
     uint32_t GetPlayerEntityId(uint32_t clientIdx);
 
-    data::Tilemap *FindOrLoadMap(const std::string &map_id);
     Err Start(void);
+    void Update(void);
+    void Stop(void);
 
+    data::Tilemap *FindOrLoadMap(const std::string &map_id);
     data::Tilemap *FindMap(const std::string &map_id);
 
     data::Entity *SpawnEntity(data::EntityType type);
     void DespawnEntity(uint32_t entityId);
-
-    void BroadcastEntityDespawnTest(uint32_t testId);
-
-    void Update(void);
-
-    void Stop(void);
 
 private:
     void DestroyDespawnedEntities(void);
@@ -111,8 +107,8 @@ private:
 
     void SendEntityDespawnTest(int clientIdx, uint32_t testId);
 
-    void SendEntitySay(int clientIdx, uint32_t entityId, uint32_t dialogId, const std::string &message);
-    void BroadcastEntitySay(uint32_t entityId, const std::string &message);
+    void SendEntitySay(int clientIdx, uint32_t entityId, uint32_t dialogId, const std::string &title, const std::string &message);
+    void BroadcastEntitySay(uint32_t entityId, const std::string &title, const std::string &message);
 
     void SendTileChunk(int clientIdx, data::Tilemap &map, uint32_t x, uint32_t y);
     void BroadcastTileChunk(data::Tilemap &map, uint32_t x, uint32_t y);

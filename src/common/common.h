@@ -92,8 +92,9 @@ typedef uint8_t Tile;  // TODO: Remove this?
 #define SV_TICK_DT                           (1.0/30.0)
 #define SV_MAX_PLAYERS                       8
 #define SV_MAX_ENTITIES                      256
-#define SV_MAX_ENTITY_SAY_MSG_LEN            1023
 #define SV_MAX_ENTITY_NAME_LEN               63 // "Goranza The Arch-Nemesis Defiler of Doom" was the longest name I could think of when I wrote this
+#define SV_MAX_ENTITY_SAY_TITLE_LEN          SV_MAX_ENTITY_NAME_LEN
+#define SV_MAX_ENTITY_SAY_MSG_LEN            1023
 #define SV_MAX_TILE_MAP_NAME_LEN             63
 #define SV_MAX_SPRITE_NAME_LEN               63
 // how long this entity stays interested in a conversation before returning to pathfinding

@@ -105,7 +105,7 @@ void ClientWorld::ApplyStateInterpolated(uint32_t entityId,
     ApplyStateInterpolated(*entity, a, b, alpha, dt);
 }
 
-Err ClientWorld::CreateDialog(uint32_t entityId, uint32_t dialogId, const std::string &message, double now)
+Err ClientWorld::CreateDialog(uint32_t entityId, uint32_t dialogId, const std::string &title, const std::string &message, double now)
 {
     data::Entity *entity = entityDb->FindEntity(entityId);
     if (!entity) {
@@ -115,7 +115,7 @@ Err ClientWorld::CreateDialog(uint32_t entityId, uint32_t dialogId, const std::s
 
     entity->dialog_spawned_at = now;
     entity->dialog_id = dialogId;
-    entity->dialog_title = entity->name.size() ? entity->name : "???";
+    entity->dialog_title = title;
     entity->dialog_message = message;
     return RN_SUCCESS;
 }
@@ -451,13 +451,26 @@ void ClientWorld::DrawDialog(GameClient &client, data::Entity &entity, Vector2 b
         return;
     }
 
+    static bool debugprint = false;
+    if (io.KeyPressed(KEY_SPACE)) {
+        debugprint = true;
+    }
+
     Vector2 msgCursor{};
     Vector2 msgSize{};
     for (DialogNode &node : msgNodes) {
         Vector2 nodeSize = dlb_MeasureTextEx(font, node.text.data(), node.text.size(), &msgCursor);
+        if (debugprint) {
+            printf("%.f %.f | %.f %.f\n\"%.*s\"\n",
+                msgCursor.x, msgCursor.y,
+                nodeSize.x, nodeSize.y,
+                (int)node.text.size(), node.text.data()
+            );
+        }
         msgSize.x = MAX(msgSize.x, nodeSize.x);
-        msgSize.y = msgCursor.y + nodeSize.y;
+        msgSize.y = msgCursor.y + MIN(nodeSize.y, font.baseSize);
     }
+    debugprint = false;
 
     const float bgHeight =
         bgPad.y +
@@ -507,7 +520,7 @@ void ClientWorld::DrawDialog(GameClient &client, data::Entity &entity, Vector2 b
         io.CaptureMouse();
     }
 
-    printf("%.02f %.02f %.02f %.02f\n", bgRect.x, bgRect.y, bgRect.width, bgRect.height);
+    //printf("%.02f %.02f %.02f %.02f\n", bgRect.x, bgRect.y, bgRect.width, bgRect.height);
     dlb_DrawNPatch(bgRect);
     //DrawRectangleRounded(msgBgRect, 0.2f, 6, Fade(BLACK, 0.5));
     //DrawRectangleRoundedLines(msgBgRect, 0.2f, 6, 1.0f, RAYWHITE);
@@ -654,6 +667,7 @@ void ClientWorld::Draw(GameClient &client)
     //--------------------
     // Draw the sign editor
     static bool editingSign = false;
+    static char signText[64]{ "This is some sign text" };
 
     io.PushScope(IO::IO_EditorUI);
     {

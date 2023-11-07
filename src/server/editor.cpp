@@ -1337,9 +1337,6 @@ void Editor::DrawUI_EntityActions(UI &uiActionBar, double now)
         }
     }
 
-    if (uiActionBar.Button(TextFormat("Despawn Test %d", state.entities.testId), ColorBrightness(MAROON, -0.3f)).pressed) {
-        state.entities.testId++;
-    };
     uiActionBar.Newline();
     uiActionBar.Space({ 0, 4 });
 

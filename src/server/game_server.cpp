@@ -77,50 +77,6 @@ uint32_t GameServer::GetPlayerEntityId(uint32_t clientIdx)
     return clientIdx + 1;
 }
 
-data::Tilemap *GameServer::FindOrLoadMap(const std::string &map_id)
-{
-#if 1
-    // TODO: Go back to assuming it's not already loaded once we figure out packs
-    data::Tilemap &map = data::packs[0]->FindTilemap(map_id);
-    if (!map.id.empty()) {
-        return &map;
-    } else {
-        return 0;
-    }
-#else
-    const auto &mapEntry = mapsByName.find(filename);
-    if (mapEntry != mapsByName.end()) {
-        size_t mapIndex = mapEntry->second;
-        return maps[mapIndex];
-    } else {
-        Err err = RN_SUCCESS;
-        data::Tilemap *map = new data::Tilemap();
-        do {
-            if (!map) {
-                printf("Failed to load map %s with code %d\n", filename.c_str(), err);
-                err = RN_BAD_ALLOC;
-                break;
-            }
-
-            err = map->Load(filename);
-            if (err) break;
-
-            map->id = nextMapId++;
-            map->chunkLastUpdatedAt = now;
-            mapsById[map->id] = maps.size();
-            mapsByName[map->name] = maps.size();
-            maps.push_back(map);
-            return map;
-        } while (0);
-
-        if (err) {
-            assert(!"failed to load map, what to do here?");
-            printf("Failed to load map %s with code %d\n", filename.c_str(), err);
-        }
-        return 0;
-    }
-#endif
-}
 Err GameServer::Start(void)
 {
     // NOTE(DLB): MUST happen after InitWindow() so that GetTime() is valid!!
@@ -192,6 +148,83 @@ Err GameServer::Start(void)
     return RN_SUCCESS;
 }
 
+void GameServer::Update(void)
+{
+    if (!yj_server->IsRunning())
+        return;
+
+    yj_server->AdvanceTime(now);
+    yj_server->ReceivePackets();
+    ProcessMessages();
+
+    bool hasDelta = false;
+    while (tickAccum >= SV_TICK_DT) {
+        UpdateServerPlayers();
+        Tick();
+        tickAccum -= SV_TICK_DT;
+        hasDelta = true;
+    }
+
+    // TODO(dlb): Calculate actual state deltas
+    if (hasDelta) {
+        SendClientSnapshots();
+        DestroyDespawnedEntities();
+    }
+
+    SendClockSync();
+    yj_server->SendPackets();
+}
+
+void GameServer::Stop(void)
+{
+    yj_server->Stop();
+    delete entityDb;
+}
+
+data::Tilemap *GameServer::FindOrLoadMap(const std::string &map_id)
+{
+#if 1
+    // TODO: Go back to assuming it's not already loaded once we figure out packs
+    data::Tilemap &map = data::packs[0]->FindTilemap(map_id);
+    if (!map.id.empty()) {
+        return &map;
+    } else {
+        return 0;
+    }
+#else
+    const auto &mapEntry = mapsByName.find(filename);
+    if (mapEntry != mapsByName.end()) {
+        size_t mapIndex = mapEntry->second;
+        return maps[mapIndex];
+    } else {
+        Err err = RN_SUCCESS;
+        data::Tilemap *map = new data::Tilemap();
+        do {
+            if (!map) {
+                printf("Failed to load map %s with code %d\n", filename.c_str(), err);
+                err = RN_BAD_ALLOC;
+                break;
+            }
+
+            err = map->Load(filename);
+            if (err) break;
+
+            map->id = nextMapId++;
+            map->chunkLastUpdatedAt = now;
+            mapsById[map->id] = maps.size();
+            mapsByName[map->name] = maps.size();
+            maps.push_back(map);
+            return map;
+        } while (0);
+
+        if (err) {
+            assert(!"failed to load map, what to do here?");
+            printf("Failed to load map %s with code %d\n", filename.c_str(), err);
+        }
+        return 0;
+    }
+#endif
+}
 data::Tilemap *GameServer::FindMap(const std::string &map_id)
 {
     // TODO: Remove this alias and call data::* directly?
@@ -319,29 +352,7 @@ void GameServer::BroadcastEntityDespawn(uint32_t entityId)
     }
 }
 
-void GameServer::SendEntityDespawnTest(int clientIdx, uint32_t testId)
-{
-    if (yj_server->CanSendMessage(clientIdx, CHANNEL_R_ENTITY_EVENT)) {
-        Msg_S_EntityDespawn *msg = (Msg_S_EntityDespawn *)yj_server->CreateMessage(clientIdx, MSG_S_ENTITY_DESPAWN_TEST);
-        if (msg) {
-            msg->entityId = testId;
-            printf("[game_server][client %d] ENTITY_DESPAWN_TEST testId=%u\n", clientIdx, msg->entityId);
-            yj_server->SendMessage(clientIdx, CHANNEL_R_ENTITY_EVENT, msg);
-        }
-    }
-}
-void GameServer::BroadcastEntityDespawnTest(uint32_t testId)
-{
-    for (int clientIdx = 0; clientIdx < SV_MAX_PLAYERS; clientIdx++) {
-        if (!yj_server->IsClientConnected(clientIdx)) {
-            continue;
-        }
-
-        SendEntityDespawnTest(clientIdx, testId);
-    }
-}
-
-void GameServer::SendEntitySay(int clientIdx, uint32_t entityId, uint32_t dialogId, const std::string &message)
+void GameServer::SendEntitySay(int clientIdx, uint32_t entityId, uint32_t dialogId, const std::string &title, const std::string &message)
 {
     // TODO: Send only if the client is nearby, or the message is a global event
     data::Entity *entity = entityDb->FindEntity(entityId);
@@ -355,19 +366,20 @@ void GameServer::SendEntitySay(int clientIdx, uint32_t entityId, uint32_t dialog
         if (msg) {
             msg->entity_id = entityId;
             msg->dialog_id = dialogId;
+            strncpy(msg->title, title.c_str(), SV_MAX_ENTITY_SAY_TITLE_LEN);
             strncpy(msg->message, message.c_str(), SV_MAX_ENTITY_SAY_MSG_LEN);
             yj_server->SendMessage(clientIdx, CHANNEL_R_ENTITY_EVENT, msg);
         }
     }
 }
-void GameServer::BroadcastEntitySay(uint32_t entityId, const std::string &message)
+void GameServer::BroadcastEntitySay(uint32_t entityId, const std::string &title, const std::string &message)
 {
     for (int clientIdx = 0; clientIdx < SV_MAX_PLAYERS; clientIdx++) {
         if (!yj_server->IsClientConnected(clientIdx)) {
             continue;
         }
 
-        SendEntitySay(clientIdx, entityId, 0, message);
+        SendEntitySay(clientIdx, entityId, 0, title, message);
     }
 }
 
@@ -395,28 +407,28 @@ void GameServer::BroadcastTileChunk(data::Tilemap &map, uint32_t x, uint32_t y)
 void GameServer::RequestDialog(int clientIdx, data::Entity &entity, Dialog &dialog)
 {
     // Overridable by listeners
-    uint32_t final_dialog_id = dialog.id;
+    uint32_t dialog_id = dialog.id;
+    const std::string_view *msg = &dialog.msg;
 
     DialogListener listener = dialog_library.FindListenerByKey(dialog.key);
     if (listener) {
         ServerPlayer &player = players[clientIdx];
-        final_dialog_id = listener(player.entityId, entity.id, dialog.id);
-    }
-
-    if (final_dialog_id) {
-        std::string_view msg = dialog.msg;
-        if (final_dialog_id != dialog.id) {
-            Dialog *final_dialog = dialog_library.FindById(final_dialog_id);
-            if (final_dialog) {
-                msg = final_dialog->msg;
+        uint32_t redirect_id = listener(player.entityId, entity.id, dialog.id);
+        if (redirect_id != dialog_id) {
+            Dialog *redirect_dialog = dialog_library.FindById(redirect_id);
+            if (redirect_dialog) {
+                dialog_id = redirect_id;
+                msg = &redirect_dialog->msg;
             } else {
-                assert(!"wtf, listener redirected us to a bad dialog id?");
                 // something bad happened in listener, just show the original
                 // dialog i guess?
-                final_dialog_id = final_dialog->id;
+                assert(!"wtf, listener redirected us to a bad dialog id?");
             }
         }
-        SendEntitySay(clientIdx, entity.id, final_dialog_id, std::string(msg));
+    }
+
+    if (dialog_id) {
+        SendEntitySay(clientIdx, entity.id, dialog_id, entity.name, std::string(*msg));
         entity.dialog_spawned_at = now;
     }
 }
@@ -502,22 +514,61 @@ void GameServer::ProcessMessages(void)
                     {
                         Msg_C_TileInteract *msg = (Msg_C_TileInteract *)yjMsg;
 
+                        // TODO: Figure out what tool player is holding
+                        ServerPlayer &player = players[clientIdx];
+                        //player.activeItem
+
                         // TODO: Check if sv_player is allowed to actually interact with this
                         // particular tile. E.g. are they even in the same map as it!?
                         // Holding the right tool, proximity, etc.
                         data::Tilemap *map = FindMap(msg->map_id);
-                        Tile tile{};
-                        if (map && map->AtTry(msg->x, msg->y, tile)) {
-                            const std::string &tile_def_id = "til_stone_path";
+                        if (map) {
+                            Tile tile{};
+                            if (map->AtTry(msg->x, msg->y, tile)) {
+                                const char *new_tile_def = 0;
+                                uint8_t obj = map->At_Obj(msg->x, msg->y);
+                                const data::ObjectData *obj_data = map->GetObjectData(msg->x, msg->y);
 
-                            //data::TileDef &tile_def = data::packs[0]->FindTileDef(tile_def_id);
+                                bool handled = false;
+                                if (obj_data) {
+                                    if (obj_data->type == "lootable") {
+                                        SendEntitySay(clientIdx, player.entityId, 0, "Chest", obj_data->loot_table_id);
+                                        handled = true;
+                                    } else if (obj_data->type == "sign") {
+                                        std::string signText =
+                                            obj_data->sign_text[0] + '\n' +
+                                            obj_data->sign_text[1] + '\n' +
+                                            obj_data->sign_text[2] + '\n' +
+                                            obj_data->sign_text[3];
+                                        SendEntitySay(clientIdx, player.entityId, 0, "Sign", signText);
+                                        handled = true;
+                                    }
+                                } else if (!handled) {
+                                    const data::TileDef &tile_def = map->GetTileDef(tile);
+                                    if (tile_def.id == "til_water_dark") {
+                                        new_tile_def = "til_stone_path";
+                                    } else if (tile_def.id == "til_stone_path") {
+                                        new_tile_def = "til_water_dark";
+                                    }
+                                    handled = true;
+                                }
 
-                            // TODO(perf): Make some kind of map from string -> tile_def_index in the map?
-                            // * OR * make the maps all have global tile def ids instead of local tile def ids
-                            for (int i = 0; i < map->tileDefs.size(); i++) {
-                                if (map->tileDefs[i] == tile_def_id) {
-                                    map->Set(msg->x, msg->y, i, now);
-                                    break;
+                                if (handled) {
+                                    if (new_tile_def) {
+                                        // TODO(perf): Make some kind of map from string -> tile_def_index in the map?
+                                        // * OR * make the maps all have global tile def ids instead of local tile def ids
+                                        int new_tile_def_idx = 0;
+                                        for (int i = 0; i < map->tileDefs.size(); i++) {
+                                            if (map->tileDefs[i] == new_tile_def) {
+                                                new_tile_def_idx = i;
+                                                break;
+                                            }
+                                        }
+
+                                        if (new_tile_def_idx) {
+                                            map->Set(msg->x, msg->y, new_tile_def_idx, now);
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -933,11 +984,11 @@ void GameServer::TickEntityProjectile(uint32_t entityId, double dt)
                         switch (victim.spec) {
                             case data::ENTITY_SPEC_NPC_TOWNFOLK: {
                                 //BroadcastEntitySay(victim.id, TextFormat("Ouch! You hit me with\nprojectile #%u!", projectile->id));
-                                BroadcastEntitySay(victim.id, "Ouch!");
+                                BroadcastEntitySay(victim.id, victim.name, "Ouch!");
                                 break;
                             }
                             case data::ENTITY_SPEC_NPC_CHICKEN: {
-                                BroadcastEntitySay(victim.id, "*squawk*!");
+                                BroadcastEntitySay(victim.id, victim.name, "*squawk*!");
                                 break;
                             }
                         }
@@ -1223,36 +1274,4 @@ void GameServer::SendClockSync(void)
             }
         }
     }
-}
-void GameServer::Update(void)
-{
-    if (!yj_server->IsRunning())
-        return;
-
-    yj_server->AdvanceTime(now);
-    yj_server->ReceivePackets();
-    ProcessMessages();
-
-    bool hasDelta = false;
-    while (tickAccum >= SV_TICK_DT) {
-        UpdateServerPlayers();
-        Tick();
-        tickAccum -= SV_TICK_DT;
-        hasDelta = true;
-    }
-
-    // TODO(dlb): Calculate actual state deltas
-    if (hasDelta) {
-        SendClientSnapshots();
-        DestroyDespawnedEntities();
-    }
-
-    SendClockSync();
-    yj_server->SendPackets();
-}
-
-void GameServer::Stop(void)
-{
-    yj_server->Stop();
-    delete entityDb;
 }

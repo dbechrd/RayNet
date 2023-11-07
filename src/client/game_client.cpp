@@ -147,16 +147,10 @@ void GameClient::ProcessMessages(void)
                     entityDb->DestroyEntity(msg->entityId);
                     break;
                 }
-                case MSG_S_ENTITY_DESPAWN_TEST:
-                {
-                    Msg_S_EntityDespawn *msg = (Msg_S_EntityDespawn *)yjMsg;
-                    printf("[game_client] ENTITY_DESPAWN_TEST entityId=%u\n", msg->entityId);
-                    break;
-                }
                 case MSG_S_ENTITY_SAY:
                 {
                     Msg_S_EntitySay *msg = (Msg_S_EntitySay *)yjMsg;
-                    world->CreateDialog(msg->entity_id, msg->dialog_id, msg->message, now);
+                    world->CreateDialog(msg->entity_id, msg->dialog_id, msg->title, msg->message, now);
                     break;
                 }
                 case MSG_S_ENTITY_SNAPSHOT:

@@ -28,18 +28,14 @@ struct ClientWorld {
 
     data::Entity *LocalPlayer(void);
     data::Tilemap *LocalPlayerMap(void);
-
     data::Tilemap *FindOrLoadMap(const std::string &map_id);
-
     bool CopyEntityData(uint32_t entityId, data::EntityData &data);
 
     void ApplySpawnEvent(const Msg_S_EntitySpawn &entitySpawn);
+    void ApplyStateInterpolated(data::Entity &entity, const data::GhostSnapshot &a, const data::GhostSnapshot &b, float alpha, float dt);
+    void ApplyStateInterpolated(uint32_t entityId, const data::GhostSnapshot &a, const data::GhostSnapshot &b, float alpha, float dt);
 
-    void ApplyStateInterpolated(data::Entity &entity,
-        const data::GhostSnapshot &a, const data::GhostSnapshot &b, float alpha, float dt);
-    void ApplyStateInterpolated(uint32_t entityId,
-        const data::GhostSnapshot &a, const data::GhostSnapshot &b, float alpha, float dt);
-    Err CreateDialog(uint32_t entityId, uint32_t dialogId, const std::string &message, double now);
+    Err CreateDialog(uint32_t entityId, uint32_t dialogId, const std::string &title, const std::string &message, double now);
     void Update(GameClient &client);
     void Draw(GameClient &client);
 

@@ -5,6 +5,7 @@ struct Msg_S_EntitySay : public yojimbo::Message
 {
     uint32_t entity_id{};
     uint32_t dialog_id{};
+    char title[SV_MAX_ENTITY_SAY_TITLE_LEN + 1]{};
     char message[SV_MAX_ENTITY_SAY_MSG_LEN + 1]{};
 
     //enum SayDuration {
@@ -17,6 +18,7 @@ struct Msg_S_EntitySay : public yojimbo::Message
     {
         serialize_uint32(stream, entity_id);
         serialize_uint32(stream, dialog_id);
+        serialize_string(stream, title, sizeof(title));
         serialize_string(stream, message, sizeof(message));
 
         //uint32_t message_len = MIN(message.size(), SV_MAX_ENTITY_SAY_MSG_LEN);

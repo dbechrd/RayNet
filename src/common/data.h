@@ -209,6 +209,9 @@ namespace data {
         // type == "lootable"
         std::string loot_table_id {};
 
+        // type == "sign"
+        std::string sign_text[4] {};
+
         // type == "warp"
         std::string warp_map_id {};
         uint32_t    warp_dest_x {};

@@ -20,6 +20,11 @@ struct GameClient {
     double frameDtSmooth = 60;
     double animAccum{};
 
+    Controller controller{};
+    ClientWorld *world{};
+
+    /////////////////////////////////////////////////////////////////////////////
+    // TODO: None of this stuff belongs in here.. it's not for networking
     double fadeDirection{};
     double fadeDuration{};
     double fadeValue{};
@@ -45,10 +50,8 @@ struct GameClient {
         const char *holdingItem = hudSpinnerIndex < ARRAY_SIZE(hudSpinnerItems) ? hudSpinnerItems[hudSpinnerIndex] : 0;
         return holdingItem;
     }
-
-    Controller controller{};
-    ClientWorld *world{};
     TodoList todoList{};
+    /////////////////////////////////////////////////////////////////////////////
 
     GameClient(double now) : now(now), frameStart(now) {};
 

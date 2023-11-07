@@ -147,7 +147,7 @@ void draw_game(GameClient &client)
             const char *menuText = i < ARRAY_SIZE(client.hudSpinnerItems) ? client.hudSpinnerItems[i] : "-Empty-";
 
             //DrawCircle(iconCenter.x, iconCenter.y, 2, BLACK);
-            Vector2 textSize = dlb_MeasureTextEx(fntMedium, menuText, strlen(menuText));
+            Vector2 textSize = MeasureTextEx(fntMedium, menuText, fntMedium.baseSize, 1.0f);
             Vector2 textPos{
                 iconCenter.x - textSize.x / 2.0f,
                 iconCenter.y - textSize.y / 2.0f

@@ -132,6 +132,7 @@ namespace data {
             fprintf(file, "    object_data: [\n");
             fprintf(file, "        //x y type [type_data]\n");
             fprintf(file, "        //    lootable loot_table_id\n");
+            fprintf(file, "        //    sign     \"line 1\" \"line 2\" \"line 3\" \"line 4\"\n");
             fprintf(file, "        //    warp     dest_map_id dest_x dest_y dest_z\n");
             for (ObjectData &obj_data : tilemap.object_data) {
                 fprintf(file, "        { %u %u %s ",
@@ -141,6 +142,11 @@ namespace data {
                 );
                 if (obj_data.type == "lootable") {
                     fprintf(file, "%s ", obj_data.loot_table_id.c_str());
+                } else if (obj_data.type == "sign") {
+                    fprintf(file, "\"%s\" ", obj_data.sign_text[0].c_str());
+                    fprintf(file, "\"%s\" ", obj_data.sign_text[1].c_str());
+                    fprintf(file, "\"%s\" ", obj_data.sign_text[2].c_str());
+                    fprintf(file, "\"%s\" ", obj_data.sign_text[3].c_str());
                 } else if (obj_data.type == "warp") {
                     fprintf(file, "%s %u %u %u ",
                         obj_data.warp_map_id.c_str(),
@@ -200,96 +206,107 @@ namespace data {
     }
     bool dlb_MD_Expect_Ident(MD_Node *node, std::string *result)
     {
-        if (node->kind != MD_NodeKind_Main || !(node->flags & MD_NodeFlag_Identifier)) {
+        if (node->kind == MD_NodeKind_Main && node->flags & MD_NodeFlag_Identifier) {
+            if (result) {
+                *result = std::string((char *)node->string.str, node->string.size);
+            }
+            return true;
+        } else {
             MD_CodeLoc loc = MD_CodeLocFromNode(node);
             MD_PrintMessage(stderr, loc, MD_MessageKind_Error, MD_S8Lit("Expected identifier."));
             return false;
         }
-        if (result) {
-            *result = std::string((char *)node->string.str, node->string.size);
-        }
-        return true;
     }
     bool dlb_MD_Expect_String(MD_Node *node, std::string *result)
     {
-        if (node->kind != MD_NodeKind_Main || !(node->flags & MD_NodeFlag_StringDoubleQuote)) {
+        if (node->kind == MD_NodeKind_Main && node->flags & MD_NodeFlag_StringLiteral) {
+            if (result) {
+                *result = std::string((char *)node->string.str, node->string.size);
+            }
+            return true;
+        } else {
             MD_CodeLoc loc = MD_CodeLocFromNode(node);
             MD_PrintMessage(stderr, loc, MD_MessageKind_Error, MD_S8Lit("Expected double-quoted string."));
             return false;
         }
-        if (result) {
-            *result = std::string((char *)node->string.str, node->string.size);
-        }
-        return true;
     }
     bool dlb_MD_Expect_Int(MD_Node *node, int min, int max, int *result)
     {
-        if (node->kind != MD_NodeKind_Main || !(node->flags & MD_NodeFlag_Numeric) || !(MD_StringIsCStyleInt(node->string))) {
+        if (node->kind == MD_NodeKind_Main && node->flags & MD_NodeFlag_Numeric && MD_StringIsCStyleInt(node->string)) {
+            int val = (int)MD_CStyleIntFromString(node->string);
+            if (val >= min && val <= max) {
+                if (result) {
+                    *result = val;
+                }
+                return true;
+            } else {
+                MD_CodeLoc loc = MD_CodeLocFromNode(node);
+                MD_PrintMessageFmt(stderr, loc, MD_MessageKind_Error, (char *)"Expected integer in inclusive range [%d, %d].", min, max);
+                return false;
+            }
+
+        } else {
             MD_CodeLoc loc = MD_CodeLocFromNode(node);
             MD_PrintMessage(stderr, loc, MD_MessageKind_Error, MD_S8Lit("Expected integer literal."));
             return false;
         }
-        int val = (int)MD_CStyleIntFromString(node->string);
-        if (val < min || val > max) {
-            MD_CodeLoc loc = MD_CodeLocFromNode(node);
-            MD_PrintMessageFmt(stderr, loc, MD_MessageKind_Error, (char *)"Expected integer in inclusive range [%d, %d].", min, max);
-            return false;
-        }
-        if (result) {
-            *result = val;
-        }
-        return true;
+
     }
     bool dlb_MD_Expect_Uint(MD_Node *node, uint32_t min, uint32_t max, uint32_t *result)
     {
-        if (node->kind != MD_NodeKind_Main || !(node->flags & MD_NodeFlag_Numeric) || !(MD_StringIsCStyleInt(node->string))) {
+        if (node->kind == MD_NodeKind_Main && node->flags & MD_NodeFlag_Numeric && MD_StringIsCStyleInt(node->string)) {
+            MD_u64 val = MD_U64FromString(node->string, 10);
+            if (val >= min && val <= max) {
+                if (result) {
+                    *result = val;
+                }
+                return true;
+            } else {
+                MD_CodeLoc loc = MD_CodeLocFromNode(node);
+                MD_PrintMessageFmt(stderr, loc, MD_MessageKind_Error, (char *)"Expected unsigned integer in inclusive range [%u, %u].", min, max);
+                return false;
+            }
+        } else {
             MD_CodeLoc loc = MD_CodeLocFromNode(node);
             MD_PrintMessage(stderr, loc, MD_MessageKind_Error, MD_S8Lit("Expected unsigned integer literal."));
             return false;
         }
-        MD_u64 val = MD_U64FromString(node->string, 10);
-        if (val < min || val > max) {
-            MD_CodeLoc loc = MD_CodeLocFromNode(node);
-            MD_PrintMessageFmt(stderr, loc, MD_MessageKind_Error, (char *)"Expected unsigned integer in inclusive range [%u, %u].", min, max);
-            return false;
-        }
-        if (result) {
-            *result = val;
-        }
-        return true;
     }
     bool dlb_MD_Expect_Float(MD_Node *node, float *result)
     {
-        if (node->kind != MD_NodeKind_Main || !(node->flags & MD_NodeFlag_Numeric)) {
+        if (node->kind == MD_NodeKind_Main && node->flags & MD_NodeFlag_Numeric) {
+            if (result) {
+                *result = (float)MD_F64FromString(node->string);
+            }
+            return true;
+        } else {
             MD_CodeLoc loc = MD_CodeLocFromNode(node);
             MD_PrintMessage(stderr, loc, MD_MessageKind_Error, MD_S8Lit("Expected float literal."));
             return false;
         }
-        if (result) {
-            *result = (float)MD_F64FromString(node->string);
-        }
-        return true;
     }
     bool dlb_MD_Expect_Double(MD_Node *node, double *result)
     {
-        if (node->kind != MD_NodeKind_Main || !(node->flags & MD_NodeFlag_Numeric)) {
+        if (node->kind == MD_NodeKind_Main && node->flags & MD_NodeFlag_Numeric) {
+            if (result) {
+                *result = MD_F64FromString(node->string);
+            }
+            return true;
+        } else {
             MD_CodeLoc loc = MD_CodeLocFromNode(node);
             MD_PrintMessage(stderr, loc, MD_MessageKind_Error, MD_S8Lit("Expected double literal."));
             return false;
         }
-        if (result) {
-            *result = MD_F64FromString(node->string);
-        }
-        return true;
     }
     bool dlb_MD_Expect_Nil(MD_Node *node)
     {
-        if (!MD_NodeIsNil(node)) {
+        if (MD_NodeIsNil(node)) {
+            return true;
+        } else {
             MD_CodeLoc loc = MD_CodeLocFromNode(node);
             MD_PrintMessageFmt(stderr, loc, MD_MessageKind_Error, (char *)"Expected end of scope.");
             return false;
         }
-        return true;
     }
 
 #define META_ID(dest) \
@@ -526,6 +543,11 @@ namespace data {
                                         META_IDENT(obj_data.type);
                                         if (obj_data.type == "lootable") {
                                             META_IDENT(obj_data.loot_table_id);
+                                        } else if (obj_data.type == "sign") {
+                                            META_STRING(obj_data.sign_text[0]);
+                                            META_STRING(obj_data.sign_text[1]);
+                                            META_STRING(obj_data.sign_text[2]);
+                                            META_STRING(obj_data.sign_text[3]);
                                         } else if (obj_data.type == "warp") {
                                             META_IDENT(obj_data.warp_map_id);
                                             META_UINT32(obj_data.warp_dest_x);
@@ -1067,6 +1089,11 @@ namespace data {
 
             if (obj_data.type == "lootable") {
                 PROC(obj_data.loot_table_id);
+            } else if (obj_data.type == "sign") {
+                PROC(obj_data.sign_text[0]);
+                PROC(obj_data.sign_text[1]);
+                PROC(obj_data.sign_text[2]);
+                PROC(obj_data.sign_text[3]);
             } else if (obj_data.type == "warp") {
                 PROC(obj_data.warp_map_id);
                 PROC(obj_data.warp_dest_x);

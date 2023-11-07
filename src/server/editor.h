@@ -56,7 +56,6 @@ struct EditModeDialog {
 };
 
 struct EditModeEntities {
-    int testId{};
     uint32_t selectedId{};
 };
 

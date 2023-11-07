@@ -479,7 +479,8 @@ bool RN_stb_is_space(char ch)
 #define STB_TEXTEDIT_IMPLEMENTATION
 #include "stb_textedit.h"
 
-UIState UI::Textbox(STB_TexteditState &stbState, std::string &text, KeyPreCallback preCallback,
+UIState UI::Textbox(STB_TexteditState &stbState,
+    std::string &text, KeyPreCallback preCallback,
     KeyPostCallback postCallback, void *userData)
 {
     const Vector2 textOffset{ 8, 2 };
