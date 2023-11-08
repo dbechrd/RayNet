@@ -513,62 +513,109 @@ void GameServer::ProcessMessages(void)
                     case MSG_C_TILE_INTERACT:
                     {
                         Msg_C_TileInteract *msg = (Msg_C_TileInteract *)yjMsg;
+                        ServerPlayer &player = players[clientIdx];
+
+                        data::Entity *e_player = entityDb->FindEntity(player.entityId, data::ENTITY_PLAYER);
+                        if (msg->map_id != e_player->map_id) {
+                            // Wrong map, kick player?
+                            break;
+                        }
+
 
                         // TODO: Figure out what tool player is holding
-                        ServerPlayer &player = players[clientIdx];
                         //player.activeItem
 
                         // TODO: Check if sv_player is allowed to actually interact with this
                         // particular tile. E.g. are they even in the same map as it!?
                         // Holding the right tool, proximity, etc.
                         data::Tilemap *map = FindMap(msg->map_id);
-                        if (map) {
-                            Tile tile{};
-                            if (map->AtTry(msg->x, msg->y, tile)) {
-                                const char *new_tile_def = 0;
-                                uint8_t obj = map->At_Obj(msg->x, msg->y);
-                                const data::ObjectData *obj_data = map->GetObjectData(msg->x, msg->y);
+                        if (!map) {
+                            // Map not loaded, kick player?
+                            break;
+                        }
 
-                                bool handled = false;
-                                if (obj_data) {
-                                    if (obj_data->type == "lootable") {
-                                        SendEntitySay(clientIdx, player.entityId, 0, "Chest", obj_data->loot_table_id);
-                                        handled = true;
-                                    } else if (obj_data->type == "sign") {
-                                        std::string signText =
-                                            obj_data->sign_text[0] + '\n' +
-                                            obj_data->sign_text[1] + '\n' +
-                                            obj_data->sign_text[2] + '\n' +
-                                            obj_data->sign_text[3];
-                                        SendEntitySay(clientIdx, player.entityId, 0, "Sign", signText);
-                                        handled = true;
+                        data::Tilemap::Coord player_coord{};
+                        if (!map->WorldToTileIndex(e_player->position.x, e_player->position.y, player_coord)) {
+                            // Player somehow not on a tile!? Server error!?!?
+                            assert(!"player outside of map, wot?");
+                            break;
+                        }
+
+                        const int dist_x = abs((int)player_coord.x - (int)msg->x);
+                        const int dist_y = abs((int)player_coord.y - (int)msg->y);
+                        if (dist_x > SV_MAX_TILE_INTERACT_DIST_IN_TILES ||
+                            dist_y > SV_MAX_TILE_INTERACT_DIST_IN_TILES)
+                        {
+                            if (dist_x > SV_MAX_TILE_INTERACT_DIST_IN_TILES * 2 ||
+                                dist_y > SV_MAX_TILE_INTERACT_DIST_IN_TILES * 2)
+                            {
+                                // Player WAY too far away, kick
+                                printf("WAY too far\n");
+                            } else {
+                                // Player too far away, ignore request
+                                printf("too far\n");
+                            }
+                            break;
+                        }
+
+                        Tile tile{};
+                        if (!map->AtTry(msg->x, msg->y, tile)) {
+                            // Tile at x/y is not a valid tile type.. hmm.. is it void?
+                            assert(!"not a valid tile");
+                            break;
+                        }
+
+                        const char *new_tile_def = 0;
+                        uint8_t obj = map->At_Obj(msg->x, msg->y);
+                        const data::ObjectData *obj_data = map->GetObjectData(msg->x, msg->y);
+
+                        bool handled = false;
+                        if (obj_data) {
+                            if (obj_data->type == "lootable") {
+                                SendEntitySay(clientIdx, player.entityId, 0, "Chest", obj_data->loot_table_id);
+                                handled = true;
+                            } else if (obj_data->type == "sign") {
+                                const char *signText = TextFormat("%s\n%s\n%s\n%s",
+                                    obj_data->sign_text[0].c_str(),
+                                    obj_data->sign_text[1].c_str(),
+                                    obj_data->sign_text[2].c_str(),
+                                    obj_data->sign_text[3].c_str()
+                                );
+                                SendEntitySay(clientIdx, player.entityId, 0, "Sign", signText);
+                                handled = true;
+                            } else if (obj_data->type == "warp") {
+                                const char *warpInfo = TextFormat("%s (%u, %u)",
+                                    obj_data->warp_map_id.c_str(),
+                                    obj_data->warp_dest_x,
+                                    obj_data->warp_dest_y
+                                );
+                                SendEntitySay(clientIdx, player.entityId, 0, "Warp", warpInfo);
+                                handled = true;
+                            }
+                        } else {
+                            const data::TileDef &tile_def = map->GetTileDef(tile);
+                            if (tile_def.id == "til_water_dark") {
+                                new_tile_def = "til_stone_path";
+                            } else if (tile_def.id == "til_stone_path") {
+                                new_tile_def = "til_water_dark";
+                            }
+                            handled = true;
+                        }
+
+                        if (handled) {
+                            if (new_tile_def) {
+                                // TODO(perf): Make some kind of map from string -> tile_def_index in the map?
+                                // * OR * make the maps all have global tile def ids instead of local tile def ids
+                                int new_tile_def_idx = 0;
+                                for (int i = 0; i < map->tileDefs.size(); i++) {
+                                    if (map->tileDefs[i] == new_tile_def) {
+                                        new_tile_def_idx = i;
+                                        break;
                                     }
-                                } else if (!handled) {
-                                    const data::TileDef &tile_def = map->GetTileDef(tile);
-                                    if (tile_def.id == "til_water_dark") {
-                                        new_tile_def = "til_stone_path";
-                                    } else if (tile_def.id == "til_stone_path") {
-                                        new_tile_def = "til_water_dark";
-                                    }
-                                    handled = true;
                                 }
 
-                                if (handled) {
-                                    if (new_tile_def) {
-                                        // TODO(perf): Make some kind of map from string -> tile_def_index in the map?
-                                        // * OR * make the maps all have global tile def ids instead of local tile def ids
-                                        int new_tile_def_idx = 0;
-                                        for (int i = 0; i < map->tileDefs.size(); i++) {
-                                            if (map->tileDefs[i] == new_tile_def) {
-                                                new_tile_def_idx = i;
-                                                break;
-                                            }
-                                        }
-
-                                        if (new_tile_def_idx) {
-                                            map->Set(msg->x, msg->y, new_tile_def_idx, now);
-                                        }
-                                    }
+                                if (new_tile_def_idx) {
+                                    map->Set(msg->x, msg->y, new_tile_def_idx, now);
                                 }
                             }
                         }

@@ -459,6 +459,13 @@ int main(int argc, char *argv[])
                 }
                 io.PopScope();
 
+                const bool button_up = io.KeyDown(KEY_W);
+                const bool button_left = io.KeyDown(KEY_A);
+                const bool button_down = io.KeyDown(KEY_S);
+                const bool button_right = io.KeyDown(KEY_D);
+                const bool button_primary = io.MouseButtonPressed(MOUSE_BUTTON_LEFT);
+                const bool button_any = button_up || button_left || button_down || button_right || button_primary;
+
                 // TODO: Update facing direction elsewhere, then just get localPlayer.facing here?
                 Camera2D& camera = client->world->camera2d;
                 Vector2 cursorWorldPos = GetScreenToWorld2D(GetMousePosition(), camera);
@@ -467,27 +474,31 @@ int main(int argc, char *argv[])
                 facing = Vector2Normalize(facing);
                 client->controller.cmdAccum.facing = facing;
 
-                client->controller.cmdAccum.north |= io.KeyDown(KEY_W);
-                client->controller.cmdAccum.west |= io.KeyDown(KEY_A);
-                client->controller.cmdAccum.south |= io.KeyDown(KEY_S);
-                client->controller.cmdAccum.east |= io.KeyDown(KEY_D);
+                client->controller.cmdAccum.north |= button_up;
+                client->controller.cmdAccum.west |= button_left;
+                client->controller.cmdAccum.south |= button_down;
+                client->controller.cmdAccum.east |= button_right;
+
+                if (client->controller.cmdAccum.north ||
+                    client->controller.cmdAccum.west ||
+                    client->controller.cmdAccum.south ||
+                    client->controller.cmdAccum.east)
+                {
+                    localPlayer->ClearDialog();
+                }
 
                 // TODO: Make function
                 const char *holdingItem = client->HudSpinnerItemName();
 
                 // TODO: Actually check hand
                 if (holdingItem == "Fireball") {
-                    client->controller.cmdAccum.fire |= io.MouseButtonDown(MOUSE_LEFT_BUTTON);
-                    //client->controller.cmdAccum.fire |= io.MouseButtonPressed(MOUSE_LEFT_BUTTON);
-                }
-
-                // TODO: Actually check hand
-                if (holdingItem == "Shovel") {
-                    if (io.MouseButtonPressed(MOUSE_BUTTON_LEFT)) {
+                    client->controller.cmdAccum.fire |= button_primary;
+                } else if (holdingItem == "Shovel") {
+                    if (button_primary) {
                         data::Tilemap::Coord coord{};
                         data::Tilemap* map = client->world->LocalPlayerMap();
                         if (map && map->WorldToTileIndex(cursorWorldPos.x, cursorWorldPos.y, coord)) {
-                            // TOOD: Send mapId too then validate server-side
+                            // TODO: Send mapId too then validate server-side
                             client->SendTileInteract(map->id, coord.x, coord.y);
                         }
                     }

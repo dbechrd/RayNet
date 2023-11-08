@@ -448,7 +448,10 @@ void ClientWorld::DrawDialog(GameClient &client, data::Entity &entity, Vector2 b
     char *msgBuf = (char *)entity.dialog_message.c_str();
     Err err = ParseMessage(msgBuf, msgNodes);
     if (err) {
-        return;
+        DialogNode errNode{};
+        errNode.type = DIALOG_NODE_TEXT;
+        errNode.text = "<???>";
+        msgNodes.push_back(errNode);
     }
 
     static bool debugprint = false;

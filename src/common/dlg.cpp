@@ -95,57 +95,57 @@ Err ParseTagNode(char *&buf, DialogNode &node)
     // Read dialog tag text
     if (!Expect(buf, '[')) {
         assert(!"expected tag text to open with '['");
-        return RN_BAD_FILE_READ;
+        return RN_PARSE_ERROR;
     }
 
     std::string_view tagText = ReadUntilChar(buf, ']');
     if (!tagText.size()) {
         assert(!"expected tag text to be at least 1 character");
-        return RN_BAD_FILE_READ;
+        return RN_PARSE_ERROR;
     }
 
     if (!Expect(buf, ']')) {
         assert(!"expected tag text to close with ']'");
-        return RN_BAD_FILE_READ;
+        return RN_PARSE_ERROR;
     }
 
     // Read dialog tag key
     if (!Expect(buf, '(')) {
         assert(!"expected tag data to open with '('");
-        return RN_BAD_FILE_READ;
+        return RN_PARSE_ERROR;
     }
     if (!Expect(buf, '#')) {
         assert(!"expected tag data to start with '#'");
-        return RN_BAD_FILE_READ;
+        return RN_PARSE_ERROR;
     }
 
     std::string_view tagData = ReadUntilChar(buf, ')');
     if (!tagData.size()) {
         assert(!"expected tag data to be at least 1 character");
-        return RN_BAD_FILE_READ;
+        return RN_PARSE_ERROR;
     }
 
     if (!Expect(buf, ')')) {
         assert(!"expected tag data to close with ')'");
-        return RN_BAD_FILE_READ;
+        return RN_PARSE_ERROR;
     }
 
     if (tagData[0] == ' ') {
         char *hoverBuf = (char *)&tagData[1];
         if (!Expect(hoverBuf, '"')) {
             assert(!"expected hover tip tag data to open with '\"'");
-            return RN_BAD_FILE_READ;
+            return RN_PARSE_ERROR;
         }
 
         std::string_view hoverTip = ReadUntilChar(hoverBuf, '"');
         if (!hoverTip.size()) {
             assert(!"expected hover tip tag data to be at least 1 character");
-            return RN_BAD_FILE_READ;
+            return RN_PARSE_ERROR;
         }
 
         if (!Expect(hoverBuf, '"')) {
             assert(!"expected hover tip tag data to close with '\"'");
-            return RN_BAD_FILE_READ;
+            return RN_PARSE_ERROR;
         }
         node.type = DIALOG_NODE_HOVER_TIP;
         node.text = tagText;
@@ -201,11 +201,11 @@ Err ParseDialog(char *&buf)
 
     if (!Expect(buf, '#')) {
         assert(!"expected dialog key starting with '#'");
-        return RN_BAD_FILE_READ;
+        return RN_PARSE_ERROR;
     }
     if (!Expect(buf, ' ')) {
         assert(!"expected ' ' after '#' in dialog key");
-        return RN_BAD_FILE_READ;
+        return RN_PARSE_ERROR;
     }
 
     SkipWhitespace(buf);
@@ -213,17 +213,17 @@ Err ParseDialog(char *&buf)
     std::string_view key = ReadUntilChar(buf, '\n');
     if (!key.size()) {
         assert(!"expected dialog key to have length > 0");
-        return RN_BAD_FILE_READ;
+        return RN_PARSE_ERROR;
     }
 
     if (dialog_library.dialog_idx_by_key.contains(key)) {
         assert(!"duplicate dialog key");
-        return RN_BAD_FILE_READ;
+        return RN_PARSE_ERROR;
     }
 
     if (!Expect(buf, '\n')) {
         assert(!"expected newline after dialog key");
-        return RN_BAD_FILE_READ;
+        return RN_PARSE_ERROR;
     }
 
     SkipWhitespace(buf);
@@ -252,7 +252,7 @@ Err ParseDialogFile(char *buf)
 
     if (*buf) {
         assert(!"unexpected character");
-        return RN_BAD_FILE_READ;
+        return RN_PARSE_ERROR;
     }
 
     return err;
