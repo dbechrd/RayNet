@@ -1,21 +1,14 @@
 #include "game_server.h"
 #include "../common/data.h"
-#include "../common/net/messages/msg_s_entity_spawn.h"
-#include "../common/net/messages/msg_s_entity_snapshot.h"
-
-Rectangle lastCollisionA{};
-Rectangle lastCollisionB{};
 
 GameServerNetAdapter::GameServerNetAdapter(GameServer *server)
 {
     this->server = server;
 }
-
 void GameServerNetAdapter::OnServerClientConnected(int clientIdx)
 {
     server->OnClientJoin(clientIdx);
 }
-
 void GameServerNetAdapter::OnServerClientDisconnected(int clientIdx)
 {
     server->OnClientLeave(clientIdx);
@@ -147,7 +140,6 @@ Err GameServer::Start(void)
 
     return RN_SUCCESS;
 }
-
 void GameServer::Update(void)
 {
     if (!yj_server->IsRunning())
@@ -174,7 +166,6 @@ void GameServer::Update(void)
     SendClockSync();
     yj_server->SendPackets();
 }
-
 void GameServer::Stop(void)
 {
     yj_server->Stop();
@@ -319,7 +310,6 @@ void GameServer::BroadcastEntitySpawn(uint32_t entityId)
         SendEntitySpawn(clientIdx, entityId);
     }
 }
-
 void GameServer::SendEntityDespawn(int clientIdx, uint32_t entityId)
 {
     data::Entity *entity = entityDb->FindEntity(entityId, true);
@@ -351,7 +341,6 @@ void GameServer::BroadcastEntityDespawn(uint32_t entityId)
         SendEntityDespawn(clientIdx, entityId);
     }
 }
-
 void GameServer::SendEntitySay(int clientIdx, uint32_t entityId, uint32_t dialogId, const std::string &title, const std::string &message)
 {
     // TODO: Send only if the client is nearby, or the message is a global event
@@ -382,7 +371,6 @@ void GameServer::BroadcastEntitySay(uint32_t entityId, const std::string &title,
         SendEntitySay(clientIdx, entityId, 0, title, message);
     }
 }
-
 void GameServer::SendTileChunk(int clientIdx, data::Tilemap &map, uint32_t x, uint32_t y)
 {
     if (yj_server->CanSendMessage(clientIdx, CHANNEL_R_TILE_EVENT)) {
@@ -403,7 +391,6 @@ void GameServer::BroadcastTileChunk(data::Tilemap &map, uint32_t x, uint32_t y)
         SendTileChunk(clientIdx, map, x, y);
     }
 }
-
 void GameServer::RequestDialog(int clientIdx, data::Entity &entity, Dialog &dialog)
 {
     // Overridable by listeners
@@ -433,6 +420,192 @@ void GameServer::RequestDialog(int clientIdx, data::Entity &entity, Dialog &dial
     }
 }
 
+void GameServer::ProcessMsg(int clientIdx, Msg_C_EntityInteract &msg)
+{
+    // TODO: Check if sv_player is allowed to actually interact with this
+    // particular entity. E.g. are they even in the same map as them!?
+    // Proximity, etc.
+    data::Entity *entity = entityDb->FindEntity(msg.entityId, data::ENTITY_NPC);
+    if (entity) {
+        ServerPlayer &player = players[clientIdx];
+        data::Entity *e_player = entityDb->FindEntity(player.entityId, data::ENTITY_PLAYER);
+        if (!e_player) {
+            assert(!"player entity not found.. huh?");
+            return;
+        }
+
+        const float dist_x = fabs(e_player->position.x - entity->position.x);
+        const float dist_y = fabs(e_player->position.y - entity->position.y);
+        if (dist_x > SV_MAX_ENTITY_INTERACT_DIST || dist_y > SV_MAX_ENTITY_INTERACT_DIST) {
+            if (dist_x > SV_MAX_ENTITY_INTERACT_DIST * 2 || dist_y > SV_MAX_ENTITY_INTERACT_DIST * 2) {
+                // Player WAY too far away, kick
+                printf("WAY too far\n");
+            } else {
+                // Player too far away, ignore request
+                printf("too far\n");
+            }
+            return;
+        }
+
+        Dialog *dialog = dialog_library.FindByKey(entity->dialog_root_key);
+        if (dialog) {
+            RequestDialog(clientIdx, *entity, *dialog);
+        }
+    }
+}
+void GameServer::ProcessMsg(int clientIdx, Msg_C_EntityInteractDialogOption &msg)
+{
+    ServerPlayer &player = players[clientIdx];
+
+    Dialog *prevDialog = dialog_library.FindById(msg.dialog_id);
+    if (!prevDialog) {
+        // Client being stupid?
+        assert(!"invalid dialog id");
+        return;
+    }
+
+    if (msg.option_id >= prevDialog->nodes.size()) {
+        // Client being stupid?
+        assert(!"invalid dialog option id (out of bounds)");
+        return;
+    }
+
+    // TODO: Check if player is allowed to actually interact with this
+    // particular entity. E.g. are they even in the same map as them!?
+    // Proximity, etc. If they leave proximity, send EntityInteractCancel
+    data::Entity *entity = entityDb->FindEntity(msg.entity_id, data::ENTITY_NPC);
+    if (entity) {
+        DialogNode &optionTag = prevDialog->nodes[msg.option_id];
+
+        if (optionTag.type != DIALOG_NODE_LINK) {
+            // Client being stupid?
+            assert(!"invalid dialog option id (not a link)");
+            return;
+        }
+
+        std::string_view nextDialogKey = optionTag.data;
+        Dialog *nextDialog = dialog_library.FindByKey(nextDialogKey);
+        if (!nextDialog) {
+            // Client being stupid? (or bug in data where msg string has more options than options id array)
+            assert(!"missing dialog option id?");
+            return;
+        }
+
+        RequestDialog(clientIdx, *entity, *nextDialog);
+    }
+}
+void GameServer::ProcessMsg(int clientIdx, Msg_C_InputCommands &msg)
+{
+    players[clientIdx].inputQueue = msg.cmdQueue;
+}
+void GameServer::ProcessMsg(int clientIdx, Msg_C_TileInteract &msg)
+{
+    ServerPlayer &player = players[clientIdx];
+
+    data::Entity *e_player = entityDb->FindEntity(player.entityId, data::ENTITY_PLAYER);
+    if (msg.map_id != e_player->map_id) {
+        // Wrong map, kick player?
+        return;
+    }
+
+    // TODO: Figure out what tool player is holding
+    //player.activeItem
+
+    // TODO: Check if sv_player is allowed to actually interact with this
+    // particular tile. E.g. are they even in the same map as it!?
+    // Holding the right tool, proximity, etc.
+    data::Tilemap *map = FindMap(msg.map_id);
+    if (!map) {
+        // Map not loaded, kick player?
+        return;
+    }
+
+    data::Tilemap::Coord player_coord{};
+    if (!map->WorldToTileIndex(e_player->position.x, e_player->position.y, player_coord)) {
+        // Player somehow not on a tile!? Server error!?!?
+        assert(!"player outside of map, wot?");
+        return;
+    }
+
+    const int dist_x = abs((int)player_coord.x - (int)msg.x);
+    const int dist_y = abs((int)player_coord.y - (int)msg.y);
+    if (dist_x > SV_MAX_TILE_INTERACT_DIST_IN_TILES ||
+        dist_y > SV_MAX_TILE_INTERACT_DIST_IN_TILES)
+    {
+        if (dist_x > SV_MAX_TILE_INTERACT_DIST_IN_TILES * 2 ||
+            dist_y > SV_MAX_TILE_INTERACT_DIST_IN_TILES * 2)
+        {
+            // Player WAY too far away, kick
+            printf("WAY too far\n");
+        } else {
+            // Player too far away, ignore request
+            printf("too far\n");
+        }
+        return;
+    }
+
+    Tile tile{};
+    if (!map->AtTry(msg.x, msg.y, tile)) {
+        // Tile at x/y is not a valid tile type.. hmm.. is it void?
+        assert(!"not a valid tile");
+        return;
+    }
+
+    const char *new_tile_def = 0;
+    uint8_t obj = map->At_Obj(msg.x, msg.y);
+    const data::ObjectData *obj_data = map->GetObjectData(msg.x, msg.y);
+
+    bool handled = false;
+    if (obj_data) {
+        if (obj_data->type == "lootable") {
+            SendEntitySay(clientIdx, player.entityId, 0, "Chest", obj_data->loot_table_id);
+            handled = true;
+        } else if (obj_data->type == "sign") {
+            const char *signText = TextFormat("%s\n%s\n%s\n%s",
+                obj_data->sign_text[0].c_str(),
+                obj_data->sign_text[1].c_str(),
+                obj_data->sign_text[2].c_str(),
+                obj_data->sign_text[3].c_str()
+            );
+            SendEntitySay(clientIdx, player.entityId, 0, "Sign", signText);
+            handled = true;
+        } else if (obj_data->type == "warp") {
+            const char *warpInfo = TextFormat("%s (%u, %u)",
+                obj_data->warp_map_id.c_str(),
+                obj_data->warp_dest_x,
+                obj_data->warp_dest_y
+            );
+            SendEntitySay(clientIdx, player.entityId, 0, "Warp", warpInfo);
+            handled = true;
+        }
+    } else {
+        const data::TileDef &tile_def = map->GetTileDef(tile);
+        if (tile_def.id == "til_water_dark") {
+            new_tile_def = "til_stone_path";
+        } else if (tile_def.id == "til_stone_path") {
+            new_tile_def = "til_water_dark";
+        }
+        handled = true;
+    }
+
+    if (handled) {
+        if (new_tile_def) {
+            // TODO(perf): Make some kind of map from string -> tile_def_index in the map?
+            // * OR * make the maps all have global tile def ids instead of local tile def ids
+            int new_tile_def_idx = 0;
+            for (int i = 0; i < map->tileDefs.size(); i++) {
+                if (map->tileDefs[i] == new_tile_def) {
+                    new_tile_def_idx = i;
+                    break;
+                }
+            }
+
+            if (new_tile_def_idx) {
+                map->Set(msg.x, msg.y, new_tile_def_idx, now);
+            }
+        }
+    }
+}
 void GameServer::ProcessMessages(void)
 {
     for (int clientIdx = 0; clientIdx < SV_MAX_PLAYERS; clientIdx++) {
@@ -444,183 +617,10 @@ void GameServer::ProcessMessages(void)
             yojimbo::Message *yjMsg = yj_server->ReceiveMessage(clientIdx, channelIdx);
             while (yjMsg) {
                 switch (yjMsg->GetType()) {
-                    case MSG_C_ENTITY_INTERACT:
-                    {
-                        Msg_C_EntityInteract *msg = (Msg_C_EntityInteract *)yjMsg;
-                        ServerPlayer &player = players[clientIdx];
-
-                        // TODO: Check if sv_player is allowed to actually interact with this
-                        // particular entity. E.g. are they even in the same map as them!?
-                        // Proximity, etc.
-                        data::Entity *entity = entityDb->FindEntity(msg->entityId, data::ENTITY_NPC);
-                        if (entity) {
-                            Dialog *dialog = dialog_library.FindByKey(entity->dialog_root_key);
-                            if (dialog) {
-                                RequestDialog(clientIdx, *entity, *dialog);
-                            }
-                        }
-                        break;
-                    }
-                    case MSG_C_ENTITY_INTERACT_DIALOG_OPTION:
-                    {
-                        Msg_C_EntityInteractDialogOption *msg = (Msg_C_EntityInteractDialogOption *)yjMsg;
-                        ServerPlayer &player = players[clientIdx];
-
-                        Dialog *prevDialog = dialog_library.FindById(msg->dialog_id);
-                        if (!prevDialog) {
-                            // Client being stupid?
-                            assert(!"invalid dialog id");
-                            break;
-                        }
-
-                        if (msg->option_id >= prevDialog->nodes.size()) {
-                            // Client being stupid?
-                            assert(!"invalid dialog option id (out of bounds)");
-                            break;
-                        }
-
-                        // TODO: Check if player is allowed to actually interact with this
-                        // particular entity. E.g. are they even in the same map as them!?
-                        // Proximity, etc. If they leave proximity, send EntityInteractCancel
-                        data::Entity *entity = entityDb->FindEntity(msg->entity_id, data::ENTITY_NPC);
-                        if (entity) {
-                            DialogNode &optionTag = prevDialog->nodes[msg->option_id];
-
-                            if (optionTag.type != DIALOG_NODE_LINK) {
-                                // Client being stupid?
-                                assert(!"invalid dialog option id (not a link)");
-                                break;
-                            }
-
-                            std::string_view nextDialogKey = optionTag.data;
-                            Dialog *nextDialog = dialog_library.FindByKey(nextDialogKey);
-                            if (!nextDialog) {
-                                // Client being stupid? (or bug in data where msg string has more options than options id array)
-                                assert(!"missing dialog option id?");
-                                break;
-                            }
-
-                            RequestDialog(clientIdx, *entity, *nextDialog);
-                        }
-                        break;
-                    }
-                    case MSG_C_INPUT_COMMANDS:
-                    {
-                        Msg_C_InputCommands *msg = (Msg_C_InputCommands *)yjMsg;
-                        players[clientIdx].inputQueue = msg->cmdQueue;
-                        break;
-                    }
-                    case MSG_C_TILE_INTERACT:
-                    {
-                        Msg_C_TileInteract *msg = (Msg_C_TileInteract *)yjMsg;
-                        ServerPlayer &player = players[clientIdx];
-
-                        data::Entity *e_player = entityDb->FindEntity(player.entityId, data::ENTITY_PLAYER);
-                        if (msg->map_id != e_player->map_id) {
-                            // Wrong map, kick player?
-                            break;
-                        }
-
-
-                        // TODO: Figure out what tool player is holding
-                        //player.activeItem
-
-                        // TODO: Check if sv_player is allowed to actually interact with this
-                        // particular tile. E.g. are they even in the same map as it!?
-                        // Holding the right tool, proximity, etc.
-                        data::Tilemap *map = FindMap(msg->map_id);
-                        if (!map) {
-                            // Map not loaded, kick player?
-                            break;
-                        }
-
-                        data::Tilemap::Coord player_coord{};
-                        if (!map->WorldToTileIndex(e_player->position.x, e_player->position.y, player_coord)) {
-                            // Player somehow not on a tile!? Server error!?!?
-                            assert(!"player outside of map, wot?");
-                            break;
-                        }
-
-                        const int dist_x = abs((int)player_coord.x - (int)msg->x);
-                        const int dist_y = abs((int)player_coord.y - (int)msg->y);
-                        if (dist_x > SV_MAX_TILE_INTERACT_DIST_IN_TILES ||
-                            dist_y > SV_MAX_TILE_INTERACT_DIST_IN_TILES)
-                        {
-                            if (dist_x > SV_MAX_TILE_INTERACT_DIST_IN_TILES * 2 ||
-                                dist_y > SV_MAX_TILE_INTERACT_DIST_IN_TILES * 2)
-                            {
-                                // Player WAY too far away, kick
-                                printf("WAY too far\n");
-                            } else {
-                                // Player too far away, ignore request
-                                printf("too far\n");
-                            }
-                            break;
-                        }
-
-                        Tile tile{};
-                        if (!map->AtTry(msg->x, msg->y, tile)) {
-                            // Tile at x/y is not a valid tile type.. hmm.. is it void?
-                            assert(!"not a valid tile");
-                            break;
-                        }
-
-                        const char *new_tile_def = 0;
-                        uint8_t obj = map->At_Obj(msg->x, msg->y);
-                        const data::ObjectData *obj_data = map->GetObjectData(msg->x, msg->y);
-
-                        bool handled = false;
-                        if (obj_data) {
-                            if (obj_data->type == "lootable") {
-                                SendEntitySay(clientIdx, player.entityId, 0, "Chest", obj_data->loot_table_id);
-                                handled = true;
-                            } else if (obj_data->type == "sign") {
-                                const char *signText = TextFormat("%s\n%s\n%s\n%s",
-                                    obj_data->sign_text[0].c_str(),
-                                    obj_data->sign_text[1].c_str(),
-                                    obj_data->sign_text[2].c_str(),
-                                    obj_data->sign_text[3].c_str()
-                                );
-                                SendEntitySay(clientIdx, player.entityId, 0, "Sign", signText);
-                                handled = true;
-                            } else if (obj_data->type == "warp") {
-                                const char *warpInfo = TextFormat("%s (%u, %u)",
-                                    obj_data->warp_map_id.c_str(),
-                                    obj_data->warp_dest_x,
-                                    obj_data->warp_dest_y
-                                );
-                                SendEntitySay(clientIdx, player.entityId, 0, "Warp", warpInfo);
-                                handled = true;
-                            }
-                        } else {
-                            const data::TileDef &tile_def = map->GetTileDef(tile);
-                            if (tile_def.id == "til_water_dark") {
-                                new_tile_def = "til_stone_path";
-                            } else if (tile_def.id == "til_stone_path") {
-                                new_tile_def = "til_water_dark";
-                            }
-                            handled = true;
-                        }
-
-                        if (handled) {
-                            if (new_tile_def) {
-                                // TODO(perf): Make some kind of map from string -> tile_def_index in the map?
-                                // * OR * make the maps all have global tile def ids instead of local tile def ids
-                                int new_tile_def_idx = 0;
-                                for (int i = 0; i < map->tileDefs.size(); i++) {
-                                    if (map->tileDefs[i] == new_tile_def) {
-                                        new_tile_def_idx = i;
-                                        break;
-                                    }
-                                }
-
-                                if (new_tile_def_idx) {
-                                    map->Set(msg->x, msg->y, new_tile_def_idx, now);
-                                }
-                            }
-                        }
-                        break;
-                    }
+                    case MSG_C_ENTITY_INTERACT:               ProcessMsg(clientIdx, *(Msg_C_EntityInteract             *)yjMsg); break;
+                    case MSG_C_ENTITY_INTERACT_DIALOG_OPTION: ProcessMsg(clientIdx, *(Msg_C_EntityInteractDialogOption *)yjMsg); break;
+                    case MSG_C_INPUT_COMMANDS:                ProcessMsg(clientIdx, *(Msg_C_InputCommands              *)yjMsg); break;
+                    case MSG_C_TILE_INTERACT:                 ProcessMsg(clientIdx, *(Msg_C_TileInteract               *)yjMsg); break;
                 }
                 yj_server->ReleaseMessage(clientIdx, yjMsg);
                 yjMsg = yj_server->ReceiveMessage(clientIdx, channelIdx);
@@ -702,7 +702,6 @@ void GameServer::UpdateServerPlayers(void)
         }
     }
 }
-
 data::Entity *SpawnEntityProto(GameServer &server, const std::string &map_id, Vector3 position, data::EntityProto &proto)
 {
     data::Tilemap *map = server.FindMap(map_id);

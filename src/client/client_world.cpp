@@ -4,8 +4,6 @@
 #include "../common/dlg.h"
 #include "../common/entity_db.h"
 #include "../common/io.h"
-#include "../common/net/messages/msg_s_entity_spawn.h"
-#include "../common/net/messages/msg_s_entity_snapshot.h"
 
 data::Entity *ClientWorld::LocalPlayer(void) {
     data::Entity *localPlayer = entityDb->FindEntity(localPlayerEntityId);
@@ -262,6 +260,12 @@ void ClientWorld::UpdateEntities(GameClient &client)
     hoveredEntityId = 0;
     data::Tilemap *localPlayerMap = LocalPlayerMap();
 
+    data::Entity *e_player = entityDb->FindEntity(localPlayerEntityId, data::ENTITY_PLAYER);
+    if (!e_player) {
+        assert(!"player entity not found!?");
+        return;
+    }
+
     for (data::Entity &entity : entityDb->entities) {
         if (!entity.type) {
             continue;
@@ -288,16 +292,20 @@ void ClientWorld::UpdateEntities(GameClient &client)
 
     if (hoveredEntityId) {
         data::Entity *hoveredEntity = entityDb->FindEntity(hoveredEntityId);
-        // NOTE: This has to check for ENTITY_TOWNFOLK or entity.attackable, etc.,
-        // otherwise you can't shoot da enemies!
         if (hoveredEntity) {
-            if (hoveredEntity->spec == data::ENTITY_SPEC_NPC_TOWNFOLK) {
-                io.CaptureMouse();
-            }
+            const float dist_x = fabs(e_player->position.x - hoveredEntity->position.x);
+            const float dist_y = fabs(e_player->position.y - hoveredEntity->position.y);
+            if (dist_x <= SV_MAX_ENTITY_INTERACT_DIST && dist_y <= SV_MAX_ENTITY_INTERACT_DIST) {
+                if (hoveredEntity->spec == data::ENTITY_SPEC_NPC_TOWNFOLK) {
+                    // NOTE: This has to check for ENTITY_TOWNFOLK or entity.attackable, etc.,
+                    // otherwise you can't shoot da enemies!
+                    io.CaptureMouse();
+                }
 
-            bool pressed = io.MouseButtonPressed(MOUSE_BUTTON_LEFT);
-            if (pressed) {
-                client.SendEntityInteract(hoveredEntityId);
+                bool pressed = io.MouseButtonPressed(MOUSE_BUTTON_LEFT);
+                if (pressed) {
+                    client.SendEntityInteract(hoveredEntityId);
+                }
             }
         }
     }
@@ -622,7 +630,6 @@ void ClientWorld::Draw(GameClient &client)
 
     Vector2 cursorWorldPos = GetScreenToWorld2D(GetMousePosition(), camera2d);
 
-
     BeginMode2D(camera2d);
     data::DrawCmdQueue sortedDraws{};
 
@@ -636,6 +643,12 @@ void ClientWorld::Draw(GameClient &client)
     // Draw the entities
     cursorWorldPos = GetScreenToWorld2D(GetMousePosition(), camera2d);
 
+    data::Entity *e_player = entityDb->FindEntity(localPlayerEntityId, data::ENTITY_PLAYER);
+    if (!e_player) {
+        assert(!"player entity not found!?");
+        return;
+    }
+
     for (data::Entity &entity : entityDb->entities) {
         if (!entity.type || entity.despawned_at || entity.map_id != map->id) {
             continue;
@@ -643,6 +656,24 @@ void ClientWorld::Draw(GameClient &client)
         assert(entity.id);
         DrawEntitySnapshotShadows(entity.id, client.controller, client.now, client.frameDt);
         entityDb->DrawEntity(entity.id, sortedDraws);
+
+        if (entity.id == hoveredEntityId) {
+            const float dist_x = fabs(e_player->position.x - entity.position.x);
+            const float dist_y = fabs(e_player->position.y - entity.position.y);
+            const Rectangle rect = data::GetSpriteRect(entity);
+            if (dist_x <= SV_MAX_ENTITY_INTERACT_DIST && dist_y <= SV_MAX_ENTITY_INTERACT_DIST) {
+                DrawRectangleLinesEx(rect, 1, WHITE);
+            } else {
+                //DrawRectangleLinesEx(rect, 1, GRAY);
+            }
+
+            //DrawCmd cmd{};
+            //cmd.texture = gfx_file.texture;
+            //cmd.rect = frame_rec;
+            //cmd.position = pos;
+            //cmd.color = color;
+            //sortedDraws->push(cmd);
+        }
     }
 
     sortedDraws.Draw();

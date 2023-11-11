@@ -74,7 +74,6 @@ void GameClient::SendInput(const Controller &controller)
         printf("Outgoing INPUT_COMMANDS channel message queue is full.\n");
     }
 }
-
 void GameClient::SendEntityInteract(uint32_t entityId)
 {
     if (yj_client->CanSendMessage(MSG_C_ENTITY_INTERACT)) {
@@ -89,7 +88,6 @@ void GameClient::SendEntityInteract(uint32_t entityId)
         printf("Outgoing ENTITY_INTERACT channel message queue is full.\n");
     }
 }
-
 void GameClient::SendEntityInteractDialogOption(data::Entity &entity, uint32_t optionId)
 {
     if (yj_client->CanSendMessage(MSG_C_ENTITY_INTERACT_DIALOG_OPTION)) {
@@ -106,7 +104,6 @@ void GameClient::SendEntityInteractDialogOption(data::Entity &entity, uint32_t o
         printf("Outgoing ENTITY_INTERACT_DIALOG_OPTION channel message queue is full.\n");
     }
 }
-
 void GameClient::SendTileInteract(const std::string &map_id, uint32_t x, uint32_t y)
 {
     if (yj_client->CanSendMessage(MSG_C_TILE_INTERACT)) {
@@ -124,6 +121,61 @@ void GameClient::SendTileInteract(const std::string &map_id, uint32_t x, uint32_
     }
 }
 
+void GameClient::ProcessMsg(Msg_S_ClockSync &msg)
+{
+    yojimbo::NetworkInfo netInfo{};
+    yj_client->GetNetworkInfo(netInfo);
+    const double approxServerNow = msg.serverTime + netInfo.RTT / 2000;
+    clientTimeDeltaVsServer = now - approxServerNow;
+    world->localPlayerEntityId = msg.playerEntityId;
+}
+void GameClient::ProcessMsg(Msg_S_EntityDespawn &msg)
+{
+    entityDb->DestroyEntity(msg.entityId);
+}
+void GameClient::ProcessMsg(Msg_S_EntitySay &msg)
+{
+    world->CreateDialog(msg.entity_id, msg.dialog_id, msg.title, msg.message, now);
+}
+void GameClient::ProcessMsg(Msg_S_EntitySnapshot &msg)
+{
+    size_t entityIndex = entityDb->FindEntityIndex(msg.entity_id);
+    if (entityIndex) {
+        data::AspectGhost &ghost = entityDb->ghosts[entityIndex];
+        data::GhostSnapshot ghostSnapshot{ msg };
+        ghost.push(ghostSnapshot);
+    }
+}
+void GameClient::ProcessMsg(Msg_S_EntitySpawn &msg)
+{
+    //printf("[ENTITY_SPAWN] id=%u mapId=%u\n", msg->entity_id, msg->map_id);
+    data::Entity *entity = entityDb->FindEntity(msg.entity_id);
+    if (!entity) {
+        data::Tilemap *map = world->FindOrLoadMap(msg.map_id);
+        assert(map && "why no map? we get chunks before entities, right!?");
+        if (map) {
+            if (entityDb->SpawnEntity(msg.entity_id, msg.type, now)) {
+                world->ApplySpawnEvent(msg);
+            }
+        } else {
+            printf("[game_client] Failed to load map id %s to spawn entity id %u\n", msg.map_id, msg.entity_id);
+        }
+    } else {
+        assert(!"why two spawn events for same entityId??");
+    }
+}
+void GameClient::ProcessMsg(Msg_S_TileChunk &msg)
+{
+    data::Tilemap *map = world->FindOrLoadMap(msg.map_id);
+    if (map) {
+        map->CL_DeserializeChunk(msg);
+    } else {
+        // TODO: LoadPack the right map by ID somehow
+        //if (msg->mapId != world->map.id) {
+        //    //world->map.LoadPack(tileChunk.mapName, 0);
+        //}
+    }
+}
 void GameClient::ProcessMessages(void)
 {
     for (int channelIdx = 0; channelIdx < CHANNEL_COUNT; channelIdx++) {
@@ -131,74 +183,12 @@ void GameClient::ProcessMessages(void)
         while (yjMsg) {
             //printf("[game_client] RECV msgId=%d msgType=%s\n", yjMsg->GetId(), MsgTypeStr((MsgType)yjMsg->GetType()));
             switch (yjMsg->GetType()) {
-                case MSG_S_CLOCK_SYNC:
-                {
-                    Msg_S_ClockSync *msg = (Msg_S_ClockSync *)yjMsg;
-                    yojimbo::NetworkInfo netInfo{};
-                    yj_client->GetNetworkInfo(netInfo);
-                    const double approxServerNow = msg->serverTime + netInfo.RTT / 2000;
-                    clientTimeDeltaVsServer = now - approxServerNow;
-                    world->localPlayerEntityId = msg->playerEntityId;
-                    break;
-                }
-                case MSG_S_ENTITY_DESPAWN:
-                {
-                    Msg_S_EntityDespawn *msg = (Msg_S_EntityDespawn *)yjMsg;
-                    entityDb->DestroyEntity(msg->entityId);
-                    break;
-                }
-                case MSG_S_ENTITY_SAY:
-                {
-                    Msg_S_EntitySay *msg = (Msg_S_EntitySay *)yjMsg;
-                    world->CreateDialog(msg->entity_id, msg->dialog_id, msg->title, msg->message, now);
-                    break;
-                }
-                case MSG_S_ENTITY_SNAPSHOT:
-                {
-                    Msg_S_EntitySnapshot *msg = (Msg_S_EntitySnapshot *)yjMsg;
-                    size_t entityIndex = entityDb->FindEntityIndex(msg->entity_id);
-                    if (entityIndex) {
-                        data::AspectGhost &ghost = entityDb->ghosts[entityIndex];
-                        data::GhostSnapshot ghostSnapshot{ *msg };
-                        ghost.push(ghostSnapshot);
-                    }
-                    break;
-                }
-                case MSG_S_ENTITY_SPAWN:
-                {
-                    Msg_S_EntitySpawn *msg = (Msg_S_EntitySpawn *)yjMsg;
-                    //printf("[ENTITY_SPAWN] id=%u mapId=%u\n", msg->entity_id, msg->map_id);
-                    data::Entity *entity = entityDb->FindEntity(msg->entity_id);
-                    if (!entity) {
-                        data::Tilemap *map = world->FindOrLoadMap(msg->map_id);
-                        assert(map && "why no map? we get chunks before entities, right!?");
-                        if (map) {
-                            if (entityDb->SpawnEntity(msg->entity_id, msg->type, now)) {
-                                world->ApplySpawnEvent(*msg);
-                            }
-                        } else {
-                            printf("[game_client] Failed to load map id %s to spawn entity id %u\n", msg->map_id, msg->entity_id);
-                        }
-                    } else {
-                        assert(!"why two spawn events for same entityId??");
-                    }
-                    break;
-                }
-                case MSG_S_TILE_CHUNK:
-                {
-                    Msg_S_TileChunk *msg = (Msg_S_TileChunk *)yjMsg;
-
-                    data::Tilemap *map = world->FindOrLoadMap(msg->map_id);
-                    if (map) {
-                        map->CL_DeserializeChunk(*msg);
-                    } else {
-                        // TODO: LoadPack the right map by ID somehow
-                        //if (msg->mapId != world->map.id) {
-                        //    //world->map.LoadPack(tileChunk.mapName, 0);
-                        //}
-                    }
-                    break;
-                }
+                case MSG_S_CLOCK_SYNC:      ProcessMsg(*(Msg_S_ClockSync      *)yjMsg); break;
+                case MSG_S_ENTITY_DESPAWN:  ProcessMsg(*(Msg_S_EntityDespawn  *)yjMsg); break;
+                case MSG_S_ENTITY_SAY:      ProcessMsg(*(Msg_S_EntitySay      *)yjMsg); break;
+                case MSG_S_ENTITY_SNAPSHOT: ProcessMsg(*(Msg_S_EntitySnapshot *)yjMsg); break;
+                case MSG_S_ENTITY_SPAWN:    ProcessMsg(*(Msg_S_EntitySpawn    *)yjMsg); break;
+                case MSG_S_TILE_CHUNK:      ProcessMsg(*(Msg_S_TileChunk      *)yjMsg); break;
             }
             yj_client->ReleaseMessage(yjMsg);
             yjMsg = yj_client->ReceiveMessage(channelIdx);
@@ -238,7 +228,6 @@ void GameClient::Update(void)
 
     yj_client->SendPackets();
 }
-
 void GameClient::Stop(void)
 {
     yj_client->Disconnect();

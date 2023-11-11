@@ -282,8 +282,8 @@ Err Play(GameServer &server)
                 editor.DrawEntityOverlays(camera, server.now);
 
                 // [Debug] Last collision
-                DrawRectangleLinesEx(lastCollisionA, 1, RED);
-                DrawRectangleLinesEx(lastCollisionB, 1, GREEN);
+                DrawRectangleLinesEx(server.lastCollisionA, 1, RED);
+                DrawRectangleLinesEx(server.lastCollisionB, 1, GREEN);
             EndMode2D();
 
             // [Editor] Menus, action bar, etc.

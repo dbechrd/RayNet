@@ -102,6 +102,7 @@ typedef uint8_t Tile;  // TODO: Remove this?
 #define SV_MAX_TILE_CHUNK_WIDTH              64
 #define SV_WARP_FADE_DURATION                1.0  // delay in seconds for fade transition to be black
 #define SV_MAX_TILE_INTERACT_DIST_IN_TILES   1  // max distance player can be from a tile to interact with it
+#define SV_MAX_ENTITY_INTERACT_DIST          (TILE_W * 2)  // max distance player can be from a tile to interact with it
 
 //#define CL_PORT                 30000
 #define CL_BANDWIDTH_SMOOTHING_FACTOR   0.5f

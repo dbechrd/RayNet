@@ -31,8 +31,6 @@
 //    - Use C instead of C++? No.
 //    - Use std::variant. No. Fuck that.
 
-struct Msg_S_EntitySpawn;
-
 struct TileChunkRecord {
     data::Tilemap::Coord coord{};
     double lastSentAt{};  // when we last sent this chunk to the client
@@ -76,6 +74,10 @@ struct GameServer {
 
     bool showF3Menu = false;
 
+    // TODO(cleanup): Weird debug viz
+    Rectangle lastCollisionA{};
+    Rectangle lastCollisionB{};
+
     uint32_t nextEntityId = 1;
 
     GameServer(double now) : now(now), frameStart(now) {};
@@ -115,7 +117,13 @@ private:
 
     // All part of Update()
     void RequestDialog(int clientIdx, data::Entity &entity, Dialog &dialog);
+
+    void ProcessMsg(int clientIdx, Msg_C_EntityInteract &msg);
+    void ProcessMsg(int clientIdx, Msg_C_EntityInteractDialogOption &msg);
+    void ProcessMsg(int clientIdx, Msg_C_InputCommands &msg);
+    void ProcessMsg(int clientIdx, Msg_C_TileInteract &msg);
     void ProcessMessages(void);
+
     data::Entity *SpawnProjectile(const std::string &map_id, Vector3 position, Vector2 direction, Vector3 initial_velocity);
     void UpdateServerPlayers(void);
     void TickSpawnTownNPCs(const std::string &map_id);
@@ -130,6 +138,3 @@ private:
     void SendClientSnapshots(void);
     void SendClockSync(void);
 };
-
-extern Rectangle lastCollisionA;
-extern Rectangle lastCollisionB;
