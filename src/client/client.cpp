@@ -200,11 +200,14 @@ int main(int argc, char *argv[])
 
         // TODO: Move this somewhere in client?
         if (client->yj_client->IsConnected()) {
-            const data::MusFile &mus_file = data::packs[0]->FindMusic(client->world->musBackgroundMusic);
-            if (!IsMusicStreamPlaying(mus_file.music)) {
-                PlayMusicStream(mus_file.music);
+            data::Tilemap *map = client->world->LocalPlayerMap();
+            if (map) {
+                const data::MusFile &mus_file = data::packs[0]->FindMusic(map->background_music);
+                if (!IsMusicStreamPlaying(mus_file.music)) {
+                    PlayMusicStream(mus_file.music);
+                }
+                UpdateMusicStream(mus_file.music);
             }
-            UpdateMusicStream(mus_file.music);
         }
 
         //--------------------

@@ -7,10 +7,10 @@
         til_void
         til_stone_path
         til_water_dark
-        til_chest_basic
-        til_portal_top
-        til_portal_bottom
-        til_sign
+        obj_chest_basic
+        obj_portal_top
+        obj_portal_bottom
+        obj_sign
         til_stone_wall_cc
         til_stone_wall_tc
     ]

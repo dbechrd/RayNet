@@ -23,6 +23,10 @@ struct ClientWorld {
     double fadeDuration{};
     double fadeValue{};
 
+    uint32_t last_target_id = 0;
+    std::string last_target_map = "";
+    float zoomTarget = camera.zoom;
+
     bool showSnapshotShadows{};
 
     uint32_t localPlayerEntityId{};
@@ -45,7 +49,10 @@ struct ClientWorld {
         return holdingItem;
     }
 
-    std::string musBackgroundMusic{};
+    // For histogram
+    float prevX = 0;
+
+    ClientWorld(void);
 
     data::Entity *LocalPlayer(void);
     data::Tilemap *LocalPlayerMap(void);

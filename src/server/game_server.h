@@ -80,6 +80,10 @@ struct GameServer {
 
     uint32_t nextEntityId = 1;
 
+    double lastTownfolkSpawnedAt = 0;
+    double lastChickenSpawnedAt = 0;
+    uint32_t eid_bots[1];
+
     GameServer(double now) : now(now), frameStart(now) {};
 
     void OnClientJoin(int clientIdx);

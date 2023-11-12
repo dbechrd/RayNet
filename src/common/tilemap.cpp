@@ -249,8 +249,11 @@ void data::Tilemap::ResolveEntityCollisions(data::Entity &entity)
                 solid = tileDef.flags & data::TILEDEF_FLAG_SOLID;
                 if (!solid) {
                     const uint8_t obj = At_Obj(x, y);
-                    const data::TileDef &objTileDef = GetTileDef(obj);
-                    solid = objTileDef.flags & data::TILEDEF_FLAG_SOLID;
+                    // NOTE(dlb): Don't collide with void objects like we do with ground tiles
+                    if (obj) {
+                        const data::TileDef &objTileDef = GetTileDef(obj);
+                        solid = objTileDef.flags & data::TILEDEF_FLAG_SOLID;
+                    }
                 }
             }
 

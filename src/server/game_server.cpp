@@ -737,6 +737,7 @@ data::Entity *SpawnEntityProto(GameServer &server, const std::string &map_id, Ve
 }
 void GameServer::TickSpawnTownNPCs(const std::string &map_id)
 {
+    // TODO: Load protos from an mdesk file
     static data::EntityProto lily;
     static data::EntityProto freye;
     static data::EntityProto nessa;
@@ -832,7 +833,6 @@ void GameServer::TickSpawnTownNPCs(const std::string &map_id)
     assert(ARRAY_SIZE(townfolk) == ARRAY_SIZE(townfolk_ids));
 
     const double townfolkSpawnRate = 2.0;
-    static double lastTownfolkSpawnedAt = 0;
     if (now - lastTownfolkSpawnedAt >= townfolkSpawnRate) {
         for (int i = 0; i < ARRAY_SIZE(townfolk_ids); i++) {
             data::Entity *entity = entityDb->FindEntity(townfolk_ids[i], data::ENTITY_NPC);
@@ -849,7 +849,6 @@ void GameServer::TickSpawnTownNPCs(const std::string &map_id)
     }
 
     const double chickenSpawnCooldown = 3.0;
-    static double lastChickenSpawnedAt = 0;
     if (now - lastChickenSpawnedAt >= chickenSpawnCooldown) {
         for (int i = 0; i < ARRAY_SIZE(chicken_ids); i++) {
             data::Entity *entity = entityDb->FindEntity(chicken_ids[i], data::ENTITY_NPC);
@@ -872,7 +871,6 @@ void GameServer::TickSpawnTownNPCs(const std::string &map_id)
 }
 void GameServer::TickSpawnCaveNPCs(const std::string &map_id)
 {
-    static uint32_t eid_bots[1];
     for (int i = 0; i < ARRAY_SIZE(eid_bots); i++) {
         data::Entity *entity = entityDb->FindEntity(eid_bots[i], data::ENTITY_NPC);
         if (!entity && ((int)tick % 100 == i * 10)) {

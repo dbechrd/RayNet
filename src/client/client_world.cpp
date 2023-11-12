@@ -5,6 +5,12 @@
 #include "../common/entity_db.h"
 #include "../common/io.h"
 
+ClientWorld::ClientWorld(void)
+{
+    camera.zoom = 1.0f;
+    zoomTarget = camera.zoom;
+}
+
 data::Entity *ClientWorld::LocalPlayer(void) {
     data::Entity *localPlayer = entityDb->FindEntity(localPlayerEntityId, data::ENTITY_PLAYER);
     return localPlayer;
@@ -20,9 +26,6 @@ data::Tilemap *ClientWorld::LocalPlayerMap(void)
 data::Tilemap *ClientWorld::FindOrLoadMap(const std::string &map_id)
 {
     data::Tilemap &map = data::packs[0]->FindTilemap(map_id);
-
-    musBackgroundMusic = map.background_music;
-
     return &map;
 }
 
@@ -89,6 +92,7 @@ void ClientWorld::UpdateLocalPlayerHisto(GameClient &client, data::Entity &entit
         return;
     }
 
+    // TODO: Move these to histogram class
     static Color colors[] = { BEIGE, BROWN };
     static int colorIdx = 0;
     if (histoData.latestSnapInputSeq != histoInput.buffer[histoInput.buffer.size() - 2].value) {
@@ -99,7 +103,6 @@ void ClientWorld::UpdateLocalPlayerHisto(GameClient &client, data::Entity &entit
     entryInput.color = colors[colorIdx];
     entryInput.metadata = TextFormat("latestSnapInputSeq: %u", histoData.latestSnapInputSeq);
 
-    static float prevX = 0;
     Histogram::Entry &entryDx = histoDx.buffer.newest();
     entryDx.value = entity.position.x - prevX;
     prevX = entity.position.x;
@@ -319,17 +322,24 @@ void ClientWorld::UpdateCamera(GameClient &client)
     //}
 
     // Snap camera when new entity target, or target entity changes maps
-    static uint32_t last_target_id = 0;
-    static std::string last_target_map = "";
-    if (target.id != last_target_id || target.map_id != last_target_map) {
+    const bool new_target = target.id != last_target_id;
+    const bool new_map = target.map_id != last_target_map;
+
+    // Teleport camera to new location
+    if (new_target || new_map) {
         camera.target.x = targetPos.x;
         camera.target.y = targetPos.y;
         last_target_id = target.id;
         last_target_map = target.map_id;
     }
 
+    if (new_map) {
+        fadeDirection = 1;
+        fadeDuration = SV_WARP_FADE_DURATION;
+        fadeValue = 0;
+    }
+
     // Zoom based on mouse wheel
-    static float zoomTarget = camera.zoom;
     float wheel = io.MouseWheelMove();
     if (wheel != 0) {
         // Get the world point that is under the mouse
@@ -524,26 +534,13 @@ void ClientWorld::DrawDialog(GameClient &client, data::Entity &entity, Vector2 b
         msgNodes.push_back(errNode);
     }
 
-    static bool debugprint = false;
-    if (io.KeyPressed(KEY_SPACE)) {
-        debugprint = true;
-    }
-
     Vector2 msgCursor{};
     Vector2 msgSize{};
     for (DialogNode &node : msgNodes) {
         Vector2 nodeSize = dlb_MeasureTextEx(font, node.text.data(), node.text.size(), &msgCursor);
-        if (debugprint) {
-            printf("%.f %.f | %.f %.f\n\"%.*s\"\n",
-                msgCursor.x, msgCursor.y,
-                nodeSize.x, nodeSize.y,
-                (int)node.text.size(), node.text.data()
-            );
-        }
         msgSize.x = MAX(msgSize.x, nodeSize.x);
         msgSize.y = msgCursor.y + MIN(nodeSize.y, font.baseSize);
     }
-    debugprint = false;
 
     const float bgHeight =
         bgPad.y +
