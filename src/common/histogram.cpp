@@ -4,7 +4,7 @@
 const float Histogram::barPadding = 1.0f;
 const float Histogram::barWidth = 7.0f;
 const float Histogram::histoHeight = 20.0f;
-bool Histogram::paused = false;
+bool Histogram::paused = true;
 
 Histogram histoFps;
 Histogram histoInput;

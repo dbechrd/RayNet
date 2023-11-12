@@ -6,8 +6,8 @@ struct EntityDB {
     std::unordered_map<uint32_t, size_t> entityIndexById{};
 
     // TODO: Rename these so they don't collide with local variables all the time
-    std::vector<data::Entity>      entities {SV_MAX_ENTITIES};
-    std::vector<data::AspectGhost> ghosts   {SV_MAX_ENTITIES};
+    std::array<data::Entity     , SV_MAX_ENTITIES> entities {};
+    std::array<data::AspectGhost, SV_MAX_ENTITIES> ghosts   {};
 
     size_t FindEntityIndex(uint32_t entityId);
     data::Entity *FindEntity(uint32_t entityId, bool evenIfDespawned = false);
@@ -19,11 +19,9 @@ struct EntityDB {
     Rectangle EntityRect(uint32_t entityId);
     Vector2 EntityTopCenter(uint32_t entityId);
     void EntityTick(data::Entity &entity, double dt);
-    void EntityTick(uint32_t entityId, double dt);
 
     void DrawEntityIds(uint32_t map_id, Camera2D &camera);
-    void DrawEntityHoverInfo(uint32_t entityId);
-    void DrawEntity(uint32_t entityId, data::DrawCmdQueue &sortedDraws);
+    void DrawEntity(data::Entity &entity, data::DrawCmdQueue &sortedDraws, bool highlight = false);
 };
 
 extern EntityDB *entityDb;

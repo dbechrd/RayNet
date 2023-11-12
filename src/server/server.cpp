@@ -271,7 +271,7 @@ Err Play(GameServer &server)
 
                 for (data::Entity &entity : entityDb->entities) {
                     if (entity.map_id == editor_map.id) {
-                        entityDb->DrawEntity(entity.id, sortedDraws);
+                        entityDb->DrawEntity(entity, sortedDraws);
                     }
                 }
 

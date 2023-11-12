@@ -9,184 +9,9 @@
 #include "menu.h"
 #include "todo.h"
 
-void update_camera(Camera2D &camera, data::Tilemap &map, data::Entity &target, float frameDt)
-{
-    Vector2 targetPos = target.ScreenPos();
-
-    camera.offset = {
-        /*floorf(*/GetRenderWidth ()/2.0f/*)*/,
-        /*floorf(*/GetRenderHeight()/2.0f/*)*/
-    };
-
-    if (!io.KeyDown(KEY_SPACE)) {
-#if CL_CAMERA_LERP
-        // https://www.gamedeveloper.com/programming/improved-lerp-smoothing-
-        const float halfLife = 8.0f;
-        float alpha = 1.0f - exp2f(-halfLife * frameDt);
-        camera.target.x = LERP(camera.target.x, targetPos.x, alpha);
-        camera.target.y = LERP(camera.target.y, targetPos.y, alpha);
-
-#else
-        camera.target.x = targetPos.x;
-        camera.target.y = targetPos.y;
-#endif
-    }
-
-    // Some maps are too small for this to work.. so I just disabled it for now
-    //if (map) {
-        //Vector2 mapSize = { (float)map->width * TILE_W, map->height * (float)TILE_W };
-        //camera.target.x = CLAMP(camera.target.x, camera.offset.x / camera.zoom, mapSize.x - camera.offset.x / camera.zoom);
-        //camera.target.y = CLAMP(camera.target.y, camera.offset.y / camera.zoom, mapSize.y - camera.offset.y / camera.zoom);
-    //}
-
-    // Snap camera when new entity target, or target entity changes maps
-    static uint32_t last_target_id = 0;
-    static std::string last_target_map = "";
-    if (target.id != last_target_id || target.map_id != last_target_map) {
-        camera.target.x = targetPos.x;
-        camera.target.y = targetPos.y;
-        last_target_id = target.id;
-        last_target_map = target.map_id;
-    }
-
-    // Zoom based on mouse wheel
-    static float zoomTarget = camera.zoom;
-    float wheel = io.MouseWheelMove();
-    if (wheel != 0) {
-        // Get the world point that is under the mouse
-        Vector2 mouseWorldPos = GetScreenToWorld2D(GetMousePosition(), camera);
-
-        // Zoom increment
-        const float zoomIncrement = 0.1f;
-        zoomTarget += (wheel * zoomIncrement * zoomTarget);
-        zoomTarget = MAX(zoomIncrement, zoomTarget);
-    }
-    if (fabsf(camera.zoom - zoomTarget) > 0.001f) {
-        const float halfLife = 8.0f;
-        float alpha = 1.0f - exp2f(-halfLife * frameDt);
-        camera.zoom = LERP(camera.zoom, zoomTarget, alpha);
-    }
-
-    if (io.KeyPressed(KEY_KP_1)) {
-        zoomTarget = 1;
-    } else if (io.KeyPressed(KEY_KP_2)) {
-        zoomTarget = 2;
-    }
-
-    camera.target.x = floorf(camera.target.x);
-    camera.target.y = floorf(camera.target.y);
-    camera.offset.x = floorf(camera.offset.x);
-    camera.offset.y = floorf(camera.offset.y);
-}
-
-void draw_game(GameClient &client)
-{
-    Vector2 screenSize{
-        floorf((float)GetRenderWidth()),
-        floorf((float)GetRenderHeight())
-    };
-    SetShaderValue(shdPixelFixer, shdPixelFixerScreenSizeUniformLoc, &screenSize, SHADER_UNIFORM_VEC2);
-
-    client.world->Draw(client);
-
-    //--------------------
-    // Draw in-game menu
-    io.PushScope(IO::IO_GameHUD);
-    //io.CaptureMouse();
-
-    if (client.hudSpinner) {
-        const float innerRadius = 80;
-        const float outerRadius = innerRadius * 2;
-        const float centerRadius = innerRadius + (outerRadius - innerRadius) / 2;
-
-        Vector2 mousePos = GetMousePosition();
-        if (!client.hudSpinnerPrev) {
-            client.hudSpinnerPos = mousePos; //{ GetRenderWidth() / 2.0f, GetRenderHeight() / 2.0f };
-            CircleConstrainToScreen(client.hudSpinnerPos, outerRadius);
-        }
-
-        Vector2 toMouse = Vector2Subtract(mousePos, client.hudSpinnerPos);
-        float toMouseLen2 = Vector2LengthSqr(toMouse);
-
-        if (toMouseLen2 >= innerRadius*innerRadius) {
-            // Position on circle, normalized to 0.0 - 1.0 range, clockwise from 12 o'clock
-            float pieAlpha = 1.0f - (atan2f(toMouse.x, toMouse.y) / PI + 1.0f) / 2.0f;
-            client.hudSpinnerIndex = pieAlpha * client.hudSpinnerCount;
-            client.hudSpinnerIndex = CLAMP(client.hudSpinnerIndex, 0, client.hudSpinnerCount);
-        }
-
-#if 1
-        // TODO(cleanup): Debug code to increase/decrease # of pie entries
-        float wheelMove = io.MouseWheelMove();
-        if (wheelMove) {
-            int delta = (int)CLAMP(wheelMove, -1, 1) * -1;
-            client.hudSpinnerCount += delta;
-            client.hudSpinnerCount = CLAMP(client.hudSpinnerCount, 1, 20);
-        }
-#endif
-
-        const float pieSliceDeg = 360.0f / client.hudSpinnerCount;
-        const float angleStart = pieSliceDeg * client.hudSpinnerIndex - 90;
-        const float angleEnd = angleStart + pieSliceDeg;
-        const Color color = ColorFromHSV(angleStart, 0.7f, 0.7f);
-
-        //DrawCircleV(client.hudSpinnerPos, outerRadius, Fade(LIGHTGRAY, 0.6f));
-        DrawRing(client.hudSpinnerPos, innerRadius, outerRadius, 0, 360, 32, Fade(LIGHTGRAY, 0.6f));
-
-        //DrawCircleSector(client.hudSpinnerPos, outerRadius, angleStart, angleEnd, 32, Fade(SKYBLUE, 0.6f));
-        DrawRing(client.hudSpinnerPos, innerRadius, outerRadius, angleStart, angleEnd, 32, Fade(color, 0.8f));
-
-        for (int i = 0; i < client.hudSpinnerCount; i++) {
-            // Find middle of pie slice as a percentage of total pie circumference
-            const float iconPieAlpha = (float)i / client.hudSpinnerCount - 0.25f + (1.0f / client.hudSpinnerCount * 0.5f);
-            const Vector2 iconCenter = {
-                client.hudSpinnerPos.x + centerRadius * cosf(2 * PI * iconPieAlpha),
-                client.hudSpinnerPos.y + centerRadius * sinf(2 * PI * iconPieAlpha)
-            };
-
-            const char *menuText = i < ARRAY_SIZE(client.hudSpinnerItems) ? client.hudSpinnerItems[i] : "-Empty-";
-
-            //DrawCircle(iconCenter.x, iconCenter.y, 2, BLACK);
-            Vector2 textSize = MeasureTextEx(fntMedium, menuText, fntMedium.baseSize, 1.0f);
-            Vector2 textPos{
-                iconCenter.x - textSize.x / 2.0f,
-                iconCenter.y - textSize.y / 2.0f
-            };
-            //DrawTextShadowEx(fntMedium, TextFormat("%d %.2f", i, iconPieAlpha), iconCenter, RED);
-            DrawTextShadowEx(fntMedium, menuText, textPos, WHITE);
-        }
-
-#if 0
-        // TODO(cleanup): Draw debug text on pie menu
-        DrawTextShadowEx(fntMedium,
-            TextFormat("%.2f (%d of %d)", pieAlpha, client.hudSpinnerIndex + 1, client.hudSpinnerCount),
-            center, WHITE
-        );
-#endif
-    }
-
-    UIStyle uiHUDMenuStyle{};
-    UI uiHUDMenu{ {}, uiHUDMenuStyle };
-
-    // TODO: Add Quit button to the menu at the very least
-    uiHUDMenu.Button("Menu");
-    uiHUDMenu.Button("Quests");
-    uiHUDMenu.Button("Inventory");
-    uiHUDMenu.Button("Map");
-    uiHUDMenu.Newline();
-
-    const char *holdingItem = client.HudSpinnerItemName();
-    if (!holdingItem) {
-        holdingItem = "-Empty-";
-    }
-    uiHUDMenu.Text(holdingItem);
-
-    io.PopScope();
-}
-
 void draw_f3_menu(GameClient &client)
 {
-    io.PushScope(IO::IO_F3Menu);
+    IO::Scoped scope(IO::IO_F3Menu);
 
     //Vector2 hudCursor{ GetRenderWidth() - 360.0f - 8.0f, 8.0f };
     Vector2 hudCursor{ 8.0f, 48.0f };
@@ -222,7 +47,7 @@ void draw_f3_menu(GameClient &client)
     DRAW_TEXT("render", "%d, %d", GetRenderWidth(), GetRenderHeight());
     DRAW_TEXT("cursorScn", "%d, %d", GetMouseX(), GetMouseY());
     if (client.yj_client->IsConnected() && client.world) {
-        Camera2D &camera = client.world->camera2d;
+        Camera2D &camera = client.world->camera;
         Vector2 cursorWorldPos = GetScreenToWorld2D(GetMousePosition(), camera);
         DRAW_TEXT("cursorWld", "%.f, %.f", cursorWorldPos.x, cursorWorldPos.y);
         data::Entity *localPlayer = client.world->LocalPlayer();
@@ -290,8 +115,6 @@ void draw_f3_menu(GameClient &client)
     histoFps.DrawHover();
     histoInput.DrawHover();
     histoDx.DrawHover();
-
-    io.PopScope();
 }
 
 int main(int argc, char *argv[])
@@ -440,25 +263,12 @@ int main(int argc, char *argv[])
             // TODO: fpsHistogram.update() which checks input and calls TogglePause?
             Histogram::paused = !Histogram::paused;
         }
-        if (io.KeyPressed(KEY_F)) {
-            client->fadeDirection = -1;
-            client->fadeDuration = SV_WARP_FADE_DURATION;
-            client->fadeValue = 1;
-        }
 
         //--------------------
         // Accmulate input every frame
         if (client->yj_client->IsConnected()) {
             data::Entity *localPlayer = client->world->LocalPlayer();
             if (localPlayer) {
-                io.PushScope(IO::IO_GameHUD);
-                client->hudSpinnerPrev = client->hudSpinner;
-                client->hudSpinner = io.KeyDown(KEY_TAB);
-                if (client->hudSpinner) {
-                    io.CaptureMouse();
-                }
-                io.PopScope();
-
                 const bool button_up = io.KeyDown(KEY_W);
                 const bool button_left = io.KeyDown(KEY_A);
                 const bool button_down = io.KeyDown(KEY_S);
@@ -467,7 +277,7 @@ int main(int argc, char *argv[])
                 const bool button_any = button_up || button_left || button_down || button_right || button_primary;
 
                 // TODO: Update facing direction elsewhere, then just get localPlayer.facing here?
-                Camera2D& camera = client->world->camera2d;
+                Camera2D& camera = client->world->camera;
                 Vector2 cursorWorldPos = GetScreenToWorld2D(GetMousePosition(), camera);
                 cursorWorldPos = GetScreenToWorld2D(GetMousePosition(), camera);
                 Vector2 facing = Vector2Subtract(cursorWorldPos, localPlayer->ScreenPos());
@@ -488,7 +298,7 @@ int main(int argc, char *argv[])
                 }
 
                 // TODO: Make function
-                const char *holdingItem = client->HudSpinnerItemName();
+                const char *holdingItem = client->world->HudSpinnerItemName();
 
                 // TODO: Actually check hand
                 if (holdingItem == "Fireball") {
@@ -534,23 +344,7 @@ int main(int argc, char *argv[])
             if (localPlayer) {
                 // Update world
                 client->world->Update(*client);
-                // Update camera
-                update_camera(client->world->camera2d, *client->world->LocalPlayerMap(),
-                    *localPlayer, client->frameDt);
             }
-        }
-
-        if (client->fadeDuration) {
-            client->fadeValue += (1.0f / (client->fadeDuration * 0.5f)) * client->fadeDirection * client->frameDt;
-            if (client->fadeDirection < 0 && client->fadeValue < 0) {
-                client->fadeDirection = 1;
-                client->fadeValue = 0;
-            } else if (client->fadeDirection > 0 && client->fadeValue > 1) {
-                client->fadeDirection = 0;
-                client->fadeDuration = 0;
-                client->fadeValue = 0;
-            }
-            printf("now = %f, fadeAccum = %f\n", client->now, client->fadeValue);
         }
 
         if (client->yj_client->IsDisconnected()) {
@@ -567,11 +361,7 @@ int main(int argc, char *argv[])
             ClearBackground(BLACK); //GRAYISH_BLUE);
 
             if (client->yj_client->IsConnected()) {
-                draw_game(*client);
-            }
-
-            if (client->fadeDuration) {
-                DrawRectangle(0, 0, GetRenderWidth(), GetRenderHeight(), Fade(BLACK, 1.0f - client->fadeValue));
+                client->world->Draw(*client);
             }
 
             bool back = false;

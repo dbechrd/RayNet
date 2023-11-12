@@ -168,15 +168,6 @@ void EntityDB::EntityTick(data::Entity &entity, double dt)
 
     pos = Vector3Add(pos, Vector3Scale(vel, dt));
 }
-void EntityDB::EntityTick(uint32_t entityId, double dt)
-{
-    assert(entityId);
-
-    data::Entity *entity = FindEntity(entityId);
-    if (entity) {
-        EntityTick(*entity, dt);
-    }
-}
 
 void EntityDB::DrawEntityIds(uint32_t entityId, Camera2D &camera)
 {
@@ -189,62 +180,8 @@ void EntityDB::DrawEntityIds(uint32_t entityId, Camera2D &camera)
             fntSmall.baseSize / camera.zoom, 1 / camera.zoom, WHITE);
     }
 }
-void EntityDB::DrawEntityHoverInfo(uint32_t entityId)
+void EntityDB::DrawEntity(data::Entity &entity, data::DrawCmdQueue &sortedDraws, bool highlight)
 {
-    assert(entityId);
-
-    data::Entity *entity = FindEntity(entityId);
-    if (!entity) return;
-    if (!entity->hp_max) return;
-
-    const float borderWidth = 1;
-    const float pad = 1;
-    Vector2 hpBarPad{ pad, pad };
-    Vector2 hpBarSize{ 200, 24 };
-
-    Rectangle hpBarBg{
-        (float)GetRenderWidth() / 2 - hpBarSize.x / 2 - hpBarPad.x,
-        20.0f,
-        hpBarSize.x + hpBarPad.x * 2,
-        hpBarSize.y + hpBarPad.y * 2
-    };
-
-    Rectangle hpBar{
-        hpBarBg.x + hpBarPad.x,
-        hpBarBg.y + hpBarPad.y,
-        hpBarSize.x,
-        hpBarSize.y
-    };
-
-    DrawRectangleRec(hpBarBg, Fade(BLACK, 0.5));
-
-    if (fabsf(entity->hp - entity->hp_smooth) < 1.0f) {
-        float pctHealth = CLAMP((float)entity->hp_smooth / entity->hp_max, 0, 1);
-        hpBar.width = CLAMP(ceilf(hpBarSize.x * pctHealth), 0, hpBarSize.x);
-        DrawRectangleRec(hpBar, ColorBrightness(MAROON, -0.4));
-    } else {
-        float pctHealth = CLAMP((float)entity->hp / entity->hp_max, 0, 1);
-        float pctHealthSmooth = CLAMP((float)entity->hp_smooth / entity->hp_max, 0, 1);
-        float pctWhite = MAX(pctHealth, pctHealthSmooth);
-        float pctRed = MIN(pctHealth, pctHealthSmooth);
-        hpBar.width = CLAMP(ceilf(hpBarSize.x * pctWhite), 0, hpBarSize.x);
-        DrawRectangleRec(hpBar, ColorBrightness(WHITE, -0.3));
-        hpBar.width = CLAMP(ceilf(hpBarSize.x * pctRed), 0, hpBarSize.x);
-        DrawRectangleRec(hpBar, ColorBrightness(MAROON, -0.4));
-    }
-
-    Vector2 labelSize = MeasureTextEx(fntMedium, entity->name.c_str(), fntMedium.baseSize, 1);
-    Vector2 labelPos{
-        floorf(hpBarBg.x + hpBarBg.width / 2 - labelSize.x / 2),
-        floorf(hpBarBg.y + hpBarBg.height / 2 - labelSize.y / 2)
-    };
-    DrawTextShadowEx(fntMedium, entity->name.c_str(), labelPos, WHITE);
-}
-void EntityDB::DrawEntity(uint32_t entityId, data::DrawCmdQueue &sortedDraws)
-{
-    data::Entity *entity = FindEntity(entityId);
-    if (entity) {
-        const Rectangle rect = data::GetSpriteRect(*entity);
-        data::DrawSprite(*entity, &sortedDraws);
-    }
+    const Rectangle rect = data::GetSpriteRect(entity);
+    data::DrawSprite(entity, &sortedDraws, highlight);
 }

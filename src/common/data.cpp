@@ -1484,7 +1484,7 @@ namespace data {
         entity.anim_state.frame = 0;
         entity.anim_state.accum = 0;
     }
-    void DrawSprite(const Entity &entity, data::DrawCmdQueue *sortedDraws)
+    void DrawSprite(const Entity &entity, data::DrawCmdQueue *sortedDraws, bool highlight)
     {
         const GfxFrame &frame = GetSpriteFrame(entity);
         const GfxFile &gfx_file = packs[0]->FindGraphic(frame.gfx);
@@ -1501,6 +1501,9 @@ namespace data {
         Color color = WHITE;
         if (entity.on_warp_cooldown) {
             color = ColorTint(color, SKYBLUE);
+        }
+        if (highlight) {
+            color = ColorBrightness(color, 1.3f);
         }
 
         const Rectangle frame_rec{ (float)frame.x, (float)frame.y, (float)frame.w, (float)frame.h };

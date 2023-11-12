@@ -1,7 +1,25 @@
 #pragma once
 #include "common.h"
 
-typedef uint16_t StringId;
+struct RNString {
+    uint16_t id{};
+
+    const std::string &str(void);
+
+    bool operator==(const RNString other) const
+    {
+        return id == other.id;
+    }
+
+    struct Hasher {
+        const std::hash<uint16_t> hasher{};
+
+        std::size_t operator()(const RNString &k) const
+        {
+            return hasher(k.id);
+        }
+    };
+};
 
 enum {
     STR_NULL,
@@ -19,18 +37,19 @@ enum {
 
 struct StringCatalog {
     void Init(void);
-    const std::string &GetString(StringId stringId);
-    //StringId GetStringId(std::string value);
-    StringId AddString(const std::string &value);
+    const std::string &Find(RNString str);                 // get string data, should be used via RNString.str()
+    const RNString FindByValue(const std::string &value);  // existence check; find without inserting
+    const RNString Insert(const std::string &value);       // find or insert
 
 private:
-    //void SetString(StringId stringId, std::string value);
+    static const std::string &strNull;
 
     std::vector<std::string> entries;
-    std::unordered_map<std::string, StringId> entriesByValue{};
+    std::unordered_map<std::string, RNString> entriesByValue{};
 
     // TODO(dlb): How to handle dynamic strings.. e.g. when you open a new tileset
     // image in the editor and want to change tilemap.tileset to it?
 };
 
+extern const RNString &rnStringNull;
 extern StringCatalog rnStringCatalog;

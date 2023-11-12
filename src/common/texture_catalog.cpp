@@ -19,7 +19,7 @@ void TextureCatalog::Init(void)
     Entry entry{ missingImg, missingTex };
     size_t entryIdx = entries.size();
     entries.push_back(entry);
-    entriesById[STR_NULL] = entryIdx;
+    entriesById[rnStringNull] = entryIdx;
 }
 
 void TextureCatalog::Free(void)
@@ -30,17 +30,17 @@ void TextureCatalog::Free(void)
     }
 }
 
-Err TextureCatalog::Load(StringId id)
+Err TextureCatalog::Load(RNString str)
 {
     Err err = RN_SUCCESS;
 
-    const auto &entry = entriesById.find(id);
+    const auto &entry = entriesById.find(str);
     do {
         if (entry != entriesById.end()) {
             break;  // already loaded
         }
 
-        const std::string &path = rnStringCatalog.GetString(id);
+        const std::string &path = str.str();
         Image image = LoadImage(path.c_str());
         if (!image.width) {
             UnloadImage(image);
@@ -55,15 +55,15 @@ Err TextureCatalog::Load(StringId id)
         Entry entry{ image, texture };
         size_t entryIdx = entries.size();
         entries.push_back(entry);
-        entriesById[id] = entryIdx;
+        entriesById[str] = entryIdx;
     } while (0);
 
     return err;
 }
 
-const TextureCatalog::Entry &TextureCatalog::GetEntry(StringId id)
+const TextureCatalog::Entry &TextureCatalog::GetEntry(RNString str)
 {
-    const auto &entry = entriesById.find(id);
+    const auto &entry = entriesById.find(str);
     if (entry != entriesById.end()) {
         size_t entryIdx = entry->second;
         if (entryIdx >= 0 && entryIdx < entries.size()) {
@@ -73,14 +73,14 @@ const TextureCatalog::Entry &TextureCatalog::GetEntry(StringId id)
     return entries[0];
 }
 
-const Texture &TextureCatalog::GetTexture(StringId id)
+const Texture &TextureCatalog::GetTexture(RNString str)
 {
-    Load(id);  // we don't care if this is successful because GetEntry returns placeholder if it fails
-    const auto &entry = GetEntry(id);
+    Load(str);  // we don't care if this is successful because GetEntry returns placeholder if it fails
+    const auto &entry = GetEntry(str);
     return entry.texture;
 }
 
-void TextureCatalog::Unload(StringId id)
+void TextureCatalog::Unload(RNString str)
 {
     // TODO: unload it eventually (ref count?)
 }

@@ -216,8 +216,12 @@ data::AiPathNode *data::Tilemap::GetPathNode(uint32_t pathId, uint32_t pathNodeI
     return 0;
 }
 
-void data::Tilemap::ResolveEntityTerrainCollisions(data::Entity &entity)
+void data::Tilemap::ResolveEntityCollisions(data::Entity &entity)
 {
+    if (!entity.radius || entity.Dead()) {
+        return;
+    }
+
     entity.colliding = false;
 
     Vector2 topLeft{
@@ -300,16 +304,6 @@ void data::Tilemap::ResolveEntityTerrainCollisions(data::Entity &entity)
     if (!entity.on_warp) {
         entity.on_warp_cooldown = false;  // ready to warp again
     }
-}
-void data::Tilemap::ResolveEntityTerrainCollisions(uint32_t entityId)
-{
-    assert(entityId);
-    data::Entity *entity = entityDb->FindEntity(entityId);
-    if (!entity || !entity->Alive() || !entity->radius) {
-        return;
-    }
-
-    ResolveEntityTerrainCollisions(*entity);
 }
 
 void data::Tilemap::DrawTile(Tile tile, Vector2 position, data::DrawCmdQueue *sortedDraws)

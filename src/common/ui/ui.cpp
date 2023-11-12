@@ -952,3 +952,11 @@ UIState UI::TextboxFloat(STB_TexteditState &stbState, float &value, float width,
     return state;
 #endif
 }
+
+void LimitStringLength(std::string &str, void *userData)
+{
+    size_t maxLength = (size_t)userData;
+    if (str.size() > maxLength) {
+        str.resize(maxLength, 0);
+    }
+}

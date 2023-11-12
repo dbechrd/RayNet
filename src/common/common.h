@@ -122,6 +122,7 @@ typedef uint8_t Tile;  // TODO: Remove this?
 #define CL_DBG_TILE_CULLING    0
 #define CL_DBG_CIRCLE_VS_REC   0
 #define CL_DBG_FORCE_ACCUM     0
+#define CL_DBG_PIXEL_FIXER     0
 
 // Shared types
 

@@ -53,7 +53,7 @@ Err GameClient::TryConnect(void)
 
     yj_client->InsecureConnect(privateKey, clientId, serverAddress);
     world = new ClientWorld;
-    world->camera2d.zoom = 1.0f;
+    world->camera.zoom = 1.0f;
     world->musBackgroundMusic = "mus_ambient_outdoors";
     //world->map.LoadPack(LEVEL_001, now);
     entityDb = new EntityDB;
@@ -135,7 +135,12 @@ void GameClient::ProcessMsg(Msg_S_EntityDespawn &msg)
 }
 void GameClient::ProcessMsg(Msg_S_EntitySay &msg)
 {
-    world->CreateDialog(msg.entity_id, msg.dialog_id, msg.title, msg.message, now);
+    data::Entity *entity = entityDb->FindEntity(msg.entity_id);
+    if (entity) {
+        world->CreateDialog(*entity, msg.dialog_id, msg.title, msg.message, now);
+    } else {
+        printf("[game_client] Failed to create dialog. Could not find entity id %u.\n", msg.entity_id);
+    }
 }
 void GameClient::ProcessMsg(Msg_S_EntitySnapshot &msg)
 {

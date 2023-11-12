@@ -900,43 +900,40 @@ void GameServer::TickSpawnCaveNPCs(const std::string &map_id)
         }
     }
 }
-void GameServer::TickEntityNPC(uint32_t entityId, double dt)
+void GameServer::TickEntityNPC(data::Entity &e_npc, double dt)
 {
-    data::Entity *entity = entityDb->FindEntity(entityId);
-    if (!entity) return;
-
-    data::Tilemap *map = FindMap(entity->map_id);
+    data::Tilemap *map = FindMap(e_npc.map_id);
     if (!map) return;
 
-    if (now - entity->dialog_spawned_at > SV_ENTITY_DIALOG_INTERESTED_DURATION) {
-        entity->dialog_spawned_at = 0;
+    if (now - e_npc.dialog_spawned_at > SV_ENTITY_DIALOG_INTERESTED_DURATION) {
+        e_npc.dialog_spawned_at = 0;
     }
 
     // TODO: tick_pathfind?
     // TODO: Instead of path_id -1 for "no path" change it to 0 like everything else. After tilemap refactor.
-    if (entity->path_id >= 0 && !entity->dialog_spawned_at) {
-        data::AiPathNode *ai_path_node = map->GetPathNode(entity->path_id, entity->path_node_target);
+    if (e_npc.path_id >= 0 && !e_npc.dialog_spawned_at) {
+        data::AiPathNode *ai_path_node = map->GetPathNode(e_npc.path_id, e_npc.path_node_target);
         if (ai_path_node) {
             Vector3 target = ai_path_node->pos;
-            Vector3 to_target = Vector3Subtract(target, entity->position);
+            Vector3 to_target = Vector3Subtract(target, e_npc.position);
             if (Vector3LengthSqr(to_target) < 10 * 10) {
-                if (entity->path_node_last_reached != entity->path_node_target) {
+                if (e_npc.path_node_last_reached != e_npc.path_node_target) {
                     // Arrived at a new node
-                    entity->path_node_last_reached = entity->path_node_target;
-                    entity->path_node_arrived_at = now;
+                    e_npc.path_node_last_reached = e_npc.path_node_target;
+                    e_npc.path_node_arrived_at = now;
                 }
-                if (now - entity->path_node_arrived_at > ai_path_node->waitFor) {
+                if (now - e_npc.path_node_arrived_at > ai_path_node->waitFor) {
                     // Been at node long enough, move on
-                    entity->path_node_target = map->GetNextPathNodeIndex(entity->path_id, entity->path_node_target);
+                    e_npc.path_node_target = map->GetNextPathNodeIndex(e_npc.path_id, e_npc.path_node_target);
                 }
             } else {
-                entity->path_node_last_reached = 0;
-                entity->path_node_arrived_at = 0;
+                e_npc.path_node_last_reached = 0;
+                e_npc.path_node_arrived_at = 0;
 
                 Vector3 move_force = to_target;
                 move_force = Vector3Normalize(move_force);
-                move_force = Vector3Scale(move_force, entity->speed);
-                entity->ApplyForce(move_force);
+                move_force = Vector3Scale(move_force, e_npc.speed);
+                e_npc.ApplyForce(move_force);
             }
 
     #if 0
@@ -960,15 +957,15 @@ void GameServer::TickEntityNPC(uint32_t entityId, double dt)
     }
 
     // Chicken pathing AI (really bad)
-    if (entity->spec == data::ENTITY_SPEC_NPC_CHICKEN) {
-        if (entity->colliding) {
-            entity->path_rand_direction = {};
+    if (e_npc.spec == data::ENTITY_SPEC_NPC_CHICKEN) {
+        if (e_npc.colliding) {
+            e_npc.path_rand_direction = {};
         }
 
-        if (now - entity->path_rand_started_at >= entity->path_rand_duration) {
+        if (now - e_npc.path_rand_started_at >= e_npc.path_rand_duration) {
             double duration = 0;
             Vector3 dir{};
-            if (Vector3LengthSqr(entity->path_rand_direction) == 0) {
+            if (Vector3LengthSqr(e_npc.path_rand_direction) == 0) {
                 dir.x = GetRandomFloatMinusOneToOne();
                 dir.y = GetRandomFloatMinusOneToOne();
                 dir = Vector3Normalize(dir);
@@ -977,102 +974,88 @@ void GameServer::TickEntityNPC(uint32_t entityId, double dt)
                 dir = {};
                 duration = GetRandomValue(5, 10);
             }
-            entity->path_rand_started_at = now;
-            entity->path_rand_direction = dir;
-            entity->path_rand_duration = duration;
+            e_npc.path_rand_started_at = now;
+            e_npc.path_rand_direction = dir;
+            e_npc.path_rand_duration = duration;
         }
-        Vector3 move = Vector3Scale(entity->path_rand_direction, entity->speed);
-        entity->ApplyForce(move);
+        Vector3 move = Vector3Scale(e_npc.path_rand_direction, e_npc.speed);
+        e_npc.ApplyForce(move);
     }
 
-    entityDb->EntityTick(entityId, dt);
+    entityDb->EntityTick(e_npc, dt);
 }
-void GameServer::TickEntityPlayer(uint32_t entityId, double dt)
+void GameServer::TickEntityPlayer(data::Entity &e_player, double dt)
 {
-    entityDb->EntityTick(entityId, dt);
+    entityDb->EntityTick(e_player, dt);
 }
-void GameServer::TickEntityProjectile(uint32_t entityId, double dt)
+void GameServer::TickEntityProjectile(data::Entity &e_projectile, double dt)
 {
-    data::Entity *projectile = entityDb->FindEntity(entityId);
-    assert(projectile);
-
     // Gravity
     //AspectPhysics &ePhysics = map.ePhysics[entityIndex];
     //playerEntity.ApplyForce({ 0, 5 });
 
-    entityDb->EntityTick(entityId, dt);
+    entityDb->EntityTick(e_projectile, dt);
 
-    if (now - projectile->spawned_at > 1.0) {
-        DespawnEntity(projectile->id);
+    if (now - e_projectile.spawned_at > 1.0) {
+        DespawnEntity(e_projectile.id);
     }
 
-    if (projectile->despawned_at) {
+    if (e_projectile.despawned_at) {
         return;
     }
 
-    for (data::Entity &victim : entityDb->entities) {
-        if (victim.type == data::ENTITY_NPC
-            && !victim.despawned_at
-            && victim.Alive()
-            && victim.map_id == projectile->map_id)
+    for (data::Entity &e_target : entityDb->entities) {
+        if (e_target.type == data::ENTITY_NPC
+            && !e_target.despawned_at
+            && e_target.Alive()
+            && e_target.map_id == e_projectile.map_id)
         {
-            assert(victim.id);
-            if (victim.Dead()) {
+            assert(e_target.id);
+            if (e_target.Dead()) {
                 continue;
             }
 
-            Rectangle projectileHitbox = entityDb->EntityRect(projectile->id);
-            Rectangle targetHitbox = entityDb->EntityRect(victim.id);
+            Rectangle projectileHitbox = entityDb->EntityRect(e_projectile.id);
+            Rectangle targetHitbox = entityDb->EntityRect(e_target.id);
             if (CheckCollisionRecs(projectileHitbox, targetHitbox)) {
-                victim.TakeDamage(GetRandomValue(3, 8));
-                if (victim.Alive()) {
-                    if (!victim.dialog_spawned_at) {
-                        switch (victim.spec) {
+                e_target.TakeDamage(GetRandomValue(3, 8));
+                if (e_target.Alive()) {
+                    if (!e_target.dialog_spawned_at) {
+                        switch (e_target.spec) {
                             case data::ENTITY_SPEC_NPC_TOWNFOLK: {
-                                //BroadcastEntitySay(victim.id, TextFormat("Ouch! You hit me with\nprojectile #%u!", projectile->id));
-                                BroadcastEntitySay(victim.id, victim.name, "Ouch!");
+                                //BroadcastEntitySay(victim.id, TextFormat("Ouch! You hit me with\nprojectile #%u!", entity.id));
+                                BroadcastEntitySay(e_target.id, e_target.name, "Ouch!");
                                 break;
                             }
                             case data::ENTITY_SPEC_NPC_CHICKEN: {
-                                BroadcastEntitySay(victim.id, victim.name, "*squawk*!");
+                                BroadcastEntitySay(e_target.id, e_target.name, "*squawk*!");
                                 break;
                             }
                         }
                     }
                 } else {
-                    DespawnEntity(victim.id);
+                    DespawnEntity(e_target.id);
                 }
-                DespawnEntity(projectile->id);
+                DespawnEntity(e_projectile.id);
                 lastCollisionA = projectileHitbox;
                 lastCollisionB = targetHitbox;
             }
         }
     }
 }
-void GameServer::WarpEntity(uint32_t entityId, const std::string &dest_map_id, Vector3 dest_pos)
+void GameServer::WarpEntity(data::Entity &entity, const std::string &dest_map_id, Vector3 dest_pos)
 {
-    assert(entityId);
-    assert(!dest_map_id.empty());
-
-    data::Entity *victim = entityDb->FindEntity(entityId);
-    if (!victim) return;
-
-    if (!dest_map_id.empty()) {
-        // TODO: We need to move our victim to the new map
-        data::Tilemap *dest_map = FindOrLoadMap(dest_map_id);
-        if (dest_map) {
-            // TODO: Move victim to other map?
-            victim->map_id = dest_map->id;
-            victim->position = dest_pos;
-            victim->force_accum = {};
-            victim->velocity = {};
-        } else {
-            assert(!"UH-OH");
-        }
+    data::Tilemap *dest_map = FindOrLoadMap(dest_map_id);
+    if (dest_map) {
+        entity.map_id = dest_map->id;
+        entity.position = dest_pos;
+        entity.force_accum = {};
+        entity.velocity = {};
     } else {
         // TODO: This needs to ask GameServer to load the new map and
         // we also need to move our victim to the new map
 
+        assert(!"TODO: Load map dynamically");
         //Err err = Load(warp.templateMap);
         //if (err) {
         //    assert(!"UH-OH");
@@ -1110,61 +1093,27 @@ void GameServer::WarpEntity(uint32_t entityId, const std::string &dest_map_id, V
 #endif
     }
 }
-void GameServer::TickResolveEntityWarpCollisions(data::Tilemap &map, uint32_t entityId, double now)
+void GameServer::TickResolveEntityWarpCollisions(data::Tilemap &map, data::Entity &entity, double now)
 {
-    assert(entityId);
-
-    data::Entity *victim = entityDb->FindEntity(entityId);
-    if (!victim) {
+    if (!entity.on_warp || entity.on_warp_cooldown) {
         return;
     }
-    if (!victim->on_warp || victim->on_warp_cooldown) {
-        return;
-    }
-    if (victim->type != data::ENTITY_PLAYER) {
+    if (entity.type != data::ENTITY_PLAYER) {
         return;
     }
 
-    data::ObjectData *obj_data = map.GetObjectData(victim->on_warp_coord.x, victim->on_warp_coord.y);
+    data::ObjectData *obj_data = map.GetObjectData(entity.on_warp_coord.x, entity.on_warp_coord.y);
     if (obj_data) {
         assert(obj_data->type == "warp");
         Vector3 dest{};
         dest.x = obj_data->warp_dest_x * TILE_W + TILE_W * 0.5f;
-        dest.y = obj_data->warp_dest_y * TILE_W + TILE_W - victim->radius; // * 0.5f;
+        dest.y = obj_data->warp_dest_y * TILE_W + TILE_W - entity.radius; // * 0.5f;
         dest.z = obj_data->warp_dest_z;
-        WarpEntity(victim->id, obj_data->warp_map_id, dest);
-        victim->on_warp_cooldown = true;
+        WarpEntity(entity, obj_data->warp_map_id, dest);
+        entity.on_warp_cooldown = true;
     } else {
         TraceLog(LOG_WARNING, "We're on a warp, but there's no warp object found at that coord. Did it disappear?");
     }
-
-#if 0
-    if (victim->on_warp) {
-        // De-bounce warps. Only allow warping after victim has moved off any warps
-        // they may have just used to get here.
-        return;
-    }
-    victim->on_warp = false;
-
-    for (data::Entity &entity : entityDb->entities) {
-        // TODO: Make a better way to find matching entities, e.g. FindEntity(map_id, type, alive)
-        if (entity.spec != data::ENTITY_SPEC_OBJ_WARP
-            || !entity.id
-            || entity.despawned_at
-            || entity.map_id != victim->map_id)
-        {
-            continue;
-        }
-
-        data::Entity &warp = entity;
-        const bool on_warp = dlb_CheckCollisionCircleRec(victim->ScreenPos(), victim->radius, warp.warp_collider, 0);
-        if (on_warp) {
-            victim->on_warp = true;
-            WarpEntity(victim->id, warp.warp_dest_map, warp.warp_dest_pos);
-            break;
-        }
-    }
-#endif
 }
 void GameServer::Tick(void)
 {
@@ -1185,15 +1134,15 @@ void GameServer::Tick(void)
         // TODO: if (map.sleeping) continue
 
         switch (entity.type) {
-            case data::ENTITY_NPC:        TickEntityNPC        (entity.id, SV_TICK_DT); break;
-            case data::ENTITY_PLAYER:     TickEntityPlayer     (entity.id, SV_TICK_DT); break;
-            case data::ENTITY_PROJECTILE: TickEntityProjectile (entity.id, SV_TICK_DT); break;
+            case data::ENTITY_NPC:        TickEntityNPC        (entity, SV_TICK_DT); break;
+            case data::ENTITY_PLAYER:     TickEntityPlayer     (entity, SV_TICK_DT); break;
+            case data::ENTITY_PROJECTILE: TickEntityProjectile (entity, SV_TICK_DT); break;
         }
 
         data::Tilemap *map = FindMap(entity.map_id);
         if (map) {
-            map->ResolveEntityTerrainCollisions(entity.id);
-            TickResolveEntityWarpCollisions(*map, entity.id, now);
+            map->ResolveEntityCollisions(entity);
+            TickResolveEntityWarpCollisions(*map, entity, now);
         }
 
         bool newlySpawned = entity.spawned_at == now;
@@ -1203,35 +1152,28 @@ void GameServer::Tick(void)
     tick++;
     lastTickedAt = yj_server->GetTime();
 }
-void GameServer::SerializeSnapshot(uint32_t entityId, Msg_S_EntitySnapshot &entitySnapshot)
+void GameServer::SerializeSnapshot(data::Entity &entity, Msg_S_EntitySnapshot &entitySnapshot)
 {
-    assert(entityId);
-    if (!entityId) return;
-
-    data::Entity *entity = entityDb->FindEntity(entityId);
-    assert(entity);
-    if (!entity) return;
-
     entitySnapshot.server_time = lastTickedAt;
 
     // Entity
-    entitySnapshot.entity_id = entity->id;
-    entitySnapshot.type      = entity->type;
-    strncpy(entitySnapshot.map_id, entity->map_id.c_str(), SV_MAX_TILE_MAP_NAME_LEN);
-    entitySnapshot.position  = entity->position;
-    entitySnapshot.on_warp_cooldown = entity->on_warp_cooldown;
+    entitySnapshot.entity_id = entity.id;
+    entitySnapshot.type      = entity.type;
+    strncpy(entitySnapshot.map_id, entity.map_id.c_str(), SV_MAX_TILE_MAP_NAME_LEN);
+    entitySnapshot.position  = entity.position;
+    entitySnapshot.on_warp_cooldown = entity.on_warp_cooldown;
 
     // Collision
-    //entitySnapshot.radius = projectile->radius;
+    //entitySnapshot.radius = entity.radius;
 
     // Life
-    entitySnapshot.hp_max = entity->hp_max;
-    entitySnapshot.hp     = entity->hp;
+    entitySnapshot.hp_max = entity.hp_max;
+    entitySnapshot.hp     = entity.hp;
 
     // Physics
-    //entitySnapshot.drag     = projectile->drag;
-    //entitySnapshot.speed    = entity->speed;
-    entitySnapshot.velocity = entity->velocity;
+    //entitySnapshot.drag     = entity.drag;
+    //entitySnapshot.speed    = entity.speed;
+    entitySnapshot.velocity = entity.velocity;
 }
 void GameServer::SendClientSnapshots(void)
 {
@@ -1292,7 +1234,7 @@ void GameServer::SendClientSnapshots(void)
                 if (yj_server->CanSendMessage(clientIdx, CHANNEL_U_ENTITY_SNAPSHOT)) {
                     Msg_S_EntitySnapshot *msg = (Msg_S_EntitySnapshot *)yj_server->CreateMessage(clientIdx, MSG_S_ENTITY_SNAPSHOT);
                     if (msg) {
-                        SerializeSnapshot(entity.id, *msg);
+                        SerializeSnapshot(entity, *msg);
                         // TODO: We only need this for the sv_player entity, not EVERY entity. Make it suck less.
                         msg->last_processed_input_cmd = serverPlayer.lastInputSeq;
                         yj_server->SendMessage(clientIdx, CHANNEL_U_ENTITY_SNAPSHOT, msg);

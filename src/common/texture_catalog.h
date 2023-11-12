@@ -7,20 +7,19 @@ struct TextureCatalog {
         Image image;
         Texture texture;
 
-        Entry(Image &image, Texture &texture)
-            : image(image), texture(texture) {}
+        Entry(Image &image, Texture &texture) : image(image), texture(texture) {}
     };
 
     void Init(void);
     void Free(void);
-    Err Load(StringId id);
-    const Entry &GetEntry(StringId id);
-    const Texture &GetTexture(StringId id);
-    void Unload(StringId id);
+    Err Load(RNString str);
+    const Entry &GetEntry(RNString str);
+    const Texture &GetTexture(RNString str);
+    void Unload(RNString str);
 
 private:
     std::vector<Entry> entries{};
-    std::unordered_map<StringId, size_t> entriesById{};
+    std::unordered_map<RNString, size_t, RNString::Hasher> entriesById{};
 };
 
 extern TextureCatalog rnTextureCatalog;

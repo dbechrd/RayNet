@@ -300,8 +300,7 @@ namespace data {
         uint32_t GetNextPathNodeIndex(uint32_t pathId, uint32_t pathNodeIndex);
         AiPathNode *GetPathNode(uint32_t pathId, uint32_t pathNodeIndex);
 
-        void ResolveEntityTerrainCollisions(Entity &entity);
-        void ResolveEntityTerrainCollisions(uint32_t entityId);
+        void ResolveEntityCollisions(Entity &entity);
 
         void DrawTile(Tile tile, Vector2 position, DrawCmdQueue *sortedDraws);
         void Draw(Camera2D &camera, DrawCmdQueue &sortedDraws);
@@ -356,6 +355,8 @@ namespace data {
         Direction     direction            {};
     };
 
+    // std::string -> StringId
+    // 672 bytes -> 296 bytes
     struct Entity {
         static const DataType dtype = DAT_TYP_ENTITY;
 
@@ -364,20 +365,12 @@ namespace data {
         EntityType    type         {};
         EntitySpecies spec         {};
         std::string   name         {};
-        uint32_t      caused_by    {};
+        uint32_t      caused_by    {};  // who spawned the projectile?
         double        spawned_at   {};
         double        despawned_at {};
 
         std::string   map_id       {};
         Vector3       position     {};
-
-        inline Vector2 ScreenPos(void) {
-            Vector2 screenPos{
-                floorf(position.x),
-                floorf(position.y - position.z)
-            };
-            return screenPos;
-        }
 
         //// Audio ////
         std::string ambient_fx           {};  // some sound they play occasionally
@@ -409,32 +402,10 @@ namespace data {
         std::string dialog_title      {};  // name of NPC, submenu, etc.
         std::string dialog_message    {};  // what they're saying
 
-        inline void ClearDialog(void) {
-            dialog_spawned_at = 0;
-            dialog_title = {};
-            dialog_message = {};
-        }
-
         //// Life ////
         float hp_max    {};
         float hp        {};
         float hp_smooth {};  // client-only to smoothly interpolate health changes
-
-        inline void TakeDamage(int damage) {
-            if (damage >= hp) {
-                hp = 0;
-            } else {
-                hp -= damage;
-            }
-        }
-
-        inline bool Alive(void) {
-            return hp > 0;
-        }
-
-        inline bool Dead(void) {
-            return !Alive();
-        }
 
         //// Pathfinding ////
         int    path_id                {};
@@ -452,10 +423,6 @@ namespace data {
         Vector3 force_accum {};
         Vector3 velocity    {};
 
-        inline void ApplyForce(Vector3 force) {
-            force_accum = Vector3Add(force_accum, force);
-        }
-
         //// Sprite ////
         std::string  sprite     {};  // sprite resource
         Direction    direction  {};  // current facing direction
@@ -470,6 +437,40 @@ namespace data {
         // Or both of these
         std::string warp_template_map     {};  // template map to make a copy of for procgen
         std::string warp_template_tileset {};  // wang tileset to use for procgen
+
+        inline Vector2 ScreenPos(void) {
+            Vector2 screenPos{
+                floorf(position.x),
+                floorf(position.y - position.z)
+            };
+            return screenPos;
+        }
+
+        inline void ClearDialog(void) {
+            dialog_spawned_at = 0;
+            dialog_title = {};
+            dialog_message = {};
+        }
+
+        inline void TakeDamage(int damage) {
+            if (damage >= hp) {
+                hp = 0;
+            } else {
+                hp -= damage;
+            }
+        }
+
+        inline bool Alive(void) {
+            return hp > 0;
+        }
+
+        inline bool Dead(void) {
+            return !Alive();
+        }
+
+        inline void ApplyForce(Vector3 force) {
+            force_accum = Vector3Add(force_accum, force);
+        }
     };
 
     struct GhostSnapshot {
@@ -750,7 +751,7 @@ namespace data {
     Rectangle GetSpriteRect(const Entity &entity);
     void UpdateSprite(Entity &entity, double dt, bool newlySpawned);
     void ResetSprite(Entity &entity);
-    void DrawSprite(const Entity &entity, data::DrawCmdQueue *sortedDraws);
+    void DrawSprite(const Entity &entity, data::DrawCmdQueue *sortedDraws, bool highlight = false);
 
     void UpdateTileDefAnimations(double dt);
 

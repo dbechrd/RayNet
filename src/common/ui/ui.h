@@ -150,3 +150,5 @@ private:
     void UpdateAudio(const UIState &uiState);
     void UpdateCursor(const UIStyle &style, Rectangle &ctrlRect);
 };
+
+extern void LimitStringLength(std::string &str, void *userData);

@@ -18,24 +18,43 @@ struct Controller {
 };
 
 struct ClientWorld {
-    Camera2D camera2d{};
+    Camera2D camera{};
+    double fadeDirection{};
+    double fadeDuration{};
+    double fadeValue{};
+
     bool showSnapshotShadows{};
 
     uint32_t localPlayerEntityId{};
-    uint32_t hoveredEntityId{};
+    uint32_t hoveredEntityId{};   // mouse is over entity
+    bool hoveredEntityInRange{};  // player is close enough to interact
+
+    const char *hudSpinnerItems[2]{
+        "Fireball",
+        "Shovel"
+    };
+
+    bool hudSpinnerPrev = false;
+    bool hudSpinner = false;
+    Vector2 hudSpinnerPos{};
+    int hudSpinnerIndex = 0;  // which index is currently active
+    int hudSpinnerCount = 6;  // how many items in hud spinner
+
+    inline const char *HudSpinnerItemName(void) {
+        const char *holdingItem = hudSpinnerIndex < ARRAY_SIZE(hudSpinnerItems) ? hudSpinnerItems[hudSpinnerIndex] : 0;
+        return holdingItem;
+    }
 
     std::string musBackgroundMusic{};
 
     data::Entity *LocalPlayer(void);
     data::Tilemap *LocalPlayerMap(void);
     data::Tilemap *FindOrLoadMap(const std::string &map_id);
-    bool CopyEntityData(uint32_t entityId, data::EntityData &data);
 
     void ApplySpawnEvent(const Msg_S_EntitySpawn &entitySpawn);
     void ApplyStateInterpolated(data::Entity &entity, const data::GhostSnapshot &a, const data::GhostSnapshot &b, float alpha, float dt);
-    void ApplyStateInterpolated(uint32_t entityId, const data::GhostSnapshot &a, const data::GhostSnapshot &b, float alpha, float dt);
+    Err CreateDialog(data::Entity &entity, uint32_t dialogId, const std::string &title, const std::string &message, double now);
 
-    Err CreateDialog(uint32_t entityId, uint32_t dialogId, const std::string &title, const std::string &message, double now);
     void Update(GameClient &client);
     void Draw(GameClient &client);
 
@@ -51,9 +70,16 @@ private:
     void UpdateLocalPlayer(GameClient &client, data::Entity &entity, data::AspectGhost &ghost);
     void UpdateLocalGhost(GameClient &client, data::Entity &entity, data::AspectGhost &ghost, data::Tilemap *localPlayerMap);
     void UpdateEntities(GameClient &client);
+    void UpdateCamera(GameClient &client);
+    void UpdateHUDSpinner(void);
 
-    void DrawEntitySnapshotShadows(uint32_t entityId, Controller &controller, double now, double dt);
-    void DrawDialogTips(std::vector<FancyTextTip> tips);
+    void DrawEntitySnapshotShadows(GameClient &client, data::Entity &entity, Controller &controller);
+    void DrawEntities(GameClient &client, data::Tilemap &map, data::DrawCmdQueue &sortedDraws);
     void DrawDialog(GameClient &client, data::Entity &entity, Vector2 bottomCenterScreen, std::vector<FancyTextTip> &tips);
-    void DrawDialogs(GameClient &client, Camera2D &camera);
+    void DrawDialogTips(std::vector<FancyTextTip> tips);
+    void DrawDialogs(GameClient &client);
+    void DrawHUDEntityHoverInfo(void);
+    void DrawHUDSpinner(void);
+    void DrawHUDSignEditor(void);
+    void DrawHUDMenu(void);
 };

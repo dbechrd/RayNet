@@ -1,6 +1,10 @@
 #pragma once
 #include "common.h"
 
+struct IO;
+
+extern IO io;
+
 struct IO {
     // In order of least to greatest I/O precedence
     enum Scope {
@@ -8,14 +12,33 @@ struct IO {
         IO_Game,
         IO_GameNPC,
         IO_GameNPCDialog,
-        IO_GameHUD,
+        IO_HUDSpinner,
+        IO_HUDMenu,
+        IO_HUDSignEditor,
+
+        // Server-side, prolly shouldn't exist client-side
         IO_Editor,
         IO_EditorGroundOverlay,
         IO_EditorEntityOverlay,
         IO_EditorUI,
         IO_EditorDrag,
+
         IO_F3Menu,
         IO_Count
+    };
+
+    struct Scoped {
+        Scope scope{};
+
+        Scoped(Scope scope) : scope(scope)
+        {
+            io.PushScope(scope);
+        }
+
+        ~Scoped(void)
+        {
+            io.PopScope();
+        }
     };
 
     void EndFrame(void)
@@ -130,5 +153,3 @@ private:
 
     std::stack<Scope> scopeStack;
 };
-
-extern IO io;

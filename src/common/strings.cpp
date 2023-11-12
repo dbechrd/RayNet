@@ -1,11 +1,19 @@
 #include "strings.h"
 
+const std::string &StringCatalog::strNull = "<null>";
+
+const RNString &rnStringNull = { STR_NULL };
 StringCatalog rnStringCatalog;
+
+const std::string &RNString::str(void)
+{
+    return rnStringCatalog.Find(*this);
+}
 
 void StringCatalog::Init(void)
 {
     entries.resize(STR_COUNT);
-    entries[STR_NULL] = "<null>";
+    entries[STR_NULL] = strNull;
 
     // TODO: LoadPack from ui.lang file
     entries[STR_UI_MENU_PLAY]     = "Play";
@@ -16,56 +24,39 @@ void StringCatalog::Init(void)
     entries[STR_LILY_HELLO] = "Hello, welcome to the wonderful world of RayNet!";
 }
 
-const std::string &StringCatalog::GetString(StringId stringId)
+const std::string &StringCatalog::Find(RNString str)
 {
-    static const std::string nullstr = "<null>";
-    if (stringId >= 0 && stringId < entries.size()) {
-        return entries[stringId];
+    if (str.id >= 0 && str.id < entries.size()) {
+        return entries[str.id];
     }
-    return nullstr;
+    return strNull;
 }
-#if 0
-StringId StringCatalog::GetStringId(std::string value)
+const RNString StringCatalog::FindByValue(const std::string &value)
 {
     const auto &entry = entriesByValue.find(value);
     if (entry != entriesByValue.end()) {
         return entry->second;
     }
-    return STR_NULL;
+    return rnStringNull;
 }
-
-void StringCatalog::SetString(StringId stringId, std::string value)
+const RNString StringCatalog::Insert(const std::string &value)
 {
-    std::string &existingStr = entries[stringId];
-    if (existingStr.size()) {
-        printf("[strings] Warning: String id %d exists with value %s, overwriting with %s.\n",
-            stringId,
-            existingStr.c_str(),
-            value.c_str()
-        );
-        entries[stringId] = value;
-        entriesByValue[value] = stringId;
-        assert(!"Duplicate String");
-    }
-}
-#endif
-StringId StringCatalog::AddString(const std::string &value)
-{
+    // TODO(dlb): Should interning "" be allowed??
     if (!value.size()) {
-        return STR_NULL;
+        return rnStringNull;
     }
 
     const auto &entry = entriesByValue.find(value);
     if (entry == entriesByValue.end()) {
         size_t entryCount = entries.size();
         if (entryCount < UINT16_MAX) {
-            StringId entryIdx = (uint16_t)entryCount;
+            const RNString rnString{ (uint16_t)entryCount };
             entries.push_back(value);
-            entriesByValue[value] = entryIdx;
-            return entryIdx;
+            entriesByValue[value] = rnString;
+            return rnString;
         } else {
             TraceLog(LOG_ERROR, "ERROR: Cannot add string '%s' to string catalog. Catalog full.\n", value.c_str());
-            return STR_NULL;
+            return rnStringNull;
         }
     } else {
         return entry->second;
