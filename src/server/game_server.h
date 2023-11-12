@@ -69,7 +69,7 @@ struct GameServer {
     double lastTickedAt{};
 
     double frameStart{};
-    double frameDt = 0;
+    double frameDt{};
     double frameDtSmooth = 60;
 
     bool showF3Menu = false;
@@ -80,9 +80,9 @@ struct GameServer {
 
     uint32_t nextEntityId = 1;
 
-    double lastTownfolkSpawnedAt = 0;
-    double lastChickenSpawnedAt = 0;
-    uint32_t eid_bots[1];
+    double lastTownfolkSpawnedAt{};
+    double lastChickenSpawnedAt{};
+    uint32_t eid_bots[1]{};
 
     GameServer(double now) : now(now), frameStart(now) {};
 

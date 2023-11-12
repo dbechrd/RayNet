@@ -250,6 +250,7 @@ namespace data {
         std::string id               {};  // name of map area
         uint32_t    width            {};  // width of map in tiles
         uint32_t    height           {};  // height of map in tiles
+        std::string title            {};  // display name
         std::string background_music {};  // background music
 
         // TODO(dlb): Move these to a global pool, each has its own textureId

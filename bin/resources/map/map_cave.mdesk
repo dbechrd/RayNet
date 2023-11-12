@@ -2,6 +2,7 @@
     version: 8
     width: 16
     height: 16
+    title: "Echo Cave"
     background_music: mus_ambient_cave
     tile_defs: [
         til_void

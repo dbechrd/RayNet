@@ -11,7 +11,8 @@ ClientWorld::ClientWorld(void)
     zoomTarget = camera.zoom;
 }
 
-data::Entity *ClientWorld::LocalPlayer(void) {
+data::Entity *ClientWorld::LocalPlayer(void)
+{
     data::Entity *localPlayer = entityDb->FindEntity(localPlayerEntityId, data::ENTITY_PLAYER);
     return localPlayer;
 }
@@ -281,12 +282,6 @@ void ClientWorld::UpdateEntities(GameClient &client)
 }
 void ClientWorld::UpdateCamera(GameClient &client)
 {
-    if (io.KeyPressed(KEY_F)) {
-        fadeDirection = -1;
-        fadeDuration = SV_WARP_FADE_DURATION;
-        fadeValue = 1;
-    }
-
     data::Entity *localPlayer = LocalPlayer();
     if (!localPlayer) {
         return;
@@ -334,9 +329,15 @@ void ClientWorld::UpdateCamera(GameClient &client)
     }
 
     if (new_map) {
-        fadeDirection = 1;
-        fadeDuration = SV_WARP_FADE_DURATION;
-        fadeValue = 0;
+        warpFadeInStartedAt = client.now;
+
+        data::Tilemap &map = data::packs[0]->FindTilemap(target.map_id);
+        if (map.title.size()) {
+            titleText = map.title;
+        } else {
+            titleText = map.id;
+        }
+        titleShownAt = client.now;
     }
 
     // Zoom based on mouse wheel
@@ -366,19 +367,6 @@ void ClientWorld::UpdateCamera(GameClient &client)
     camera.target.y = floorf(camera.target.y);
     camera.offset.x = floorf(camera.offset.x);
     camera.offset.y = floorf(camera.offset.y);
-
-    if (fadeDuration) {
-        fadeValue += (1.0f / (fadeDuration * 0.5f)) * fadeDirection * client.frameDt;
-        if (fadeDirection < 0 && fadeValue < 0) {
-            fadeDirection = 1;
-            fadeValue = 0;
-        } else if (fadeDirection > 0 && fadeValue > 1) {
-            fadeDirection = 0;
-            fadeDuration = 0;
-            fadeValue = 0;
-        }
-        //printf("now = %f, fadeAccum = %f\n", client.now, fadeValue);
-    }
 }
 void ClientWorld::UpdateHUDSpinner(void)
 {
@@ -836,6 +824,56 @@ void ClientWorld::DrawHUDSpinner(void)
     );
 #endif
 }
+void ClientWorld::DrawHUDTitle(GameClient &client)
+{
+    if (titleShownAt) {
+        const Vector2 titleSize = dlb_MeasureTextEx(fntBig, titleText.c_str(), titleText.size());
+        const Vector2 titlePos{
+            floorf(GetRenderWidth() / 2.0f - titleSize.x / 2.0f),
+            floorf(GetRenderHeight() * 0.1f),
+        };
+
+        double start = titleShownAt;
+        double end = start + CL_WARP_FADE_IN_DURATION * 0.5f;
+        double titleWaitAlpha = (client.now - start) / (end - start);
+        CLAMP(titleWaitAlpha, 0.0f, 1.0f);
+
+        start = end;
+        end = start + CL_WARP_TITLE_FADE_IN_DURATION;
+        double titleFadeInAlpha = (client.now - start) / (end - start);
+        CLAMP(titleFadeInAlpha, 0.0f, 1.0f);
+
+        start = end;
+        end = start + CL_WARP_TITLE_SHOW_DURATION;
+        double titleShowAlpha = (client.now - start) / (end - start);
+        CLAMP(titleShowAlpha, 0.0f, 1.0f);
+
+        start = end;
+        end = start + CL_WARP_TITLE_FADE_OUT_DURATION;
+        double titleFadeOutAlpha = (client.now - start) / (end - start);
+        CLAMP(titleFadeOutAlpha, 0.0f, 1.0f);
+
+        float alpha = 0.0f;
+        if (titleWaitAlpha < 1.0f) {
+            // wait for warp fade to end before fading in the title
+            printf("title wait: %.2f\n", titleWaitAlpha);
+        } else if (titleFadeInAlpha < 1.0f) {
+            alpha = titleFadeInAlpha;
+            printf("title fade in: %.2f\n", alpha);
+        } else if (titleShowAlpha < 1.0f) {
+            alpha = 1.0f;
+            printf("title show: %.2f\n", alpha);
+        } else if (titleFadeOutAlpha < 1.0f) {
+            alpha = 1.0f - titleFadeOutAlpha;
+            printf("title fade out: %.2f\n", alpha);
+        } else {
+            // TODO: ClearTitle() function
+            titleShownAt = 0;
+            titleText = "";
+        }
+        DrawTextShadowEx(fntBig, titleText.c_str(), titlePos, Fade(WHITE, alpha));
+    }
+}
 void ClientWorld::DrawHUDSignEditor(void)
 {
     IO::Scoped scope(IO::IO_HUDSignEditor);
@@ -956,10 +994,16 @@ void ClientWorld::Draw(GameClient &client)
     DrawDialogs(client);
     DrawHUDEntityHoverInfo();
     DrawHUDSpinner();
+    DrawHUDTitle(client);
     DrawHUDSignEditor();
     DrawHUDMenu();
 
-    if (client.world->fadeDuration) {
-        DrawRectangle(0, 0, GetRenderWidth(), GetRenderHeight(), Fade(BLACK, 1.0f - client.world->fadeValue));
+    if (warpFadeInStartedAt) {
+        const double fadeInAlpha = (client.now - warpFadeInStartedAt) / CL_WARP_FADE_IN_DURATION;
+        if (fadeInAlpha < 1.0f) {
+            DrawRectangle(0, 0, GetRenderWidth(), GetRenderHeight(), Fade(BLACK, 1.0f - fadeInAlpha));
+        } else {
+            warpFadeInStartedAt = 0;
+        }
     }
 }

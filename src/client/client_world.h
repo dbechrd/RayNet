@@ -19,13 +19,15 @@ struct Controller {
 
 struct ClientWorld {
     Camera2D camera{};
-    double fadeDirection{};
-    double fadeDuration{};
-    double fadeValue{};
 
-    uint32_t last_target_id = 0;
-    std::string last_target_map = "";
-    float zoomTarget = camera.zoom;
+    uint32_t last_target_id{};
+    std::string last_target_map{};
+    float zoomTarget{};
+
+    double warpFadeInStartedAt{};
+
+    double titleShownAt{};
+    std::string titleText{};
 
     bool showSnapshotShadows{};
 
@@ -87,6 +89,7 @@ private:
     void DrawDialogs(GameClient &client);
     void DrawHUDEntityHoverInfo(void);
     void DrawHUDSpinner(void);
+    void DrawHUDTitle(GameClient &client);
     void DrawHUDSignEditor(void);
     void DrawHUDMenu(void);
 };

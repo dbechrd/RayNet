@@ -2,6 +2,7 @@
     version: 8
     width: 64
     height: 64
+    title: "Sisters' Encampment"
     background_music: mus_ambient_outdoors
     tile_defs: [
         til_void

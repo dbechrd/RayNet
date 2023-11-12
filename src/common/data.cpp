@@ -101,6 +101,7 @@ namespace data {
             fprintf(file, "    version: %u\n", tilemap.version);
             fprintf(file, "    width: %u\n", tilemap.width);
             fprintf(file, "    height: %u\n", tilemap.height);
+            fprintf(file, "    title: %s\n", tilemap.title.c_str());
             fprintf(file, "    background_music: %s\n", tilemap.background_music.c_str());
 
             fprintf(file, "    tile_defs: [\n");
@@ -509,6 +510,8 @@ namespace data {
                                 META_UINT32(map.width);
                             } else if (key == "height") {
                                 META_UINT32(map.height);
+                            } else if (key == "title") {
+                                META_STRING(map.title);
                             } else if (key == "background_music") {
                                 META_IDENT(map.background_music);
                             } else if (key == "tile_defs") {
@@ -1022,6 +1025,7 @@ namespace data {
         PROC(tile_map.id);
         PROC(tile_map.width);
         PROC(tile_map.height);
+        PROC(tile_map.title);
         PROC(tile_map.background_music);
 
         PROC(sentinel);

@@ -100,7 +100,6 @@ typedef uint8_t Tile;  // TODO: Remove this?
 // how long this entity stays interested in a conversation before returning to pathfinding
 #define SV_ENTITY_DIALOG_INTERESTED_DURATION 30
 #define SV_MAX_TILE_CHUNK_WIDTH              64
-#define SV_WARP_FADE_DURATION                1.0  // delay in seconds for fade transition to be black
 #define SV_MAX_TILE_INTERACT_DIST_IN_TILES   1  // max distance player can be from a tile to interact with it
 #define SV_MAX_ENTITY_INTERACT_DIST          (TILE_W * 2)  // max distance player can be from a tile to interact with it
 
@@ -115,6 +114,10 @@ typedef uint8_t Tile;  // TODO: Remove this?
 #define CL_CLIENT_SIDE_PREDICT          1
 #define CL_DIALOG_DURATION_MIN          1.0
 #define CL_DIALOG_DURATION_PER_CHAR     0.1
+#define CL_WARP_FADE_IN_DURATION        0.5  // delay in seconds for fade transition to be black
+#define CL_WARP_TITLE_FADE_IN_DURATION  1.0  // delay in seconds for title to fade in
+#define CL_WARP_TITLE_SHOW_DURATION     2.0  // delay in seconds for title to remain fully visible after warping
+#define CL_WARP_TITLE_FADE_OUT_DURATION 0.4  // delay in seconds for title to fade out
 
 #define CL_DBG_ONE_SCREEN      0
 #define CL_DBG_TWO_SCREEN      0
