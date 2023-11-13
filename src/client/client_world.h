@@ -15,6 +15,11 @@ struct Controller {
     double lastInputSampleAt{};  // time we last sampled accumulator
     double lastCommandSentAt{};  // time we last sent inputs to the server
     RingBuffer<InputCmd, CL_SEND_INPUT_COUNT> cmdQueue{};  // queue of last N input samples
+
+    // not synced, just tracked client-side
+    bool tile_hovered{};
+    uint32_t tile_x{};
+    uint32_t tile_y{};
 };
 
 struct ClientWorld {
@@ -51,6 +56,12 @@ struct ClientWorld {
         return holdingItem;
     }
 
+    // Return true if the held item interacts with tiles on primary click (used to show hover rect)
+    inline bool HudSpinnerItemIsTool(void) {
+        const char *holdingItem = HudSpinnerItemName();
+        return holdingItem == "Shovel";
+    }
+
     // For histogram
     float prevX = 0;
 
@@ -82,8 +93,10 @@ private:
     void UpdateCamera(GameClient &client);
     void UpdateHUDSpinner(void);
 
+    void DrawHoveredTileIndicator(GameClient &client);
     void DrawEntitySnapshotShadows(GameClient &client, data::Entity &entity, Controller &controller);
     void DrawEntities(GameClient &client, data::Tilemap &map, data::DrawCmdQueue &sortedDraws);
+    void DrawHoveredObjectIndicator(GameClient &client, data::Tilemap &map);
     void DrawDialog(GameClient &client, data::Entity &entity, Vector2 bottomCenterScreen, std::vector<FancyTextTip> &tips);
     void DrawDialogTips(std::vector<FancyTextTip> tips);
     void DrawDialogs(GameClient &client);

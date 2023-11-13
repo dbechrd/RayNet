@@ -278,51 +278,71 @@ int main(int argc, char *argv[])
                 const bool button_right = io.KeyDown(KEY_D);
                 const bool button_primary = io.MouseButtonPressed(MOUSE_BUTTON_LEFT);
                 const bool button_secondary = io.MouseButtonPressed(MOUSE_BUTTON_RIGHT);
-                const bool button_any = button_up || button_left || button_down || button_right || button_primary;
+
+                // TODO: Use this for dismissing dialogs, updating player facing dir, etc.?
+                //const bool button_any = button_up || button_left || button_down || button_right || button_primary;
 
                 // TODO: Update facing direction elsewhere, then just get localPlayer.facing here?
                 Camera2D& camera = client->world->camera;
                 Vector2 cursorWorldPos = GetScreenToWorld2D(GetMousePosition(), camera);
-                cursorWorldPos = GetScreenToWorld2D(GetMousePosition(), camera);
                 Vector2 facing = Vector2Subtract(cursorWorldPos, localPlayer->ScreenPos());
                 facing = Vector2Normalize(facing);
-                client->controller.cmdAccum.facing = facing;
 
-                client->controller.cmdAccum.north |= button_up;
-                client->controller.cmdAccum.west |= button_left;
-                client->controller.cmdAccum.south |= button_down;
-                client->controller.cmdAccum.east |= button_right;
+                Controller &controller = client->controller;
+                InputCmd &input = controller.cmdAccum;
+                input.facing = facing;
+                input.north |= button_up;
+                input.west  |= button_left;
+                input.south |= button_down;
+                input.east  |= button_right;
 
-                if (client->controller.cmdAccum.north ||
-                    client->controller.cmdAccum.west ||
-                    client->controller.cmdAccum.south ||
-                    client->controller.cmdAccum.east)
+                if (input.north ||
+                    input.west  ||
+                    input.south ||
+                    input.east)
                 {
                     localPlayer->ClearDialog();
                 }
 
-                // TODO: Make function
-                const char *holdingItem = client->world->HudSpinnerItemName();
+                controller.tile_hovered = false;
+                controller.tile_x = 0;
+                controller.tile_y = 0;
 
-                // TODO: Actually check hand
-                if (button_primary) {
-                    if (holdingItem == "Fireball") {
-                        client->controller.cmdAccum.fire = true;
-                    } else if (holdingItem == "Shovel") {
-                        data::Tilemap::Coord coord{};
-                        data::Tilemap* map = client->world->LocalPlayerMap();
-                        if (map && map->WorldToTileIndex(cursorWorldPos.x, cursorWorldPos.y, coord)) {
-                            client->SendTileInteract(map->id, coord.x, coord.y, true);
+                data::Tilemap* map = client->world->LocalPlayerMap();
+                {
+                    data::Tilemap::Coord tile_coord{};
+                    if (map) {
+                        if (map->WorldToTileIndex(cursorWorldPos.x, cursorWorldPos.y, tile_coord)) {
+                            data::Tilemap::Coord player_coord{};
+                            if (map->WorldToTileIndex(localPlayer->position.x, localPlayer->position.y, player_coord)) {
+                                const int dist_x = abs((int)player_coord.x - (int)tile_coord.x);
+                                const int dist_y = abs((int)player_coord.y - (int)tile_coord.y);
+                                if (dist_x <= SV_MAX_TILE_INTERACT_DIST_IN_TILES &&
+                                    dist_y <= SV_MAX_TILE_INTERACT_DIST_IN_TILES)
+                                {
+                                    controller.tile_hovered = true;
+                                    controller.tile_x = tile_coord.x;
+                                    controller.tile_y = tile_coord.y;
+                                }
+                            } else {
+                                // Player somehow not on a tile!? Server error!?!?
+                                assert(!"player outside of map, wot?");
+                            }
                         }
                     }
                 }
 
-                if (button_secondary) {
-                    data::Tilemap::Coord coord{};
-                    data::Tilemap* map = client->world->LocalPlayerMap();
-                    if (map && map->WorldToTileIndex(cursorWorldPos.x, cursorWorldPos.y, coord)) {
-                        client->SendTileInteract(map->id, coord.x, coord.y, false);
+                const char *holdingItem = client->world->HudSpinnerItemName();
+                if (button_primary) {
+                    if (holdingItem == "Fireball") {
+                        input.fire = true;
+                    } else if (holdingItem == "Shovel" && controller.tile_hovered) {
+                        client->SendTileInteract(map->id, controller.tile_x, controller.tile_y, true);
                     }
+                }
+
+                if (button_secondary && controller.tile_hovered) {
+                    client->SendTileInteract(map->id, controller.tile_x, controller.tile_y, false);
                 }
             }
         }

@@ -171,7 +171,7 @@ float GetRandomFloatMinusOneToOne(void);
 float GetRandomFloatVariance(float variance);
 
 void DrawTextShadowEx(Font font, const char *text, Vector2 pos, Color color);
-Rectangle GetScreenRectWorld(Camera2D &camera);
+Rectangle GetCameraRectWorld(Camera2D &camera);
 Rectangle RectShrink(const Rectangle &rect, float pixels);
 Rectangle RectGrow(const Rectangle &rect, float pixels);
 void RectConstrainToScreen(Rectangle &rect, Vector2 *resultOffset = 0);

@@ -397,6 +397,18 @@ void ClientWorld::Update(GameClient &client)
     }
 }
 
+void ClientWorld::DrawHoveredTileIndicator(GameClient &client)
+{
+    if (client.controller.tile_hovered && HudSpinnerItemIsTool()) {
+        Rectangle tileRect{
+            floorf((float)client.controller.tile_x * TILE_W),
+            floorf((float)client.controller.tile_y * TILE_W),
+            floorf(TILE_W),
+            floorf(TILE_W)
+        };
+        DrawRectangleLinesEx(tileRect, 2.0f, WHITE);
+    }
+}
 void ClientWorld::DrawEntitySnapshotShadows(GameClient &client, data::Entity &entity, Controller &controller)
 {
     // TODO: Everything that says "ghostInstance" needs to be an entity_id, but we don't
@@ -498,6 +510,36 @@ void ClientWorld::DrawEntities(GameClient &client, data::Tilemap &map, data::Dra
         }
         assert(entity.id);
         entityDb->DrawEntity(entity, sortedDraws, entity.id == hoveredEntityId);
+    }
+}
+void ClientWorld::DrawHoveredObjectIndicator(GameClient &client, data::Tilemap &map)
+{
+    // Object interact indicator (cursor ornament in screen space)
+    if (client.controller.tile_hovered) {
+        uint8_t obj = 0;
+        map.AtTry_Obj(client.controller.tile_x, client.controller.tile_y, obj);
+        if (obj) {
+            const data::GfxFrame &gfx_frame = map.GetTileGfxFrame(obj);
+            const data::GfxFile &gfx_file = data::packs[0]->FindGraphic(gfx_frame.gfx);
+            const Rectangle texRect{ (float)gfx_frame.x, (float)gfx_frame.y, (float)gfx_frame.w, (float)gfx_frame.h };
+
+            Vector2 texAspect{ 1.0f, 1.0f };
+            if (texRect.width > texRect.height) {
+                texAspect.y = texRect.height / texRect.width;
+            } else {
+                texAspect.x = texRect.width / texRect.height;
+            }
+
+            const float ornamentScale = 0.7f + 0.05f * cosf(client.now * 5.0f);
+            const Vector2 ornamentPos = Vector2Add(GetMousePosition(), { 4, 4 });
+            const Rectangle ornamentRect{
+                ornamentPos.x,
+                ornamentPos.y,
+                texAspect.x * TILE_W * ornamentScale,
+                texAspect.y * TILE_W * ornamentScale
+            };
+            dlb_DrawTexturePro(gfx_file.texture, texRect, ornamentRect, {}, WHITE);
+        }
     }
 }
 void ClientWorld::DrawDialog(GameClient &client, data::Entity &entity, Vector2 bottomCenterScreen, std::vector<FancyTextTip> &tips)
@@ -979,6 +1021,7 @@ void ClientWorld::Draw(GameClient &client)
 
     data::DrawCmdQueue sortedDraws{};
     map->Draw(camera, sortedDraws);
+    DrawHoveredTileIndicator(client);
     DrawEntities(client, *map, sortedDraws);
 
 #if CL_DBG_PIXEL_FIXER
@@ -996,6 +1039,7 @@ void ClientWorld::Draw(GameClient &client)
 
     EndMode2D();
 
+    DrawHoveredObjectIndicator(client, *map);
     DrawDialogs(client);
     DrawHUDEntityHoverInfo();
     DrawHUDSpinner();

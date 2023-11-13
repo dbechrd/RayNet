@@ -282,6 +282,7 @@ namespace data {
         Tile At(uint32_t x, uint32_t y);
         uint8_t At_Obj(uint32_t x, uint32_t y);
         bool AtTry(uint32_t x, uint32_t y, Tile &tile);
+        bool AtTry_Obj(uint32_t x, uint32_t y, uint8_t &obj);
         bool WorldToTileIndex(uint32_t world_x, uint32_t world_y, Coord &coord);
         bool AtWorld(uint32_t world_x, uint32_t world_y, Tile &tile);
 
@@ -402,6 +403,9 @@ namespace data {
         uint32_t    dialog_id         {};  // which dialog is active
         std::string dialog_title      {};  // name of NPC, submenu, etc.
         std::string dialog_message    {};  // what they're saying
+
+        //// Inventory ////
+        std::string holdingItem {};
 
         //// Life ////
         float hp_max    {};

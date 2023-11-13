@@ -3,12 +3,12 @@
 
 struct InputCmd {
     uint32_t seq;
+    Vector2 facing;
     bool north;
     bool west;
     bool south;
     bool east;
     bool fire;
-    Vector2 facing;
     double sampledAt;  // client time for debug
 
     Vector3 GenerateMoveForce(float speed) const

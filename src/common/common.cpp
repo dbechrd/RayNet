@@ -379,24 +379,24 @@ void DrawTextShadowEx(Font font, const char *text, Vector2 pos, Color color)
     //EndShaderMode();
 }
 
-Rectangle GetScreenRectWorld(Camera2D &camera)
+Rectangle GetCameraRectWorld(Camera2D &camera)
 {
 #if CL_DBG_TILE_CULLING
     const int screenMargin = 64;
     Vector2 screenTLWorld = GetScreenToWorld2D({ screenMargin, screenMargin }, camera);
     Vector2 screenBRWorld = GetScreenToWorld2D({ (float)GetRenderWidth() - screenMargin, (float)GetRenderHeight() - screenMargin }, camera);
 #else
-    const Vector2 screenTLWorld = GetScreenToWorld2D({ 0, 0 }, camera);
-    const Vector2 screenBRWorld = GetScreenToWorld2D({ (float)GetRenderWidth(), (float)GetRenderHeight() }, camera);
+    const Vector2 cameraTLWorld = GetScreenToWorld2D({ 0, 0 }, camera);
+    const Vector2 cameraBRWorld = GetScreenToWorld2D({ (float)GetRenderWidth(), (float)GetRenderHeight() }, camera);
 #endif
 
-    const Rectangle rectWorld{
-        screenTLWorld.x,
-        screenTLWorld.y,
-        screenBRWorld.x - screenTLWorld.x,
-        screenBRWorld.y - screenTLWorld.y,
+    const Rectangle cameraRectWorld{
+        cameraTLWorld.x,
+        cameraTLWorld.y,
+        cameraBRWorld.x - cameraTLWorld.x,
+        cameraBRWorld.y - cameraTLWorld.y,
     };
-    return rectWorld;
+    return cameraRectWorld;
 }
 
 #ifdef TRACY_ENABLE

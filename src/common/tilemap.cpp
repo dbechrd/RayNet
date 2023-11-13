@@ -51,6 +51,14 @@ bool data::Tilemap::AtTry(uint32_t x, uint32_t y, Tile &tile)
     }
     return false;
 }
+bool data::Tilemap::AtTry_Obj(uint32_t x, uint32_t y, uint8_t &obj)
+{
+    if (x < width && y < height) {
+        obj = At_Obj(x, y);
+        return true;
+    }
+    return false;
+}
 bool data::Tilemap::WorldToTileIndex(uint32_t world_x, uint32_t world_y, Coord &coord)
 {
     if (world_x < width * TILE_W && world_y < height * TILE_W) {
@@ -338,11 +346,13 @@ void data::Tilemap::DrawTile(Tile tile, Vector2 position, data::DrawCmdQueue *so
 //}
 void data::Tilemap::Draw(Camera2D &camera, data::DrawCmdQueue &sortedDraws)
 {
-    Rectangle screenRect = GetScreenRectWorld(camera);
-    int yMin = CLAMP(floorf(screenRect.y / TILE_W), 0, height);
-    int yMax = CLAMP(ceilf((screenRect.y + screenRect.height) / TILE_W), 0, height);
-    int xMin = CLAMP(floorf(screenRect.x / TILE_W), 0, width);
-    int xMax = CLAMP(ceilf((screenRect.x + screenRect.width) / TILE_W), 0, width);
+    const Vector2 cursorWorld = GetScreenToWorld2D(GetMousePosition(), camera);
+
+    Rectangle cameraRectWorld = GetCameraRectWorld(camera);
+    int yMin = CLAMP(floorf(cameraRectWorld.y / TILE_W), 0, height);
+    int yMax = CLAMP(ceilf((cameraRectWorld.y + cameraRectWorld.height) / TILE_W), 0, height);
+    int xMin = CLAMP(floorf(cameraRectWorld.x / TILE_W), 0, width);
+    int xMax = CLAMP(ceilf((cameraRectWorld.x + cameraRectWorld.width) / TILE_W), 0, width);
 
     for (int y = yMin; y < yMax; y++) {
         for (int x = xMin; x < xMax; x++) {
@@ -352,10 +362,10 @@ void data::Tilemap::Draw(Camera2D &camera, data::DrawCmdQueue &sortedDraws)
     }
 
     // NOTE(dlb): Give obj layer an extra padding on all sides to prevent culling 2-tall things
-    yMin = CLAMP(-1 + floorf(screenRect.y / TILE_W), 0, height);
-    yMax = CLAMP( 1 + ceilf((screenRect.y + screenRect.height) / TILE_W), 0, height);
-    xMin = CLAMP(-1 + floorf(screenRect.x / TILE_W), 0, width);
-    xMax = CLAMP( 1 + ceilf((screenRect.x + screenRect.width) / TILE_W), 0, width);
+    yMin = CLAMP(-1 + floorf(cameraRectWorld.y / TILE_W), 0, height);
+    yMax = CLAMP( 1 + ceilf((cameraRectWorld.y + cameraRectWorld.height) / TILE_W), 0, height);
+    xMin = CLAMP(-1 + floorf(cameraRectWorld.x / TILE_W), 0, width);
+    xMax = CLAMP( 1 + ceilf((cameraRectWorld.x + cameraRectWorld.width) / TILE_W), 0, width);
     for (int y = yMin; y < yMax; y++) {
         for (int x = xMin; x < xMax; x++) {
             uint8_t object = At_Obj(x, y);
@@ -367,11 +377,11 @@ void data::Tilemap::Draw(Camera2D &camera, data::DrawCmdQueue &sortedDraws)
 }
 void data::Tilemap::DrawColliders(Camera2D &camera)
 {
-    Rectangle screenRect = GetScreenRectWorld(camera);
-    int yMin = CLAMP(floorf(screenRect.y / TILE_W), 0, height);
-    int yMax = CLAMP(ceilf((screenRect.y + screenRect.height) / TILE_W), 0, height);
-    int xMin = CLAMP(floorf(screenRect.x / TILE_W), 0, width);
-    int xMax = CLAMP(ceilf((screenRect.x + screenRect.width) / TILE_W), 0, width);
+    Rectangle cameraRectWorld = GetCameraRectWorld(camera);
+    int yMin = CLAMP(floorf(cameraRectWorld.y / TILE_W), 0, height);
+    int yMax = CLAMP(ceilf((cameraRectWorld.y + cameraRectWorld.height) / TILE_W), 0, height);
+    int xMin = CLAMP(floorf(cameraRectWorld.x / TILE_W), 0, width);
+    int xMax = CLAMP(ceilf((cameraRectWorld.x + cameraRectWorld.width) / TILE_W), 0, width);
 
     for (int y = yMin; y < yMax; y++) {
         for (int x = xMin; x < xMax; x++) {
@@ -396,11 +406,11 @@ void data::Tilemap::DrawColliders(Camera2D &camera)
 }
 void data::Tilemap::DrawTileIds(Camera2D &camera)
 {
-    Rectangle screenRect = GetScreenRectWorld(camera);
-    int yMin = CLAMP(floorf(screenRect.y / TILE_W), 0, height);
-    int yMax = CLAMP(ceilf((screenRect.y + screenRect.height) / TILE_W), 0, height);
-    int xMin = CLAMP(floorf(screenRect.x / TILE_W), 0, width);
-    int xMax = CLAMP(ceilf((screenRect.x + screenRect.width) / TILE_W), 0, width);
+    Rectangle cameraRectWorld = GetCameraRectWorld(camera);
+    int yMin = CLAMP(floorf(cameraRectWorld.y / TILE_W), 0, height);
+    int yMax = CLAMP(ceilf((cameraRectWorld.y + cameraRectWorld.height) / TILE_W), 0, height);
+    int xMin = CLAMP(floorf(cameraRectWorld.x / TILE_W), 0, width);
+    int xMax = CLAMP(ceilf((cameraRectWorld.x + cameraRectWorld.width) / TILE_W), 0, width);
 
     const int pad = 8;
     for (int y = yMin; y < yMax; y++) {
