@@ -101,7 +101,7 @@ void GameClient::SendEntityInteractDialogOption(data::Entity &entity, uint32_t o
         printf("Outgoing ENTITY_INTERACT_DIALOG_OPTION channel message queue is full.\n");
     }
 }
-void GameClient::SendTileInteract(const std::string &map_id, uint32_t x, uint32_t y)
+void GameClient::SendTileInteract(const std::string &map_id, uint32_t x, uint32_t y, bool primary)
 {
     if (yj_client->CanSendMessage(MSG_C_TILE_INTERACT)) {
         Msg_C_TileInteract *msg = (Msg_C_TileInteract *)yj_client->CreateMessage(MSG_C_TILE_INTERACT);
@@ -109,6 +109,7 @@ void GameClient::SendTileInteract(const std::string &map_id, uint32_t x, uint32_
             strncpy(msg->map_id, map_id.c_str(), SV_MAX_TILE_MAP_NAME_LEN);
             msg->x = x;
             msg->y = y;
+            msg->primary = primary;
             yj_client->SendMessage(MSG_C_TILE_INTERACT, msg);
         } else {
             printf("Failed to create TILE_INTERACT message.\n");

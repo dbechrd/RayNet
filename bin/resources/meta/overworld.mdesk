@@ -14,6 +14,7 @@
 //       id                      path
 @MusFile mus_ambient_outdoors : "resources/music/copyright/345470__philip_goddard__branscombe-landslip-birds-and-sea-echoes-ese-from-cave-track.ogg"
 @MusFile mus_ambient_cave     : "resources/music/copyright/69391__zixem__cave_amb.wav"
+@MusFile mus_bathroom         : "resources/music/copyright/O9s5lzHl6W8.wav"
 
 //       id                    path                                            variations  pitch_variance  max_instances
 @SfxFile sfx_mic_test       : "resources/sound/mic_test.wav"                   1           0.00            10

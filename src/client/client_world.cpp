@@ -834,7 +834,7 @@ void ClientWorld::DrawHUDTitle(GameClient &client)
         };
 
         double start = titleShownAt;
-        double end = start + CL_WARP_FADE_IN_DURATION * 0.5f;
+        double end = start + CL_WARP_TITLE_FADE_IN_DELAY;
         double titleWaitAlpha = (client.now - start) / (end - start);
         CLAMP(titleWaitAlpha, 0.0f, 1.0f);
 
@@ -856,16 +856,16 @@ void ClientWorld::DrawHUDTitle(GameClient &client)
         float alpha = 0.0f;
         if (titleWaitAlpha < 1.0f) {
             // wait for warp fade to end before fading in the title
-            printf("title wait: %.2f\n", titleWaitAlpha);
+            //printf("title wait: %.2f\n", titleWaitAlpha);
         } else if (titleFadeInAlpha < 1.0f) {
             alpha = titleFadeInAlpha;
-            printf("title fade in: %.2f\n", alpha);
+            //printf("title fade in: %.2f\n", alpha);
         } else if (titleShowAlpha < 1.0f) {
             alpha = 1.0f;
-            printf("title show: %.2f\n", alpha);
+            //printf("title show: %.2f\n", alpha);
         } else if (titleFadeOutAlpha < 1.0f) {
             alpha = 1.0f - titleFadeOutAlpha;
-            printf("title fade out: %.2f\n", alpha);
+            //printf("title fade out: %.2f\n", alpha);
         } else {
             // TODO: ClearTitle() function
             titleShownAt = 0;
@@ -962,6 +962,11 @@ void ClientWorld::DrawHUDMenu(void)
         holdingItem = "-Empty-";
     }
     uiHUDMenu.Text(holdingItem);
+    uiHUDMenu.Newline();
+
+    data::Tilemap *map = LocalPlayerMap();
+    uiHUDMenu.Text(map ? map->background_music.c_str() : "-Empty-");
+    uiHUDMenu.Newline();
 }
 void ClientWorld::Draw(GameClient &client)
 {

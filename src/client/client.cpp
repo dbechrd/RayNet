@@ -138,7 +138,7 @@ int main(int argc, char *argv[])
     DrawBootScreen();
 
     InitAudioDevice();
-    SetMasterVolume(0.5f);
+    SetMasterVolume(1.0f);
 
     // NOTE(dlb): yojimbo uses rand() for network simulator and random_int()/random_float()
     srand((unsigned int)GetTime());
@@ -277,6 +277,7 @@ int main(int argc, char *argv[])
                 const bool button_down = io.KeyDown(KEY_S);
                 const bool button_right = io.KeyDown(KEY_D);
                 const bool button_primary = io.MouseButtonPressed(MOUSE_BUTTON_LEFT);
+                const bool button_secondary = io.MouseButtonPressed(MOUSE_BUTTON_RIGHT);
                 const bool button_any = button_up || button_left || button_down || button_right || button_primary;
 
                 // TODO: Update facing direction elsewhere, then just get localPlayer.facing here?
@@ -304,16 +305,23 @@ int main(int argc, char *argv[])
                 const char *holdingItem = client->world->HudSpinnerItemName();
 
                 // TODO: Actually check hand
-                if (holdingItem == "Fireball") {
-                    client->controller.cmdAccum.fire |= button_primary;
-                } else if (holdingItem == "Shovel") {
-                    if (button_primary) {
+                if (button_primary) {
+                    if (holdingItem == "Fireball") {
+                        client->controller.cmdAccum.fire = true;
+                    } else if (holdingItem == "Shovel") {
                         data::Tilemap::Coord coord{};
                         data::Tilemap* map = client->world->LocalPlayerMap();
                         if (map && map->WorldToTileIndex(cursorWorldPos.x, cursorWorldPos.y, coord)) {
-                            // TODO: Send mapId too then validate server-side
-                            client->SendTileInteract(map->id, coord.x, coord.y);
+                            client->SendTileInteract(map->id, coord.x, coord.y, true);
                         }
+                    }
+                }
+
+                if (button_secondary) {
+                    data::Tilemap::Coord coord{};
+                    data::Tilemap* map = client->world->LocalPlayerMap();
+                    if (map && map->WorldToTileIndex(cursorWorldPos.x, cursorWorldPos.y, coord)) {
+                        client->SendTileInteract(map->id, coord.x, coord.y, false);
                     }
                 }
             }

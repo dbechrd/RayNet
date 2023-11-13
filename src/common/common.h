@@ -114,10 +114,11 @@ typedef uint8_t Tile;  // TODO: Remove this?
 #define CL_CLIENT_SIDE_PREDICT          1
 #define CL_DIALOG_DURATION_MIN          1.0
 #define CL_DIALOG_DURATION_PER_CHAR     0.1
-#define CL_WARP_FADE_IN_DURATION        0.5  // delay in seconds for fade transition to be black
-#define CL_WARP_TITLE_FADE_IN_DURATION  1.0  // delay in seconds for title to fade in
-#define CL_WARP_TITLE_SHOW_DURATION     2.0  // delay in seconds for title to remain fully visible after warping
-#define CL_WARP_TITLE_FADE_OUT_DURATION 0.4  // delay in seconds for title to fade out
+#define CL_WARP_FADE_IN_DURATION        0.5  // time it takes in seconds for screen to fade in from black after warping
+#define CL_WARP_TITLE_FADE_IN_DELAY     (CL_WARP_FADE_IN_DURATION * 0.5f)  // time to wait before starting to fade in title
+#define CL_WARP_TITLE_FADE_IN_DURATION  1.0  // time it takes to fade in title
+#define CL_WARP_TITLE_SHOW_DURATION     2.0  // time to show title fully
+#define CL_WARP_TITLE_FADE_OUT_DURATION 0.4  // time it takes to fade out title
 
 #define CL_DBG_ONE_SCREEN      0
 #define CL_DBG_TWO_SCREEN      0

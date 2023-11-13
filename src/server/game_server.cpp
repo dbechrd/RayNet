@@ -536,10 +536,10 @@ void GameServer::ProcessMsg(int clientIdx, Msg_C_TileInteract &msg)
             dist_y > SV_MAX_TILE_INTERACT_DIST_IN_TILES * 2)
         {
             // Player WAY too far away, kick
-            printf("WAY too far\n");
+            //printf("WAY too far\n");
         } else {
             // Player too far away, ignore request
-            printf("too far\n");
+            //printf("too far\n");
         }
         return;
     }
@@ -556,7 +556,7 @@ void GameServer::ProcessMsg(int clientIdx, Msg_C_TileInteract &msg)
     const data::ObjectData *obj_data = map->GetObjectData(msg.x, msg.y);
 
     bool handled = false;
-    if (obj_data) {
+    if (msg.primary == false && obj_data) {
         if (obj_data->type == "lootable") {
             SendEntitySay(clientIdx, player.entityId, 0, "Chest", obj_data->loot_table_id);
             handled = true;
@@ -578,7 +578,7 @@ void GameServer::ProcessMsg(int clientIdx, Msg_C_TileInteract &msg)
             SendEntitySay(clientIdx, player.entityId, 0, "Warp", warpInfo);
             handled = true;
         }
-    } else {
+    } else if (msg.primary) {
         const data::TileDef &tile_def = map->GetTileDef(tile);
         if (tile_def.id == "til_water_dark") {
             new_tile_def = "til_stone_path";

@@ -984,6 +984,8 @@ void Editor::DrawUI_Tilesheet(UI &uiActionBar, double now)
         };
         DrawRectangleLinesEx(tileDefRectScreen, 2, WHITE);
     }
+
+    DrawUI_WangTile(now);
 }
 void Editor::DrawUI_Wang(UI &uiActionBar, double now)
 {
@@ -1000,14 +1002,12 @@ void Editor::DrawUI_Wang(UI &uiActionBar, double now)
     WangMap &wangMap = state.wang.wangMap;
 
     UIStyle uiWangStyle4x{};
-    uiWangStyle4x.scale = 4;
+    uiWangStyle4x.scale = 2;
     uiActionBar.PushStyle(uiWangStyle4x);
 
     UIStyle styleSelected{ uiWangStyle4x };
     styleSelected.borderColor = WHITE;
 
-    static int hTex = -1;
-    static int vTex = -1;
     for (int i = 0; i < wangTileset.ts.num_h_tiles; i++) {
         stbhw_tile *wangTile = wangTileset.ts.h_tiles[i];
         Rectangle srcRect{
@@ -1017,13 +1017,13 @@ void Editor::DrawUI_Wang(UI &uiActionBar, double now)
             (float)wangTileset.ts.short_side_len
         };
         bool stylePushed = false;
-        if (i == hTex) {
+        if (i == state.wang.hTex) {
             uiActionBar.PushStyle(styleSelected);
             stylePushed = true;
         }
         if (uiActionBar.Image(wangTileset.thumbnail, srcRect).pressed) {
-            hTex = hTex == i ? -1 : i;
-            vTex = -1;
+            state.wang.hTex = state.wang.hTex == i ? -1 : i;
+            state.wang.vTex = -1;
         }
         if (stylePushed) {
             uiActionBar.PopStyle();
@@ -1041,13 +1041,13 @@ void Editor::DrawUI_Wang(UI &uiActionBar, double now)
             (float)wangTileset.ts.short_side_len * 2
         };
         bool stylePushed = false;
-        if (i == vTex) {
+        if (i == state.wang.vTex) {
             uiActionBar.PushStyle(styleSelected);
             stylePushed = true;
         }
         if (uiActionBar.Image(wangTileset.thumbnail, srcRect).pressed) {
-            hTex = -1;
-            vTex = vTex == i ? -1 : i;
+            state.wang.hTex = -1;
+            state.wang.vTex = state.wang.vTex == i ? -1 : i;
         }
         if (stylePushed) {
             uiActionBar.PopStyle();
@@ -1063,40 +1063,45 @@ void Editor::DrawUI_Wang(UI &uiActionBar, double now)
     uiActionBar.Newline();
 
     uiActionBar.PopStyle();
-    UIStyle uiWangStyle2x{};
-    uiWangStyle2x.scale = 2;
-    uiActionBar.PushStyle(uiWangStyle2x);
 
-    auto &map = data::packs[0]->FindTilemap(map_id);
+    data::Tilemap &map = data::packs[0]->FindTilemap(map_id);
 
     if (uiActionBar.Button("Re-generate Map").pressed) {
         wangTileset.GenerateMap(map.width, map.height, wangMap);
     }
     uiActionBar.Newline();
 
-    static data::Tilemap wangTilemap{};
     if (uiActionBar.Image(wangMap.colorized).pressed) {
         map.SetFromWangMap(wangMap, now);
     }
 
-    if (hTex >= 0 || vTex >= 0) {
+    DrawUI_WangTile(now);
+}
+void Editor::DrawUI_WangTile(double now)
+{
+    WangTileset &wangTileset = state.wang.wangTileset;
+    data::Tilemap &map = data::packs[0]->FindTilemap(map_id);
+
+    Rectangle wangBg{ 434, 4, 560, 560 };
+
+    if (state.wang.hTex >= 0 || state.wang.vTex >= 0) {
         Tile selectedTile = state.tiles.cursor.tileDefId;
         static double lastUpdatedAt = 0;
         static double lastChangedAt = 0;
         const double updateDelay = 0.02;
 
-        Rectangle wangBg{ cursorEndOfFirstLine.x + 8, cursorEndOfFirstLine.y + 8, 560, 560 };
         DrawRectangleRec(wangBg, Fade(BLACK, 0.5f));
 
         UIStyle uiWangTileStyle{};
+        uiWangTileStyle.scale = 0.5f;
         uiWangTileStyle.margin = 0;
         uiWangTileStyle.imageBorderThickness = 1;
         UI uiWangTile{ { wangBg.x + 8, wangBg.y + 8 }, uiWangTileStyle };
 
         uint8_t *imgData = (uint8_t *)wangTileset.ts.img.data;
 
-        if (hTex >= 0) {
-            stbhw_tile *wangTile = wangTileset.ts.h_tiles[hTex];
+        if (state.wang.hTex >= 0) {
+            stbhw_tile *wangTile = wangTileset.ts.h_tiles[state.wang.hTex];
             for (int y = 0; y < wangTileset.ts.short_side_len; y++) {
                 for (int x = 0; x < wangTileset.ts.short_side_len*2; x++) {
                     int templateX = wangTile->x + x;
@@ -1117,8 +1122,8 @@ void Editor::DrawUI_Wang(UI &uiActionBar, double now)
                 }
                 uiWangTile.Newline();
             }
-        } else if (vTex >= 0) {
-            stbhw_tile *wangTile = wangTileset.ts.v_tiles[vTex];
+        } else if (state.wang.vTex >= 0) {
+            stbhw_tile *wangTile = wangTileset.ts.v_tiles[state.wang.vTex];
             for (int y = 0; y < wangTileset.ts.short_side_len*2; y++) {
                 for (int x = 0; x < wangTileset.ts.short_side_len; x++) {
                     int templateX = wangTile->x + x;
@@ -1147,8 +1152,64 @@ void Editor::DrawUI_Wang(UI &uiActionBar, double now)
             wangTileset.thumbnail = wangTileset.GenerateColorizedTexture(wangTileset.ts.img);
             lastUpdatedAt = now;
         }
+
+        //////////////////////////////////////////////////////////////////////////////////////////
+
+        if (false) {
+            struct fang_tile {
+                // the edge or vertex constraints, according to diagram below
+                signed char a,b,c,d,e,f;
+
+                // The herringbone wang tile data; it is a bitmap which is either
+                // w=2*short_sidelen,h=short_sidelen, or w=short_sidelen,h=2*short_sidelen.
+                // it is always RGB, stored row-major, with no padding between rows.
+                // (allocate stbhw_tile structure to be large enough for the pixel data)
+                //unsigned char pixels[1];
+                uint32_t x,y;  // uv coords of top left of tile
+            };
+
+            fang_tile h_tile{};
+            h_tile.a = 0;
+            h_tile.b = 1;
+            h_tile.c = 2;
+            h_tile.d = 3;
+            h_tile.e = 4;
+            h_tile.f = 5;
+
+            fang_tile v_tile{};
+
+            struct fang_tileset {
+                bool is_corner;
+                int num_color[6];  // number of colors for each of 6 edge types or 4 corner types
+                int short_side_len;
+                std::vector<fang_tile> h_tiles;
+                std::vector<fang_tile> v_tiles;
+                //int num_h_tiles, max_h_tiles;  // num = size(), max = capacity()
+                //int num_v_tiles, max_v_tiles;
+            };
+
+            fang_tileset ts{};
+            ts.is_corner = false;
+            ts.num_color[0] = 1;
+            ts.num_color[1] = 1;
+            ts.num_color[2] = 1;
+            ts.num_color[3] = 1;
+            ts.num_color[4] = 1;
+            ts.num_color[5] = 1;
+            ts.short_side_len = 8;
+            ts.h_tiles.push_back(h_tile);
+            ts.v_tiles.push_back(v_tile);
+
+            UI uiWangNew{ { wangBg.x + wangBg.width + 8 , wangBg.y }, {} };
+            Vector2 cursor = uiWangNew.CursorScreen();
+            Rectangle tile1{};
+            tile1.x = cursor.x;
+            tile1.y = cursor.y;
+            tile1.width = TILE_W * 8;
+            tile1.height = TILE_W * 8;
+            DrawRectangleRec(tile1, DARKGRAY);
+        }
     }
-    uiActionBar.PopStyle();
 }
 void Editor::DrawUI_PathActions(UI &uiActionBar, double now)
 {

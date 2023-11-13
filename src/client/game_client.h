@@ -47,7 +47,7 @@ struct GameClient {
     void SendInput(const Controller &controller);
     void SendEntityInteract(uint32_t entityId);
     void SendEntityInteractDialogOption(data::Entity &entity, uint32_t optionId);
-    void SendTileInteract(const std::string &map_name, uint32_t x, uint32_t y);
+    void SendTileInteract(const std::string &map_name, uint32_t x, uint32_t y, bool primary);
 
     void ProcessMsg(Msg_S_ClockSync &msg);
     void ProcessMsg(Msg_S_EntityDespawn &msg);

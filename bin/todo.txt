@@ -11,6 +11,7 @@
 [x] Profile server
 [x] Switch maps
 [x] Y sort (drawlist)
+[ ] Nice entering area titles
 [ ] Make warps collapse in editor UI
 [ ] Edit wang tiles as maps (persisted or virtual?)
 [ ] Items
@@ -18,5 +19,4 @@
 [ ] NPC inventory (Buy/Sell UI)
 [ ] Chat
 [ ] Choose which server to connect to (localhost vs. DandyNet)
-[ ] Nice entering area titles
 [ ] Add UI::Histogram

@@ -38,6 +38,8 @@ struct EditModeTiles {
 struct EditModeWang {
     WangTileset wangTileset;
     WangMap wangMap;
+    int hTex = -1;
+    int vTex = -1;
 };
 
 struct EditModePathNodes {
@@ -115,6 +117,7 @@ private:
     void DrawUI_MapActions(UI &uiActionBar, GameServer &server, double now);
     void DrawUI_TileActions(UI &uiActionBar, double now);
     void DrawUI_Tilesheet(UI &uiActionBar, double now);
+    void DrawUI_WangTile(double now);
     void DrawUI_Wang(UI &uiActionBar, double now);
     void DrawUI_PathActions(UI &uiActionBar, double now);
     void DrawUI_WarpActions(UI &uiActionBar, double now);
