@@ -516,10 +516,10 @@ void ClientWorld::DrawHoveredObjectIndicator(GameClient &client, data::Tilemap &
 {
     // Object interact indicator (cursor ornament in screen space)
     if (client.controller.tile_hovered) {
-        uint8_t obj = 0;
-        map.AtTry_Obj(client.controller.tile_x, client.controller.tile_y, obj);
-        if (obj) {
-            const data::GfxFrame &gfx_frame = map.GetTileGfxFrame(obj);
+        uint32_t object_id = 0;
+        map.AtTry_Obj(client.controller.tile_x, client.controller.tile_y, object_id);
+        if (object_id) {
+            const data::GfxFrame &gfx_frame = map.GetTileGfxFrame(object_id);
             const data::GfxFile &gfx_file = data::packs[0]->FindGraphic(gfx_frame.gfx);
             const Rectangle texRect{ (float)gfx_frame.x, (float)gfx_frame.y, (float)gfx_frame.w, (float)gfx_frame.h };
 

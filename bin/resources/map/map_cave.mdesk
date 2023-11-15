@@ -4,60 +4,49 @@
     height: 16
     title: "Echo Cave"
     background_music: mus_ambient_cave
-    tile_defs: [
-        til_void
-        til_stone_path
-        til_water_dark
-        obj_chest_basic
-        obj_portal_top
-        obj_portal_bottom
-        obj_sign
-        til_stone_wall_cc
-        til_stone_wall_tc
-    ]
     ground_tiles: [
-          1  1  1  1  1  1  1  1  2  2  1  1  1  1  1  1
-          1  1  1  1  1  1  1  1  2  2  8  1  1  1  1  1
-          1  1  1  8  8  8  1  1  1  2  2  8  1  1  1  1
-          1  1  8  2  2  2  8  1  1  1  2  2  1  1  1  1
-          1  1  2  2  2  2  2  1  1  1  2  2  1  1  1  1
-          1  1  1  1  2  2  2  1  1  1  2  2  8  1  1  1
-          1  1  1  1  1  2  2  1  1  1  2  2  2  1  1  1
-          1  1  1  1  1  2  2  1  1  1  2  2  2  1  1  1
-          8  1  1  1  1  2  2  1  1  1  1  1  1  1  1  1
-          2  8  8  8  8  2  2  1  1  1  8  8  8  1  1  1
-          2  2  2  2  2  2  1  1  1  1  2  2  2  1  1  1
-          1  1  1  1  1  1  1  1  1  1  2  2  2  1  1  1
-          1  1  1  1  1  1  1  1  1  1  2  2  1  1  1  1
-          1  1  1  1  1  1  1  1  1  1  2  2  1  1  1  1
-          1  1  1  1  1  1  1  1  1  1  2  2  1  1  1  1
-          1  1  1  1  1  1  1  1  1  1  2  2  1  1  1  1
+          2  2  2  2  2  2  2  2  3  3  2  2  2  2  2  2
+          2  2  2  2  2  2  2  2  3  3  7  2  2  2  2  2
+          2  2  2  7  7  7  2  2  2  3  3  7  2  2  2  2
+          2  2  7  3  3  3  7  2  2  2  3  3  2  2  2  2
+          2  2  3  3  3  3  3  2  2  2  3  3  2  2  2  2
+          2  2  2  2  3  3  3  2  2  2  3  3  7  2  2  2
+          2  2  2  2  2  3  3  2  2  2  3  3  3  2  2  2
+          2  2  2  2  2  3  3  2  2  2  3  3  3  2  2  2
+          7  2  2  2  2  3  3  2  2  2  2  2  2  2  2  2
+          3  7  7  7  7  3  3  2  2  2  7  7  7  2  2  2
+          3  3  3  3  3  3  2  2  2  2  3  3  3  2  2  2
+          2  2  2  2  2  2  2  2  2  2  3  3  3  2  2  2
+          2  2  2  2  2  2  2  2  2  2  3  3  2  2  2  2
+          2  2  2  2  2  2  2  2  2  2  3  3  2  2  2  2
+          2  2  2  2  2  2  2  2  2  2  3  3  2  2  2  2
+          2  2  2  2  2  2  2  2  2  2  3  3  2  2  2  2
     ]
-    object_tiles: [
-          0  0  6  0  0  0  3  0  0  0  0  0  0  0  0  0
-          0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0
-          6  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0
-          0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0
-          0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0
-          0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0
-          0  0  4  0  0  0  0  0  0  0  0  0  0  0  0  0
-          0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0
-          0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0
-          0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0
-          0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0
-          0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0
-          0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0
-          0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0
-          0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0
-          0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0
+    objects: [
+          0  0 18  0  0  0 16  0  0  0  0  0  0  0  0  1
+          0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  1
+         18  0  0  0  0  0  0  0  0  0  0  0  0  0  0  1
+          0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  1
+          0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  1
+          0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  1
+          0  0 17  0  0  0  0  0  0  0  0  0  0  0  0  1
+          0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  1
+          0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  1
+          0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  1
+          0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  1
+          0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  1
+          0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  1
+          0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  1
+          0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  1
+          0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  1
     ]
     object_data: [
         //x y type [type_data]
         //    lootable loot_table_id
+        //    sign     "line 1" "line 2" "line 3" "line 4"
         //    warp     dest_map_id dest_x dest_y dest_z
         { 6 0 lootable loot_basic }
-        //{ 2 0 sign "Thank you" "for visiting" "my wonderful" "cave." }
-        { 2 0 sign "I have heard that the" `[Sorcerer's Stone](# "A blue, glowing magical stone")` "is somewhere nearby" "this place. -Sign Painter" }
+        { 2 0 sign `I have heard that the` `[Sorcerer's Stone](# "A blue, glowing magical stone")` `is somewhere nearby` `this place. -Sign Painter` }
         { 0 2 sign "Kings of Leon" "Sex on Fire" "but you're in a" "bathroom at a party" }
         { 2 7 warp map_overworld 51 12 0 }
     ]

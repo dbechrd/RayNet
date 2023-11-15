@@ -306,7 +306,7 @@ struct Msg_S_TileChunk : public yojimbo::Message
     uint32_t y        {};
     uint32_t w        {};
     uint32_t h        {};
-    uint8_t  tileDefs [SV_MAX_TILE_CHUNK_WIDTH * SV_MAX_TILE_CHUNK_WIDTH]{};
+    uint32_t tile_ids [SV_MAX_TILE_CHUNK_WIDTH * SV_MAX_TILE_CHUNK_WIDTH]{};  // TODO: Compress, use less bits, etc.
 
     template <typename Stream> bool Serialize(Stream &stream)
     {
@@ -319,7 +319,7 @@ struct Msg_S_TileChunk : public yojimbo::Message
         serialize_uint32(stream, y);
         serialize_uint32(stream, w);
         serialize_uint32(stream, h);
-        serialize_bytes(stream, tileDefs, sizeof(tileDefs));
+        serialize_bytes(stream, (uint8_t *)tile_ids, sizeof(tile_ids));
         return true;
     }
 

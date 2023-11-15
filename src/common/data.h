@@ -1,5 +1,6 @@
 #pragma once
 #include "common.h"
+#include "strings.h"
 
 struct Msg_S_TileChunk;
 struct Msg_S_EntitySnapshot;
@@ -145,6 +146,13 @@ namespace data {
         std::vector<std::string> frames      {};
 
         bool soundPlayed{};
+
+        const std::string &GetFrame(size_t index) const {
+            if (index < frames.size()) {
+                return frames[index];
+            }
+            return rnStringCatalog.Find(rnStringNull);
+        }
     };
 
     struct GfxAnimState {
@@ -184,7 +192,8 @@ namespace data {
 
     struct TileDef {
         static const DataType dtype = DAT_TYP_TILE_DEF;
-        std::string  id             {};
+        uint32_t     id             {};
+        std::string  name           {};
         std::string  anim           {};
         std::string  material       {};
         TileDefFlags flags          {};
@@ -253,10 +262,8 @@ namespace data {
         std::string title            {};  // display name
         std::string background_music {};  // background music
 
-        // TODO(dlb): Move these to a global pool, each has its own textureId
-        std::vector<std::string> tileDefs    {};
-        std::vector<Tile>        tiles       {};
-        std::vector<uint8_t>     objects     {};
+        std::vector<uint32_t>    tiles       {};
+        std::vector<uint32_t>    objects     {};
         std::vector<ObjectData>  object_data {};
         // TODO(dlb): Consider having vector<Warp>, vector<Lootable> etc. and having vector<ObjectData> be pointers/indices into those tables?
         std::vector<AiPathNode>  pathNodes   {};  // 94 19 56 22 57
@@ -279,21 +286,21 @@ namespace data {
         void CL_DeserializeChunk(Msg_S_TileChunk &tileChunk);
 
         // Tiles
-        Tile At(uint32_t x, uint32_t y);
-        uint8_t At_Obj(uint32_t x, uint32_t y);
-        bool AtTry(uint32_t x, uint32_t y, Tile &tile);
-        bool AtTry_Obj(uint32_t x, uint32_t y, uint8_t &obj);
+        uint32_t At(uint32_t x, uint32_t y);
+        uint32_t At_Obj(uint32_t x, uint32_t y);
+        bool AtTry(uint32_t x, uint32_t y, uint32_t &tile_id);
+        bool AtTry_Obj(uint32_t x, uint32_t y, uint32_t &obj_id);
         bool WorldToTileIndex(uint32_t world_x, uint32_t world_y, Coord &coord);
-        bool AtWorld(uint32_t world_x, uint32_t world_y, Tile &tile);
+        bool AtWorld(uint32_t world_x, uint32_t world_y, uint32_t &tile_id);
 
-        void Set(uint32_t x, uint32_t y, Tile tile, double now);
+        void Set(uint32_t x, uint32_t y, uint32_t tile_id, double now);
         void SetFromWangMap(WangMap &wangMap, double now);
-        void Fill(uint32_t x, uint32_t y, int tileDefId, double now);
+        void Fill(uint32_t x, uint32_t y, uint32_t new_tile_id, double now);
 
-        TileDef &GetTileDef(Tile tile);
-        const GfxFrame &GetTileGfxFrame(Tile tile);
-        Rectangle TileDefRect(Tile tile);
-        Color TileDefAvgColor(Tile tile);
+        TileDef &GetTileDef(uint32_t tile_id);
+        const GfxFrame &GetTileGfxFrame(uint32_t tile_id);
+        Rectangle TileDefRect(uint32_t tile_id);
+        Color TileDefAvgColor(uint32_t tile_id);
 
         // Objects
         ObjectData *GetObjectData(uint32_t x, uint32_t y);
@@ -304,14 +311,14 @@ namespace data {
 
         void ResolveEntityCollisions(Entity &entity);
 
-        void DrawTile(Tile tile, Vector2 position, DrawCmdQueue *sortedDraws);
+        void DrawTile(uint32_t tile_id, Vector2 position, DrawCmdQueue *sortedDraws);
         void Draw(Camera2D &camera, DrawCmdQueue &sortedDraws);
         void DrawColliders(Camera2D &camera);
         void DrawTileIds(Camera2D &camera);
 
     private:
-        bool NeedsFill(uint32_t x, uint32_t y, int tileDefFill);
-        void Scan(uint32_t lx, uint32_t rx, uint32_t y, Tile tileDefFill, std::stack<Coord> &stack);
+        bool NeedsFill(uint32_t x, uint32_t y, uint32_t old_tile_id);
+        void Scan(uint32_t lx, uint32_t rx, uint32_t y, uint32_t old_tile_id, std::stack<Coord> &stack);
     };
 
     ////////////////////////////////////////////////////////////////////////////
@@ -573,25 +580,13 @@ namespace data {
         std::unordered_map<std::string, size_t> material_by_id{};
         std::unordered_map<std::string, size_t> object_by_id{};
         std::unordered_map<std::string, size_t> sprite_by_id{};
-        std::unordered_map<std::string, size_t> tile_def_by_id{};
+        std::unordered_map<uint32_t, size_t>    tile_def_by_id{};
+        std::unordered_map<std::string, size_t> tile_def_by_name{};
         std::unordered_map<std::string, size_t> tile_map_by_id{};  // TODO: Integer ids to reduce network bandwidth
 
         PackToc toc {};
 
-        Pack(const std::string &path) : path(path) {
-            // Reserve slot 0 in all resource arrays for a placeholder asset
-            gfx_files.emplace_back();
-            mus_files.emplace_back();
-            sfx_files.emplace_back();
-
-            gfx_frames.emplace_back();
-            gfx_anims.emplace_back();
-            materials.emplace_back();
-            sprites.emplace_back();
-            tile_defs.emplace_back();
-
-            tile_maps.emplace_back();
-        }
+        Pack(const std::string &path) : path(path) {}
 
         GfxFile &FindGraphic(const std::string &id) {
             const auto &entry = gfx_file_by_id.find(id);
@@ -629,8 +624,8 @@ namespace data {
 
                 return sfx_files[sfx_idx];
             } else {
-                if (!id.empty()) {
-                    //TraceLog(LOG_WARNING, "Missing sound: %s", id.c_str());
+                if (id != "null") {
+                    TraceLog(LOG_WARNING, "Missing sound: %s", id.c_str());
                 }
                 return sfx_files[0];
             }
@@ -641,7 +636,9 @@ namespace data {
             if (entry != gfx_frame_by_id.end()) {
                 return gfx_frames[entry->second];
             } else {
-                //TraceLog(LOG_WARNING, "Missing graphic frame: %s", id.c_str());
+                if (id != "null") {
+                    TraceLog(LOG_WARNING, "Missing graphic frame: %s", id.c_str());
+                }
                 return gfx_frames[0];
             }
         }
@@ -651,7 +648,9 @@ namespace data {
             if (entry != gfx_anim_by_id.end()) {
                 return gfx_anims[entry->second];
             } else {
-                //TraceLog(LOG_WARNING, "Missing graphic animation: %s", id.c_str());
+                if (id != "null") {
+                    TraceLog(LOG_WARNING, "Missing graphic animation: %s", id.c_str());
+                }
                 return gfx_anims[0];
             }
         }
@@ -661,7 +660,9 @@ namespace data {
             if (entry != material_by_id.end()) {
                 return materials[entry->second];
             } else {
-                //TraceLog(LOG_WARNING, "Missing material: %s", id.c_str());
+                if (id != "null") {
+                    TraceLog(LOG_WARNING, "Missing material: %s", id.c_str());
+                }
                 return materials[0];
             }
         }
@@ -671,17 +672,31 @@ namespace data {
             if (entry != sprite_by_id.end()) {
                 return sprites[entry->second];
             } else {
-                //TraceLog(LOG_WARNING, "Missing sprite: %s", id.c_str());
+                if (id != "null") {
+                    TraceLog(LOG_WARNING, "Missing sprite: %s", id.c_str());
+                }
                 return sprites[0];
             }
         }
 
-        TileDef &FindTileDef(const std::string &id) {
+        TileDef &FindTileDefById(uint32_t id) {
             const auto &entry = tile_def_by_id.find(id);
             if (entry != tile_def_by_id.end()) {
                 return tile_defs[entry->second];
             } else {
-                //TraceLog(LOG_WARNING, "Missing tile definition: %s", id.c_str());
+                TraceLog(LOG_WARNING, "Missing tile definition by id: %u", id);
+                return tile_defs[0];
+            }
+        }
+
+        TileDef &FindTileDefByName(const std::string &name) {
+            const auto &entry = tile_def_by_name.find(name);
+            if (entry != tile_def_by_name.end()) {
+                return tile_defs[entry->second];
+            } else {
+                if (name != "null") {
+                    TraceLog(LOG_WARNING, "Missing tile definition by name: %s", name.c_str());
+                }
                 return tile_defs[0];
             }
         }
@@ -691,7 +706,7 @@ namespace data {
             if (entry != tile_map_by_id.end()) {
                 return tile_maps[entry->second];
             } else {
-                //TraceLog(LOG_WARNING, "Missing tile map: %s", id.c_str());
+                TraceLog(LOG_WARNING, "Missing tile map: %s", id.c_str());
                 return tile_maps[0];
             }
         }
@@ -701,6 +716,7 @@ namespace data {
             if (entry != tile_map_by_id.end()) {
                 return entry->second;
             } else {
+                TraceLog(LOG_WARNING, "Missing tile map: %s", id.c_str());
                 return 0;
             }
         }

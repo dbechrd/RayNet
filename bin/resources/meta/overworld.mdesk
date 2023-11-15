@@ -1,4 +1,5 @@
 //       id                    path
+@GfxFile gfx_missing        : "resources/graphics/missing.png"
 @GfxFile gfx_dlg_npatch     : "resources/graphics/npatch.png"
 @GfxFile gfx_chr_mage       : "resources/graphics/mage.png"
 @GfxFile gfx_npc_lily       : "resources/graphics/lily.png"
@@ -12,12 +13,12 @@
 @GfxFile gfx_til_auto_grass : "resources/graphics/autotile_3x3_min.png"
 
 //       id                      path
+@MusFile mus_bathroom         : "resources/music/copyright/O9s5lzHl6W8.wav"
 @MusFile mus_ambient_outdoors : "resources/music/copyright/345470__philip_goddard__branscombe-landslip-birds-and-sea-echoes-ese-from-cave-track.ogg"
 @MusFile mus_ambient_cave     : "resources/music/copyright/69391__zixem__cave_amb.wav"
-@MusFile mus_bathroom         : "resources/music/copyright/O9s5lzHl6W8.wav"
 
 //       id                    path                                            variations  pitch_variance  max_instances
-@SfxFile sfx_mic_test       : "resources/sound/mic_test.wav"                   1           0.00            10
+@SfxFile sfx_missing        : "resources/sound/mic_test.wav"                   1           0.00            10
 @SfxFile sfx_soft_tick      : "resources/sound/soft_tick.wav"                  1           0.03            5
 @SfxFile sfx_campfire       : "resources/sound/campfire.wav"                   1           0.00            1
 @SfxFile sfx_footstep_grass : "resources/sound/footstep_grass.wav"             1           0.00            1
@@ -27,6 +28,7 @@
 @SfxFile sfx_chicken_cluck  : "resources/sound/copyright/chicken_cluck.wav"    5           0.05            10
 
 //        id                              gfx_file           x    y    w    h
+@GfxFrame gfx_frame_missing             : gfx_missing        0    0    32   32
 @GfxFrame gfx_frame_chr_mage_e_0        : gfx_chr_mage       0    0    64   128
 @GfxFrame gfx_frame_chr_mage_w_0        : gfx_chr_mage       64   0    64   128
 @GfxFrame gfx_frame_npc_lily_e_0        : gfx_npc_lily       0    0    64   128
@@ -69,17 +71,18 @@
 @GfxFrame gfx_frame_til_stone_wall_tr   : gfx_til_overworld  128  128  64   64
 @GfxFrame gfx_frame_obj_bush            : gfx_til_overworld  192  128  64   64
 @GfxFrame null                          : gfx_til_overworld  256  128  64   64
-@GfxFrame gfx_frame_obj_portal_top_0    : gfx_til_overworld  320  128  64   128
-@GfxFrame gfx_frame_obj_portal_top_1    : gfx_til_overworld  384  128  64   128
-@GfxFrame gfx_frame_obj_portal_top_2    : gfx_til_overworld  448  128  64   128
+@GfxFrame gfx_frame_obj_portal_0        : gfx_til_overworld  320  128  64   128
+@GfxFrame gfx_frame_obj_portal_1        : gfx_til_overworld  384  128  64   128
+@GfxFrame gfx_frame_obj_portal_2        : gfx_til_overworld  448  128  64   128
 @GfxFrame gfx_frame_til_stone_wall_cl   : gfx_til_overworld  0    192  64   64
 @GfxFrame gfx_frame_til_stone_wall_cc   : gfx_til_overworld  64   192  64   64
 @GfxFrame gfx_frame_til_stone_wall_cr   : gfx_til_overworld  128  192  64   64
 @GfxFrame gfx_frame_obj_sign            : gfx_til_overworld  192  192  64   64
 @GfxFrame gfx_frame_obj_chest_closed    : gfx_til_overworld  256  192  64   64
-@GfxFrame gfx_frame_obj_portal_bottom_0 : gfx_til_overworld  320  192  64   64
-@GfxFrame gfx_frame_obj_portal_bottom_1 : gfx_til_overworld  384  192  64   64
-@GfxFrame gfx_frame_obj_portal_bottom_2 : gfx_til_overworld  448  192  64   64
+// portal bottom frames
+// @GfxFrame null                          : gfx_til_overworld  320  192  64   64
+// @GfxFrame null                          : gfx_til_overworld  384  192  64   64
+// @GfxFrame null                          : gfx_til_overworld  448  192  64   64
 @GfxFrame gfx_frame_til_stone_wall_bl   : gfx_til_overworld  0    256  64   64
 @GfxFrame gfx_frame_til_stone_wall_bc   : gfx_til_overworld  64   256  64   64
 @GfxFrame gfx_frame_til_stone_wall_br   : gfx_til_overworld  128  256  64   64
@@ -90,6 +93,7 @@
 @GfxFrame null                          : gfx_til_overworld  448  256  64   64
 
 //       id                           sound_effect  frmrate  frmcount  frmdelay  frames
+@GfxAnim gfx_anim_missing           : null          60       1         0         gfx_frame_missing
 @GfxAnim gfx_anim_chr_mage_e        : null          60       1         0         gfx_frame_chr_mage_e_0
 @GfxAnim gfx_anim_chr_mage_w        : null          60       1         0         gfx_frame_chr_mage_w_0
 @GfxAnim gfx_anim_npc_lily_e        : null          60       1         0         gfx_frame_npc_lily_e_0
@@ -122,8 +126,7 @@
 
 @GfxAnim gfx_anim_obj_bush          : null          60       1         0         gfx_frame_obj_bush
 @GfxAnim gfx_anim_obj_chest_closed  : null          60       1         0         gfx_frame_obj_chest_closed
-@GfxAnim gfx_anim_obj_portal_top    : null          60       3         6         gfx_frame_obj_portal_top_0 gfx_frame_obj_portal_top_1 gfx_frame_obj_portal_top_2
-@GfxAnim gfx_anim_obj_portal_bottom : null          60       3         6         gfx_frame_obj_portal_bottom_0 gfx_frame_obj_portal_bottom_1 gfx_frame_obj_portal_bottom_2
+@GfxAnim gfx_anim_obj_portal        : null          60       3         6         gfx_frame_obj_portal_0 gfx_frame_obj_portal_1 gfx_frame_obj_portal_2
 @GfxAnim gfx_anim_obj_sign          : null          60       1         0         gfx_frame_obj_sign
 
 // forging:
@@ -131,7 +134,8 @@
 // hardness  (damage)     : resistance to deformation, scratching               (chance that durability decreases with each use)
 // strength  (durability) : resistance to tension, compression and shear forces (chance that durability decreases when your attack is blocked)
 
-//    id                  type   weapon_class damage toughness
+//    id                    type   weapon_class damage toughness
+@Item item_missing        : weapon sword        0      0
 @Item item_sword_wood     : weapon sword        1      10
 @Item item_sword_copper   : weapon sword        3      30
 @Item item_sword_bronze   : weapon sword        3      35
@@ -140,17 +144,21 @@
 @item item_axe_wood       : tool   axe
 
 //         id                 rolls items
+@LootTable loot_missing   : { 0     [{ null 1.0 }] }
 @LootTable loot_basic     : { 5     [{ null 0.2 }{ item_sword     0.2 }{ item_axe     0.1 }] }
 @LootTable loot_uncommon  : { 4     [{ null 0.3 }{ item_ruby      0.2 }{ item_saphire 0.1 }] }
 @LootTable loot_rare      : { 3     [{ null 0.4 }{ item_gold      0.2 }{ item_diamond 0.1 }] }
 @LootTable loot_legendary : { 2     [{ null 0.5 }{ item_excalibur 0.2 }{ item_hamaxe  0.1 }] }
 
-//        id          footstep_sound
-@Material mat_stone : sfx_footstep_stone
-@Material mat_water : sfx_footstep_water
-@Material mat_grass : sfx_footstep_grass
+//        id            footstep_sound
+@Material mat_missing : null
+@Material mat_void    : null
+@Material mat_stone   : sfx_footstep_stone
+@Material mat_water   : sfx_footstep_water
+@Material mat_grass   : sfx_footstep_grass
 
 //      id                    anim_n                anim_e                 anim_s anim_w                 anim_ne anim_se anim_sw anim_nw
+@Sprite sprite_missing      : null                  null                   null   null                   null    null    null    null
 @Sprite sprite_chr_mage     : null                  gfx_anim_chr_mage_e    null   gfx_anim_chr_mage_w    null    null    null    null
 @Sprite sprite_npc_lily     : null                  gfx_anim_npc_lily_e    null   gfx_anim_npc_lily_w    null    null    null    null
 @Sprite sprite_npc_freye    : null                  gfx_anim_npc_freye_e   null   gfx_anim_npc_freye_w   null    null    null    null
@@ -160,27 +168,29 @@
 @Sprite sprite_obj_campfire : gfx_anim_obj_campfire null                   null   null                   null    null    null    null
 @Sprite sprite_prj_fireball : gfx_anim_prj_fireball null                   null   null                   null    null    null    null
 
-//       id                  animation                  material  solid liquid auto_tile_mask
-@TileDef til_void          : gfx_anim_til_void          mat_void  1     0      0
-@TileDef til_stone_path    : gfx_anim_til_stone_path    mat_stone 0     0      0
-@TileDef til_water_dark    : gfx_anim_til_water_dark    mat_water 0     1      0
-@TileDef til_grass_weeds   : gfx_anim_til_grass_weeds   mat_grass 0     0      0
-@TileDef til_grass_flowers : gfx_anim_til_grass_flowers mat_grass 0     0      0
-@TileDef til_stone_wall_tl : gfx_anim_til_stone_wall_tl mat_stone 1     0      0
-@TileDef til_stone_wall_tc : gfx_anim_til_stone_wall_tc mat_stone 1     0      0
-@TileDef til_stone_wall_tr : gfx_anim_til_stone_wall_tr mat_stone 1     0      0
-@TileDef til_stone_wall_cl : gfx_anim_til_stone_wall_cl mat_stone 1     0      0
-@TileDef til_stone_wall_cc : gfx_anim_til_stone_wall_cc mat_stone 1     0      0
-@TileDef til_stone_wall_cr : gfx_anim_til_stone_wall_cr mat_stone 1     0      0
-@TileDef til_stone_wall_bl : gfx_anim_til_stone_wall_bl mat_stone 1     0      0
-@TileDef til_stone_wall_bc : gfx_anim_til_stone_wall_bc mat_stone 1     0      0
-@TileDef til_stone_wall_br : gfx_anim_til_stone_wall_br mat_stone 1     0      0
-
-@TileDef obj_bush          : gfx_anim_obj_bush          mat_grass 1     0      0
-@TileDef obj_chest_basic   : gfx_anim_obj_chest_closed  mat_wood  1     0      0
-@TileDef obj_portal_top    : gfx_anim_obj_portal_top    mat_void  0     0      0
-@TileDef obj_portal_bottom : gfx_anim_obj_portal_bottom mat_void  0     0      0
-@TileDef obj_sign          : gfx_anim_obj_sign          mat_wood  0     0      0
+///////////////////////////////////////////////////////////////////////
+// DO NOT change or reorder the IDs without updating all the map data
+///////////////////////////////////////////////////////////////////////
+//       id   name                animation                  material    solid liquid auto_tile_mask
+@TileDef 0  : "til_missing"       gfx_anim_missing           mat_missing 0     0      0
+@TileDef 1  : "til_void"          gfx_anim_til_void          mat_void    1     0      0
+@TileDef 2  : "til_stone_path"    gfx_anim_til_stone_path    mat_stone   0     0      0
+@TileDef 3  : "til_water_dark"    gfx_anim_til_water_dark    mat_water   0     1      0
+@TileDef 4  : "til_grass_weeds"   gfx_anim_til_grass_weeds   mat_grass   0     0      0
+@TileDef 5  : "til_grass_flowers" gfx_anim_til_grass_flowers mat_grass   0     0      0
+@TileDef 6  : "til_stone_wall_tl" gfx_anim_til_stone_wall_tl mat_stone   1     0      0
+@TileDef 7  : "til_stone_wall_tc" gfx_anim_til_stone_wall_tc mat_stone   1     0      0
+@TileDef 8  : "til_stone_wall_tr" gfx_anim_til_stone_wall_tr mat_stone   1     0      0
+@TileDef 9  : "til_stone_wall_cl" gfx_anim_til_stone_wall_cl mat_stone   1     0      0
+@TileDef 10 : "til_stone_wall_cc" gfx_anim_til_stone_wall_cc mat_stone   1     0      0
+@TileDef 11 : "til_stone_wall_cr" gfx_anim_til_stone_wall_cr mat_stone   1     0      0
+@TileDef 12 : "til_stone_wall_bl" gfx_anim_til_stone_wall_bl mat_stone   1     0      0
+@TileDef 13 : "til_stone_wall_bc" gfx_anim_til_stone_wall_bc mat_stone   1     0      0
+@TileDef 14 : "til_stone_wall_br" gfx_anim_til_stone_wall_br mat_stone   1     0      0
+@TileDef 15 : "obj_bush"          gfx_anim_obj_bush          mat_grass   1     0      0
+@TileDef 16 : "obj_chest_basic"   gfx_anim_obj_chest_closed  mat_wood    1     0      0
+@TileDef 17 : "obj_portal"        gfx_anim_obj_portal        mat_void    0     0      0
+@TileDef 18 : "obj_sign"          gfx_anim_obj_sign          mat_wood    0     0      0
 
 // 1st sub: 0x29
 // 2nd sub: itz_kuda gifted 0x29

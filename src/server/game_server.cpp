@@ -544,22 +544,19 @@ void GameServer::ProcessMsg(int clientIdx, Msg_C_TileInteract &msg)
         return;
     }
 
-    Tile tile{};
-    if (!map->AtTry(msg.x, msg.y, tile)) {
+    uint32_t tile_id{};
+    if (!map->AtTry(msg.x, msg.y, tile_id)) {
         // Tile at x/y is not a valid tile type.. hmm.. is it void?
         assert(!"not a valid tile");
         return;
     }
 
-    const char *new_tile_def = 0;
-    uint8_t obj = map->At_Obj(msg.x, msg.y);
+    //uint32_t object_id = map->At_Obj(msg.x, msg.y);
     const data::ObjectData *obj_data = map->GetObjectData(msg.x, msg.y);
 
-    bool handled = false;
     if (msg.primary == false && obj_data) {
         if (obj_data->type == "lootable") {
             SendEntitySay(clientIdx, player.entityId, 0, "Chest", obj_data->loot_table_id);
-            handled = true;
         } else if (obj_data->type == "sign") {
             const char *signText = TextFormat("%s\n%s\n%s\n%s",
                 obj_data->sign_text[0].c_str(),
@@ -568,7 +565,6 @@ void GameServer::ProcessMsg(int clientIdx, Msg_C_TileInteract &msg)
                 obj_data->sign_text[3].c_str()
             );
             SendEntitySay(clientIdx, player.entityId, 0, "Sign", signText);
-            handled = true;
         } else if (obj_data->type == "warp") {
             const char *warpInfo = TextFormat("%s (%u, %u)",
                 obj_data->warp_map_id.c_str(),
@@ -576,32 +572,22 @@ void GameServer::ProcessMsg(int clientIdx, Msg_C_TileInteract &msg)
                 obj_data->warp_dest_y
             );
             SendEntitySay(clientIdx, player.entityId, 0, "Warp", warpInfo);
-            handled = true;
         }
     } else if (msg.primary) {
-        const data::TileDef &tile_def = map->GetTileDef(tile);
-        if (tile_def.id == "til_water_dark") {
-            new_tile_def = "til_stone_path";
-        } else if (tile_def.id == "til_stone_path") {
-            new_tile_def = "til_water_dark";
+        const data::TileDef &tile_def = map->GetTileDef(tile_id);
+        const char *new_tile_def_name = 0;
+        if (tile_def.name == "til_water_dark") {
+            new_tile_def_name = "til_stone_path";
+        } else if (tile_def.name == "til_stone_path") {
+            new_tile_def_name = "til_water_dark";
         }
-        handled = true;
-    }
 
-    if (handled) {
-        if (new_tile_def) {
+        if (new_tile_def_name) {
+            const data::TileDef &new_tile_def = data::packs[0]->FindTileDefByName(new_tile_def_name);
             // TODO(perf): Make some kind of map from string -> tile_def_index in the map?
             // * OR * make the maps all have global tile def ids instead of local tile def ids
-            int new_tile_def_idx = 0;
-            for (int i = 0; i < map->tileDefs.size(); i++) {
-                if (map->tileDefs[i] == new_tile_def) {
-                    new_tile_def_idx = i;
-                    break;
-                }
-            }
-
-            if (new_tile_def_idx) {
-                map->Set(msg.x, msg.y, new_tile_def_idx, now);
+            if (new_tile_def.id) {
+                map->Set(msg.x, msg.y, new_tile_def.id, now);
             }
         }
     }

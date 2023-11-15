@@ -112,8 +112,8 @@ void Editor::DrawGroundOverlay_Tiles(Camera2D &camera, double now)
         const bool editorPickTile = io.MouseButtonDown(MOUSE_BUTTON_MIDDLE);
         const bool editorFillTile = io.KeyPressed(KEY_F);
 
-        Tile &cursorTile = state.tiles.cursor.tileDefId;
-        Tile hoveredTile{};
+        uint32_t &cursorTile = state.tiles.cursor.tile_id;
+        uint32_t hoveredTile{};
         auto &map = data::packs[0]->FindTilemap(map_id);
 
         data::Tilemap::Coord coord{};
@@ -707,8 +707,8 @@ void Editor::DrawUI_TileActions(UI &uiActionBar, double now)
         uint32_t newWidth = (uint32_t)width;
         uint32_t newHeight = (uint32_t)height;
 
-        std::vector<Tile> tilesNew{};
-        std::vector<uint8_t> objectsNew{};
+        std::vector<uint32_t> tilesNew{};
+        std::vector<uint32_t> objectsNew{};
         tilesNew.resize(newWidth * newHeight);
         objectsNew.resize(newWidth * newHeight);
         for (uint32_t y = 0; y < map.height && y < newHeight; y++) {
@@ -765,11 +765,12 @@ void DrawRectangleRectOffset(const Rectangle &rect, Vector2 &offset, Color color
 void Editor::DrawUI_Tilesheet(UI &uiActionBar, double now)
 {
     // TODO(dlb): Support multi-select (big rectangle?), and figure out where this lives
-    data::Tilemap &map = data::packs[0]->FindTilemap(map_id);
 
-    size_t tile_def_count = map.tileDefs.size();
+    data::Tilemap &map = data::packs[0]->FindTilemap(map_id);
+    auto &tile_defs = data::packs[0]->tile_defs;
+
     int tiles_x = 6;
-    int tiles_y = tile_def_count / 6 + (tile_def_count % 6 > 0);
+    int tiles_y = tile_defs.size() / 6 + (tile_defs.size() % 6 > 0);
     int checker_w = TILE_W * tiles_x;
     int checker_h = TILE_W * tiles_y;
 
@@ -787,10 +788,10 @@ void Editor::DrawUI_Tilesheet(UI &uiActionBar, double now)
     Vector2 imgTL{ sheet.contentRect.x, sheet.contentRect.y };
 
     // Draw tiledefs
-    for (int i = 0; i < map.tileDefs.size(); i++) {
+    for (size_t i = 0; i < tile_defs.size(); i++) {
         int tile_x = TILE_W * (i % tiles_x);
         int tile_y = TILE_W * (i / tiles_x);
-        map.DrawTile(i, { imgTL.x + tile_x, imgTL.y + tile_y }, 0);
+        map.DrawTile(tile_defs[i].id, { imgTL.x + tile_x, imgTL.y + tile_y }, 0);
     }
 
     uiActionBar.PopStyle();
@@ -798,8 +799,7 @@ void Editor::DrawUI_Tilesheet(UI &uiActionBar, double now)
     // Draw collision overlay on tilesheet if we're in collision editing mode
     switch (state.tiles.tileEditMode) {
         case TileEditMode_Collision: {
-            for (int i = 0; i < map.tileDefs.size(); i++) {
-                const data::TileDef &tile_def = map.GetTileDef(i);
+            for (size_t i = 0; i < tile_defs.size(); i++) {
                 const float tileThird = TILE_W / 3;
                 const float tileSixth = tileThird / 2.0f;
                 Vector2 cursor{
@@ -811,7 +811,7 @@ void Editor::DrawUI_Tilesheet(UI &uiActionBar, double now)
                 cursor.y++;
 
                 // TODO: Make this a loop + LUT if we start adding more flags
-                if (!tile_def.flags) {
+                if (!tile_defs[i].flags) {
                     DrawRectangle(cursor.x, cursor.y, tileThird, tileThird, Fade(MAROON, 0.7f));
 
                     Vector2 size = dlb_MeasureTextEx(fntSmall, "X", 1, 0);
@@ -820,7 +820,7 @@ void Editor::DrawUI_Tilesheet(UI &uiActionBar, double now)
                     pos.y += tileSixth - size.y / 2.0f;
                     DrawTextShadowEx(fntSmall, "X", pos, WHITE);
                 } else {
-                    if (tile_def.flags & data::TILEDEF_FLAG_SOLID) {
+                    if (tile_defs[i].flags & data::TILEDEF_FLAG_SOLID) {
                         DrawRectangle(cursor.x, cursor.y, tileThird, tileThird, Fade(DARKGREEN, 0.7f));
 
                         Vector2 size = dlb_MeasureTextEx(fntSmall, "S", 1, 0);
@@ -830,7 +830,7 @@ void Editor::DrawUI_Tilesheet(UI &uiActionBar, double now)
                         DrawTextShadowEx(fntSmall, "S", pos, WHITE);
                     }
                     cursor.x += tileThird + 1;
-                    if (tile_def.flags & data::TILEDEF_FLAG_LIQUID) {
+                    if (tile_defs[i].flags & data::TILEDEF_FLAG_LIQUID) {
                         DrawRectangle(cursor.x, cursor.y, tileThird, tileThird, Fade(SKYBLUE, 0.7f));
 
                         Vector2 size = dlb_MeasureTextEx(fntSmall, "L", 1, 0);
@@ -845,9 +845,7 @@ void Editor::DrawUI_Tilesheet(UI &uiActionBar, double now)
             break;
         }
         case TileEditMode_AutoTileMask: {
-            for (int i = 0; i < map.tileDefs.size(); i++) {
-                const data::TileDef &tile_def = map.GetTileDef(i);
-
+            for (int i = 0; i < tile_defs.size(); i++) {
                 const float tileThird = TILE_W / 3;
                 float tile_x = TILE_W * (i % tiles_x);
                 float tile_y = TILE_W * (i / tiles_x);
@@ -862,7 +860,7 @@ void Editor::DrawUI_Tilesheet(UI &uiActionBar, double now)
                 const Color color = Fade(MAROON, 0.7f);
 
                 Vector2 cursor{};
-                uint8_t mask = tile_def.auto_tile_mask;
+                uint8_t mask = tile_defs[i].auto_tile_mask;
                 if (mask & 0b10000000) DrawRectangleRectOffset(tileDefRectScreen, cursor, color);
                 cursor.x += tileThird;
 
@@ -907,7 +905,7 @@ void Editor::DrawUI_Tilesheet(UI &uiActionBar, double now)
         const int tile_y = (int)mouseRel.y / TILE_W;
         const int tileIdx = tile_y * tiles_x + tile_x;
 
-        if (tileIdx < tile_def_count) {
+        if (tileIdx < tile_defs.size()) {
             if (state.tiles.tileEditMode != TileEditMode_AutoTileMask) {
                 DrawRectangleLinesEx(
                     { imgTL.x + tile_x * TILE_W, imgTL.y + tile_y * TILE_W, TILE_W, TILE_W },
@@ -922,16 +920,14 @@ void Editor::DrawUI_Tilesheet(UI &uiActionBar, double now)
 
         // If mouse pressed, select tile, or change collision data, depending on mode
         if (sheet.pressed) {
-            if (tileIdx >= 0 && tileIdx < map.tileDefs.size()) {
+            if (tileIdx >= 0 && tileIdx < tile_defs.size()) {
                 switch (state.tiles.tileEditMode) {
                     case TileEditMode_Select: {
-                        state.tiles.cursor.tileDefId = tileIdx;
+                        state.tiles.cursor.tile_id = tileIdx;
                         break;
                     }
                     case TileEditMode_Collision:
                     case TileEditMode_AutoTileMask: {
-                        data::TileDef &tile_def = map.GetTileDef(tileIdx);
-
                         const int tileXRemainder = (int)mouseRel.x % TILE_W - 1;
                         const int tileYRemainder = (int)mouseRel.y % TILE_W - 1;
                         if (tileXRemainder < 0 || tileXRemainder > (TILE_W - 3) ||
@@ -946,21 +942,21 @@ void Editor::DrawUI_Tilesheet(UI &uiActionBar, double now)
 
                         if (state.tiles.tileEditMode == TileEditMode_Collision) {
                             switch (tileSegment) {
-                                case 0: tile_def.flags ^= data::TILEDEF_FLAG_SOLID;  break;
-                                case 1: tile_def.flags ^= data::TILEDEF_FLAG_LIQUID; break;
+                                case 0: tile_defs[tileIdx].flags ^= data::TILEDEF_FLAG_SOLID;  break;
+                                case 1: tile_defs[tileIdx].flags ^= data::TILEDEF_FLAG_LIQUID; break;
                             }
                         } else if (state.tiles.tileEditMode == TileEditMode_AutoTileMask) {
                             //printf("x: %d, y: %d, s: %d\n", tileXSegment, tileYSegment, tileSegment);
                             switch (tileSegment) {
-                                case 0: tile_def.auto_tile_mask ^= 0b10000000; break;
-                                case 1: tile_def.auto_tile_mask ^= 0b01000000; break;
-                                case 2: tile_def.auto_tile_mask ^= 0b00100000; break;
-                                case 3: tile_def.auto_tile_mask ^= 0b00010000; break;
-                                case 4: tile_def.auto_tile_mask ^= 0b00000000; break;
-                                case 5: tile_def.auto_tile_mask ^= 0b00001000; break;
-                                case 6: tile_def.auto_tile_mask ^= 0b00000100; break;
-                                case 7: tile_def.auto_tile_mask ^= 0b00000010; break;
-                                case 8: tile_def.auto_tile_mask ^= 0b00000001; break;
+                                case 0: tile_defs[tileIdx].auto_tile_mask ^= 0b10000000; break;
+                                case 1: tile_defs[tileIdx].auto_tile_mask ^= 0b01000000; break;
+                                case 2: tile_defs[tileIdx].auto_tile_mask ^= 0b00100000; break;
+                                case 3: tile_defs[tileIdx].auto_tile_mask ^= 0b00010000; break;
+                                case 4: tile_defs[tileIdx].auto_tile_mask ^= 0b00000000; break;
+                                case 5: tile_defs[tileIdx].auto_tile_mask ^= 0b00001000; break;
+                                case 6: tile_defs[tileIdx].auto_tile_mask ^= 0b00000100; break;
+                                case 7: tile_defs[tileIdx].auto_tile_mask ^= 0b00000010; break;
+                                case 8: tile_defs[tileIdx].auto_tile_mask ^= 0b00000001; break;
                             }
                         }
                         break;
@@ -973,9 +969,9 @@ void Editor::DrawUI_Tilesheet(UI &uiActionBar, double now)
     }
 
     // Draw highlight around currently styleSelected tiledef in draw mode
-    if (state.tiles.cursor.tileDefId >= 0) {
-        int tile_x = state.tiles.cursor.tileDefId % tiles_x;
-        int tile_y = state.tiles.cursor.tileDefId / tiles_x;
+    if (state.tiles.cursor.tile_id >= 0) {
+        int tile_x = state.tiles.cursor.tile_id % tiles_x;
+        int tile_y = state.tiles.cursor.tile_id / tiles_x;
         Rectangle tileDefRectScreen{
             imgTL.x + (TILE_W * tile_x),
             imgTL.y + (TILE_W * tile_y),
@@ -1081,11 +1077,12 @@ void Editor::DrawUI_WangTile(double now)
 {
     WangTileset &wangTileset = state.wang.wangTileset;
     data::Tilemap &map = data::packs[0]->FindTilemap(map_id);
+    auto &tile_defs = data::packs[0]->tile_defs;
 
     Rectangle wangBg{ 434, 4, 560, 560 };
 
     if (state.wang.hTex >= 0 || state.wang.vTex >= 0) {
-        Tile selectedTile = state.tiles.cursor.tileDefId;
+        const uint32_t selectedTile = state.tiles.cursor.tile_id;
         static double lastUpdatedAt = 0;
         static double lastChangedAt = 0;
         const double updateDelay = 0.02;
@@ -1108,7 +1105,7 @@ void Editor::DrawUI_WangTile(double now)
                     int templateY = wangTile->y + y;
                     int templateOffset = (templateY * wangTileset.ts.img.width + templateX) * 3;
                     uint8_t *pixel = &imgData[templateOffset];
-                    uint8_t tile = pixel[0] < map.tileDefs.size() ? pixel[0] : 0;
+                    uint8_t tile = pixel[0] < tile_defs.size() ? pixel[0] : 0;
 
                     const data::GfxFrame &gfx_frame = map.GetTileGfxFrame(selectedTile);
                     const data::GfxFile &gfx_file = data::packs[0]->FindGraphic(gfx_frame.gfx);
@@ -1130,7 +1127,7 @@ void Editor::DrawUI_WangTile(double now)
                     int templateY = wangTile->y + y;
                     int templateOffset = (templateY * wangTileset.ts.img.width + templateX) * 3;
                     uint8_t *pixel = &imgData[templateOffset];
-                    uint8_t tile = pixel[0] < map.tileDefs.size() ? pixel[0] : 0;
+                    uint8_t tile = pixel[0] < tile_defs.size() ? pixel[0] : 0;
 
                     const data::GfxFrame &gfx_frame = map.GetTileGfxFrame(selectedTile);
                     const data::GfxFile &gfx_file = data::packs[0]->FindGraphic(gfx_frame.gfx);

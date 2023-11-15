@@ -31,7 +31,7 @@ struct EditModeTiles {
     TileEditMode tileEditMode;
 
     struct {
-        Tile tileDefId;
+        uint32_t tile_id;
     } cursor;
 };
 
