@@ -371,12 +371,29 @@ void GameServer::BroadcastEntitySay(uint32_t entityId, const std::string &title,
         SendEntitySay(clientIdx, entityId, 0, title, message);
     }
 }
+
 void GameServer::SendTileChunk(int clientIdx, data::Tilemap &map, uint32_t x, uint32_t y)
 {
     if (yj_server->CanSendMessage(clientIdx, CHANNEL_R_TILE_EVENT)) {
         Msg_S_TileChunk *msg = (Msg_S_TileChunk *)yj_server->CreateMessage(clientIdx, MSG_S_TILE_CHUNK);
         if (msg) {
-            map.SV_SerializeChunk(*msg, x, y);
+            data::TileChunk *chunk = (data::TileChunk *)yj_server->AllocateBlock(clientIdx, sizeof(data::TileChunk));
+
+            strncpy(msg->map_id, map.id.c_str(), SV_MAX_TILE_MAP_NAME_LEN);
+            msg->x = x;
+            msg->y = y;
+            msg->w = MIN(map.width, SV_MAX_TILE_CHUNK_WIDTH);
+            msg->h = MIN(map.height, SV_MAX_TILE_CHUNK_WIDTH);
+
+            for (uint32_t ty = y; ty < msg->h; ty++) {
+                for (uint32_t tx = x; tx < msg->w; tx++) {
+                    const uint32_t index = ty * msg->w + tx;
+                    map.AtTry(tx, ty, chunk->tile_ids[index]);
+                    map.AtTry_Obj(tx, ty, chunk->object_ids[index]);
+                }
+            }
+
+            yj_server->AttachBlockToMessage(clientIdx, msg, (uint8_t *)chunk, sizeof(data::TileChunk));
             yj_server->SendMessage(clientIdx, CHANNEL_R_TILE_EVENT, msg);
         }
     }
@@ -391,6 +408,31 @@ void GameServer::BroadcastTileChunk(data::Tilemap &map, uint32_t x, uint32_t y)
         SendTileChunk(clientIdx, map, x, y);
     }
 }
+void GameServer::SendTileUpdate(int clientIdx, data::Tilemap &map, uint32_t x, uint32_t y)
+{
+    if (yj_server->CanSendMessage(clientIdx, CHANNEL_R_TILE_EVENT)) {
+        Msg_S_TileUpdate *msg = (Msg_S_TileUpdate *)yj_server->CreateMessage(clientIdx, MSG_S_TILE_UPDATE);
+        if (msg) {
+            strncpy(msg->map_id, map.id.c_str(), SV_MAX_TILE_MAP_NAME_LEN);
+            msg->x = x;
+            msg->y = y;
+            map.AtTry(x, y, msg->tile_id);
+            map.AtTry_Obj(x, y, msg->object_id);
+            yj_server->SendMessage(clientIdx, CHANNEL_R_TILE_EVENT, msg);
+        }
+    }
+}
+void GameServer::BroadcastTileUpdate(data::Tilemap &map, uint32_t x, uint32_t y)
+{
+    for (int clientIdx = 0; clientIdx < SV_MAX_PLAYERS; clientIdx++) {
+        if (!yj_server->IsClientConnected(clientIdx)) {
+            continue;
+        }
+
+        SendTileUpdate(clientIdx, map, x, y);
+    }
+}
+
 void GameServer::RequestDialog(int clientIdx, data::Entity &entity, Dialog &dialog)
 {
     // Overridable by listeners
@@ -552,10 +594,19 @@ void GameServer::ProcessMsg(int clientIdx, Msg_C_TileInteract &msg)
     }
 
     //uint32_t object_id = map->At_Obj(msg.x, msg.y);
-    const data::ObjectData *obj_data = map->GetObjectData(msg.x, msg.y);
+    data::ObjectData *obj_data = map->GetObjectData(msg.x, msg.y);
 
     if (msg.primary == false && obj_data) {
-        if (obj_data->type == "lootable") {
+        if (obj_data->type == "lever") {
+            if (obj_data->power_level) {
+                map->Set_Obj(msg.x, msg.y, obj_data->tile_def_unpowered, now);
+                obj_data->power_level = 0;
+            } else {
+                map->Set_Obj(msg.x, msg.y, obj_data->tile_def_powered, now);
+                obj_data->power_level = 1;
+            }
+            BroadcastTileUpdate(*map, msg.x, msg.y);
+        } else if (obj_data->type == "lootable") {
             SendEntitySay(clientIdx, player.entityId, 0, "Chest", obj_data->loot_table_id);
         } else if (obj_data->type == "sign") {
             const char *signText = TextFormat("%s\n%s\n%s\n%s",
@@ -1181,7 +1232,8 @@ void GameServer::SendClientSnapshots(void)
             continue;
         }
 
-        // TODO: Wut dis do?
+#if 0
+        // TODO: Send a full chunk resync only when it makes sense (first login, change maps, changes > N, etc.)
         for (int tileChunkIdx = 0; tileChunkIdx < serverPlayer.chunkList.size(); tileChunkIdx++) {
             TileChunkRecord &chunkRec = serverPlayer.chunkList[tileChunkIdx];
             if (chunkRec.lastSentAt < map->chunkLastUpdatedAt) {
@@ -1190,6 +1242,7 @@ void GameServer::SendClientSnapshots(void)
                 printf("[game_server] sending chunk to client\n");
             }
         }
+#endif
 
         // TODO: Send only the world state that's relevant to this particular client
         for (data::Entity &entity : entityDb->entities) {

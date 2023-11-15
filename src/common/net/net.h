@@ -25,6 +25,7 @@ enum MsgType
     MSG_S_ENTITY_SNAPSHOT,
     MSG_S_ENTITY_SPAWN,
     MSG_S_TILE_CHUNK,
+    MSG_S_TILE_UPDATE,
 
     MSG_COUNT
 };
@@ -299,27 +300,41 @@ struct Msg_S_EntitySpawn : public yojimbo::Message
     YOJIMBO_VIRTUAL_SERIALIZE_FUNCTIONS();
 };
 
-struct Msg_S_TileChunk : public yojimbo::Message
+struct Msg_S_TileChunk : public yojimbo::BlockMessage
 {
-    char     map_id   [SV_MAX_TILE_MAP_NAME_LEN + 1]{};
-    uint32_t x        {};
-    uint32_t y        {};
-    uint32_t w        {};
-    uint32_t h        {};
-    uint32_t tile_ids [SV_MAX_TILE_CHUNK_WIDTH * SV_MAX_TILE_CHUNK_WIDTH]{};  // TODO: Compress, use less bits, etc.
+    char     map_id     [SV_MAX_TILE_MAP_NAME_LEN + 1]{};
+    uint32_t x          {};
+    uint32_t y          {};
+    uint32_t w          {};
+    uint32_t h          {};
 
     template <typename Stream> bool Serialize(Stream &stream)
     {
-        //char mapNameBuf[PATH_LEN_MAX + 1]{};
-        //strcpy(mapNameBuf, mapName.c_str());
-        //serialize_string(stream, mapNameBuf, PATH_LEN_MAX);
-        //mapName = mapNameBuf;
         serialize_string(stream, map_id, sizeof(map_id));
         serialize_uint32(stream, x);
         serialize_uint32(stream, y);
         serialize_uint32(stream, w);
         serialize_uint32(stream, h);
-        serialize_bytes(stream, (uint8_t *)tile_ids, sizeof(tile_ids));
+        return true;
+    }
+
+    YOJIMBO_VIRTUAL_SERIALIZE_FUNCTIONS();
+};
+struct Msg_S_TileUpdate : public yojimbo::Message
+{
+    char     map_id    [SV_MAX_TILE_MAP_NAME_LEN + 1]{};
+    uint32_t x         {};
+    uint32_t y         {};
+    uint32_t tile_id   {};
+    uint32_t object_id {};
+
+    template <typename Stream> bool Serialize(Stream &stream)
+    {
+        serialize_string(stream, map_id, sizeof(map_id));
+        serialize_uint32(stream, x);
+        serialize_uint32(stream, y);
+        serialize_uint32(stream, tile_id);
+        serialize_uint32(stream, object_id);
         return true;
     }
 
@@ -339,6 +354,7 @@ YOJIMBO_DECLARE_MESSAGE_TYPE(MSG_S_ENTITY_SAY,                    Msg_S_EntitySa
 YOJIMBO_DECLARE_MESSAGE_TYPE(MSG_S_ENTITY_SNAPSHOT,               Msg_S_EntitySnapshot);
 YOJIMBO_DECLARE_MESSAGE_TYPE(MSG_S_ENTITY_SPAWN,                  Msg_S_EntitySpawn);
 YOJIMBO_DECLARE_MESSAGE_TYPE(MSG_S_TILE_CHUNK,                    Msg_S_TileChunk);
+YOJIMBO_DECLARE_MESSAGE_TYPE(MSG_S_TILE_UPDATE,                   Msg_S_TileUpdate);
 YOJIMBO_MESSAGE_FACTORY_FINISH();
 
 class NetAdapter : public yojimbo::Adapter

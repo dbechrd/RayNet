@@ -171,7 +171,39 @@ void GameClient::ProcessMsg(Msg_S_TileChunk &msg)
 {
     data::Tilemap *map = world->FindOrLoadMap(msg.map_id);
     if (map) {
-        map->CL_DeserializeChunk(msg);
+        if (map->id.compare(msg.map_id) == 0) {
+            if (msg.GetBlockSize() == sizeof(data::TileChunk)) {
+                data::TileChunk *chunk = (data::TileChunk *)msg.GetBlockData();
+                for (uint32_t ty = msg.y; ty < msg.w; ty++) {
+                    for (uint32_t tx = msg.x; tx < msg.h; tx++) {
+                        const uint32_t index = ty * msg.w + tx;
+                        map->Set(msg.x + tx, msg.y + ty, chunk->tile_ids[index], 0);
+                        map->Set_Obj(msg.x + tx, msg.y + ty, chunk->object_ids[index], 0);
+                    }
+                }
+            } else {
+                printf("[game_client] msg.GetBlockSize() [%d] != sizeof(data::TileChunk) [%zu]\n", msg.GetBlockSize(), sizeof(data::TileChunk));
+            }
+        } else {
+            printf("[game_client] Failed to deserialize chunk with mapId %s into map with id %s\n", msg.map_id, map->id.c_str());
+        }
+    } else {
+        // TODO: LoadPack the right map by ID somehow
+        //if (msg->mapId != world->map.id) {
+        //    //world->map.LoadPack(tileChunk.mapName, 0);
+        //}
+    }
+}
+void GameClient::ProcessMsg(Msg_S_TileUpdate &msg)
+{
+    data::Tilemap *map = world->FindOrLoadMap(msg.map_id);
+    if (map) {
+        if (map->id.compare(msg.map_id) == 0) {
+            map->Set(msg.x, msg.y, msg.tile_id, 0);
+            map->Set_Obj(msg.x, msg.y, msg.object_id, 0);
+        } else {
+            printf("[game_client] Failed to deserialize chunk with mapId %s into map with id %s\n", msg.map_id, map->id.c_str());
+        }
     } else {
         // TODO: LoadPack the right map by ID somehow
         //if (msg->mapId != world->map.id) {
@@ -184,14 +216,24 @@ void GameClient::ProcessMessages(void)
     for (int channelIdx = 0; channelIdx < CHANNEL_COUNT; channelIdx++) {
         yojimbo::Message *yjMsg = yj_client->ReceiveMessage(channelIdx);
         while (yjMsg) {
-            //printf("[game_client] RECV msgId=%d msgType=%s\n", yjMsg->GetId(), MsgTypeStr((MsgType)yjMsg->GetType()));
+            if (yjMsg->GetType() != MSG_S_ENTITY_SNAPSHOT) {
+                printf("[game_client] RECV msgId=%d msgType=%s\n", yjMsg->GetId(), MsgTypeStr((MsgType)yjMsg->GetType()));
+            }
             switch (yjMsg->GetType()) {
-                case MSG_S_CLOCK_SYNC:      ProcessMsg(*(Msg_S_ClockSync      *)yjMsg); break;
-                case MSG_S_ENTITY_DESPAWN:  ProcessMsg(*(Msg_S_EntityDespawn  *)yjMsg); break;
-                case MSG_S_ENTITY_SAY:      ProcessMsg(*(Msg_S_EntitySay      *)yjMsg); break;
-                case MSG_S_ENTITY_SNAPSHOT: ProcessMsg(*(Msg_S_EntitySnapshot *)yjMsg); break;
-                case MSG_S_ENTITY_SPAWN:    ProcessMsg(*(Msg_S_EntitySpawn    *)yjMsg); break;
-                case MSG_S_TILE_CHUNK:      ProcessMsg(*(Msg_S_TileChunk      *)yjMsg); break;
+                case MSG_S_CLOCK_SYNC:
+                    ProcessMsg(*(Msg_S_ClockSync      *)yjMsg); break;
+                case MSG_S_ENTITY_DESPAWN:
+                    ProcessMsg(*(Msg_S_EntityDespawn  *)yjMsg); break;
+                case MSG_S_ENTITY_SAY:
+                    ProcessMsg(*(Msg_S_EntitySay      *)yjMsg); break;
+                case MSG_S_ENTITY_SNAPSHOT:
+                    ProcessMsg(*(Msg_S_EntitySnapshot *)yjMsg); break;
+                case MSG_S_ENTITY_SPAWN:
+                    ProcessMsg(*(Msg_S_EntitySpawn    *)yjMsg); break;
+                case MSG_S_TILE_CHUNK:
+                    ProcessMsg(*(Msg_S_TileChunk      *)yjMsg); break;
+                case MSG_S_TILE_UPDATE:
+                    ProcessMsg(*(Msg_S_TileUpdate     *)yjMsg); break;
             }
             yj_client->ReleaseMessage(yjMsg);
             yjMsg = yj_client->ReceiveMessage(channelIdx);

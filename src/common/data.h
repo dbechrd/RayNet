@@ -215,6 +215,11 @@ namespace data {
         // type == "decoration"
         // no extra fields atm
 
+        // type == "lever"
+        uint8_t power_level {};
+        uint32_t tile_def_unpowered {};
+        uint32_t tile_def_powered   {};
+
         // type == "lootable"
         std::string loot_table_id {};
 
@@ -239,6 +244,11 @@ namespace data {
     };
 
     struct Entity;
+
+    struct TileChunk {
+        uint32_t tile_ids   [SV_MAX_TILE_CHUNK_WIDTH * SV_MAX_TILE_CHUNK_WIDTH]{};  // TODO: Compress, use less bits, etc.
+        uint32_t object_ids [SV_MAX_TILE_CHUNK_WIDTH * SV_MAX_TILE_CHUNK_WIDTH]{};  // TODO: Compress, use less bits, etc.
+    };
 
     struct Tilemap {
         static const DataType dtype = DAT_TYP_TILE_MAP;
@@ -282,9 +292,6 @@ namespace data {
             uint32_t x, y;
         };
 
-        void SV_SerializeChunk(Msg_S_TileChunk &tileChunk, uint32_t x, uint32_t y);
-        void CL_DeserializeChunk(Msg_S_TileChunk &tileChunk);
-
         // Tiles
         uint32_t At(uint32_t x, uint32_t y);
         uint32_t At_Obj(uint32_t x, uint32_t y);
@@ -294,6 +301,7 @@ namespace data {
         bool AtWorld(uint32_t world_x, uint32_t world_y, uint32_t &tile_id);
 
         void Set(uint32_t x, uint32_t y, uint32_t tile_id, double now);
+        void Set_Obj(uint32_t x, uint32_t y, uint32_t object_id, double now);
         void SetFromWangMap(WangMap &wangMap, double now);
         void Fill(uint32_t x, uint32_t y, uint32_t new_tile_id, double now);
 

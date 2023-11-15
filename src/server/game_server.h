@@ -119,6 +119,9 @@ private:
     void SendTileChunk(int clientIdx, data::Tilemap &map, uint32_t x, uint32_t y);
     void BroadcastTileChunk(data::Tilemap &map, uint32_t x, uint32_t y);
 
+    void SendTileUpdate(int clientIdx, data::Tilemap &map, uint32_t x, uint32_t y);
+    void BroadcastTileUpdate(data::Tilemap &map, uint32_t x, uint32_t y);
+
     // All part of Update()
     void RequestDialog(int clientIdx, data::Entity &entity, Dialog &dialog);
 

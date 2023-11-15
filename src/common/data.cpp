@@ -125,6 +125,7 @@ namespace data {
 
             fprintf(file, "    object_data: [\n");
             fprintf(file, "        //x y type [type_data]\n");
+            fprintf(file, "        //    lever    powered tile_def_unpowered tile_def_powered\n");
             fprintf(file, "        //    lootable loot_table_id\n");
             fprintf(file, "        //    sign     \"line 1\" \"line 2\" \"line 3\" \"line 4\"\n");
             fprintf(file, "        //    warp     dest_map_id dest_x dest_y dest_z\n");
@@ -134,7 +135,11 @@ namespace data {
                     obj_data.y,
                     obj_data.type.c_str()
                 );
-                if (obj_data.type == "lootable") {
+                if (obj_data.type == "lever") {
+                    fprintf(file, "%u ", obj_data.power_level);
+                    fprintf(file, "%u ", obj_data.tile_def_unpowered);
+                    fprintf(file, "%u ", obj_data.tile_def_powered);
+                } else if (obj_data.type == "lootable") {
                     fprintf(file, "%s ", obj_data.loot_table_id.c_str());
                 } else if (obj_data.type == "sign") {
                     fprintf(file, "\"%s\" ", obj_data.sign_text[0].c_str());
@@ -544,7 +549,11 @@ namespace data {
                                         META_UINT32(obj_data.x);
                                         META_UINT32(obj_data.y);
                                         META_IDENT(obj_data.type);
-                                        if (obj_data.type == "lootable") {
+                                        if (obj_data.type == "lever") {
+                                            META_UINT8(obj_data.power_level);
+                                            META_UINT32(obj_data.tile_def_unpowered);
+                                            META_UINT32(obj_data.tile_def_powered);
+                                        } else if (obj_data.type == "lootable") {
                                             META_IDENT(obj_data.loot_table_id);
                                         } else if (obj_data.type == "sign") {
                                             META_STRING(obj_data.sign_text[0]);
@@ -1088,7 +1097,11 @@ namespace data {
             PROC(obj_data.y);
             PROC(obj_data.type);
 
-            if (obj_data.type == "lootable") {
+            if (obj_data.type == "lever") {
+                PROC(obj_data.power_level);
+                PROC(obj_data.tile_def_unpowered);
+                PROC(obj_data.tile_def_powered);
+            } else if (obj_data.type == "lootable") {
                 PROC(obj_data.loot_table_id);
             } else if (obj_data.type == "sign") {
                 PROC(obj_data.sign_text[0]);

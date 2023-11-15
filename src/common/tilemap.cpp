@@ -5,32 +5,6 @@
 #include "texture_catalog.h"
 #include "wang.h"
 
-void data::Tilemap::SV_SerializeChunk(Msg_S_TileChunk &tileChunk, uint32_t x, uint32_t y)
-{
-    strncpy(tileChunk.map_id, id.c_str(), SV_MAX_TILE_MAP_NAME_LEN);
-    tileChunk.x = x;
-    tileChunk.y = y;
-    tileChunk.w = MIN(width, SV_MAX_TILE_CHUNK_WIDTH);
-    tileChunk.h = MIN(height, SV_MAX_TILE_CHUNK_WIDTH);
-    for (uint32_t ty = y; ty < tileChunk.h; ty++) {
-        for (uint32_t tx = x; tx < tileChunk.w; tx++) {
-            AtTry(tx, ty, tileChunk.tile_ids[ty * tileChunk.w + tx]);
-        }
-    }
-}
-void data::Tilemap::CL_DeserializeChunk(Msg_S_TileChunk &tileChunk)
-{
-    if (id.compare(tileChunk.map_id) == 0) {
-        for (uint32_t ty = tileChunk.y; ty < tileChunk.w; ty++) {
-            for (uint32_t tx = tileChunk.x; tx < tileChunk.h; tx++) {
-                Set(tileChunk.x + tx, tileChunk.y + ty, tileChunk.tile_ids[ty * tileChunk.w + tx], 0);
-            }
-        }
-    } else {
-        printf("[tilemap] Failed to deserialize chunk with mapId %s into map with id %s\n", tileChunk.map_id, id.c_str());
-    }
-}
-
 uint32_t data::Tilemap::At(uint32_t x, uint32_t y)
 {
     assert(x < width);
@@ -82,9 +56,19 @@ void data::Tilemap::Set(uint32_t x, uint32_t y, uint32_t tile_id, double now)
 {
     assert(x < width);
     assert(y < height);
-    uint32_t &mapTile = tiles[(size_t)y * width + x];
-    if (mapTile != tile_id) {
-        mapTile = tile_id;
+    uint32_t &cur_tile_id = tiles[(size_t)y * width + x];
+    if (cur_tile_id != tile_id) {
+        cur_tile_id = tile_id;
+        chunkLastUpdatedAt = now;
+    }
+}
+void data::Tilemap::Set_Obj(uint32_t x, uint32_t y, uint32_t object_id, double now)
+{
+    assert(x < width);
+    assert(y < height);
+    uint32_t &cur_object_id = objects[(size_t)y * width + x];
+    if (cur_object_id != object_id) {
+        cur_object_id = object_id;
         chunkLastUpdatedAt = now;
     }
 }

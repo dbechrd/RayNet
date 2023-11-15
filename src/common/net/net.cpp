@@ -26,7 +26,7 @@ void InitClientServerConfig(yojimbo::ClientServerConfig &config)
     config.channel[CHANNEL_U_ENTITY_SNAPSHOT].type = yojimbo::CHANNEL_TYPE_UNRELIABLE_UNORDERED;
 
     config.channel[CHANNEL_R_CLOCK_SYNC].type = yojimbo::CHANNEL_TYPE_RELIABLE_ORDERED;
-    config.channel[CHANNEL_R_ENTITY_EVENT].type = yojimbo::CHANNEL_TYPE_UNRELIABLE_UNORDERED;
+    config.channel[CHANNEL_R_ENTITY_EVENT].type = yojimbo::CHANNEL_TYPE_RELIABLE_ORDERED;
     config.channel[CHANNEL_R_TILE_EVENT].type = yojimbo::CHANNEL_TYPE_RELIABLE_ORDERED;
 
     //config.bandwidthSmoothingFactor = CL_BANDWIDTH_SMOOTHING_FACTOR;

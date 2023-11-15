@@ -23,7 +23,7 @@
           2  2  2  2  2  2  2  2  2  2  3  3  2  2  2  2
     ]
     objects: [
-          0  0 18  0  0  0 16  0  0  0  0  0  0  0  0  1
+          4  0 18  0  0  0 16  0  0  0  0  0  0  0  0  1
           0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  1
          18  0  0  0  0  0  0  0  0  0  0  0  0  0  0  1
           0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  1
@@ -42,9 +42,11 @@
     ]
     object_data: [
         //x y type [type_data]
+        //    lever    powered tile_def_unpowered tile_def_powered
         //    lootable loot_table_id
         //    sign     "line 1" "line 2" "line 3" "line 4"
         //    warp     dest_map_id dest_x dest_y dest_z
+        { 0 0 lever 0 4 5 }
         { 6 0 lootable loot_basic }
         { 2 0 sign `I have heard that the` `[Sorcerer's Stone](# "A blue, glowing magical stone")` `is somewhere nearby` `this place. -Sign Painter` }
         { 0 2 sign "Kings of Leon" "Sex on Fire" "but you're in a" "bathroom at a party" }
