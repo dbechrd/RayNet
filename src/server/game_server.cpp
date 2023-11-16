@@ -416,8 +416,12 @@ void GameServer::SendTileUpdate(int clientIdx, data::Tilemap &map, uint32_t x, u
             strncpy(msg->map_id, map.id.c_str(), SV_MAX_TILE_MAP_NAME_LEN);
             msg->x = x;
             msg->y = y;
-            map.AtTry(x, y, msg->tile_id);
-            map.AtTry_Obj(x, y, msg->object_id);
+            uint32_t tile_id{};
+            uint32_t object_id{};
+            map.AtTry(x, y, tile_id);
+            map.AtTry_Obj(x, y, object_id);
+            msg->tile_id = (uint16_t)tile_id;
+            msg->object_id = (uint16_t)object_id;
             yj_server->SendMessage(clientIdx, CHANNEL_R_TILE_EVENT, msg);
         }
     }

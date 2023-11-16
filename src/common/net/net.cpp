@@ -21,6 +21,9 @@ const char *MsgTypeStr(MsgType type)
 
 void InitClientServerConfig(yojimbo::ClientServerConfig &config)
 {
+    //config.maxPacketSize = 20000;
+    //config.maxPacketFragments = 1 + config.maxPacketSize / config.fragmentPacketsAbove;
+
     config.numChannels = CHANNEL_COUNT;
     config.channel[CHANNEL_U_INPUT_COMMANDS].type = yojimbo::CHANNEL_TYPE_UNRELIABLE_UNORDERED;
     config.channel[CHANNEL_U_ENTITY_SNAPSHOT].type = yojimbo::CHANNEL_TYPE_UNRELIABLE_UNORDERED;
