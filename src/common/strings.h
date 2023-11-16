@@ -6,7 +6,7 @@ struct RNString {
 
     const std::string &str(void);
 
-    bool operator==(const RNString other) const
+    bool operator==(const RNString &other) const
     {
         return id == other.id;
     }
@@ -14,9 +14,9 @@ struct RNString {
     struct Hasher {
         const std::hash<uint16_t> hasher{};
 
-        std::size_t operator()(const RNString &k) const
+        std::size_t operator()(const RNString &str) const
         {
-            return hasher(k.id);
+            return hasher(str.id);
         }
     };
 };

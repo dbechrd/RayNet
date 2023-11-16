@@ -1244,6 +1244,10 @@ void GameServer::SendClientSnapshots(void)
         }
 #endif
 
+        for (const data::Tilemap::Coord &coord : map->dirtyTiles) {
+            SendTileUpdate(clientIdx, *map, coord.x, coord.y);
+        }
+
         // TODO: Send only the world state that's relevant to this particular client
         for (data::Entity &entity : entityDb->entities) {
             if (!entity.id || !entity.type) {
@@ -1279,6 +1283,10 @@ void GameServer::SendClientSnapshots(void)
                 }
             }
         }
+    }
+
+    for (data::Tilemap &map : data::packs[0]->tile_maps) {
+        map.dirtyTiles.clear();
     }
 }
 void GameServer::SendClockSync(void)

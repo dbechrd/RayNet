@@ -251,6 +251,25 @@ namespace data {
     };
 
     struct Tilemap {
+        struct Coord {
+            uint32_t x, y;
+
+            bool operator==(const Coord &other) const
+            {
+                return x == other.x && y == other.y;
+            }
+
+            struct Hasher {
+                std::size_t operator()(const Coord &coord) const
+                {
+                    size_t hash = 0;
+                    hash_combine(hash, coord.x, coord.y);
+                    return hash;
+                }
+            };
+        };
+        typedef std::unordered_set<Coord, Coord::Hasher> CoordSet;
+
         static const DataType dtype = DAT_TYP_TILE_MAP;
         static const uint32_t MAGIC = 0xDBBB9192;
         // v1: the OG
@@ -272,26 +291,23 @@ namespace data {
         std::string title            {};  // display name
         std::string background_music {};  // background music
 
-        std::vector<uint32_t>    tiles       {};
-        std::vector<uint32_t>    objects     {};
-        std::vector<ObjectData>  object_data {};
+        std::vector<uint32_t>   tiles       {};
+        std::vector<uint32_t>   objects     {};
         // TODO(dlb): Consider having vector<Warp>, vector<Lootable> etc. and having vector<ObjectData> be pointers/indices into those tables?
-        std::vector<AiPathNode>  pathNodes   {};  // 94 19 56 22 57
-        std::vector<AiPath>      paths       {};  // offset, length | 0, 3 | 3, 3
+        std::vector<ObjectData> object_data {};
+        std::vector<AiPathNode> pathNodes   {};  // 94 19 56 22 57
+        std::vector<AiPath>     paths       {};  // offset, length | 0, 3 | 3, 3
 
         //-------------------------------
         // Not serialized
         //-------------------------------
         //uint32_t net_id             {};  // for communicating efficiently w/ client about which map
-        double   chunkLastUpdatedAt {};  // used by server to know when chunks are dirty on clients
+        double     chunkLastUpdatedAt {};  // used by server to know when chunks are dirty on clients
+        CoordSet   dirtyTiles         {};  // tiles that have changed since last snapshot was sent
 
         //-------------------------------
         // Clean this section up
         //-------------------------------
-        struct Coord {
-            uint32_t x, y;
-        };
-
         // Tiles
         uint32_t At(uint32_t x, uint32_t y);
         uint32_t At_Obj(uint32_t x, uint32_t y);

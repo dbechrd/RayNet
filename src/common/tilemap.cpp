@@ -59,6 +59,7 @@ void data::Tilemap::Set(uint32_t x, uint32_t y, uint32_t tile_id, double now)
     uint32_t &cur_tile_id = tiles[(size_t)y * width + x];
     if (cur_tile_id != tile_id) {
         cur_tile_id = tile_id;
+        dirtyTiles.insert({ x, y });
         chunkLastUpdatedAt = now;
     }
 }
@@ -69,6 +70,7 @@ void data::Tilemap::Set_Obj(uint32_t x, uint32_t y, uint32_t object_id, double n
     uint32_t &cur_object_id = objects[(size_t)y * width + x];
     if (cur_object_id != object_id) {
         cur_object_id = object_id;
+        dirtyTiles.insert({ x, y });
         chunkLastUpdatedAt = now;
     }
 }
