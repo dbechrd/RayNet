@@ -41,7 +41,8 @@ const char *ErrStr(Err err)
 Err InitCommon(void)
 {
     Err err = RN_SUCCESS;
-    data::Init();
+    ERR_RETURN(data::Init());
+
     rnStringCatalog.Init();
     rnTextureCatalog.Init();
 
@@ -63,16 +64,16 @@ Err InitCommon(void)
 #endif
 
     fntTiny = dlb_LoadFontEx(fontName, 14, 0, 0, FONT_DEFAULT);
-    if (!fntTiny.baseSize) err = RN_RAYLIB_ERROR;
+    ERR_RETURN_EX(fntTiny.baseSize, RN_RAYLIB_ERROR);
 
     fntSmall = dlb_LoadFontEx(fontName, 18, 0, 0, FONT_DEFAULT);
-    if (!fntSmall.baseSize) err = RN_RAYLIB_ERROR;
+    ERR_RETURN_EX(fntSmall.baseSize, RN_RAYLIB_ERROR);
 
     fntMedium = dlb_LoadFontEx(fontName, 20, 0, 0, FONT_DEFAULT);
-    if (!fntMedium.baseSize) err = RN_RAYLIB_ERROR;
+    ERR_RETURN_EX(fntMedium.baseSize, RN_RAYLIB_ERROR);
 
     fntBig = dlb_LoadFontEx(fontName, 46, 0, 0, FONT_DEFAULT);
-    if (!fntBig.baseSize) err = RN_RAYLIB_ERROR;
+    ERR_RETURN_EX(fntBig.baseSize, RN_RAYLIB_ERROR);
     //SetTextureFilter(fntBig.texture, TEXTURE_FILTER_BILINEAR);    // Required for SDF font
 
     return err;
@@ -517,7 +518,7 @@ void dlb_DrawTexturePro(Texture2D texture, Rectangle source, Rectangle dest, Vec
 
 void dlb_DrawNPatch(Rectangle rec)
 {
-    const data::GfxFile &gfx_file = data::packs[0]->FindGraphic("gfx_dlg_npatch");
+    const data::GfxFile &gfx_file = data::packs[0].FindGraphic("gfx_dlg_npatch");
     NPatchInfo nPatch{};
     nPatch.source = { 0, 0, (float)gfx_file.texture.width, (float)gfx_file.texture.height };
     nPatch.left   = 16;

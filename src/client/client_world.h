@@ -68,6 +68,7 @@ struct ClientWorld {
     ClientWorld(void);
 
     data::Entity *LocalPlayer(void);
+    const std::string &LocalPlayerMapId(void);
     data::Tilemap *LocalPlayerMap(void);
     data::Tilemap *FindOrLoadMap(const std::string &map_id);
 
@@ -88,7 +89,7 @@ private:
     void UpdateMap(GameClient &client);
     void UpdateLocalPlayerHisto(GameClient &client, data::Entity &entity, HistoData &histoData);
     void UpdateLocalPlayer(GameClient &client, data::Entity &entity, data::AspectGhost &ghost);
-    void UpdateLocalGhost(GameClient &client, data::Entity &entity, data::AspectGhost &ghost, data::Tilemap *localPlayerMap);
+    void UpdateLocalGhost(GameClient &client, data::Entity &entity, data::AspectGhost &ghost, const std::string &player_map_id);
     void UpdateEntities(GameClient &client);
     void UpdateCamera(GameClient &client);
     void UpdateHUDSpinner(void);

@@ -145,6 +145,17 @@ enum Err {
     RN_PARSE_ERROR      = -12,
 };
 
+#define ERR_RETURN(expr) \
+    do { \
+        Err err = expr; \
+        if (err) return err; \
+    } while(0);
+
+#define ERR_RETURN_EX(expr, err) \
+    if (!(expr)) { \
+        return (err); \
+    }
+
 const char *ErrStr(Err err);
 
 // Dumb stuff that should get a resource manager or wutevs

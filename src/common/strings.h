@@ -4,7 +4,7 @@
 struct RNString {
     uint16_t id{};
 
-    const std::string &str(void);
+    const std::string &str(void) const;
 
     bool operator==(const RNString &other) const
     {

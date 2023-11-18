@@ -16,6 +16,14 @@ data::Entity *ClientWorld::LocalPlayer(void)
     data::Entity *localPlayer = entityDb->FindEntity(localPlayerEntityId, data::ENTITY_PLAYER);
     return localPlayer;
 }
+const std::string &ClientWorld::LocalPlayerMapId(void)
+{
+    data::Entity *localPlayer = LocalPlayer();
+    if (localPlayer && !localPlayer->map_id.empty()) {
+        return localPlayer->map_id;
+    }
+    return rnStringNull.str();
+}
 data::Tilemap *ClientWorld::LocalPlayerMap(void)
 {
     data::Entity *localPlayer = LocalPlayer();
@@ -26,7 +34,7 @@ data::Tilemap *ClientWorld::LocalPlayerMap(void)
 }
 data::Tilemap *ClientWorld::FindOrLoadMap(const std::string &map_id)
 {
-    data::Tilemap &map = data::packs[0]->FindTilemap(map_id);
+    data::Tilemap &map = data::packs[1].FindTilemap(map_id);
     return &map;
 }
 
@@ -173,7 +181,7 @@ void ClientWorld::UpdateLocalPlayer(GameClient &client, data::Entity &entity, da
     histoData.cmdAccumForce = cmdAccumForce;
     UpdateLocalPlayerHisto(client, entity, histoData);
 }
-void ClientWorld::UpdateLocalGhost(GameClient &client, data::Entity &entity, data::AspectGhost &ghost, data::Tilemap *localPlayerMap)
+void ClientWorld::UpdateLocalGhost(GameClient &client, data::Entity &entity, data::AspectGhost &ghost, const std::string &player_map_id)
 {
     // TODO(dlb): Find snapshots nearest to (GetTime() - clientTimeDeltaVsServer)
     const double renderAt = client.ServerNow() - SV_TICK_DT;
@@ -206,7 +214,7 @@ void ClientWorld::UpdateLocalGhost(GameClient &client, data::Entity &entity, dat
 
     ApplyStateInterpolated(entity, *snapshotA, *snapshotB, alpha, client.frameDt);
 
-    if (localPlayerMap && entity.map_id == localPlayerMap->id) {
+    if (entity.map_id == player_map_id) {
         const Vector2 cursorWorldPos = GetScreenToWorld2D(GetMousePosition(), camera);
         bool hover = dlb_CheckCollisionPointRec(cursorWorldPos, entityDb->EntityRect(entity.id));
         if (hover) {
@@ -238,7 +246,7 @@ void ClientWorld::UpdateEntities(GameClient &client)
     hoveredEntityId = 0;
     hoveredEntityInRange = false;
 
-    data::Tilemap *localPlayerMap = LocalPlayerMap();
+    const std::string &player_map_id = LocalPlayerMapId();
 
     data::Entity *e_player = entityDb->FindEntity(localPlayerEntityId, data::ENTITY_PLAYER);
     if (!e_player) {
@@ -258,7 +266,7 @@ void ClientWorld::UpdateEntities(GameClient &client)
         if (entity.id == localPlayerEntityId) {
             UpdateLocalPlayer(client, entity, ghost);
         } else {
-            UpdateLocalGhost(client, entity, ghost, localPlayerMap);
+            UpdateLocalGhost(client, entity, ghost, player_map_id);
         }
 
         bool newlySpawned = entity.spawned_at == client.now;
@@ -331,7 +339,8 @@ void ClientWorld::UpdateCamera(GameClient &client)
     if (new_map) {
         warpFadeInStartedAt = client.now;
 
-        data::Tilemap &map = data::packs[0]->FindTilemap(target.map_id);
+        // TODO: Send SHOW_TITLE message from server during warp
+        data::Tilemap &map = data::packs[1].FindTilemap(target.map_id);
         if (map.title.size()) {
             titleText = map.title;
         } else {
@@ -520,7 +529,7 @@ void ClientWorld::DrawHoveredObjectIndicator(GameClient &client, data::Tilemap &
         map.AtTry_Obj(client.controller.tile_x, client.controller.tile_y, object_id);
         if (object_id) {
             const data::GfxFrame &gfx_frame = map.GetTileGfxFrame(object_id);
-            const data::GfxFile &gfx_file = data::packs[0]->FindGraphic(gfx_frame.gfx);
+            const data::GfxFile &gfx_file = data::packs[0].FindGraphic(gfx_frame.gfx);
             const Rectangle texRect{ (float)gfx_frame.x, (float)gfx_frame.y, (float)gfx_frame.w, (float)gfx_frame.h };
 
             Vector2 texAspect{ 1.0f, 1.0f };

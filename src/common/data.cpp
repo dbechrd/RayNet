@@ -13,7 +13,7 @@ namespace data {
     };
 
     Texture placeholderTex{};
-    std::vector<Pack *> packs{};
+    std::vector<Pack> packs{};
     GameState game_state{};
 
     GhostSnapshot::GhostSnapshot(Msg_S_EntitySnapshot &msg)
@@ -694,61 +694,42 @@ namespace data {
 
     Err LoadResources(Pack &pack);
 
-    void Init(void)
+    Err Init(void)
     {
         Err err = RN_SUCCESS;
 
         //GenPlaceholderTexture();
 
 #if DEV_BUILD_PACK_FILE
-        Pack packHardcoded{ "pack/pack1.dat" };
+        {
+            Pack packAssets{ "pack/assets.dat" };
+            Pack packMaps{ "pack/maps.dat" };
 
-        // Reserve slot 0 in all resource arrays for a placeholder asset
-        //gfx_files.emplace_back();
-        //mus_files.emplace_back();
-        //sfx_files.emplace_back();
-        //gfx_frames.emplace_back();
-        //gfx_anims.emplace_back();
-        //materials.emplace_back();
-        //sprites.emplace_back();
-        //tile_defs.emplace_back();
-        //packHardcoded.tile_maps.emplace_back();
-        //packHardcoded.entities.emplace_back();
+            PackAddMeta(packAssets, "resources/meta/overworld.mdesk");
+            PackAddMeta(packMaps, "resources/map/map_overworld.mdesk");
+            PackAddMeta(packMaps, "resources/map/map_cave.mdesk");
+            //PackDebugPrint(packAssets);
+            //PackDebugPrint(packMaps);
 
-        PackAddMeta(packHardcoded, "resources/map/map_overworld.mdesk");
-        PackAddMeta(packHardcoded, "resources/map/map_cave.mdesk");
-        PackAddMeta(packHardcoded, "resources/meta/overworld.mdesk");
-        //PackDebugPrint(packHardcoded);
+            // If you want the big buffers in your pack, call this!
+            LoadResources(packAssets);
+            LoadResources(packMaps);
 
-        //LoadResources(packHardcoded);
-        err = SavePack(packHardcoded, PACK_TYPE_BINARY);
-        if (err) {
-            assert(!err);
-            TraceLog(LOG_ERROR, "Failed to save data file.\n");
+            ERR_RETURN(SavePack(packAssets, PACK_TYPE_BINARY));
+            ERR_RETURN(SavePack(packMaps, PACK_TYPE_BINARY));
         }
 #endif
 
-        Pack *pack1 = new Pack{ "pack/pack1.dat" };
-        packs.push_back(pack1);
+        packs.emplace_back("pack/assets.dat");
+        packs.emplace_back("pack/maps.dat");
 
-        err = LoadPack(*pack1, PACK_TYPE_BINARY);
-        if (err) {
-            assert(!err);
-            TraceLog(LOG_ERROR, "Failed to load data file.\n");
+        for (Pack &pack : packs) {
+            ERR_RETURN(LoadPack(pack, PACK_TYPE_BINARY));
         }
 
 #if 0
-        // Doesn't really work.. probably don't need it tbh
-        packHardcoded.path = "pack/pack1.txt";
-        err = SavePack(packHardcoded, PACK_TYPE_TEXT);
-        if (err) {
-            assert(!err);
-            TraceLog(LOG_ERROR, "Failed to save data file as text.\n");
-        }
-#endif
-
-#if 0
-        CompressFile("pack/pack1.dat", "pack/pack1.smol");
+        CompressFile("pack/assets.dat", "pack/assets.smol");
+        CompressFile("pack/maps.dat", "pack/maps.smol");
 #endif
 
         // TODO: Pack these too
@@ -758,6 +739,8 @@ namespace data {
         LoadDialogFile("resources/dialog/elane.md");
 
         dialog_library.RegisterListener("DIALOG_FREYE_INTRO", FreyeIntroListener);
+
+        return err;
     }
     void Free(void)
     {
@@ -1272,6 +1255,11 @@ namespace data {
         err = Process(stream);
 
         fclose(stream.file);
+
+        if (err) {
+            assert(!err);
+            TraceLog(LOG_ERROR, "Failed to save pack file.\n");
+        }
         return err;
     }
 
@@ -1360,7 +1348,13 @@ namespace data {
             if (err) break;
         } while(0);
 
-        if (stream.file) fclose(stream.file);
+        if (stream.file) {
+            fclose(stream.file);
+        }
+
+        if (err) {
+            TraceLog(LOG_ERROR, "Failed to load data file.\n");
+        }
         return err;
     }
     void UnloadPack(Pack &pack)
@@ -1385,7 +1379,7 @@ namespace data {
 
     void PlaySound(const std::string &id, float pitchVariance)
     {
-        const SfxFile &sfx_file = packs[0]->FindSoundVariant(id);
+        const SfxFile &sfx_file = packs[0].FindSoundVariant(id);
         assert(sfx_file.instances.size() == sfx_file.max_instances);
 
         //printf("updatesprite playsound %s (multi = %d)\n", sfx_file.path.c_str(), sfx_file.multi);
@@ -1401,7 +1395,7 @@ namespace data {
     bool IsSoundPlaying(const std::string &id)
     {
         // TODO: Does this work still with SoundAlias stuff?
-        const SfxFile &sfx_file = packs[0]->FindSoundVariant(id);
+        const SfxFile &sfx_file = packs[0].FindSoundVariant(id);
         assert(sfx_file.instances.size() == sfx_file.max_instances);
 
         bool playing = false;
@@ -1413,7 +1407,7 @@ namespace data {
     }
     void StopSound(const std::string &id)
     {
-        const SfxFile &sfx_file = packs[0]->FindSoundVariant(id);
+        const SfxFile &sfx_file = packs[0].FindSoundVariant(id);
         assert(sfx_file.instances.size() == sfx_file.max_instances);
 
         for (int i = 0; i < sfx_file.max_instances; i++) {
@@ -1437,11 +1431,11 @@ namespace data {
 
     const GfxFrame &GetSpriteFrame(const Entity &entity)
     {
-        const Sprite &sprite = packs[0]->FindSprite(entity.sprite);
+        const Sprite &sprite = packs[0].FindSprite(entity.sprite);
         const std::string &anim_id = sprite.anims[entity.direction];
-        const GfxAnim &anim = packs[0]->FindGraphicAnim(anim_id);
+        const GfxAnim &anim = packs[0].FindGraphicAnim(anim_id);
         const std::string &frame_id = anim.GetFrame(entity.anim_state.frame);
-        const GfxFrame &frame = packs[0]->FindGraphicFrame(frame_id);
+        const GfxFrame &frame = packs[0].FindGraphicFrame(frame_id);
         return frame;
     }
     Rectangle GetSpriteRect(const Entity &entity)
@@ -1471,19 +1465,19 @@ namespace data {
             }
         }
 
-        const Sprite &sprite = packs[0]->FindSprite(entity.sprite);
-        const GfxAnim &anim = packs[0]->FindGraphicAnim(sprite.anims[entity.direction]);
+        const Sprite &sprite = packs[0].FindSprite(entity.sprite);
+        const GfxAnim &anim = packs[0].FindGraphicAnim(sprite.anims[entity.direction]);
         UpdateGfxAnim(anim, dt, entity.anim_state);
 
         if (newlySpawned && anim.sound != "null") {
-            const SfxFile &sfx_file = packs[0]->FindSoundVariant(anim.sound);
+            const SfxFile &sfx_file = packs[0].FindSoundVariant(anim.sound);
             PlaySound(sfx_file.id);
         }
     }
     void ResetSprite(Entity &entity)
     {
-        const Sprite &sprite = packs[0]->FindSprite(entity.sprite);
-        GfxAnim &anim = packs[0]->FindGraphicAnim(sprite.anims[entity.direction]);
+        const Sprite &sprite = packs[0].FindSprite(entity.sprite);
+        GfxAnim &anim = packs[0].FindGraphicAnim(sprite.anims[entity.direction]);
         StopSound(anim.sound);
 
         entity.anim_state.frame = 0;
@@ -1492,7 +1486,7 @@ namespace data {
     void DrawSprite(const Entity &entity, data::DrawCmdQueue *sortedDraws, bool highlight)
     {
         const GfxFrame &frame = GetSpriteFrame(entity);
-        const GfxFile &gfx_file = packs[0]->FindGraphic(frame.gfx);
+        const GfxFile &gfx_file = packs[0].FindGraphic(frame.gfx);
 
         Rectangle sprite_rect = GetSpriteRect(entity);
         Vector3 pos = { sprite_rect.x, sprite_rect.y };
@@ -1527,8 +1521,8 @@ namespace data {
 
     void UpdateTileDefAnimations(double dt)
     {
-        for (TileDef &tile_def : data::packs[0]->tile_defs) {
-            const GfxAnim &anim = packs[0]->FindGraphicAnim(tile_def.anim);
+        for (TileDef &tile_def : data::packs[0].tile_defs) {
+            const GfxAnim &anim = packs[0].FindGraphicAnim(tile_def.anim);
             data::UpdateGfxAnim(anim, dt, tile_def.anim_state);
         }
     }

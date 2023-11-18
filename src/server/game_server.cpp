@@ -176,7 +176,7 @@ data::Tilemap *GameServer::FindOrLoadMap(const std::string &map_id)
 {
 #if 1
     // TODO: Go back to assuming it's not already loaded once we figure out packs
-    data::Tilemap &map = data::packs[0]->FindTilemap(map_id);
+    data::Tilemap &map = data::packs[1].FindTilemap(map_id);
     if (!map.id.empty()) {
         return &map;
     } else {
@@ -219,7 +219,7 @@ data::Tilemap *GameServer::FindOrLoadMap(const std::string &map_id)
 data::Tilemap *GameServer::FindMap(const std::string &map_id)
 {
     // TODO: Remove this alias and call data::* directly?
-    auto &tile_map = data::packs[0]->FindTilemap(map_id);
+    auto &tile_map = data::packs[1].FindTilemap(map_id);
     return &tile_map;
 }
 
@@ -638,7 +638,7 @@ void GameServer::ProcessMsg(int clientIdx, Msg_C_TileInteract &msg)
         }
 
         if (new_tile_def_name) {
-            const data::TileDef &new_tile_def = data::packs[0]->FindTileDefByName(new_tile_def_name);
+            const data::TileDef &new_tile_def = data::packs[0].FindTileDefByName(new_tile_def_name);
             // TODO(perf): Make some kind of map from string -> tile_def_index in the map?
             // * OR * make the maps all have global tile def ids instead of local tile def ids
             if (new_tile_def.id) {
@@ -1289,7 +1289,7 @@ void GameServer::SendClientSnapshots(void)
         }
     }
 
-    for (data::Tilemap &map : data::packs[0]->tile_maps) {
+    for (data::Tilemap &map : data::packs[0].tile_maps) {
         map.dirtyTiles.clear();
     }
 }

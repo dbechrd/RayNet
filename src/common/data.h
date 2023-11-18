@@ -776,12 +776,12 @@ namespace data {
         };
     };
 
-    extern std::vector<Pack *> packs;
+    extern std::vector<Pack> packs;
 
     void ReadFileIntoDataBuffer(const std::string &filename, DatBuffer &datBuffer);
     void FreeDataBuffer(DatBuffer &datBuffer);
 
-    void Init(void);
+    Err Init(void);
     void Free(void);
 
     Err SavePack(Pack &pack, PackStreamType type);

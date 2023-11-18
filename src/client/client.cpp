@@ -198,11 +198,11 @@ int main(int argc, char *argv[])
         client->netTickAccum += client->frameDt;
         bool doNetTick = client->netTickAccum >= SV_TICK_DT;
 
-        // TODO: Move this somewhere in client?
+        // TODO: Send PLAY_BACKGROUND_MUSIC from server???
         if (client->yj_client->IsConnected()) {
             data::Tilemap *map = client->world->LocalPlayerMap();
             if (map) {
-                const data::MusFile &mus_file = data::packs[0]->FindMusic(map->background_music);
+                const data::MusFile &mus_file = data::packs[0].FindMusic(map->background_music);
                 if (!IsMusicStreamPlaying(mus_file.music)) {
                     PlayMusicStream(mus_file.music);
                 }

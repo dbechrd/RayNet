@@ -5,7 +5,7 @@ const std::string &StringCatalog::strNull = "<null>";
 const RNString &rnStringNull = { STR_NULL };
 StringCatalog rnStringCatalog;
 
-const std::string &RNString::str(void)
+const std::string &RNString::str(void) const
 {
     return rnStringCatalog.Find(*this);
 }

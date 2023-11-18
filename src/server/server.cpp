@@ -250,7 +250,7 @@ Err Play(GameServer &server)
 
             // Editor/graphical stuff
             data::UpdateTileDefAnimations(accum);
-            //auto &editor_map = data::packs[0]->FindTilemap(editor.map_id);
+            //auto &editor_map = data::packs[1].FindTilemap(editor.map_id);
             //editor_map.UpdateAnimations(accum);
         }
 
@@ -259,7 +259,7 @@ Err Play(GameServer &server)
         BeginDrawing();
             ClearBackground(BLUE_DESAT);
             BeginMode2D(camera);
-                auto &editor_map = data::packs[0]->FindTilemap(editor.map_id);
+                auto &editor_map = data::packs[1].FindTilemap(editor.map_id);
 
                 data::DrawCmdQueue sortedDraws{};
 
@@ -317,7 +317,7 @@ int main(int argc, char *argv[])
     GameServer *server{};
 
     do {
-        //SetTraceLogLevel(LOG_WARNING);
+        SetTraceLogLevel(LOG_WARNING);
         SetTraceLogCallback(RN_TraceLogCallback);
 
         InitWindow(1920, 1017, "RayNet Server");
