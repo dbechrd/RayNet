@@ -1,6 +1,5 @@
 #include "common.h"
 #include "data.h"
-#include "texture_catalog.h"
 
 #define RAYMATH_IMPLEMENTATION
 #include "raylib/raymath.h"
@@ -40,11 +39,12 @@ const char *ErrStr(Err err)
 // TODO: LoadPack placeholder textures/sounds etc. if fail
 Err InitCommon(void)
 {
+    PerfTimer t{ "InitCommon" };
+
     Err err = RN_SUCCESS;
     ERR_RETURN(data::Init());
 
     rnStringCatalog.Init();
-    rnTextureCatalog.Init();
 
     // LoadPack SDF required shader (we use default vertex shader)
     shdSdfText = LoadShader(0, "resources/shader/sdf.fs");
@@ -85,7 +85,6 @@ void FreeCommon(void)
     UnloadFont(fntSmall);
     UnloadFont(fntMedium);
     UnloadFont(fntBig);
-    rnTextureCatalog.Free();
     data::Free();
 }
 
@@ -719,8 +718,8 @@ void dlb_CommonTests(void)
 #include "histogram.cpp"
 #include "io.cpp"
 #include "net/net.cpp"
+#include "perf_timer.cpp"
 #include "strings.cpp"
-#include "texture_catalog.cpp"
 #include "tilemap.cpp"
 #include "ui/ui.cpp"
 #include "uid.cpp"

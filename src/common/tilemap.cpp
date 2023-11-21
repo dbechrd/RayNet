@@ -2,7 +2,6 @@
 #include "data.h"
 #include "file_utils.h"
 #include "net/net.h"
-#include "texture_catalog.h"
 #include "wang.h"
 
 uint32_t data::Tilemap::At(uint32_t x, uint32_t y)

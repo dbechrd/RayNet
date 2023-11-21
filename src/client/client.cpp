@@ -3,6 +3,7 @@
 #include "../common/data.h"
 #include "../common/histogram.h"
 #include "../common/io.h"
+#include "../common/perf_timer.h"
 #include "../common/ui/ui.h"
 #include "client_world.h"
 #include "game_client.h"
@@ -125,20 +126,27 @@ int main(int argc, char *argv[])
 #endif
 
     Err err = RN_SUCCESS;
+    PerfTimer t{ "Client" };
 
-    //SetTraceLogLevel(LOG_WARNING);
+    SetTraceLogLevel(LOG_WARNING);
 
-    InitWindow(1920, 1017, "RayNet Client");
-    SetWindowState(FLAG_WINDOW_RESIZABLE);
-    //SetWindowState(FLAG_BORDERLESS_WINDOWED_MODE);
-    SetWindowState(FLAG_VSYNC_HINT);  // Gahhhhhh Windows sucks at this
-    //SetWindowState(FLAG_FULLSCREEN_MODE);
-    SetExitKey(0);  // must be called after InitWindow()
+    {
+        PerfTimer t{ "InitWindow" };
+        InitWindow(1920, 1017, "RayNet Client");
+        SetWindowState(FLAG_WINDOW_RESIZABLE);
+        //SetWindowState(FLAG_BORDERLESS_WINDOWED_MODE);
+        SetWindowState(FLAG_VSYNC_HINT);  // Gahhhhhh Windows sucks at this
+        //SetWindowState(FLAG_FULLSCREEN_MODE);
+        SetExitKey(0);  // must be called after InitWindow()
 
-    DrawBootScreen();
+        DrawBootScreen();
+    }
 
-    InitAudioDevice();
-    SetMasterVolume(1.0f);
+    {
+        PerfTimer t{ "InitAudioDevice" };
+        InitAudioDevice();
+        SetMasterVolume(1.0f);
+    }
 
     // NOTE(dlb): yojimbo uses rand() for network simulator and random_int()/random_float()
     srand((unsigned int)GetTime());

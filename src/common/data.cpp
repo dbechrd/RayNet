@@ -1,6 +1,7 @@
 #include "data.h"
 #include "file_utils.h"
 #include "net/net.h"
+#include "perf_timer.h"
 #define MD_HIJACK_STRING_CONSTANTS 0
 #include "md.h"
 #include <sstream>
@@ -96,6 +97,12 @@ namespace data {
             if (ferror(file)) {
                 err = RN_BAD_FILE_WRITE; break;
             }
+
+            // assets.txt
+            // assets.txt -> assets.bin
+            // assets.bin -> C++ objects
+            // C++ objects -> assets.bin
+            // assets.bin -> asset.txt
 
             fprintf(file, "@Tilemap %s: {\n", tilemap.id.c_str());
             fprintf(file, "    version: %u\n", tilemap.version);
@@ -702,18 +709,23 @@ namespace data {
 
 #if DEV_BUILD_PACK_FILE
         {
+            PerfTimer t{ "Build pack files" };
             Pack packAssets{ "pack/assets.dat" };
             Pack packMaps{ "pack/maps.dat" };
 
-            PackAddMeta(packAssets, "resources/meta/overworld.mdesk");
-            PackAddMeta(packMaps, "resources/map/map_overworld.mdesk");
-            PackAddMeta(packMaps, "resources/map/map_cave.mdesk");
+            {
+                PerfTimer t{ "Parse mdesk" };
+                PackAddMeta(packAssets, "resources/meta/overworld.mdesk");
+                PackAddMeta(packMaps, "resources/map/map_overworld.mdesk");
+                PackAddMeta(packMaps, "resources/map/map_cave.mdesk");
+            }
+
             //PackDebugPrint(packAssets);
             //PackDebugPrint(packMaps);
 
             // If you want the big buffers in your pack, call this!
-            LoadResources(packAssets);
-            LoadResources(packMaps);
+            //LoadResources(packAssets);
+            //LoadResources(packMaps);
 
             ERR_RETURN(SavePack(packAssets, PACK_TYPE_BINARY));
             ERR_RETURN(SavePack(packMaps, PACK_TYPE_BINARY));
@@ -825,7 +837,7 @@ namespace data {
         PROC(gfx_file.path);
         PROC(gfx_file.data_buffer);
         if (stream.mode == PACK_MODE_READ && !gfx_file.data_buffer.length && !gfx_file.path.empty()) {
-            ReadFileIntoDataBuffer(gfx_file.path.c_str(), gfx_file.data_buffer);
+            //ReadFileIntoDataBuffer(gfx_file.path.c_str(), gfx_file.data_buffer);
         }
 
         if (stream.mode == PACK_MODE_READ) {
@@ -839,7 +851,7 @@ namespace data {
         PROC(mus_file.data_buffer);
         if (stream.mode == PACK_MODE_READ && !mus_file.data_buffer.length && !mus_file.path.empty()) {
             // TODO(dlb): Music is streaming, don't read whole file into memory
-            ReadFileIntoDataBuffer(mus_file.path.c_str(), mus_file.data_buffer);
+            //ReadFileIntoDataBuffer(mus_file.path.c_str(), mus_file.data_buffer);
         }
 
         if (stream.mode == PACK_MODE_READ) {
@@ -1239,6 +1251,7 @@ namespace data {
 
     Err SavePack(Pack &pack, PackStreamType type)
     {
+        PerfTimer t{ TextFormat("Save pack %s", pack.path.c_str()) };
         Err err = RN_SUCCESS;
 #if 0
         if (FileExists(pack.path.c_str())) {
@@ -1252,7 +1265,10 @@ namespace data {
         }
 
         PackStream stream{ &pack, file, PACK_MODE_WRITE, type };
-        err = Process(stream);
+        {
+            PerfTimer t{ "Process" };
+            err = Process(stream);
+        }
 
         fclose(stream.file);
 
@@ -1292,22 +1308,31 @@ namespace data {
         }
 #endif
 
-        for (GfxFile &gfx_file : pack.gfx_files) {
-            if (gfx_file.path.empty()) continue;
-            gfx_file.texture = LoadTexture(gfx_file.path.c_str());
-            SetTextureFilter(gfx_file.texture, TEXTURE_FILTER_POINT);
+        {
+            PerfTimer t{ "Load graphics" };
+            for (GfxFile &gfx_file : pack.gfx_files) {
+                if (gfx_file.path.empty()) continue;
+                gfx_file.texture = LoadTexture(gfx_file.path.c_str());
+                SetTextureFilter(gfx_file.texture, TEXTURE_FILTER_POINT);
+            }
         }
-        for (MusFile &mus_file : pack.mus_files) {
-            if (mus_file.path.empty()) continue;
-            mus_file.music = LoadMusicStream(mus_file.path.c_str());
+        {
+            PerfTimer t{ "Load music" };
+            for (MusFile &mus_file : pack.mus_files) {
+                if (mus_file.path.empty()) continue;
+                mus_file.music = LoadMusicStream(mus_file.path.c_str());
+            }
         }
-        for (SfxFile &sfx_file : pack.sfx_files) {
-            if (sfx_file.path.empty()) continue;
-            sfx_file.sound = LoadSound(sfx_file.path.c_str());
-            if (sfx_file.sound.frameCount) {
-                sfx_file.instances.resize(sfx_file.max_instances);
-                for (int i = 0; i < sfx_file.max_instances; i++) {
-                    sfx_file.instances[i] = LoadSoundAlias(sfx_file.sound);
+        {
+            PerfTimer t{ "Load sounds" };
+            for (SfxFile &sfx_file : pack.sfx_files) {
+                if (sfx_file.path.empty()) continue;
+                sfx_file.sound = LoadSound(sfx_file.path.c_str());
+                if (sfx_file.sound.frameCount) {
+                    sfx_file.instances.resize(sfx_file.max_instances);
+                    for (int i = 0; i < sfx_file.max_instances; i++) {
+                        sfx_file.instances[i] = LoadSoundAlias(sfx_file.sound);
+                    }
                 }
             }
         }
@@ -1332,6 +1357,7 @@ namespace data {
     }
     Err LoadPack(Pack &pack, PackStreamType type)
     {
+        PerfTimer t{ TextFormat("Load pack %s", pack.path.c_str()) };
         Err err = RN_SUCCESS;
 
         FILE *file = fopen(pack.path.c_str(), type == PACK_TYPE_BINARY ? "rb" : "r");
@@ -1341,10 +1367,16 @@ namespace data {
 
         PackStream stream{ &pack, file, PACK_MODE_READ, type };
         do {
-            err = Process(stream);
+            {
+                PerfTimer t{ "Process" };
+                err = Process(stream);
+            }
             if (err) break;
 
-            err = LoadResources(*stream.pack);
+            {
+                PerfTimer t{ "LoadResources" };
+                err = LoadResources(*stream.pack);
+            }
             if (err) break;
         } while(0);
 

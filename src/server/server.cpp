@@ -2,6 +2,7 @@
 #include "../common/collision.h"
 #include "../common/histogram.h"
 #include "../common/io.h"
+#include "../common/perf_timer.h"
 #include "../common/ui/ui.h"
 #include "editor.h"
 #include "game_server.h"
@@ -313,6 +314,7 @@ int main(int argc, char *argv[])
 //int __stdcall WinMain(void *hInstance, void *hPrevInstance, char *pCmdLine, int nCmdShow)
 {
     Err err = RN_SUCCESS;
+    PerfTimer t{ "Server" };
 
     GameServer *server{};
 
@@ -320,16 +322,22 @@ int main(int argc, char *argv[])
         SetTraceLogLevel(LOG_WARNING);
         SetTraceLogCallback(RN_TraceLogCallback);
 
-        InitWindow(1920, 1017, "RayNet Server");
-        //SetWindowState(FLAG_VSYNC_HINT);  // KEEP THIS ENABLED it makes the room cooler
-        SetWindowState(FLAG_WINDOW_RESIZABLE);
-        SetWindowState(FLAG_WINDOW_MAXIMIZED);
-        SetExitKey(0);  // must be called after InitWindow()
+        {
+            PerfTimer t{ "InitWindow" };
+            InitWindow(1920, 1017, "RayNet Server");
+            //SetWindowState(FLAG_VSYNC_HINT);  // KEEP THIS ENABLED it makes the room cooler
+            SetWindowState(FLAG_WINDOW_RESIZABLE);
+            SetWindowState(FLAG_WINDOW_MAXIMIZED);
+            SetExitKey(0);  // must be called after InitWindow()
 
-        DrawBootScreen();
+            DrawBootScreen();
+        }
 
-        InitAudioDevice();
-        SetMasterVolume(0);
+        {
+            PerfTimer t{ "InitAudioDevice" };
+            InitAudioDevice();
+            SetMasterVolume(0);
+        }
 
         // NOTE(dlb): yojimbo uses rand() for network simulator and random_int()/random_float()
         srand((unsigned int)GetTime());

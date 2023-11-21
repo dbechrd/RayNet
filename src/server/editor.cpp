@@ -3,7 +3,6 @@
 #include "../common/data.h"
 #include "../common/entity_db.h"
 #include "../common/io.h"
-#include "../common/texture_catalog.h"
 #include "../common/ui/ui.h"
 #include "../common/uid.h"
 #include "editor.h"
