@@ -681,11 +681,11 @@ namespace data {
     }
 #endif
 
-    void CompressFile(const char *src, const char *dst)
+    void CompressFile(const char *srcFileName, const char *dstFileName)
     {
         DatBuffer raw{};
         int bytesRead = 0;
-        raw.bytes = LoadFileData(src, &bytesRead);
+        raw.bytes = LoadFileData(srcFileName, &bytesRead);
         raw.length = bytesRead;
 
         DatBuffer compressed{};
@@ -693,7 +693,7 @@ namespace data {
         compressed.bytes = CompressData(raw.bytes, raw.length, &compressedSize);
         compressed.length = compressedSize;
 
-        SaveFileData(dst, compressed.bytes, compressed.length);
+        SaveFileData(dstFileName, compressed.bytes, compressed.length);
 
         MemFree(raw.bytes);
         MemFree(compressed.bytes);

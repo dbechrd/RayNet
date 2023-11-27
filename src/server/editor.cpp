@@ -260,7 +260,7 @@ void Editor::DrawEntityOverlays(Camera2D &camera, double now)
     auto &map = data::packs[1].FindTilemap(map_id);
     if (selectedEntity && selectedEntity->map_id == map.id) {
         DrawTextEx(fntSmall, TextFormat("[selected in editor]\n%u", selectedEntity->id),
-            selectedEntity->ScreenPos(), fntSmall.baseSize / camera.zoom, 1 / camera.zoom, WHITE);
+            selectedEntity->Position2D(), fntSmall.baseSize / camera.zoom, 1 / camera.zoom, WHITE);
     }
 
     if (state.showEntityIds) {
@@ -335,6 +335,19 @@ void Editor::DrawEntityOverlay_Collision(Camera2D &camera, double now)
                     entity.radius,
                     entity.colliding ? Fade(RED, 0.5) : Fade(LIME, 0.5)
                 );
+
+#if 1
+                for (data::Collision &collision : entity.collisions) {
+                    DrawLineEx(
+                        {collision.manifold.contact.x,
+                        collision.manifold.contact.y},
+                        {collision.manifold.contact.x + collision.manifold.normal.x * collision.manifold.depth,
+                        collision.manifold.contact.y + collision.manifold.normal.y * collision.manifold.depth},
+                        1.0f,
+                        collision.col
+                    );
+                }
+#endif
             }
         }
 
@@ -644,7 +657,7 @@ UIState Editor::DrawUI_ActionBar(Vector2 position, GameServer &server, double no
 }
 void Editor::DrawUI_MapActions(UI &uiActionBar, GameServer &server, double now)
 {
-    for (const data::Tilemap &map : data::packs[0].tile_maps) {
+    for (const data::Tilemap &map : data::packs[1].tile_maps) {
         if (uiActionBar.Button(TextFormat("%s", map.id.c_str())).pressed) {
             map_id = map.id;
         }

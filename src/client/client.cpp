@@ -293,7 +293,7 @@ int main(int argc, char *argv[])
                 // TODO: Update facing direction elsewhere, then just get localPlayer.facing here?
                 Camera2D& camera = client->world->camera;
                 Vector2 cursorWorldPos = GetScreenToWorld2D(GetMousePosition(), camera);
-                Vector2 facing = Vector2Subtract(cursorWorldPos, localPlayer->ScreenPos());
+                Vector2 facing = Vector2Subtract(cursorWorldPos, localPlayer->Position2D());
                 facing = Vector2Normalize(facing);
 
                 Controller &controller = client->controller;
@@ -412,6 +412,25 @@ int main(int argc, char *argv[])
             if (client->showF3Menu) {
                 draw_f3_menu(*client);
             }
+
+#if _DEBUG
+            // Debug collision nonsense
+            float radius = 16.0f;
+            Vector2 center = Vector2Subtract(GetMousePosition(), { 64, 64 });
+
+            Rectangle r{ 100, 100, 64, 64 };
+            Manifold manifold{};
+
+            Color col = DARKGRAY;
+
+            if (dlb_CheckCollisionCircleRec(center, radius, r, &manifold)) {
+                col = MAROON;
+            }
+
+            DrawCircle(center.x, center.y, radius, DARKGRAY);
+            DrawRectangleLinesEx(r, 1, col);
+            DrawLineEx(manifold.contact, Vector2Add(manifold.contact, Vector2Scale(manifold.normal, manifold.depth)), 1, GREEN);
+#endif
         EndDrawing();
 
         if (!IsWindowState(FLAG_VSYNC_HINT)) {

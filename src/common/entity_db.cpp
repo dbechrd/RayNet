@@ -176,7 +176,7 @@ void EntityDB::DrawEntityIds(uint32_t entityId, Camera2D &camera)
     if (entity) {
         assert(entity->id == entityId);
         assert(entity->type);
-        DrawTextEx(fntSmall, TextFormat("%u", entity->id), entity->ScreenPos(),
+        DrawTextEx(fntSmall, TextFormat("%u", entity->id), entity->Position2D(),
             fntSmall.baseSize / camera.zoom, 1 / camera.zoom, WHITE);
     }
 }

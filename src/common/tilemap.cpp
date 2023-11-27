@@ -206,7 +206,19 @@ void data::Tilemap::ResolveEntityCollisions(data::Entity &entity)
         return;
     }
 
+
+    if (entity.type == ENTITY_PLAYER) {
+        printf("");
+    }
+
+    Color col[]{
+        RED,
+        GREEN,
+        BLUE
+    };
+
     entity.colliding = false;
+    //entity.collisions.clear();
 
     Vector2 topLeft{
         entity.position.x - entity.radius,
@@ -222,45 +234,100 @@ void data::Tilemap::ResolveEntityCollisions(data::Entity &entity)
     int xMin = floorf(topLeft.x / TILE_W) - 1;
     int xMax = ceilf(bottomRight.x / TILE_W) + 1;
 
-    for (int y = yMin; y < yMax; y++) {
-        for (int x = xMin; x < xMax; x++) {
-            bool solid = true;
+    for (int i = 0; i < 4; i++) {
+        std::priority_queue<Collision> collisions{};
 
-            // Out of bounds tiles are considered solid tiles
-            if (x >= 0 && x < width && y >= 0 && y < height) {
-                const uint32_t tile_id = At(x, y);
-                const data::TileDef &tileDef = GetTileDef(tile_id);
-                solid = tileDef.flags & data::TILEDEF_FLAG_SOLID;
-                if (!solid) {
-                    const uint8_t obj = At_Obj(x, y);
-                    // NOTE(dlb): Don't collide with void objects like we do with ground tiles
-                    if (obj) {
-                        const data::TileDef &objTileDef = GetTileDef(obj);
-                        solid = objTileDef.flags & data::TILEDEF_FLAG_SOLID;
+        for (int y = yMin; y < yMax; y++) {
+            for (int x = xMin; x < xMax; x++) {
+                bool solid = true;
+
+                // Out of bounds tiles are considered solid tiles
+                if (x >= 0 && x < width && y >= 0 && y < height) {
+                    const uint32_t tile_id = At(x, y);
+                    const data::TileDef &tileDef = GetTileDef(tile_id);
+                    solid = tileDef.flags & data::TILEDEF_FLAG_SOLID;
+                    if (!solid) {
+                        const uint8_t obj = At_Obj(x, y);
+                        // NOTE(dlb): Don't collide with void objects like we do with ground tiles
+                        if (obj) {
+                            const data::TileDef &objTileDef = GetTileDef(obj);
+                            solid = objTileDef.flags & data::TILEDEF_FLAG_SOLID;
+                        }
+                    }
+                }
+
+                if (solid) {
+                    const Rectangle tileRect{
+                        (float)x * TILE_W,
+                        (float)y * TILE_W,
+                        TILE_W,
+                        TILE_W
+                    };
+
+                    Collision collision{};
+                    if (dlb_CheckCollisionCircleRec(entity.Position2D(), entity.radius, tileRect, &collision.manifold)) {
+                        collision.rect = tileRect;
+                        Vector2 dist = Vector2Subtract(entity.Position2D(), collision.manifold.contact);
+                        collision.dist_sq = Vector2LengthSqr(dist);
+                        collision.col = col[collisions.size() % ARRAY_SIZE(col)];
+                        collisions.push(collision);
+                        entity.colliding = true;
                     }
                 }
             }
+        }
 
-            if (solid) {
-                Rectangle tileRect{};
-                Vector2 tilePos = { (float)x * TILE_W, (float)y * TILE_W };
-                tileRect.x = tilePos.x;
-                tileRect.y = tilePos.y;
-                tileRect.width = TILE_W;
-                tileRect.height = TILE_W;
+        if (collisions.size()) {
+            if (collisions.size() > 1) {
+                printf("");
+            }
 
+            while (!collisions.empty()) {
+                const Collision &collision = collisions.top();
+                entity.collisions.push_back(collision);
+
+                Manifold manifold{};
+                if (dlb_CheckCollisionCircleRec(entity.Position2D(), entity.radius, collision.rect, &manifold)) {
+                    const Vector2 resolve = Vector2Scale(manifold.normal, manifold.depth);
+                    if (i % 2 == 0) {
+                        entity.position.x += resolve.x;
+                    } else {
+                        entity.position.y += resolve.y;
+                    }
+                    //if (resolve.x) entity.velocity.x *= 0.5f;
+                    //if (resolve.y) entity.velocity.y *= 0.5f;
+                }
+
+                collisions.pop();
+            }
+
+    #if 0
+            for (Collision &collision : collisions) {
+                if (dlb_CheckCollisionCircleRec(entity.ScreenPos(), entity.radius, collision.rect, &collision.manifold)) {
+                    const Vector2 resolve = Vector2Scale(collision.manifold.normal, collision.manifold.depth);
+                    entity.position.x += resolve.x;
+                    entity.position.y += resolve.y;
+                    //if (resolve.x) entity.velocity.x *= 0.5f;
+                    //if (resolve.y) entity.velocity.y *= 0.5f;
+                }
+    #if 0
                 Manifold manifold{};
                 if (dlb_CheckCollisionCircleRec(entity.ScreenPos(), entity.radius, tileRect, &manifold)) {
                     const Vector2 resolve = Vector2Scale(manifold.normal, manifold.depth);
                     entity.position.x += resolve.x;
                     entity.position.y += resolve.y;
-                    if (resolve.x) entity.velocity.x *= 0.5f;
-                    if (resolve.y) entity.velocity.y *= 0.5f;
-                    entity.colliding = true;
+                    if (resolve.x) entity.velocity.x *= 0.0f;
+                    if (resolve.y) entity.velocity.y *= 0.0f;
                 }
+    #endif
             }
+    #endif
         }
     }
+
+    // Hard constraint to keep entity in the map
+    entity.position.x = CLAMP(entity.position.x, entity.radius, width * TILE_W - entity.radius);
+    entity.position.y = CLAMP(entity.position.y, entity.radius, height * TILE_W - entity.radius);
 
     if (entity.type == data::ENTITY_PLAYER) {
         assert(entity.radius);
@@ -278,7 +345,7 @@ void data::Tilemap::ResolveEntityCollisions(data::Entity &entity)
                     tileRect.width = TILE_W;
                     tileRect.height = TILE_W;
 
-                    if (dlb_CheckCollisionCircleRec(entity.ScreenPos(), entity.radius, tileRect, 0)) {
+                    if (dlb_CheckCollisionCircleRec(entity.Position2D(), entity.radius, tileRect, 0)) {
                         entity.on_warp = true;
                         entity.on_warp_coord.x = object->x;
                         entity.on_warp_coord.y = object->y;

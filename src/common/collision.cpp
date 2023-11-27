@@ -19,26 +19,37 @@ bool dlb_CheckCollisionCircleRec(const Vector2 center, const float radius, const
     float xOverlap = 0;
     float yOverlap = 0;
 
+    Vector2 normal{};
+
     Vector2 pt = center;  // circle center point constrained to box
     if (pt.x < rec.x) {
         pt.x = rec.x;
+        normal.x = -1.0f;
     } else if (pt.x >= rec.x + rec.width) {
         pt.x = rec.x + rec.width;
+        normal.x = 1.0f;
     } else {
         float recCenterX = rec.x + rec.width / 2;
-        xOverlap = pt.x < recCenterX ? rec.x - pt.x : (rec.x + rec.width) - pt.x;
+        bool leftHalf = pt.x < recCenterX;
+        xOverlap = leftHalf ? rec.x - pt.x : (rec.x + rec.width) - pt.x;
+        normal.y = leftHalf ? -1.0f : 1.0f;
     }
 
     if (pt.y < rec.y) {
         pt.y = rec.y;
+        normal.y = -1.0f;
     } else if (pt.y >= rec.y + rec.height) {
         pt.y = rec.y + rec.height;
+        normal.y = 1.0f;
     } else {
         float recCenterY = rec.y + rec.height / 2;
-        yOverlap = pt.y < recCenterY ? rec.y - pt.y : (rec.y + rec.height) - pt.y;
+        bool topHalf = pt.y < recCenterY;
+        yOverlap = topHalf ? rec.y - pt.y : (rec.y + rec.height) - pt.y;
+        normal.y = topHalf ? -1.0f : 1.0f;
     }
 
-    if (Vector2DistanceSqr(pt, center) < radius * radius) {
+    const float dist = Vector2DistanceSqr(pt, center);
+    if (dist < radius * radius) {
         if (manifold) {
             manifold->contact = pt;  // closest point to "pt" on the surface of the box
             if (fabsf(xOverlap) < fabsf(yOverlap)) {
@@ -50,10 +61,18 @@ bool dlb_CheckCollisionCircleRec(const Vector2 center, const float radius, const
 
             Vector2 pen = Vector2Subtract(center, manifold->contact);
             manifold->depth = radius - Vector2Length(pen);
+#if 1
             manifold->normal = Vector2Normalize(pen);
+#else
+            manifold->normal = normal;
+#endif
 
             if (xOverlap && yOverlap) {
-                manifold->depth -= radius * 2;
+                manifold->depth -= radius * 2.0f;  // ???
+            }
+            if (manifold->depth < 0.0f) {
+                manifold->depth = -manifold->depth;
+                manifold->normal = Vector2Negate(manifold->normal);
             }
         }
         return true;

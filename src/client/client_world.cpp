@@ -163,6 +163,15 @@ void ClientWorld::UpdateLocalPlayer(GameClient &client, data::Entity &entity, da
             entity.ApplyForce(cmdAccumForce);
             entityDb->EntityTick(entity, SV_TICK_DT);
             map->ResolveEntityCollisions(entity);
+
+            if (entity.position.x < entity.radius ||
+                entity.position.y < entity.radius ||
+                entity.position.x + entity.radius > map->width * TILE_W ||
+                entity.position.y + entity.radius > map->height * TILE_W)
+            {
+                printf("");
+            }
+
             entity.position.x = LERP(posBefore.x, entity.position.x, cmdAccumDt / SV_TICK_DT);
             entity.position.y = LERP(posBefore.y, entity.position.y, cmdAccumDt / SV_TICK_DT);
         }
@@ -296,7 +305,7 @@ void ClientWorld::UpdateCamera(GameClient &client)
     }
 
     data::Entity &target = *localPlayer;
-    Vector2 targetPos = target.ScreenPos();
+    Vector2 targetPos = target.Position2D();
 
     camera.offset = {
         /*floorf(*/GetRenderWidth ()/2.0f/*)*/,

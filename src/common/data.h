@@ -388,10 +388,23 @@ namespace data {
         Direction     direction            {};
     };
 
+    struct Collision {
+        float dist_sq{};  // distance squared from POC
+        Rectangle rect{};
+        Manifold manifold{};
+        Color col{};
+
+        bool operator<(const Collision& rhs) const {
+            return dist_sq < rhs.dist_sq;
+        }
+    };
+
     // std::string -> StringId
     // 672 bytes -> 296 bytes
     struct Entity {
         static const DataType dtype = DAT_TYP_ENTITY;
+
+        std::vector<Collision> collisions{};
 
         //// Entity ////
         uint32_t      id           {};
@@ -474,7 +487,7 @@ namespace data {
         std::string warp_template_map     {};  // template map to make a copy of for procgen
         std::string warp_template_tileset {};  // wang tileset to use for procgen
 
-        inline Vector2 ScreenPos(void) {
+        inline Vector2 Position2D(void) {
             Vector2 screenPos{
                 floorf(position.x),
                 floorf(position.y - position.z)
