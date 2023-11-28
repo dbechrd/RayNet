@@ -35,7 +35,7 @@ void GameServer::OnClientJoin(int clientIdx)
         const Vector3 townCenter{ 1660, 2360, 0 };
         const Vector3 inTree{ 2980.15f, 832.31 };
         player->position = inTree;
-        player->radius = 8;
+        player->radius = 16;
         player->hp_max = 100;
         player->hp = player->hp_max;
         player->speed = 3000;

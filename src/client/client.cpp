@@ -413,7 +413,7 @@ int main(int argc, char *argv[])
                 draw_f3_menu(*client);
             }
 
-#if _DEBUG
+#if _DEBUG && 0
             // Debug collision nonsense
             float radius = 16.0f;
             Vector2 center = Vector2Subtract(GetMousePosition(), { 64, 64 });

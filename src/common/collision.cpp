@@ -1,10 +1,5 @@
 #include "collision.h"
 
-struct Circle2 {
-    Vector2 center{};
-    float radius{};
-};
-
 bool dlb_CheckCollisionPointRec(const Vector2 point, const Rectangle rec)
 {
     bool collision = false;
@@ -61,11 +56,10 @@ bool dlb_CheckCollisionCircleRec(const Vector2 center, const float radius, const
 
             Vector2 pen = Vector2Subtract(center, manifold->contact);
             manifold->depth = radius - Vector2Length(pen);
-#if 1
             manifold->normal = Vector2Normalize(pen);
-#else
-            manifold->normal = normal;
-#endif
+            if (Vector2LengthSqr(manifold->normal) == 0) {
+                manifold->normal = normal;
+            }
 
             if (xOverlap && yOverlap) {
                 manifold->depth -= radius * 2.0f;  // ???

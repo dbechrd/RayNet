@@ -76,6 +76,7 @@ struct EditModeDebug {
 
 struct EditModeState {
     bool showColliders {};
+    bool showTileEdges {};
     bool showTileIds   {};
     bool showEntityIds {};
 

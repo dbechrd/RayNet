@@ -1,6 +1,19 @@
 #pragma once
 #include "common.h"
 
+struct Circle2 {
+    Vector2 center{};
+    float radius{};
+};
+
+struct Line2 {
+    Vector2 start{};
+    Vector2 end{};
+
+    Line2(void) {}
+    Line2(Vector2 start, Vector2 end) : start(start), end(end) {}
+};
+
 struct Manifold {
     Vector2 contact;
     Vector2 normal;

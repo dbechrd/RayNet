@@ -50,6 +50,27 @@ bool data::Tilemap::AtWorld(uint32_t world_x, uint32_t world_y, uint32_t &tile_i
     }
     return false;
 }
+bool data::Tilemap::IsSolid(int x, int y)
+{
+    bool solid = true;
+
+    // Out of bounds tiles are considered solid tiles
+    if (x >= 0 && x < width && y >= 0 && y < height) {
+        const uint32_t tile_id = At(x, y);
+        const data::TileDef &tileDef = GetTileDef(tile_id);
+        solid = tileDef.flags & data::TILEDEF_FLAG_SOLID;
+        if (!solid) {
+            const uint8_t obj = At_Obj(x, y);
+            // NOTE(dlb): Don't collide with void objects like we do with ground tiles
+            if (obj) {
+                const data::TileDef &objTileDef = GetTileDef(obj);
+                solid = objTileDef.flags & data::TILEDEF_FLAG_SOLID;
+            }
+        }
+    }
+
+    return solid;
+}
 
 void data::Tilemap::Set(uint32_t x, uint32_t y, uint32_t tile_id, double now)
 {
@@ -200,12 +221,130 @@ data::AiPathNode *data::Tilemap::GetPathNode(uint32_t pathId, uint32_t pathNodeI
     return 0;
 }
 
+void data::Tilemap::GetEdges(Edge::Array &edges)
+{
+    for (int y = 0; y < height; y++) {
+        for (int x = 0; x < width; x++) {
+            // TODO: Faster way to find solid tiles only?
+            // TODO: Cache edge until until
+            if (IsSolid(x, y)) {
+                const bool top    = IsSolid(x    , y - 1);
+                const bool right  = IsSolid(x + 1, y    );
+                const bool bottom = IsSolid(x    , y + 1);
+                const bool left   = IsSolid(x - 1, y    );
+                if (top && right && bottom && left) {
+                    // Inside tile, no important edges to check
+                    continue;
+                }
+
+                const Vector2 tilePos{ (float)x * TILE_W, (float)y * TILE_W };
+
+                const Vector2 topLeft     { tilePos.x         , tilePos.y };
+                const Vector2 topRight    { tilePos.x + TILE_W, tilePos.y };
+                const Vector2 bottomRight { tilePos.x + TILE_W, tilePos.y + TILE_W };
+                const Vector2 bottomLeft  { tilePos.x         , tilePos.y + TILE_W };
+
+                // Clockwise winding, Edge Normal = (-y, x)
+                if (!top) {
+                    edges.push_back(Edge{{ topLeft, topRight }});
+                }
+                if (!right) {
+                    edges.push_back(Edge{{ topRight, bottomRight }});
+                }
+                if (!bottom) {
+                    edges.push_back(Edge{{ bottomRight, bottomLeft }});
+                }
+                if (!left) {
+                    edges.push_back(Edge{{ bottomLeft, topLeft }});
+                }
+
+            }
+        }
+    }
+}
+void data::Tilemap::MergeEdges(Edge::Array &edges)
+{
+    Edge::Map edge_map{};
+
+    //edges.clear();
+    //edges.push_back(Edge{{{ 10, 0 }, { 20, 0 }}});
+    //edges.push_back(Edge{{{ 30, 0 }, { 40, 0 }}});
+    //edges.push_back(Edge{{{ 20, 0 }, { 30, 0 }}});
+
+    for (size_t i = 0; i < edges.size(); i++) {
+        size_t edge_idx = i;
+        Edge *edge = &edges[edge_idx];
+        bool merged = false;
+
+        for (;;) {
+            auto iter_before = edge_map.find(edge->KeyStart());
+            if (iter_before == edge_map.end()) {
+                break;
+            }
+
+            size_t edge_before_idx = iter_before->second;
+            Edge *edge_before = &edges[edge_before_idx];
+
+            edge_map.erase(edge_before->KeyStart());
+            edge_map.erase(edge_before->KeyEnd());
+            edge_before->Add(*edge);
+
+            edge_idx = edge_before_idx;
+            edge = edge_before;
+            merged = true;
+        }
+
+        for (;;) {
+            auto iter_after = edge_map.find(edge->KeyEnd());
+            if (iter_after == edge_map.end()) {
+                break;
+            }
+
+            size_t edge_after_idx = iter_after->second;
+            Edge *edge_after = &edges[edge_after_idx];
+
+            edge_map.erase(edge_after->KeyStart());
+            edge_map.erase(edge_after->KeyEnd());
+            edge_after->Add(*edge);
+
+            edge_idx = edge_after_idx;
+            edge = edge_after;
+            merged = true;
+        }
+
+        edge_map[edge->KeyStart()] = edge_idx;
+        edge_map[edge->KeyEnd()] = edge_idx;
+
+        //if (!merged) {
+        //    edge_map[edge->KeyStart()] = i;
+        //    edge_map[edge->KeyEnd()] = i;
+        //}
+
+#if 0
+        printf("Edges:\n");
+        for (auto &iter : edge_map) {
+            Edge &edge = edges[iter.second];
+            printf("%d (%d->%d)\n", (int)iter.first.vertex.x, (int)edge.line.start.x, (int)edge.line.end.x);
+        }
+        printf("\n");
+#endif
+    }
+
+#if 1
+    Edge::Array merged_edges{};
+    for (auto &iter : edge_map) {
+        Edge &edge = edges[iter.second];
+        merged_edges.push_back(edge);
+    }
+    edges = merged_edges;
+#endif
+}
+
 void data::Tilemap::ResolveEntityCollisions(data::Entity &entity)
 {
     if (!entity.radius || entity.Dead()) {
         return;
     }
-
 
     if (entity.type == ENTITY_PLAYER) {
         printf("");
@@ -234,7 +373,7 @@ void data::Tilemap::ResolveEntityCollisions(data::Entity &entity)
     int xMin = floorf(topLeft.x / TILE_W) - 1;
     int xMax = ceilf(bottomRight.x / TILE_W) + 1;
 
-    for (int i = 0; i < 4; i++) {
+    for (int i = 0; i < 8; i++) {
         std::priority_queue<Collision> collisions{};
 
         for (int y = yMin; y < yMax; y++) {
@@ -243,17 +382,7 @@ void data::Tilemap::ResolveEntityCollisions(data::Entity &entity)
 
                 // Out of bounds tiles are considered solid tiles
                 if (x >= 0 && x < width && y >= 0 && y < height) {
-                    const uint32_t tile_id = At(x, y);
-                    const data::TileDef &tileDef = GetTileDef(tile_id);
-                    solid = tileDef.flags & data::TILEDEF_FLAG_SOLID;
-                    if (!solid) {
-                        const uint8_t obj = At_Obj(x, y);
-                        // NOTE(dlb): Don't collide with void objects like we do with ground tiles
-                        if (obj) {
-                            const data::TileDef &objTileDef = GetTileDef(obj);
-                            solid = objTileDef.flags & data::TILEDEF_FLAG_SOLID;
-                        }
-                    }
+                    solid = IsSolid(x, y);
                 }
 
                 if (solid) {
@@ -269,6 +398,7 @@ void data::Tilemap::ResolveEntityCollisions(data::Entity &entity)
                         collision.rect = tileRect;
                         Vector2 dist = Vector2Subtract(entity.Position2D(), collision.manifold.contact);
                         collision.dist_sq = Vector2LengthSqr(dist);
+                        collision.dot_vel = Vector2DotProduct(collision.manifold.normal, { entity.velocity.x, entity.velocity.y });
                         collision.col = col[collisions.size() % ARRAY_SIZE(col)];
                         collisions.push(collision);
                         entity.colliding = true;
@@ -278,27 +408,33 @@ void data::Tilemap::ResolveEntityCollisions(data::Entity &entity)
         }
 
         if (collisions.size()) {
-            if (collisions.size() > 1) {
-                printf("");
-            }
+            bool multi = (collisions.size() > 1);
 
             while (!collisions.empty()) {
                 const Collision &collision = collisions.top();
-                entity.collisions.push_back(collision);
+                if (multi) {
+                    entity.collisions.push_back(collision);
+                }
 
-                Manifold manifold{};
-                if (dlb_CheckCollisionCircleRec(entity.Position2D(), entity.radius, collision.rect, &manifold)) {
-                    const Vector2 resolve = Vector2Scale(manifold.normal, manifold.depth);
+                //Manifold manifold{};
+                if (dlb_CheckCollisionCircleRec(entity.Position2D(), entity.radius, collision.rect, 0)) {
+                    const Vector2 resolve = Vector2Scale(collision.manifold.normal, collision.manifold.depth);
+#if 0
                     if (i % 2 == 0) {
                         entity.position.x += resolve.x;
                     } else {
                         entity.position.y += resolve.y;
                     }
+#else
+                    entity.position.x += resolve.x;
+                    entity.position.y += resolve.y;
+#endif
                     //if (resolve.x) entity.velocity.x *= 0.5f;
                     //if (resolve.y) entity.velocity.y *= 0.5f;
                 }
 
                 collisions.pop();
+                break;
             }
 
     #if 0
@@ -338,12 +474,12 @@ void data::Tilemap::ResolveEntityCollisions(data::Entity &entity)
             for (int x = xMin; x < xMax && !entity.on_warp; x++) {
                 const data::ObjectData *object = GetObjectData(x, y);
                 if (object && object->type == "warp") {
-                    Rectangle tileRect{};
-                    Vector2 tilePos = { (float)x * TILE_W, (float)y * TILE_W };
-                    tileRect.x = tilePos.x;
-                    tileRect.y = tilePos.y;
-                    tileRect.width = TILE_W;
-                    tileRect.height = TILE_W;
+                    Rectangle tileRect{
+                        (float)x * TILE_W,
+                        (float)y * TILE_W,
+                        TILE_W,
+                        TILE_W
+                    };
 
                     if (dlb_CheckCollisionCircleRec(entity.Position2D(), entity.radius, tileRect, 0)) {
                         entity.on_warp = true;
@@ -436,6 +572,18 @@ void data::Tilemap::DrawColliders(Camera2D &camera)
                 );
             }
         }
+    }
+}
+void data::Tilemap::DrawEdges(Edge::Array &edges)
+{
+    for (const Edge &edge : edges) {
+        // Draw edge
+        DrawLineEx(edge.line.start, edge.line.end, 2, MAGENTA);
+
+        // Draw normal
+        Vector2 edge_vec = Vector2Subtract(edge.line.end, edge.line.start);
+        Vector2 edge_mid = Vector2Add(edge.line.start, Vector2Scale(edge_vec, 0.5f));
+        DrawLineEx(edge_mid, Vector2Add(edge_mid, Vector2Scale(edge.normal, 8)), 2, SKYBLUE);
     }
 }
 void data::Tilemap::DrawTileIds(Camera2D &camera)

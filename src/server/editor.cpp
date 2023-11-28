@@ -72,6 +72,12 @@ void Editor::DrawGroundOverlays(Camera2D &camera, double now)
     if (state.showColliders) {
         map.DrawColliders(camera);
     }
+    if (state.showTileEdges) {
+        data::Edge::Array edges{};
+        map.GetEdges(edges);
+        map.MergeEdges(edges);
+        map.DrawEdges(edges);
+    }
     if (state.showTileIds) {
         map.DrawTileIds(camera);
     }
@@ -585,6 +591,10 @@ UIState Editor::DrawUI_ActionBar(Vector2 position, GameServer &server, double no
     UIState showCollidersButton = uiActionBar.Button("Collision", state.showColliders, GRAY, MAROON);
     if (showCollidersButton.released) {
         state.showColliders = !state.showColliders;
+    }
+    UIState showTileEdgesButton = uiActionBar.Button("Edges", state.showTileEdges, GRAY, MAROON);
+    if (showTileEdgesButton.released) {
+        state.showTileEdges = !state.showTileEdges;
     }
     UIState showTileIdsButton = uiActionBar.Button("Tile IDs", state.showTileIds, GRAY, LIGHTGRAY);
     if (showTileIdsButton.released) {
