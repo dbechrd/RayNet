@@ -339,9 +339,50 @@ void data::Tilemap::MergeEdges(Edge::Array &edges)
     edges = merged_edges;
 #endif
 }
+void data::Tilemap::UpdateEdges(void)
+{
+    edges.clear();
+    GetEdges(edges);
+    MergeEdges(edges);
+}
 
+void data::Tilemap::ResolveEntityCollisionsEdges(data::Entity &entity)
+{
+    if (!entity.radius || entity.Dead()) {
+        return;
+    }
+
+    entity.colliding = false;
+
+    std::vector<Collision> collisions{};
+    for (Edge &edge : edges) {
+        Manifold manifold{};
+        if (dlb_CheckCollisionCircleEdge(entity.Position2D(), entity.radius, edge, &manifold)) {
+            Collision collision{};
+            collision.edge = &edge;
+            collision.manifold = manifold;
+            collisions.push_back(collision);
+        }
+    }
+
+    for (Collision &collision : collisions) {
+        Manifold new_manifold{};
+        if (dlb_CheckCollisionCircleEdge(entity.Position2D(), entity.radius, *collision.edge, &new_manifold)) {
+            const Vector2 resolve = Vector2Scale(new_manifold.normal, new_manifold.depth);
+            entity.position.x += resolve.x;
+            entity.position.y += resolve.y;
+        }
+    }
+
+    // Hard constraint to keep entity in the map
+    entity.position.x = CLAMP(entity.position.x, entity.radius, width * TILE_W - entity.radius);
+    entity.position.y = CLAMP(entity.position.y, entity.radius, height * TILE_W - entity.radius);
+}
 void data::Tilemap::ResolveEntityCollisions(data::Entity &entity)
 {
+    ResolveEntityCollisionsEdges(entity);
+    return;
+
     if (!entity.radius || entity.Dead()) {
         return;
     }
@@ -574,16 +615,10 @@ void data::Tilemap::DrawColliders(Camera2D &camera)
         }
     }
 }
-void data::Tilemap::DrawEdges(Edge::Array &edges)
+void data::Tilemap::DrawEdges(void)
 {
     for (const Edge &edge : edges) {
-        // Draw edge
-        DrawLineEx(edge.line.start, edge.line.end, 2, MAGENTA);
-
-        // Draw normal
-        Vector2 edge_vec = Vector2Subtract(edge.line.end, edge.line.start);
-        Vector2 edge_mid = Vector2Add(edge.line.start, Vector2Scale(edge_vec, 0.5f));
-        DrawLineEx(edge_mid, Vector2Add(edge_mid, Vector2Scale(edge.normal, 8)), 2, SKYBLUE);
+        edge.Draw(MAGENTA);
     }
 }
 void data::Tilemap::DrawTileIds(Camera2D &camera)

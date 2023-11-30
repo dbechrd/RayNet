@@ -55,7 +55,8 @@
 #define LERP(a, b, alpha) ((a) + ((b) - (a)) * (alpha))
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
 #define MAX(a, b) ((a) > (b) ? (a) : (b))
-#define CLAMP(x, min, max) (MIN(MAX((x), (min)), (max)))
+//#define CLAMP(x, min, max) (MIN(MAX((x), (min)), (max)))
+#define CLAMP(x, min, max) (((x) < (min)) ? (min) : (((x) > (max)) ? (max) : (x)))
 #define ARRAY_SIZE(arr) (sizeof(arr)/sizeof(arr[0]))
 #define STR(x) #x
 #define STRSTR(x) STR(x)

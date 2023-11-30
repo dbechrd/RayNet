@@ -89,11 +89,12 @@ Err ClientWorld::CreateDialog(data::Entity &entity, uint32_t dialogId, const std
     return RN_SUCCESS;
 }
 
-void ClientWorld::UpdateMap(GameClient &client)
+void ClientWorld::UpdateMap(data::Tilemap &map)
 {
     // TODO(cleanup): What else is there to update now?
     //data::Tilemap *map = LocalPlayerMap();
     //map->UpdateAnimations(client.frameDt);
+    map.UpdateEdges();
 }
 void ClientWorld::UpdateLocalPlayerHisto(GameClient &client, data::Entity &entity, HistoData &histoData)
 {
@@ -152,7 +153,7 @@ void ClientWorld::UpdateLocalPlayer(GameClient &client, data::Entity &entity, da
             if (inputCmd.seq > latestSnapInputSeq) {
                 entity.ApplyForce(inputCmd.GenerateMoveForce(entity.speed));
                 entityDb->EntityTick(entity, SV_TICK_DT);
-                map->ResolveEntityCollisions(entity);
+                map->ResolveEntityCollisionsEdges(entity);
             }
         }
 
@@ -400,7 +401,12 @@ void ClientWorld::UpdateHUDSpinner(void)
 void ClientWorld::Update(GameClient &client)
 {
     data::UpdateTileDefAnimations(client.frameDt);
-    UpdateMap(client);
+    data::Tilemap *map = LocalPlayerMap();
+    if (map) {
+        UpdateMap(*map);
+    } else {
+        assert(!"should this ever happen?");
+    }
 
     io.PushScope(IO::IO_GameNPC);
     UpdateEntities(client);

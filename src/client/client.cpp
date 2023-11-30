@@ -414,22 +414,42 @@ int main(int argc, char *argv[])
             }
 
 #if _DEBUG && 0
-            // Debug collision nonsense
-            float radius = 16.0f;
-            Vector2 center = Vector2Subtract(GetMousePosition(), { 64, 64 });
+            {
+                // Debug circle-rect collision
+                Vector2 center = Vector2Subtract(GetMousePosition(), { 64, 64 });
+                float radius = 16.0f;
 
-            Rectangle r{ 100, 100, 64, 64 };
-            Manifold manifold{};
+                Rectangle r{ 100, 100, 64, 64 };
+                Manifold manifold{};
 
-            Color col = DARKGRAY;
+                Color col = DARKGRAY;
+                if (dlb_CheckCollisionCircleRec(center, radius, r, &manifold)) {
+                    col = MAROON;
+                }
 
-            if (dlb_CheckCollisionCircleRec(center, radius, r, &manifold)) {
-                col = MAROON;
+                DrawCircle(center.x, center.y, radius, DARKGRAY);
+                DrawRectangleLinesEx(r, 1, col);
+                DrawLineEx(manifold.contact, Vector2Add(manifold.contact, Vector2Scale(manifold.normal, manifold.depth)), 1, GREEN);
             }
+#endif
+#if _DEBUG && 0
+            {
+                // Debug circle-edge collision
+                Vector2 center = Vector2Subtract(GetMousePosition(), { 64, 64 });
+                float radius = 16.0f;
 
-            DrawCircle(center.x, center.y, radius, DARKGRAY);
-            DrawRectangleLinesEx(r, 1, col);
-            DrawLineEx(manifold.contact, Vector2Add(manifold.contact, Vector2Scale(manifold.normal, manifold.depth)), 1, GREEN);
+                Edge edge{ LineSegment2{ Vector2{ 100, 100 }, Vector2{ 200, 100 }}};
+                Manifold manifold{};
+
+                Color col = DARKGRAY;
+                if (dlb_CheckCollisionCircleEdge(center, radius, edge, &manifold)) {
+                    col = MAROON;
+                }
+
+                DrawCircle(center.x, center.y, radius, DARKGRAY);
+                edge.Draw(MAGENTA, 2);
+                DrawLineEx(manifold.contact, Vector2Add(manifold.contact, Vector2Scale(manifold.normal, manifold.depth)), 2, GREEN);
+            }
 #endif
         EndDrawing();
 

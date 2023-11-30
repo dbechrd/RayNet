@@ -1,6 +1,6 @@
 #include "collision.h"
 
-bool dlb_CheckCollisionPointRec(const Vector2 point, const Rectangle rec)
+bool dlb_CheckCollisionPointRec(Vector2 point, Rectangle rec)
 {
     bool collision = false;
 
@@ -9,7 +9,7 @@ bool dlb_CheckCollisionPointRec(const Vector2 point, const Rectangle rec)
     return collision;
 }
 
-bool dlb_CheckCollisionCircleRec(const Vector2 center, const float radius, const Rectangle rec, Manifold *manifold)
+bool dlb_CheckCollisionCircleRec(Vector2 center, float radius, Rectangle rec, Manifold *manifold)
 {
     float xOverlap = 0;
     float yOverlap = 0;
@@ -58,22 +58,28 @@ bool dlb_CheckCollisionCircleRec(const Vector2 center, const float radius, const
             manifold->depth = radius - Vector2Length(pen);
             manifold->normal = Vector2Normalize(pen);
             if (Vector2LengthSqr(manifold->normal) == 0) {
-                manifold->normal = normal;
+                manifold->normal = normal;  // this is scuffed
             }
 
             if (xOverlap && yOverlap) {
                 manifold->depth -= radius * 2.0f;  // ???
             }
+#if 0
             if (manifold->depth < 0.0f) {
                 manifold->depth = -manifold->depth;
                 manifold->normal = Vector2Negate(manifold->normal);
             }
+#else
+            if (Vector2DotProduct(pen, manifold->normal) < 0.0f) {
+                manifold->depth = -manifold->depth + radius * 2;
+            }
+#endif
         }
         return true;
     }
     return false;
 }
-bool dlb_CheckCollisionCircleRec2(const Vector2 center, const float radius, const Rectangle rec, Manifold *manifold)
+bool dlb_CheckCollisionCircleRec2(Vector2 center, float radius, Rectangle rec, Manifold *manifold)
 {
     const Vector2 cir_a_center = center;
     const float cir_a_radius = radius;
@@ -125,4 +131,48 @@ bool dlb_CheckCollisionCircleRec2(const Vector2 center, const float radius, cons
     }
 
     return cir_collide && rec_collide;
+}
+
+bool dlb_CheckCollisionCircleEdge(Vector2 center, float radius, Edge edge, Manifold *manifold)
+{
+    const Vector2 a = edge.line.start;
+    const Vector2 b = edge.line.end;
+
+    const Vector2 a_to_center = Vector2Subtract(center, a);
+    const Vector2 edge_vec = Vector2Subtract(b, a);
+    const float edge_len_sq = Vector2LengthSqr(edge_vec);
+    const float center_along_edge = Vector2DotProduct(a_to_center, edge_vec);
+
+    float t = center_along_edge / edge_len_sq;
+    t = CLAMP(t, 0.0f, 1.0f);
+
+    const Vector2 closest_point = Vector2Add(a, Vector2Scale(edge_vec, t));
+    const Vector2 dist = Vector2Subtract(center, closest_point);
+    const float dist_sq = Vector2LengthSqr(dist);
+    if (dist_sq <= radius * radius) {
+        if (manifold) {
+            manifold->contact = closest_point;
+            Vector2 pen = Vector2Subtract(center, manifold->contact);
+            manifold->depth = radius - Vector2Length(pen);
+            manifold->normal = edge.normal;
+            if (Vector2DotProduct(pen, manifold->normal) < 0.0f) {
+                manifold->depth = -manifold->depth + radius * 2;
+            }
+
+
+    //#if 0
+    //        Vector2 normal{ edge_vec.y, -edge_vec.x };
+    //        normal = Vector2Normalize(edge_vec);
+    //        manifold->normal = normal;
+    //#else
+    //        manifold->normal = edge.normal;
+    //#endif
+    //        manifold->depth = radius - Vector2Length(dist); //Vector2DotProduct(dist, manifold->normal);
+    //        //if (manifold->depth < 0) {
+    //        //    manifold->depth = -manifold->depth + radius;
+    //        //}
+        }
+        return true;
+    }
+    return false;
 }

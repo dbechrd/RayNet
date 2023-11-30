@@ -73,10 +73,7 @@ void Editor::DrawGroundOverlays(Camera2D &camera, double now)
         map.DrawColliders(camera);
     }
     if (state.showTileEdges) {
-        data::Edge::Array edges{};
-        map.GetEdges(edges);
-        map.MergeEdges(edges);
-        map.DrawEdges(edges);
+        map.DrawEdges();
     }
     if (state.showTileIds) {
         map.DrawTileIds(camera);
@@ -343,12 +340,13 @@ void Editor::DrawEntityOverlay_Collision(Camera2D &camera, double now)
                 );
 
 #if 1
-                for (data::Collision &collision : entity.collisions) {
+                for (Collision &collision : entity.collisions) {
                     DrawLineEx(
-                        {collision.manifold.contact.x,
-                        collision.manifold.contact.y},
-                        {collision.manifold.contact.x + collision.manifold.normal.x * collision.manifold.depth,
-                        collision.manifold.contact.y + collision.manifold.normal.y * collision.manifold.depth},
+                        { collision.manifold.contact.x,collision.manifold.contact.y },
+                        {
+                            collision.manifold.contact.x + collision.manifold.normal.x * collision.manifold.depth,
+                            collision.manifold.contact.y + collision.manifold.normal.y * collision.manifold.depth
+                        },
                         1.0f,
                         collision.col
                     );

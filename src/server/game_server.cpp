@@ -1157,6 +1157,11 @@ void GameServer::TickResolveEntityWarpCollisions(data::Tilemap &map, data::Entit
 }
 void GameServer::Tick(void)
 {
+    // TODO: Only do this when the map loads or changes.
+    for (data::Tilemap &map : data::packs[1].tile_maps) {
+        map.UpdateEdges();
+    }
+
     // HACK: Only spawn NPCs in map 1, whatever map that may be (hopefully it's Level_001)
     TickSpawnTownNPCs(LEVEL_001);
     //TickSpawnCaveNPCs(2);

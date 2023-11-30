@@ -245,104 +245,6 @@ namespace data {
 
     struct Entity;
 
-    struct Edge {
-        struct Key {
-            Vector2 vertex{};
-            Vector2 normal{};
-
-            Key(Vector2 vertex, Vector2 normal) : vertex(vertex), normal(normal) {};
-
-            bool operator==(const Key &other) const
-            {
-                return vertex.x == other.vertex.x
-                    && vertex.y == other.vertex.y
-                    && normal.x == other.normal.x
-                    && normal.y == other.normal.y;
-            }
-
-            struct Hasher {
-                size_t operator()(const Key &key) const
-                {
-                    size_t hash = 0;
-                    hash_combine(hash, key.vertex.x, key.vertex.y, key.normal.x, key.normal.y);
-                    return hash;
-                }
-            };
-        };
-
-        bool operator==(const Edge &other) const
-        {
-            return line.start.x == other.line.start.x
-                && line.start.y == other.line.start.y
-                && line.end.x == other.line.end.x
-                && line.end.y == other.line.end.y;
-        }
-
-        struct Hasher {
-            size_t operator()(const Edge &edge) const
-            {
-                size_t hash = 0;
-                hash_combine(hash, edge.line.start.x, edge.line.start.y, edge.line.end.x, edge.line.end.y);
-                return hash;
-            }
-        };
-
-        typedef std::unordered_map<Edge::Key, size_t, Edge::Key::Hasher> Map;
-        typedef std::unordered_set<Edge, Edge::Hasher> Set;
-        typedef std::vector<Edge> Array;
-
-        Line2 line{};
-        Vector2 normal{};
-
-        Edge(void) {}
-
-        Edge(Line2 line) : line(line) {
-            const Vector2 edge = Vector2Subtract(line.end, line.start);
-            const Vector2 normal{ edge.y, -edge.x };
-            this->normal = Vector2Normalize(normal);
-        }
-
-        Key KeyStart(void) const {
-            return Key{ line.start, normal };
-        }
-
-        Key KeyEnd(void) const {
-            return Key{ line.end, normal };
-        }
-
-        void Add(Edge other) {
-            if (Vector2Equals(normal, other.normal)) {
-                if (Vector2Equals(line.end, other.line.start)) {
-                    // Add other edge to end
-                    line.end = other.line.end;
-                } else if (Vector2Equals(line.start, other.line.end)) {
-                    // Add other edge to beginning
-                    line.start = other.line.start;
-                } else {
-                    assert(!"Expected edges to have a matching end/start or start/end vertex");
-                }
-            } else {
-                assert(!"Why are you trying to add edges with differet normals!?");
-            }
-        }
-    };
-
-    struct Collision {
-        float dist_sq{};  // distance squared from POC
-        float dot_vel{};  // dot product with velocity
-        Rectangle rect{};
-        Manifold manifold{};
-        Color col{};
-
-        bool operator<(const Collision& rhs) const {
-#if 1
-            return dist_sq < rhs.dist_sq;
-#else
-            return fabsf(dot_vel) < fabsf(rhs.dot_vel);
-#endif
-        }
-    };
-
     struct TileChunk {
         uint32_t tile_ids   [SV_MAX_TILE_CHUNK_WIDTH * SV_MAX_TILE_CHUNK_WIDTH]{};  // TODO: Compress, use less bits, etc.
         uint32_t object_ids [SV_MAX_TILE_CHUNK_WIDTH * SV_MAX_TILE_CHUNK_WIDTH]{};  // TODO: Compress, use less bits, etc.
@@ -400,8 +302,9 @@ namespace data {
         // Not serialized
         //-------------------------------
         //uint32_t net_id             {};  // for communicating efficiently w/ client about which map
-        double     chunkLastUpdatedAt {};  // used by server to know when chunks are dirty on clients
-        CoordSet   dirtyTiles         {};  // tiles that have changed since last snapshot was sent
+        double      chunkLastUpdatedAt {};  // used by server to know when chunks are dirty on clients
+        CoordSet    dirtyTiles         {};  // tiles that have changed since last snapshot was sent
+        Edge::Array edges              {};  // collision edge list
 
         //-------------------------------
         // Clean this section up
@@ -434,12 +337,14 @@ namespace data {
 
         void GetEdges(Edge::Array &edges);
         void MergeEdges(Edge::Array &edges);
+        void UpdateEdges(void);
+        void ResolveEntityCollisionsEdges(Entity &entity);
         void ResolveEntityCollisions(Entity &entity);
 
         void DrawTile(uint32_t tile_id, Vector2 position, DrawCmdQueue *sortedDraws);
         void Draw(Camera2D &camera, DrawCmdQueue &sortedDraws);
         void DrawColliders(Camera2D &camera);
-        void DrawEdges(Edge::Array &edges);
+        void DrawEdges(void);
         void DrawTileIds(Camera2D &camera);
 
     private:
