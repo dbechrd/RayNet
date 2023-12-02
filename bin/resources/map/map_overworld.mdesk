@@ -1,5 +1,6 @@
-@Tilemap map_overworld: {
+@Tilemap 1: {
     version: 8
+    name: "map_overworld"
     width: 64
     height: 64
     title: "Sisters' Encampment"
@@ -142,7 +143,7 @@
         //    lootable loot_table_id
         //    sign     "line 1" "line 2" "line 3" "line 4"
         //    warp     dest_map_id dest_x dest_y dest_z
-        { 51 12 warp map_cave 2 7 0 }
+        { 51 12 warp 2 2 7 0 }
     ]
     path_nodes: [
         //x      y      z      wait_for

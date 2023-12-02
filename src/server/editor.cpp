@@ -484,9 +484,10 @@ UIState Editor::DrawUI_ActionBar(Vector2 position, GameServer &server, double no
 
     auto &map = data::packs[1].FindTilemap(map_id);
 
+#if 0
     UIState openButton = uiActionBar.Button("Open");
     if (openButton.released) {
-        std::string filename = "resources/map/" + map.id + ".mdesk";
+        std::string filename = "resources/map/" + map.name + ".mdesk";
         std::thread openFileThread([filename, mapFileFilter]{
             const char *openRequestBuf = tinyfd_openFileDialog(
                 "Open File",
@@ -511,10 +512,10 @@ UIState Editor::DrawUI_ActionBar(Vector2 position, GameServer &server, double no
         }
         openRequest.clear();
     }
-
+#endif
     UIState saveButton = uiActionBar.Button("Save");
     if (saveButton.released) {
-        std::string filename = "resources/map/" + map.id + ".mdesk";
+        std::string filename = "resources/map/" + map.name + ".mdesk";
         Err err = data::SaveTilemap(filename, map);
         if (err) {
             std::thread errorThread([filename, err]{
@@ -527,7 +528,7 @@ UIState Editor::DrawUI_ActionBar(Vector2 position, GameServer &server, double no
 
     UIState saveAsButton = uiActionBar.Button("Save As");
     if (saveAsButton.released) {
-        std::string filename = "resources/map/" + map.id + ".mdesk";
+        std::string filename = "resources/map/" + map.name + ".mdesk";
         std::thread saveAsThread([filename, mapFileFilter]{
             const char *saveAsRequestBuf = tinyfd_saveFileDialog(
                 "Save File",
@@ -553,7 +554,7 @@ UIState Editor::DrawUI_ActionBar(Vector2 position, GameServer &server, double no
 
     UIState reloadButton = uiActionBar.Button("Reload");
     if (reloadButton.released) {
-        std::string filename = "resources/map/" + map.id + ".mdesk";
+        std::string filename = "resources/map/" + map.name + ".mdesk";
         data::Pack reload_pack{ "reload_pack.mem" };
         data::PackAddMeta(reload_pack, filename.c_str());
 
@@ -568,7 +569,7 @@ UIState Editor::DrawUI_ActionBar(Vector2 position, GameServer &server, double no
         }
 
         if (err) {
-            std::string filename = map.id;
+            std::string filename = "resources/map/" + map.name + ".mdesk";
             std::thread errorThread([filename, err]{
                 const char *msg = TextFormat("Failed to reload file %s. %s\n", filename.c_str(), ErrStr(err));
                 tinyfd_messageBox("Error", msg, "ok", "error", 1);
@@ -578,7 +579,7 @@ UIState Editor::DrawUI_ActionBar(Vector2 position, GameServer &server, double no
     }
     uiActionBar.Newline();
 
-    UIState mapPath = uiActionBar.Text(GetFileName(map.id.c_str()), WHITE);
+    UIState mapPath = uiActionBar.Text(GetFileName(map.name.c_str()), WHITE);
     if (mapPath.released) {
         system("explorer maps");
     }
@@ -666,7 +667,7 @@ UIState Editor::DrawUI_ActionBar(Vector2 position, GameServer &server, double no
 void Editor::DrawUI_MapActions(UI &uiActionBar, GameServer &server, double now)
 {
     for (const data::Tilemap &map : data::packs[1].tile_maps) {
-        if (uiActionBar.Button(TextFormat("%s", map.id.c_str())).pressed) {
+        if (uiActionBar.Button(TextFormat("%s", map.name.c_str())).pressed) {
             map_id = map.id;
         }
         uiActionBar.Newline();
@@ -1322,13 +1323,15 @@ void Editor::DrawUI_WarpActions(UI &uiActionBar, double now)
         uiActionBar.Text("destMap");
         uiActionBar.Newline();
         static STB_TexteditState txtDestMap{};
-        uiActionBar.Textbox(txtDestMap, entity.warp_dest_map);
+        std::string dest_map = "dead feature";
+        uiActionBar.Textbox(txtDestMap, dest_map); //entity.warp_dest_map);
         uiActionBar.Newline();
 
         uiActionBar.Text("templateMap");
         uiActionBar.Newline();
         static STB_TexteditState txtTemplateMap{};
-        uiActionBar.Textbox(txtTemplateMap, entity.warp_template_map);
+        std::string template_map = "dead feature";
+        uiActionBar.Textbox(txtTemplateMap, template_map); //entity.warp_template_map);
         uiActionBar.Newline();
 
         uiActionBar.Text("templateTileset");
@@ -1740,7 +1743,7 @@ void Editor::DrawUI_PackFiles(UI &uiActionBar, double now)
                 case data::DAT_TYP_TILE_MAP:
                 {
                     data::Tilemap &tile_map = pack.tile_maps[entry.index];
-                    desc = tile_map.id.c_str();
+                    desc = tile_map.name.c_str();
                     break;
                 }
                 case data::DAT_TYP_ENTITY:

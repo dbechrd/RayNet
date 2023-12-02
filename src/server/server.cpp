@@ -184,8 +184,8 @@ Err Play(GameServer &server)
     Camera2D camera{};
     camera.zoom = 1;
 
-    // TODO: Store name, pointer is unstable if vector resizes. Or reserve() the vector.
-    Editor editor{ LEVEL_001 };
+    data::Tilemap &level_001 = data::packs[1].FindTilemapByName(LEVEL_001);
+    Editor editor{ level_001.id };
     editor.Init();
 
     bool quit = false;

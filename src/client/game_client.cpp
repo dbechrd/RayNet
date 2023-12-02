@@ -101,12 +101,12 @@ void GameClient::SendEntityInteractDialogOption(data::Entity &entity, uint32_t o
         printf("Outgoing ENTITY_INTERACT_DIALOG_OPTION channel message queue is full.\n");
     }
 }
-void GameClient::SendTileInteract(const std::string &map_id, uint32_t x, uint32_t y, bool primary)
+void GameClient::SendTileInteract(uint32_t map_id, uint32_t x, uint32_t y, bool primary)
 {
     if (yj_client->CanSendMessage(MSG_C_TILE_INTERACT)) {
         Msg_C_TileInteract *msg = (Msg_C_TileInteract *)yj_client->CreateMessage(MSG_C_TILE_INTERACT);
         if (msg) {
-            strncpy(msg->map_id, map_id.c_str(), SV_MAX_TILE_MAP_NAME_LEN);
+            msg->map_id = map_id;
             msg->x = x;
             msg->y = y;
             msg->primary = primary;
@@ -161,7 +161,7 @@ void GameClient::ProcessMsg(Msg_S_EntitySpawn &msg)
                 world->ApplySpawnEvent(msg);
             }
         } else {
-            printf("[game_client] Failed to load map id %s to spawn entity id %u\n", msg.map_id, msg.entity_id);
+            printf("[game_client] Failed to load map id %u to spawn entity id %u\n", msg.map_id, msg.entity_id);
         }
     } else {
         assert(!"why two spawn events for same entityId??");
@@ -171,7 +171,7 @@ void GameClient::ProcessMsg(Msg_S_TileChunk &msg)
 {
     data::Tilemap *map = world->FindOrLoadMap(msg.map_id);
     if (map) {
-        if (map->id.compare(msg.map_id) == 0) {
+        if (map->id = msg.map_id) {
             if (msg.GetBlockSize() == sizeof(data::TileChunk)) {
                 data::TileChunk *chunk = (data::TileChunk *)msg.GetBlockData();
                 for (uint32_t ty = msg.y; ty < msg.w; ty++) {
@@ -185,7 +185,7 @@ void GameClient::ProcessMsg(Msg_S_TileChunk &msg)
                 printf("[game_client] msg.GetBlockSize() [%d] != sizeof(data::TileChunk) [%zu]\n", msg.GetBlockSize(), sizeof(data::TileChunk));
             }
         } else {
-            printf("[game_client] Failed to deserialize chunk with mapId %s into map with id %s\n", msg.map_id, map->id.c_str());
+            printf("[game_client] Failed to deserialize chunk with mapId %u into map with id %u\n", msg.map_id, map->id);
         }
     } else {
         // TODO: LoadPack the right map by ID somehow
@@ -198,11 +198,11 @@ void GameClient::ProcessMsg(Msg_S_TileUpdate &msg)
 {
     data::Tilemap *map = world->FindOrLoadMap(msg.map_id);
     if (map) {
-        if (map->id.compare(msg.map_id) == 0) {
+        if (map->id = msg.map_id) {
             map->Set(msg.x, msg.y, msg.tile_id, 0);
             map->Set_Obj(msg.x, msg.y, msg.object_id, 0);
         } else {
-            printf("[game_client] Failed to deserialize chunk with mapId %s into map with id %s\n", msg.map_id, map->id.c_str());
+            printf("[game_client] Failed to deserialize chunk with mapId %u into map with id %u\n", msg.map_id, map->id);
         }
     } else {
         // TODO: LoadPack the right map by ID somehow

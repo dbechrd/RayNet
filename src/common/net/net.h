@@ -87,14 +87,14 @@ struct Msg_C_InputCommands : public yojimbo::Message
 
 struct Msg_C_TileInteract : public yojimbo::Message
 {
-    char     map_id  [SV_MAX_TILE_MAP_NAME_LEN]{};
+    uint32_t map_id  {};
     uint32_t x       {};
     uint32_t y       {};
     bool     primary {};  // true = primary, false = secondary
 
     template <typename Stream> bool Serialize(Stream &stream)
     {
-        serialize_string(stream, map_id, sizeof(map_id));
+        serialize_uint32(stream, map_id);
         serialize_bool(stream, primary);
         serialize_uint32(stream, x);
         serialize_uint32(stream, y);
@@ -180,7 +180,7 @@ struct Msg_S_EntitySnapshot : public yojimbo::Message
     uint32_t            entity_id  {};
     data::EntityType    type       {};  // doesn't change, but needed for switch statements in deserializer
     data::EntitySpecies spec       {};
-    char                map_id   [SV_MAX_TILE_MAP_NAME_LEN + 1]{};
+    uint32_t            map_id     {};
     Vector3             position   {};
     bool                on_warp_cooldown {};
 
@@ -209,7 +209,7 @@ struct Msg_S_EntitySnapshot : public yojimbo::Message
         serialize_uint32(stream, entity_id);
         serialize_uint32(stream, (uint32_t &)type);
         serialize_uint32(stream, (uint32_t &)spec);
-        serialize_string(stream, map_id, sizeof(map_id));
+        serialize_uint32(stream, map_id);
         serialize_float(stream, position.x);
         serialize_float(stream, position.y);
         serialize_float(stream, position.z);
@@ -247,7 +247,7 @@ struct Msg_S_EntitySpawn : public yojimbo::Message
     data::EntityType    type      {};
     data::EntitySpecies spec      {};
     char                name      [SV_MAX_ENTITY_NAME_LEN + 1]{};
-    char                map_id    [SV_MAX_TILE_MAP_NAME_LEN + 1]{};
+    uint32_t            map_id    {};
     Vector3             position  {};
     // Collision
     float               radius    {};
@@ -270,7 +270,7 @@ struct Msg_S_EntitySpawn : public yojimbo::Message
         serialize_uint32(stream, (uint32_t&)type);
         serialize_uint32(stream, (uint32_t&)spec);
         serialize_string(stream, name, sizeof(name));
-        serialize_string(stream, map_id, sizeof(map_id));
+        serialize_uint32(stream, map_id);
         serialize_float(stream, position.x);
         serialize_float(stream, position.y);
         serialize_float(stream, position.z);
@@ -302,15 +302,15 @@ struct Msg_S_EntitySpawn : public yojimbo::Message
 
 struct Msg_S_TileChunk : public yojimbo::BlockMessage
 {
-    char     map_id     [SV_MAX_TILE_MAP_NAME_LEN + 1]{};
-    uint32_t x          {};
-    uint32_t y          {};
-    uint32_t w          {};
-    uint32_t h          {};
+    uint32_t map_id {};
+    uint32_t x      {};
+    uint32_t y      {};
+    uint32_t w      {};
+    uint32_t h      {};
 
     template <typename Stream> bool Serialize(Stream &stream)
     {
-        serialize_string(stream, map_id, sizeof(map_id));
+        serialize_uint32(stream, map_id);
         serialize_uint32(stream, x);
         serialize_uint32(stream, y);
         serialize_uint32(stream, w);
@@ -322,7 +322,7 @@ struct Msg_S_TileChunk : public yojimbo::BlockMessage
 };
 struct Msg_S_TileUpdate : public yojimbo::Message
 {
-    char     map_id    [SV_MAX_TILE_MAP_NAME_LEN + 1]{};
+    uint32_t map_id    {};
     uint32_t x         {};
     uint32_t y         {};
     uint32_t tile_id   {};
@@ -330,7 +330,7 @@ struct Msg_S_TileUpdate : public yojimbo::Message
 
     template <typename Stream> bool Serialize(Stream &stream)
     {
-        serialize_string(stream, map_id, sizeof(map_id));
+        serialize_uint32(stream, map_id);
         serialize_uint32(stream, x);
         serialize_uint32(stream, y);
         serialize_uint32(stream, tile_id);

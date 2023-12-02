@@ -216,7 +216,7 @@ namespace data {
         // no extra fields atm
 
         // type == "lever"
-        uint8_t power_level {};
+        uint8_t  power_level        {};
         uint32_t tile_def_unpowered {};
         uint32_t tile_def_powered   {};
 
@@ -227,10 +227,10 @@ namespace data {
         std::string sign_text[4] {};
 
         // type == "warp"
-        std::string warp_map_id {};
-        uint32_t    warp_dest_x {};
-        uint32_t    warp_dest_y {};
-        uint32_t    warp_dest_z {};
+        uint32_t warp_map_id {};
+        uint32_t warp_dest_x {};
+        uint32_t warp_dest_y {};
+        uint32_t warp_dest_z {};
     };
 
     struct AiPathNode {
@@ -285,7 +285,8 @@ namespace data {
         static const uint32_t SENTINEL = 0x12345678;
 
         uint32_t    version          {};  // version on disk
-        std::string id               {};  // name of map area
+        uint32_t    id               {};  // id of the map (for networking)
+        std::string name             {};  // name of map area
         uint32_t    width            {};  // width of map in tiles
         uint32_t    height           {};  // height of map in tiles
         std::string title            {};  // display name
@@ -411,7 +412,7 @@ namespace data {
         double        spawned_at   {};
         double        despawned_at {};
 
-        std::string   map_id       {};
+        uint32_t      map_id       {};
         Vector3       position     {};
 
         //// Audio ////
@@ -478,9 +479,9 @@ namespace data {
         Vector3   warp_dest_pos {};
 
         // You either need this
-        std::string warp_dest_map         {};  // regular map to warp to
+        uint32_t    warp_dest_map         {};  // regular map to warp to
         // Or both of these
-        std::string warp_template_map     {};  // template map to make a copy of for procgen
+        uint32_t    warp_template_map     {};  // template map to make a copy of for procgen
         std::string warp_template_tileset {};  // wang tileset to use for procgen
 
         inline Vector2 Position2D(void) {
@@ -519,20 +520,20 @@ namespace data {
     };
 
     struct GhostSnapshot {
-        double      server_time {};
+        double   server_time {};
 
         // Entity
-        std::string map_id      {};
-        Vector3     position    {};
-        bool        on_warp_cooldown {};
+        uint32_t map_id      {};
+        Vector3  position    {};
+        bool     on_warp_cooldown {};
 
         // Physics
-        float       speed       {};  // max walk speed or something
-        Vector3     velocity    {};
+        float    speed       {};  // max walk speed or something
+        Vector3  velocity    {};
 
         // Life
-        int         hp_max      {};
-        int         hp          {};
+        int      hp_max      {};
+        int      hp          {};
 
         // TODO: Wtf do I do with this shit?
         uint32_t last_processed_input_cmd {};
@@ -615,7 +616,8 @@ namespace data {
         std::unordered_map<std::string, size_t> sprite_by_id{};
         std::unordered_map<uint32_t, size_t>    tile_def_by_id{};
         std::unordered_map<std::string, size_t> tile_def_by_name{};
-        std::unordered_map<std::string, size_t> tile_map_by_id{};  // TODO: Integer ids to reduce network bandwidth
+        std::unordered_map<uint32_t, size_t>    tile_map_by_id{};
+        std::unordered_map<std::string, size_t> tile_map_by_name{};
 
         PackToc toc {};
 
@@ -734,22 +736,32 @@ namespace data {
             }
         }
 
-        Tilemap &FindTilemap(const std::string &id) {
+        Tilemap &FindTilemap(uint32_t id) {
             const auto &entry = tile_map_by_id.find(id);
             if (entry != tile_map_by_id.end()) {
                 return tile_maps[entry->second];
             } else {
-                TraceLog(LOG_WARNING, "Missing tile map: %s", id.c_str());
+                TraceLog(LOG_WARNING, "Missing tile map: %u", id);
                 return tile_maps[0];
             }
         }
 
-        size_t FindTilemapIndex(const std::string &id) {
+        Tilemap &FindTilemapByName(const std::string &name) {
+            const auto &entry = tile_map_by_name.find(name);
+            if (entry != tile_map_by_name.end()) {
+                return tile_maps[entry->second];
+            } else {
+                TraceLog(LOG_WARNING, "Missing tile map: %s", name.c_str());
+                return tile_maps[0];
+            }
+        }
+
+        size_t FindTilemapIndex(uint32_t id) {
             const auto &entry = tile_map_by_id.find(id);
             if (entry != tile_map_by_id.end()) {
                 return entry->second;
             } else {
-                TraceLog(LOG_WARNING, "Missing tile map: %s", id.c_str());
+                TraceLog(LOG_WARNING, "Missing tile map: %u", id);
                 return 0;
             }
         }

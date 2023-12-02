@@ -340,7 +340,7 @@ int main(int argc, char *argv[])
                     }
                 }
 
-                const char *holdingItem = client->world->HudSpinnerItemName();
+                const char *holdingItem = client->world->spinner.ItemName();
                 if (button_primary) {
                     if (holdingItem == "Fireball") {
                         input.fire = true;

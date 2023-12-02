@@ -95,8 +95,8 @@ struct GameServer {
     void Update(void);
     void Stop(void);
 
-    data::Tilemap *FindOrLoadMap(const std::string &map_id);
-    data::Tilemap *FindMap(const std::string &map_id);
+    data::Tilemap *FindOrLoadMap(uint32_t map_id);
+    data::Tilemap *FindMap(uint32_t map_id);
 
     data::Entity *SpawnEntity(data::EntityType type);
     void DespawnEntity(uint32_t entityId);
@@ -131,14 +131,14 @@ private:
     void ProcessMsg(int clientIdx, Msg_C_TileInteract &msg);
     void ProcessMessages(void);
 
-    data::Entity *SpawnProjectile(const std::string &map_id, Vector3 position, Vector2 direction, Vector3 initial_velocity);
+    data::Entity *SpawnProjectile(uint32_t map_id, Vector3 position, Vector2 direction, Vector3 initial_velocity);
     void UpdateServerPlayers(void);
-    void TickSpawnTownNPCs(const std::string &map_id);
-    void TickSpawnCaveNPCs(const std::string &map_id);
+    void TickSpawnTownNPCs(uint32_t map_id);
+    void TickSpawnCaveNPCs(uint32_t map_id);
     void TickEntityNPC(data::Entity &entity, double dt);
     void TickEntityPlayer(data::Entity &entity, double dt);
     void TickEntityProjectile(data::Entity &entity, double dt);
-    void WarpEntity(data::Entity &entity, const std::string &dest_map_id, Vector3 dest_pos);
+    void WarpEntity(data::Entity &entity, uint32_t dest_map_id, Vector3 dest_pos);
     void TickResolveEntityWarpCollisions(data::Tilemap &map, data::Entity &entity, double now);
     void Tick(void);
     void SerializeSnapshot(data::Entity &entity, Msg_S_EntitySnapshot &entitySnapshot);

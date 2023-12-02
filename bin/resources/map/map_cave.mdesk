@@ -1,5 +1,6 @@
-@Tilemap map_cave: {
+@Tilemap 2: {
     version: 8
+    name: "map_cave"
     width: 16
     height: 16
     title: "Echo Cave"
@@ -50,7 +51,7 @@
         { 6 0 lootable loot_basic }
         { 2 0 sign `I have heard that the` `[Sorcerer's Stone](# "A blue, glowing magical stone")` `is somewhere nearby` `this place. -Sign Painter` }
         { 0 2 sign "Kings of Leon" "Sex on Fire" "but you're in a" "bathroom at a party" }
-        { 2 7 warp map_overworld 51 12 0 }
+        { 2 7 warp 1 51 12 0 }
     ]
     path_nodes: [
         //x      y      z      wait_for

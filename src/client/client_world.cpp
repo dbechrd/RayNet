@@ -16,23 +16,23 @@ data::Entity *ClientWorld::LocalPlayer(void)
     data::Entity *localPlayer = entityDb->FindEntity(localPlayerEntityId, data::ENTITY_PLAYER);
     return localPlayer;
 }
-const std::string &ClientWorld::LocalPlayerMapId(void)
+uint32_t ClientWorld::LocalPlayerMapId(void)
 {
     data::Entity *localPlayer = LocalPlayer();
-    if (localPlayer && !localPlayer->map_id.empty()) {
+    if (localPlayer && localPlayer->map_id) {
         return localPlayer->map_id;
     }
-    return rnStringNull.str();
+    return 0;
 }
 data::Tilemap *ClientWorld::LocalPlayerMap(void)
 {
     data::Entity *localPlayer = LocalPlayer();
-    if (localPlayer && !localPlayer->map_id.empty()) {
+    if (localPlayer && localPlayer->map_id) {
         return FindOrLoadMap(localPlayer->map_id);
     }
     return 0;
 }
-data::Tilemap *ClientWorld::FindOrLoadMap(const std::string &map_id)
+data::Tilemap *ClientWorld::FindOrLoadMap(uint32_t map_id)
 {
     data::Tilemap &map = data::packs[1].FindTilemap(map_id);
     return &map;
@@ -191,7 +191,7 @@ void ClientWorld::UpdateLocalPlayer(GameClient &client, data::Entity &entity, da
     histoData.cmdAccumForce = cmdAccumForce;
     UpdateLocalPlayerHisto(client, entity, histoData);
 }
-void ClientWorld::UpdateLocalGhost(GameClient &client, data::Entity &entity, data::AspectGhost &ghost, const std::string &player_map_id)
+void ClientWorld::UpdateLocalGhost(GameClient &client, data::Entity &entity, data::AspectGhost &ghost, uint32_t player_map_id)
 {
     // TODO(dlb): Find snapshots nearest to (GetTime() - clientTimeDeltaVsServer)
     const double renderAt = client.ServerNow() - SV_TICK_DT;
@@ -256,7 +256,7 @@ void ClientWorld::UpdateEntities(GameClient &client)
     hoveredEntityId = 0;
     hoveredEntityInRange = false;
 
-    const std::string &player_map_id = LocalPlayerMapId();
+    const uint32_t player_map_id = LocalPlayerMapId();
 
     data::Entity *e_player = entityDb->FindEntity(localPlayerEntityId, data::ENTITY_PLAYER);
     if (!e_player) {
@@ -336,14 +336,14 @@ void ClientWorld::UpdateCamera(GameClient &client)
 
     // Snap camera when new entity target, or target entity changes maps
     const bool new_target = target.id != last_target_id;
-    const bool new_map = target.map_id != last_target_map;
+    const bool new_map = target.map_id != last_target_map_id;
 
     // Teleport camera to new location
     if (new_target || new_map) {
         camera.target.x = targetPos.x;
         camera.target.y = targetPos.y;
         last_target_id = target.id;
-        last_target_map = target.map_id;
+        last_target_map_id = target.map_id;
     }
 
     if (new_map) {
@@ -387,17 +387,6 @@ void ClientWorld::UpdateCamera(GameClient &client)
     camera.offset.x = floorf(camera.offset.x);
     camera.offset.y = floorf(camera.offset.y);
 }
-void ClientWorld::UpdateHUDSpinner(void)
-{
-    IO::Scoped scope(IO::IO_HUDSpinner);
-
-    hudSpinnerPrev = hudSpinner;
-    hudSpinner = io.KeyDown(KEY_TAB);
-    if (hudSpinner) {
-        io.CaptureMouse();
-    } else {
-    }
-}
 void ClientWorld::Update(GameClient &client)
 {
     data::UpdateTileDefAnimations(client.frameDt);
@@ -413,7 +402,7 @@ void ClientWorld::Update(GameClient &client)
     io.PopScope();
 
     UpdateCamera(client);
-    UpdateHUDSpinner();
+    spinner.Update();
 
     // TODO: Idk how to make this frame independent, but it's a hack so wutevs. Fix it one day.
     if ((int)fmod(client.now * 100, 100) == GetRandomValue(0, 9)) {
@@ -423,7 +412,7 @@ void ClientWorld::Update(GameClient &client)
 
 void ClientWorld::DrawHoveredTileIndicator(GameClient &client)
 {
-    if (client.controller.tile_hovered && HudSpinnerItemIsTool()) {
+    if (client.controller.tile_hovered && spinner.ItemIsTool()) {
         Rectangle tileRect{
             floorf((float)client.controller.tile_x * TILE_W),
             floorf((float)client.controller.tile_y * TILE_W),
@@ -813,83 +802,6 @@ void ClientWorld::DrawHUDEntityHoverInfo(void)
     };
     DrawTextShadowEx(fntMedium, e_hovered.name.c_str(), labelPos, WHITE);
 }
-void ClientWorld::DrawHUDSpinner(void)
-{
-    if (!hudSpinner) {
-        return;
-    }
-
-    IO::Scope scope(IO::IO_HUDSpinner);
-
-    const float innerRadius = 80;
-    const float outerRadius = innerRadius * 2;
-    const float centerRadius = innerRadius + (outerRadius - innerRadius) / 2;
-
-    Vector2 mousePos = GetMousePosition();
-    if (!hudSpinnerPrev) {
-        hudSpinnerPos = mousePos; //{ GetRenderWidth() / 2.0f, GetRenderHeight() / 2.0f };
-        CircleConstrainToScreen(hudSpinnerPos, outerRadius);
-    }
-
-    Vector2 toMouse = Vector2Subtract(mousePos, hudSpinnerPos);
-    float toMouseLen2 = Vector2LengthSqr(toMouse);
-
-    if (toMouseLen2 >= innerRadius*innerRadius) {
-        // Position on circle, normalized to 0.0 - 1.0 range, clockwise from 12 o'clock
-        float pieAlpha = 1.0f - (atan2f(toMouse.x, toMouse.y) / PI + 1.0f) / 2.0f;
-        hudSpinnerIndex = pieAlpha * hudSpinnerCount;
-        hudSpinnerIndex = CLAMP(hudSpinnerIndex, 0, hudSpinnerCount);
-    }
-
-#if 1
-    // TODO(cleanup): Debug code to increase/decrease # of pie entries
-    float wheelMove = io.MouseWheelMove();
-    if (wheelMove) {
-        int delta = (int)CLAMP(wheelMove, -1, 1) * -1;
-        hudSpinnerCount += delta;
-        hudSpinnerCount = CLAMP(hudSpinnerCount, 1, 20);
-    }
-#endif
-
-    const float pieSliceDeg = 360.0f / hudSpinnerCount;
-    const float angleStart = pieSliceDeg * hudSpinnerIndex - 90;
-    const float angleEnd = angleStart + pieSliceDeg;
-    const Color color = ColorFromHSV(angleStart, 0.7f, 0.7f);
-
-    //DrawCircleV(hudSpinnerPos, outerRadius, Fade(LIGHTGRAY, 0.6f));
-    DrawRing(hudSpinnerPos, innerRadius, outerRadius, 0, 360, 32, Fade(LIGHTGRAY, 0.6f));
-
-    //DrawCircleSector(hudSpinnerPos, outerRadius, angleStart, angleEnd, 32, Fade(SKYBLUE, 0.6f));
-    DrawRing(hudSpinnerPos, innerRadius, outerRadius, angleStart, angleEnd, 32, Fade(color, 0.8f));
-
-    for (int i = 0; i < hudSpinnerCount; i++) {
-        // Find middle of pie slice as a percentage of total pie circumference
-        const float iconPieAlpha = (float)i / hudSpinnerCount - 0.25f + (1.0f / hudSpinnerCount * 0.5f);
-        const Vector2 iconCenter = {
-            hudSpinnerPos.x + centerRadius * cosf(2 * PI * iconPieAlpha),
-            hudSpinnerPos.y + centerRadius * sinf(2 * PI * iconPieAlpha)
-        };
-
-        const char *menuText = i < ARRAY_SIZE(hudSpinnerItems) ? hudSpinnerItems[i] : "-Empty-";
-
-        //DrawCircle(iconCenter.x, iconCenter.y, 2, BLACK);
-        Vector2 textSize = MeasureTextEx(fntMedium, menuText, fntMedium.baseSize, 1.0f);
-        Vector2 textPos{
-            iconCenter.x - textSize.x / 2.0f,
-            iconCenter.y - textSize.y / 2.0f
-        };
-        //DrawTextShadowEx(fntMedium, TextFormat("%d %.2f", i, iconPieAlpha), iconCenter, RED);
-        DrawTextShadowEx(fntMedium, menuText, textPos, WHITE);
-    }
-
-#if 0
-    // TODO(cleanup): Draw debug text on pie menu
-    DrawTextShadowEx(fntMedium,
-        TextFormat("%.2f (%d of %d)", pieAlpha, hudSpinnerIndex + 1, hudSpinnerCount),
-        center, WHITE
-    );
-#endif
-}
 void ClientWorld::DrawHUDTitle(GameClient &client)
 {
     if (titleShownAt) {
@@ -1023,7 +935,7 @@ void ClientWorld::DrawHUDMenu(void)
     uiHUDMenu.Button("Map");
     uiHUDMenu.Newline();
 
-    const char *holdingItem = HudSpinnerItemName();
+    const char *holdingItem = spinner.ItemName();
     if (!holdingItem) {
         holdingItem = "-Empty-";
     }
@@ -1066,7 +978,7 @@ void ClientWorld::Draw(GameClient &client)
     DrawHoveredObjectIndicator(client, *map);
     DrawDialogs(client);
     DrawHUDEntityHoverInfo();
-    DrawHUDSpinner();
+    spinner.Draw();
     DrawHUDTitle(client);
     DrawHUDSignEditor();
     DrawHUDMenu();

@@ -30,7 +30,8 @@ void GameServer::OnClientJoin(int clientIdx)
         sv_player.entityId = player->id;
 
         player->type = data::ENTITY_PLAYER;
-        player->map_id = LEVEL_001;  // TODO: Something smarter
+        data::Tilemap &level_001 = data::packs[1].FindTilemapByName(LEVEL_001);
+        player->map_id = level_001.id;
         const Vector3 caveEntrance{ 3100, 1100, 0 };
         const Vector3 townCenter{ 1660, 2360, 0 };
         const Vector3 inTree{ 2980.15f, 832.31 };
@@ -173,12 +174,12 @@ void GameServer::Stop(void)
     delete entityDb;
 }
 
-data::Tilemap *GameServer::FindOrLoadMap(const std::string &map_id)
+data::Tilemap *GameServer::FindOrLoadMap(uint32_t map_id)
 {
 #if 1
     // TODO: Go back to assuming it's not already loaded once we figure out packs
     data::Tilemap &map = data::packs[1].FindTilemap(map_id);
-    if (!map.id.empty()) {
+    if (map.id) {
         return &map;
     } else {
         return 0;
@@ -217,7 +218,7 @@ data::Tilemap *GameServer::FindOrLoadMap(const std::string &map_id)
     }
 #endif
 }
-data::Tilemap *GameServer::FindMap(const std::string &map_id)
+data::Tilemap *GameServer::FindMap(uint32_t map_id)
 {
     // TODO: Remove this alias and call data::* directly?
     auto &tile_map = data::packs[1].FindTilemap(map_id);
@@ -262,7 +263,7 @@ void GameServer::SerializeSpawn(uint32_t entityId, Msg_S_EntitySpawn &entitySpaw
     entitySpawn.type      = entity->type;
     entitySpawn.spec      = entity->spec;
     strncpy(entitySpawn.name,   entity->name  .c_str(), SV_MAX_ENTITY_NAME_LEN);
-    strncpy(entitySpawn.map_id, entity->map_id.c_str(), SV_MAX_TILE_MAP_NAME_LEN);
+    entitySpawn.map_id    = entity->map_id;
     entitySpawn.position  = entity->position;
 
     // Collision
@@ -380,7 +381,7 @@ void GameServer::SendTileChunk(int clientIdx, data::Tilemap &map, uint32_t x, ui
         if (msg) {
             data::TileChunk *chunk = (data::TileChunk *)yj_server->AllocateBlock(clientIdx, sizeof(data::TileChunk));
 
-            strncpy(msg->map_id, map.id.c_str(), SV_MAX_TILE_MAP_NAME_LEN);
+            msg->map_id = map.id;
             msg->x = x;
             msg->y = y;
             msg->w = MIN(map.width, SV_MAX_TILE_CHUNK_WIDTH);
@@ -414,7 +415,7 @@ void GameServer::SendTileUpdate(int clientIdx, data::Tilemap &map, uint32_t x, u
     if (yj_server->CanSendMessage(clientIdx, CHANNEL_R_TILE_EVENT)) {
         Msg_S_TileUpdate *msg = (Msg_S_TileUpdate *)yj_server->CreateMessage(clientIdx, MSG_S_TILE_UPDATE);
         if (msg) {
-            strncpy(msg->map_id, map.id.c_str(), SV_MAX_TILE_MAP_NAME_LEN);
+            msg->map_id = map.id;
             msg->x = x;
             msg->y = y;
             uint32_t tile_id{};
@@ -622,8 +623,9 @@ void GameServer::ProcessMsg(int clientIdx, Msg_C_TileInteract &msg)
             );
             SendEntitySay(clientIdx, player.entityId, 0, "Sign", signText);
         } else if (obj_data->type == "warp") {
+            data::Tilemap &map = data::packs[1].FindTilemap(obj_data->warp_map_id);
             const char *warpInfo = TextFormat("%s (%u, %u)",
-                obj_data->warp_map_id.c_str(),
+                map.name.c_str(),
                 obj_data->warp_dest_x,
                 obj_data->warp_dest_y
             );
@@ -671,7 +673,7 @@ void GameServer::ProcessMessages(void)
     }
 }
 
-data::Entity *GameServer::SpawnProjectile(const std::string &map_id, Vector3 position, Vector2 direction, Vector3 initial_velocity)
+data::Entity *GameServer::SpawnProjectile(uint32_t map_id, Vector3 position, Vector2 direction, Vector3 initial_velocity)
 {
     data::Entity *projectile = SpawnEntity(data::ENTITY_PROJECTILE);
     if (!projectile) return 0;
@@ -744,7 +746,7 @@ void GameServer::UpdateServerPlayers(void)
         }
     }
 }
-data::Entity *SpawnEntityProto(GameServer &server, const std::string &map_id, Vector3 position, data::EntityProto &proto)
+data::Entity *SpawnEntityProto(GameServer &server, uint32_t map_id, Vector3 position, data::EntityProto &proto)
 {
     data::Tilemap *map = server.FindMap(map_id);
     if (!map) return 0;
@@ -777,7 +779,7 @@ data::Entity *SpawnEntityProto(GameServer &server, const std::string &map_id, Ve
 
     return entity;
 }
-void GameServer::TickSpawnTownNPCs(const std::string &map_id)
+void GameServer::TickSpawnTownNPCs(uint32_t map_id)
 {
     // TODO: Load protos from an mdesk file
     static data::EntityProto lily;
@@ -911,7 +913,7 @@ void GameServer::TickSpawnTownNPCs(const std::string &map_id)
         }
     }
 }
-void GameServer::TickSpawnCaveNPCs(const std::string &map_id)
+void GameServer::TickSpawnCaveNPCs(uint32_t map_id)
 {
     for (int i = 0; i < ARRAY_SIZE(eid_bots); i++) {
         data::Entity *entity = entityDb->FindEntity(eid_bots[i], data::ENTITY_NPC);
@@ -1083,7 +1085,7 @@ void GameServer::TickEntityProjectile(data::Entity &e_projectile, double dt)
         }
     }
 }
-void GameServer::WarpEntity(data::Entity &entity, const std::string &dest_map_id, Vector3 dest_pos)
+void GameServer::WarpEntity(data::Entity &entity, uint32_t dest_map_id, Vector3 dest_pos)
 {
     data::Tilemap *dest_map = FindOrLoadMap(dest_map_id);
     if (dest_map) {
@@ -1163,7 +1165,8 @@ void GameServer::Tick(void)
     }
 
     // HACK: Only spawn NPCs in map 1, whatever map that may be (hopefully it's Level_001)
-    TickSpawnTownNPCs(LEVEL_001);
+    data::Tilemap &level_001 = data::packs[1].FindTilemapByName(LEVEL_001);
+    TickSpawnTownNPCs(level_001.id);
     //TickSpawnCaveNPCs(2);
 
     // Tick entites
@@ -1204,7 +1207,7 @@ void GameServer::SerializeSnapshot(data::Entity &entity, Msg_S_EntitySnapshot &e
     // Entity
     entitySnapshot.entity_id = entity.id;
     entitySnapshot.type      = entity.type;
-    strncpy(entitySnapshot.map_id, entity.map_id.c_str(), SV_MAX_TILE_MAP_NAME_LEN);
+    entitySnapshot.map_id    = entity.map_id;
     entitySnapshot.position  = entity.position;
     entitySnapshot.on_warp_cooldown = entity.on_warp_cooldown;
 

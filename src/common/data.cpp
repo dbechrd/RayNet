@@ -104,8 +104,9 @@ namespace data {
             // C++ objects -> assets.bin
             // assets.bin -> asset.txt
 
-            fprintf(file, "@Tilemap %s: {\n", tilemap.id.c_str());
+            fprintf(file, "@Tilemap %u: {\n", tilemap.id);
             fprintf(file, "    version: %u\n", tilemap.version);
+            fprintf(file, "    name: %s\n", tilemap.name.c_str());
             fprintf(file, "    width: %u\n", tilemap.width);
             fprintf(file, "    height: %u\n", tilemap.height);
             fprintf(file, "    title: \"%s\"\n", tilemap.title.c_str());
@@ -154,8 +155,8 @@ namespace data {
                     fprintf(file, "\"%s\" ", obj_data.sign_text[2].c_str());
                     fprintf(file, "\"%s\" ", obj_data.sign_text[3].c_str());
                 } else if (obj_data.type == "warp") {
-                    fprintf(file, "%s %u %u %u ",
-                        obj_data.warp_map_id.c_str(),
+                    fprintf(file, "%u %u %u %u ",
+                        obj_data.warp_map_id,
                         obj_data.warp_dest_x,
                         obj_data.warp_dest_y,
                         obj_data.warp_dest_z
@@ -519,14 +520,16 @@ namespace data {
                 } else if (MD_NodeHasTag(node, MD_S8Lit("Tilemap"), 0)) {
                     Tilemap map{};
 
-                    META_ID_STR(map.id);
+                    META_ID_UINT32(map.id);
                     META_CHILDREN_BEGIN;           // {}
                         META_CHILDREN_LOOP_BEGIN;  // key: value
                             std::string key{};
                             META_ID_STR(key);      // key
 
                             META_CHILDREN_BEGIN;   // value
-                            if (key == "version") {
+                            if (key == "name") {
+                                META_STRING(map.name);
+                            } else if (key == "version") {
                                 META_UINT32(map.version);
                             } else if (key == "width") {
                                 META_UINT32(map.width);
@@ -568,7 +571,8 @@ namespace data {
                                             META_STRING(obj_data.sign_text[2]);
                                             META_STRING(obj_data.sign_text[3]);
                                         } else if (obj_data.type == "warp") {
-                                            META_IDENT(obj_data.warp_map_id);
+                                            std::string warp_map_name{};
+                                            META_UINT32(obj_data.warp_map_id);
                                             META_UINT32(obj_data.warp_dest_x);
                                             META_UINT32(obj_data.warp_dest_y);
                                             META_UINT32(obj_data.warp_dest_z);
@@ -1042,6 +1046,7 @@ namespace data {
 
         PROC(tile_map.version);
         PROC(tile_map.id);
+        PROC(tile_map.name);
         PROC(tile_map.width);
         PROC(tile_map.height);
         PROC(tile_map.title);
@@ -1136,6 +1141,7 @@ namespace data {
 
         if (stream.mode == PACK_MODE_READ) {
             stream.pack->tile_map_by_id[tile_map.id] = index;
+            stream.pack->tile_map_by_name[tile_map.name] = index;
         }
     }
 
