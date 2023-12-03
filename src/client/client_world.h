@@ -161,14 +161,14 @@ struct ClientWorld {
 
     ClientWorld(void);
 
-    data::Entity *LocalPlayer(void);
+    Entity *LocalPlayer(void);
     uint32_t LocalPlayerMapId(void);
-    data::Tilemap *LocalPlayerMap(void);
-    data::Tilemap *FindOrLoadMap(uint32_t map_id);
+    Tilemap *LocalPlayerMap(void);
+    Tilemap *FindOrLoadMap(uint32_t map_id);
 
     void ApplySpawnEvent(const Msg_S_EntitySpawn &entitySpawn);
-    void ApplyStateInterpolated(data::Entity &entity, const data::GhostSnapshot &a, const data::GhostSnapshot &b, float alpha, float dt);
-    Err CreateDialog(data::Entity &entity, uint32_t dialogId, const std::string &title, const std::string &message, double now);
+    void ApplyStateInterpolated(Entity &entity, const GhostSnapshot &a, const GhostSnapshot &b, float alpha, float dt);
+    Err CreateDialog(Entity &entity, uint32_t dialogId, const std::string &title, const std::string &message, double now);
 
     void Update(GameClient &client);
     void Draw(GameClient &client);
@@ -180,19 +180,19 @@ private:
         Vector3 cmdAccumForce;
     };
 
-    void UpdateMap(data::Tilemap &map);
-    void UpdateLocalPlayerHisto(GameClient &client, data::Entity &entity, HistoData &histoData);
-    void UpdateLocalPlayer(GameClient &client, data::Entity &entity, data::AspectGhost &ghost);
-    void UpdateLocalGhost(GameClient &client, data::Entity &entity, data::AspectGhost &ghost, uint32_t player_map_id);
+    void UpdateMap(Tilemap &map);
+    void UpdateLocalPlayerHisto(GameClient &client, Entity &entity, HistoData &histoData);
+    void UpdateLocalPlayer(GameClient &client, Entity &entity);
+    void UpdateLocalGhost(GameClient &client, Entity &entity, uint32_t player_map_id);
     void UpdateEntities(GameClient &client);
     void UpdateCamera(GameClient &client);
     void UpdateHUDSpinner(void);
 
     void DrawHoveredTileIndicator(GameClient &client);
-    void DrawEntitySnapshotShadows(GameClient &client, data::Entity &entity, Controller &controller);
-    void DrawEntities(GameClient &client, data::Tilemap &map, data::DrawCmdQueue &sortedDraws);
-    void DrawHoveredObjectIndicator(GameClient &client, data::Tilemap &map);
-    void DrawDialog(GameClient &client, data::Entity &entity, Vector2 bottomCenterScreen, std::vector<FancyTextTip> &tips);
+    void DrawEntitySnapshotShadows(GameClient &client, Entity &entity, Controller &controller);
+    void DrawEntities(GameClient &client, Tilemap &map, DrawCmdQueue &sortedDraws);
+    void DrawHoveredObjectIndicator(GameClient &client, Tilemap &map);
+    void DrawDialog(GameClient &client, Entity &entity, Vector2 bottomCenterScreen, std::vector<FancyTextTip> &tips);
     void DrawDialogTips(std::vector<FancyTextTip> tips);
     void DrawDialogs(GameClient &client);
     void DrawHUDEntityHoverInfo(void);

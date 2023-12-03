@@ -32,7 +32,7 @@
 //    - Use std::variant. No. Fuck that.
 
 struct TileChunkRecord {
-    data::Tilemap::Coord coord{};
+    Tilemap::Coord coord{};
     double lastSentAt{};  // when we last sent this chunk to the client
 };
 
@@ -95,10 +95,10 @@ struct GameServer {
     void Update(void);
     void Stop(void);
 
-    data::Tilemap *FindOrLoadMap(uint32_t map_id);
-    data::Tilemap *FindMap(uint32_t map_id);
+    Tilemap *FindOrLoadMap(uint32_t map_id);
+    Tilemap *FindMap(uint32_t map_id);
 
-    data::Entity *SpawnEntity(data::EntityType type);
+    Entity *SpawnEntity(EntityType type);
     void DespawnEntity(uint32_t entityId);
 
 private:
@@ -116,14 +116,14 @@ private:
     void SendEntitySay(int clientIdx, uint32_t entityId, uint32_t dialogId, const std::string &title, const std::string &message);
     void BroadcastEntitySay(uint32_t entityId, const std::string &title, const std::string &message);
 
-    void SendTileChunk(int clientIdx, data::Tilemap &map, uint32_t x, uint32_t y);
-    void BroadcastTileChunk(data::Tilemap &map, uint32_t x, uint32_t y);
+    void SendTileChunk(int clientIdx, Tilemap &map, uint32_t x, uint32_t y);
+    void BroadcastTileChunk(Tilemap &map, uint32_t x, uint32_t y);
 
-    void SendTileUpdate(int clientIdx, data::Tilemap &map, uint32_t x, uint32_t y);
-    void BroadcastTileUpdate(data::Tilemap &map, uint32_t x, uint32_t y);
+    void SendTileUpdate(int clientIdx, Tilemap &map, uint32_t x, uint32_t y);
+    void BroadcastTileUpdate(Tilemap &map, uint32_t x, uint32_t y);
 
     // All part of Update()
-    void RequestDialog(int clientIdx, data::Entity &entity, Dialog &dialog);
+    void RequestDialog(int clientIdx, Entity &entity, Dialog &dialog);
 
     void ProcessMsg(int clientIdx, Msg_C_EntityInteract &msg);
     void ProcessMsg(int clientIdx, Msg_C_EntityInteractDialogOption &msg);
@@ -131,17 +131,17 @@ private:
     void ProcessMsg(int clientIdx, Msg_C_TileInteract &msg);
     void ProcessMessages(void);
 
-    data::Entity *SpawnProjectile(uint32_t map_id, Vector3 position, Vector2 direction, Vector3 initial_velocity);
+    Entity *SpawnProjectile(uint32_t map_id, Vector3 position, Vector2 direction, Vector3 initial_velocity);
     void UpdateServerPlayers(void);
     void TickSpawnTownNPCs(uint32_t map_id);
     void TickSpawnCaveNPCs(uint32_t map_id);
-    void TickEntityNPC(data::Entity &entity, double dt);
-    void TickEntityPlayer(data::Entity &entity, double dt);
-    void TickEntityProjectile(data::Entity &entity, double dt);
-    void WarpEntity(data::Entity &entity, uint32_t dest_map_id, Vector3 dest_pos);
-    void TickResolveEntityWarpCollisions(data::Tilemap &map, data::Entity &entity, double now);
+    void TickEntityNPC(Entity &entity, double dt);
+    void TickEntityPlayer(Entity &entity, double dt);
+    void TickEntityProjectile(Entity &entity, double dt);
+    void WarpEntity(Entity &entity, uint32_t dest_map_id, Vector3 dest_pos);
+    void TickResolveEntityWarpCollisions(Tilemap &map, Entity &entity, double now);
     void Tick(void);
-    void SerializeSnapshot(data::Entity &entity, Msg_S_EntitySnapshot &entitySnapshot);
+    void SerializeSnapshot(Entity &entity, Msg_S_EntitySnapshot &entitySnapshot);
     void SendClientSnapshots(void);
     void SendClockSync(void);
 };

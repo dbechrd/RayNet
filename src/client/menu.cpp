@@ -86,12 +86,12 @@ void MenuConnecting::OnEnter(void) {
 }
 
 void MenuConnecting::OnLeave(void) {
-    data::ResetSprite(campfire);
+    ResetSprite(campfire);
 }
 
 void MenuConnecting::Draw(GameClient &client, bool &back)
 {
-    data::UpdateSprite(campfire, client.frameDt, !msg_last_updated);
+    UpdateSprite(campfire, client.frameDt, !msg_last_updated);
     if (!msg_last_updated) {
         msg_last_updated = client.now;
     } else if (client.now > msg_last_updated + 0.5) {
@@ -99,7 +99,7 @@ void MenuConnecting::Draw(GameClient &client, bool &back)
         msg_index = ((size_t)msg_index + 1) % ARRAY_SIZE(connecting_msgs);
     }
 
-    const data::GfxFrame &campfireFrame = data::GetSpriteFrame(campfire);
+    const GfxFrame &campfireFrame = GetSpriteFrame(campfire);
 
     UIStyle uiStyleMenu {};
     uiStyleMenu.margin = {};
@@ -118,7 +118,7 @@ void MenuConnecting::Draw(GameClient &client, bool &back)
     campfire.position.y = campfirePos.y;
     campfire.position.z = 0;
 
-    data::DrawSprite(campfire, 0);
+    DrawSprite(campfire, 0);
     uiMenu.Space({ 0, (float)uiStyleMenu.font->baseSize / 2 });
 
     if (client.yj_client->IsConnecting()) {

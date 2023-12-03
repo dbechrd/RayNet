@@ -85,7 +85,7 @@ void GameClient::SendEntityInteract(uint32_t entityId)
         printf("Outgoing ENTITY_INTERACT channel message queue is full.\n");
     }
 }
-void GameClient::SendEntityInteractDialogOption(data::Entity &entity, uint32_t optionId)
+void GameClient::SendEntityInteractDialogOption(Entity &entity, uint32_t optionId)
 {
     if (yj_client->CanSendMessage(MSG_C_ENTITY_INTERACT_DIALOG_OPTION)) {
         Msg_C_EntityInteractDialogOption *msg = (Msg_C_EntityInteractDialogOption *)yj_client->CreateMessage(MSG_C_ENTITY_INTERACT_DIALOG_OPTION);
@@ -133,7 +133,7 @@ void GameClient::ProcessMsg(Msg_S_EntityDespawn &msg)
 }
 void GameClient::ProcessMsg(Msg_S_EntitySay &msg)
 {
-    data::Entity *entity = entityDb->FindEntity(msg.entity_id);
+    Entity *entity = entityDb->FindEntity(msg.entity_id);
     if (entity) {
         world->CreateDialog(*entity, msg.dialog_id, msg.title, msg.message, now);
     } else {
@@ -142,19 +142,18 @@ void GameClient::ProcessMsg(Msg_S_EntitySay &msg)
 }
 void GameClient::ProcessMsg(Msg_S_EntitySnapshot &msg)
 {
-    size_t entityIndex = entityDb->FindEntityIndex(msg.entity_id);
-    if (entityIndex) {
-        data::AspectGhost &ghost = entityDb->ghosts[entityIndex];
-        data::GhostSnapshot ghostSnapshot{ msg };
-        ghost.push(ghostSnapshot);
+    Entity *entity = entityDb->FindEntity(msg.entity_id);
+    if (entity) {
+        GhostSnapshot ghostSnapshot{ msg };
+        entity->ghost->push(ghostSnapshot);
     }
 }
 void GameClient::ProcessMsg(Msg_S_EntitySpawn &msg)
 {
     //printf("[ENTITY_SPAWN] id=%u mapId=%u\n", msg->entity_id, msg->map_id);
-    data::Entity *entity = entityDb->FindEntity(msg.entity_id);
+    Entity *entity = entityDb->FindEntity(msg.entity_id);
     if (!entity) {
-        data::Tilemap *map = world->FindOrLoadMap(msg.map_id);
+        Tilemap *map = world->FindOrLoadMap(msg.map_id);
         assert(map && "why no map? we get chunks before entities, right!?");
         if (map) {
             if (entityDb->SpawnEntity(msg.entity_id, msg.type, now)) {
@@ -169,11 +168,11 @@ void GameClient::ProcessMsg(Msg_S_EntitySpawn &msg)
 }
 void GameClient::ProcessMsg(Msg_S_TileChunk &msg)
 {
-    data::Tilemap *map = world->FindOrLoadMap(msg.map_id);
+    Tilemap *map = world->FindOrLoadMap(msg.map_id);
     if (map) {
         if (map->id = msg.map_id) {
-            if (msg.GetBlockSize() == sizeof(data::TileChunk)) {
-                data::TileChunk *chunk = (data::TileChunk *)msg.GetBlockData();
+            if (msg.GetBlockSize() == sizeof(TileChunk)) {
+                TileChunk *chunk = (TileChunk *)msg.GetBlockData();
                 for (uint32_t ty = msg.y; ty < msg.w; ty++) {
                     for (uint32_t tx = msg.x; tx < msg.h; tx++) {
                         const uint32_t index = ty * msg.w + tx;
@@ -182,7 +181,7 @@ void GameClient::ProcessMsg(Msg_S_TileChunk &msg)
                     }
                 }
             } else {
-                printf("[game_client] msg.GetBlockSize() [%d] != sizeof(data::TileChunk) [%zu]\n", msg.GetBlockSize(), sizeof(data::TileChunk));
+                printf("[game_client] msg.GetBlockSize() [%d] != sizeof(TileChunk) [%zu]\n", msg.GetBlockSize(), sizeof(TileChunk));
             }
         } else {
             printf("[game_client] Failed to deserialize chunk with mapId %u into map with id %u\n", msg.map_id, map->id);
@@ -196,7 +195,7 @@ void GameClient::ProcessMsg(Msg_S_TileChunk &msg)
 }
 void GameClient::ProcessMsg(Msg_S_TileUpdate &msg)
 {
-    data::Tilemap *map = world->FindOrLoadMap(msg.map_id);
+    Tilemap *map = world->FindOrLoadMap(msg.map_id);
     if (map) {
         if (map->id = msg.map_id) {
             map->Set(msg.x, msg.y, msg.tile_id, 0);

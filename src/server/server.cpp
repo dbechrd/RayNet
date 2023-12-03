@@ -184,7 +184,7 @@ Err Play(GameServer &server)
     Camera2D camera{};
     camera.zoom = 1;
 
-    data::Tilemap &level_001 = data::packs[1].FindTilemapByName(LEVEL_001);
+    Tilemap &level_001 = packs[1].FindTilemapByName(LEVEL_001);
     Editor editor{ level_001.id };
     editor.Init();
 
@@ -250,8 +250,8 @@ Err Play(GameServer &server)
             accum -= server.tickAccum;
 
             // Editor/graphical stuff
-            data::UpdateTileDefAnimations(accum);
-            //auto &editor_map = data::packs[1].FindTilemap(editor.map_id);
+            UpdateTileDefAnimations(accum);
+            //auto &editor_map = packs[1].FindTilemap(editor.map_id);
             //editor_map.UpdateAnimations(accum);
         }
 
@@ -260,9 +260,9 @@ Err Play(GameServer &server)
         BeginDrawing();
             ClearBackground(BLUE_DESAT);
             BeginMode2D(camera);
-                auto &editor_map = data::packs[1].FindTilemap(editor.map_id);
+                auto &editor_map = packs[1].FindTilemap(editor.map_id);
 
-                data::DrawCmdQueue sortedDraws{};
+                DrawCmdQueue sortedDraws{};
 
                 // [World] Draw ground tiles
                 editor_map.Draw(camera, sortedDraws);
@@ -270,7 +270,7 @@ Err Play(GameServer &server)
                 // [Editor] Overlays
                 editor.DrawGroundOverlays(camera, server.now);
 
-                for (data::Entity &entity : entityDb->entities) {
+                for (Entity &entity : entityDb->entities) {
                     if (entity.map_id == editor_map.id) {
                         entityDb->DrawEntity(entity, sortedDraws);
                     }

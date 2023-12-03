@@ -178,8 +178,8 @@ struct Msg_S_EntitySnapshot : public yojimbo::Message
 
     // Entity
     uint32_t            entity_id  {};
-    data::EntityType    type       {};  // doesn't change, but needed for switch statements in deserializer
-    data::EntitySpecies spec       {};
+    EntityType    type       {};  // doesn't change, but needed for switch statements in deserializer
+    EntitySpecies spec       {};
     uint32_t            map_id     {};
     Vector3             position   {};
     bool                on_warp_cooldown {};
@@ -228,7 +228,7 @@ struct Msg_S_EntitySnapshot : public yojimbo::Message
 
         // TODO: Also check if player is the clientIdx player. I.e. don't leak
         //       input info to all other players.
-        if (type == data::ENTITY_PLAYER) {
+        if (type == ENTITY_PLAYER) {
             serialize_uint32(stream, last_processed_input_cmd);
         }
 
@@ -244,8 +244,8 @@ struct Msg_S_EntitySpawn : public yojimbo::Message
 
     // Entity
     uint32_t            entity_id {};
-    data::EntityType    type      {};
-    data::EntitySpecies spec      {};
+    EntityType    type      {};
+    EntitySpecies spec      {};
     char                name      [SV_MAX_ENTITY_NAME_LEN + 1]{};
     uint32_t            map_id    {};
     Vector3             position  {};

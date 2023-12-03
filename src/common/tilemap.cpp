@@ -4,19 +4,19 @@
 #include "net/net.h"
 #include "wang.h"
 
-uint32_t data::Tilemap::At(uint32_t x, uint32_t y)
+uint32_t Tilemap::At(uint32_t x, uint32_t y)
 {
     assert(x < width);
     assert(y < height);
     return tiles[(size_t)y * width + x];
 }
-uint32_t data::Tilemap::At_Obj(uint32_t x, uint32_t y)
+uint32_t Tilemap::At_Obj(uint32_t x, uint32_t y)
 {
     assert(x < width);
     assert(y < height);
     return objects[(size_t)y * width + x];
 }
-bool data::Tilemap::AtTry(uint32_t x, uint32_t y, uint32_t &tile_id)
+bool Tilemap::AtTry(uint32_t x, uint32_t y, uint32_t &tile_id)
 {
     if (x < width && y < height) {
         tile_id = At(x, y);
@@ -24,7 +24,7 @@ bool data::Tilemap::AtTry(uint32_t x, uint32_t y, uint32_t &tile_id)
     }
     return false;
 }
-bool data::Tilemap::AtTry_Obj(uint32_t x, uint32_t y, uint32_t &obj_id)
+bool Tilemap::AtTry_Obj(uint32_t x, uint32_t y, uint32_t &obj_id)
 {
     if (x < width && y < height) {
         obj_id = At_Obj(x, y);
@@ -32,7 +32,7 @@ bool data::Tilemap::AtTry_Obj(uint32_t x, uint32_t y, uint32_t &obj_id)
     }
     return false;
 }
-bool data::Tilemap::WorldToTileIndex(uint32_t world_x, uint32_t world_y, Coord &coord)
+bool Tilemap::WorldToTileIndex(uint32_t world_x, uint32_t world_y, Coord &coord)
 {
     if (world_x < width * TILE_W && world_y < height * TILE_W) {
         coord.x = world_x / TILE_W;
@@ -41,7 +41,7 @@ bool data::Tilemap::WorldToTileIndex(uint32_t world_x, uint32_t world_y, Coord &
     }
     return false;
 }
-bool data::Tilemap::AtWorld(uint32_t world_x, uint32_t world_y, uint32_t &tile_id)
+bool Tilemap::AtWorld(uint32_t world_x, uint32_t world_y, uint32_t &tile_id)
 {
     Coord coord{};
     if (WorldToTileIndex(world_x, world_y, coord)) {
@@ -50,21 +50,21 @@ bool data::Tilemap::AtWorld(uint32_t world_x, uint32_t world_y, uint32_t &tile_i
     }
     return false;
 }
-bool data::Tilemap::IsSolid(int x, int y)
+bool Tilemap::IsSolid(int x, int y)
 {
     bool solid = true;
 
     // Out of bounds tiles are considered solid tiles
     if (x >= 0 && x < width && y >= 0 && y < height) {
         const uint32_t tile_id = At(x, y);
-        const data::TileDef &tileDef = GetTileDef(tile_id);
-        solid = tileDef.flags & data::TILEDEF_FLAG_SOLID;
+        const TileDef &tileDef = GetTileDef(tile_id);
+        solid = tileDef.flags & TILEDEF_FLAG_SOLID;
         if (!solid) {
             const uint8_t obj = At_Obj(x, y);
             // NOTE(dlb): Don't collide with void objects like we do with ground tiles
             if (obj) {
-                const data::TileDef &objTileDef = GetTileDef(obj);
-                solid = objTileDef.flags & data::TILEDEF_FLAG_SOLID;
+                const TileDef &objTileDef = GetTileDef(obj);
+                solid = objTileDef.flags & TILEDEF_FLAG_SOLID;
             }
         }
     }
@@ -72,7 +72,7 @@ bool data::Tilemap::IsSolid(int x, int y)
     return solid;
 }
 
-void data::Tilemap::Set(uint32_t x, uint32_t y, uint32_t tile_id, double now)
+void Tilemap::Set(uint32_t x, uint32_t y, uint32_t tile_id, double now)
 {
     assert(x < width);
     assert(y < height);
@@ -83,7 +83,7 @@ void data::Tilemap::Set(uint32_t x, uint32_t y, uint32_t tile_id, double now)
         chunkLastUpdatedAt = now;
     }
 }
-void data::Tilemap::Set_Obj(uint32_t x, uint32_t y, uint32_t object_id, double now)
+void Tilemap::Set_Obj(uint32_t x, uint32_t y, uint32_t object_id, double now)
 {
     assert(x < width);
     assert(y < height);
@@ -94,7 +94,7 @@ void data::Tilemap::Set_Obj(uint32_t x, uint32_t y, uint32_t object_id, double n
         chunkLastUpdatedAt = now;
     }
 }
-void data::Tilemap::SetFromWangMap(WangMap &wangMap, double now)
+void Tilemap::SetFromWangMap(WangMap &wangMap, double now)
 {
     // TODO: Specify map coords to set (or chunk id) and do a bounds check here instead
     if (width != wangMap.image.width || height != wangMap.image.height) {
@@ -110,7 +110,7 @@ void data::Tilemap::SetFromWangMap(WangMap &wangMap, double now)
         }
     }
 }
-bool data::Tilemap::NeedsFill(uint32_t x, uint32_t y, uint32_t old_tile_id)
+bool Tilemap::NeedsFill(uint32_t x, uint32_t y, uint32_t old_tile_id)
 {
     uint32_t tile_id;
     if (AtTry(x, y, tile_id)) {
@@ -118,7 +118,7 @@ bool data::Tilemap::NeedsFill(uint32_t x, uint32_t y, uint32_t old_tile_id)
     }
     return false;
 }
-void data::Tilemap::Scan(uint32_t lx, uint32_t rx, uint32_t y, uint32_t old_tile_id, std::stack<Coord> &stack)
+void Tilemap::Scan(uint32_t lx, uint32_t rx, uint32_t y, uint32_t old_tile_id, std::stack<Coord> &stack)
 {
     bool inSpan = false;
     for (uint32_t x = lx; x < rx; x++) {
@@ -130,18 +130,18 @@ void data::Tilemap::Scan(uint32_t lx, uint32_t rx, uint32_t y, uint32_t old_tile
         }
     }
 }
-void data::Tilemap::Fill(uint32_t x, uint32_t y, uint32_t new_tile_id, double now)
+void Tilemap::Fill(uint32_t x, uint32_t y, uint32_t new_tile_id, double now)
 {
     uint32_t old_tile_id = At(x, y);
     if (old_tile_id == new_tile_id) {
         return;
     }
 
-    std::stack<data::Tilemap::Coord> stack{};
+    std::stack<Tilemap::Coord> stack{};
     stack.push({ x, y });
 
     while (!stack.empty()) {
-        data::Tilemap::Coord coord = stack.top();
+        Tilemap::Coord coord = stack.top();
         stack.pop();
 
         uint32_t lx = coord.x;
@@ -161,34 +161,34 @@ void data::Tilemap::Fill(uint32_t x, uint32_t y, uint32_t new_tile_id, double no
     }
 }
 
-data::TileDef &data::Tilemap::GetTileDef(uint32_t tile_id)
+TileDef &Tilemap::GetTileDef(uint32_t tile_id)
 {
-    data::TileDef &tile_def = data::packs[0].FindTileDefById(tile_id);
+    TileDef &tile_def = packs[0].FindTileDefById(tile_id);
     return tile_def;
 }
-const data::GfxFrame &data::Tilemap::GetTileGfxFrame(uint32_t tile_id)
+const GfxFrame &Tilemap::GetTileGfxFrame(uint32_t tile_id)
 {
-    const data::TileDef &tile_def = GetTileDef(tile_id);
-    const data::GfxAnim &gfx_anim = data::packs[0].FindGraphicAnim(tile_def.anim);
+    const TileDef &tile_def = GetTileDef(tile_id);
+    const GfxAnim &gfx_anim = packs[0].FindGraphicAnim(tile_def.anim);
     const std::string &gfx_frame_id = gfx_anim.GetFrame(tile_def.anim_state.frame);
-    const data::GfxFrame &gfx_frame = data::packs[0].FindGraphicFrame(gfx_frame_id);
+    const GfxFrame &gfx_frame = packs[0].FindGraphicFrame(gfx_frame_id);
     return gfx_frame;
 }
-Rectangle data::Tilemap::TileDefRect(uint32_t tile_id)
+Rectangle Tilemap::TileDefRect(uint32_t tile_id)
 {
-    const data::GfxFrame &gfx_frame = GetTileGfxFrame(tile_id);
+    const GfxFrame &gfx_frame = GetTileGfxFrame(tile_id);
     const Rectangle rect{ (float)gfx_frame.x, (float)gfx_frame.y, (float)gfx_frame.w, (float)gfx_frame.h };
     return rect;
 }
-Color data::Tilemap::TileDefAvgColor(uint32_t tile_id)
+Color Tilemap::TileDefAvgColor(uint32_t tile_id)
 {
-    const data::TileDef &tile_def = GetTileDef(tile_id);
+    const TileDef &tile_def = GetTileDef(tile_id);
     return tile_def.color;
 }
 
-data::ObjectData *data::Tilemap::GetObjectData(uint32_t x, uint32_t y)
+ObjectData *Tilemap::GetObjectData(uint32_t x, uint32_t y)
 {
-    for (data::ObjectData &obj_data : object_data) {
+    for (ObjectData &obj_data : object_data) {
         if (obj_data.x == x && obj_data.y == y) {
             return &obj_data;
         }
@@ -196,14 +196,14 @@ data::ObjectData *data::Tilemap::GetObjectData(uint32_t x, uint32_t y)
     return 0;
 }
 
-data::AiPath *data::Tilemap::GetPath(uint32_t pathId) {
+AiPath *Tilemap::GetPath(uint32_t pathId) {
     if (pathId < paths.size()) {
         return &paths[pathId];
     }
     return 0;
 }
-uint32_t data::Tilemap::GetNextPathNodeIndex(uint32_t pathId, uint32_t pathNodeIndex) {
-    data::AiPath *path = GetPath(pathId);
+uint32_t Tilemap::GetNextPathNodeIndex(uint32_t pathId, uint32_t pathNodeIndex) {
+    AiPath *path = GetPath(pathId);
     if (path) {
         uint32_t nextPathNodeIndex = pathNodeIndex + 1;
         if (nextPathNodeIndex >= path->pathNodeStart + path->pathNodeCount) {
@@ -213,15 +213,15 @@ uint32_t data::Tilemap::GetNextPathNodeIndex(uint32_t pathId, uint32_t pathNodeI
     }
     return 0;
 }
-data::AiPathNode *data::Tilemap::GetPathNode(uint32_t pathId, uint32_t pathNodeIndex) {
-    data::AiPath *path = GetPath(pathId);
+AiPathNode *Tilemap::GetPathNode(uint32_t pathId, uint32_t pathNodeIndex) {
+    AiPath *path = GetPath(pathId);
     if (path) {
         return &pathNodes[pathNodeIndex];
     }
     return 0;
 }
 
-void data::Tilemap::GetEdges(Edge::Array &edges)
+void Tilemap::GetEdges(Edge::Array &edges)
 {
     for (int y = 0; y < height; y++) {
         for (int x = 0; x < width; x++) {
@@ -262,7 +262,7 @@ void data::Tilemap::GetEdges(Edge::Array &edges)
         }
     }
 }
-void data::Tilemap::MergeEdges(Edge::Array &edges)
+void Tilemap::MergeEdges(Edge::Array &edges)
 {
     Edge::Map edge_map{};
 
@@ -339,14 +339,14 @@ void data::Tilemap::MergeEdges(Edge::Array &edges)
     edges = merged_edges;
 #endif
 }
-void data::Tilemap::UpdateEdges(void)
+void Tilemap::UpdateEdges(void)
 {
     edges.clear();
     GetEdges(edges);
     MergeEdges(edges);
 }
 
-void data::Tilemap::ResolveEntityCollisionsEdges(data::Entity &entity)
+void Tilemap::ResolveEntityCollisionsEdges(Entity &entity)
 {
     if (!entity.radius || entity.Dead()) {
         return;
@@ -378,7 +378,7 @@ void data::Tilemap::ResolveEntityCollisionsEdges(data::Entity &entity)
     entity.position.x = CLAMP(entity.position.x, entity.radius, width * TILE_W - entity.radius);
     entity.position.y = CLAMP(entity.position.y, entity.radius, height * TILE_W - entity.radius);
 }
-void data::Tilemap::ResolveEntityCollisions(data::Entity &entity)
+void Tilemap::ResolveEntityCollisions(Entity &entity)
 {
     ResolveEntityCollisionsEdges(entity);
     return;
@@ -506,14 +506,14 @@ void data::Tilemap::ResolveEntityCollisions(data::Entity &entity)
     entity.position.x = CLAMP(entity.position.x, entity.radius, width * TILE_W - entity.radius);
     entity.position.y = CLAMP(entity.position.y, entity.radius, height * TILE_W - entity.radius);
 
-    if (entity.type == data::ENTITY_PLAYER) {
+    if (entity.type == ENTITY_PLAYER) {
         assert(entity.radius);
 
         entity.on_warp = false;
         entity.on_warp_coord = {};
         for (int y = yMin; y < yMax && !entity.on_warp; y++) {
             for (int x = xMin; x < xMax && !entity.on_warp; x++) {
-                const data::ObjectData *object = GetObjectData(x, y);
+                const ObjectData *object = GetObjectData(x, y);
                 if (object && object->type == "warp") {
                     Rectangle tileRect{
                         (float)x * TILE_W,
@@ -537,11 +537,11 @@ void data::Tilemap::ResolveEntityCollisions(data::Entity &entity)
     }
 }
 
-void data::Tilemap::DrawTile(uint32_t tile_id, Vector2 position, data::DrawCmdQueue *sortedDraws)
+void Tilemap::DrawTile(uint32_t tile_id, Vector2 position, DrawCmdQueue *sortedDraws)
 {
     // TODO: Yikes.. that's a lot of lookups in a tight loop. Memoize some pointers or something man.
-    const data::GfxFrame &gfx_frame = GetTileGfxFrame(tile_id);
-    const GfxFile &gfx_file = data::packs[0].FindGraphic(gfx_frame.gfx);
+    const GfxFrame &gfx_frame = GetTileGfxFrame(tile_id);
+    const GfxFile &gfx_file = packs[0].FindGraphic(gfx_frame.gfx);
     const Rectangle texRect{ (float)gfx_frame.x, (float)gfx_frame.y, (float)gfx_frame.w, (float)gfx_frame.h };
 
     if (sortedDraws) {
@@ -555,7 +555,7 @@ void data::Tilemap::DrawTile(uint32_t tile_id, Vector2 position, data::DrawCmdQu
         dlb_DrawTextureRec(gfx_file.texture, texRect, position, WHITE);
     }
 }
-void data::Tilemap::Draw(Camera2D &camera, data::DrawCmdQueue &sortedDraws)
+void Tilemap::Draw(Camera2D &camera, DrawCmdQueue &sortedDraws)
 {
     const Vector2 cursorWorld = GetScreenToWorld2D(GetMousePosition(), camera);
 
@@ -586,7 +586,7 @@ void data::Tilemap::Draw(Camera2D &camera, data::DrawCmdQueue &sortedDraws)
         }
     }
 }
-void data::Tilemap::DrawColliders(Camera2D &camera)
+void Tilemap::DrawColliders(Camera2D &camera)
 {
     Rectangle cameraRectWorld = GetCameraRectWorld(camera);
     int yMin = CLAMP(floorf(cameraRectWorld.y / TILE_W), 0, height);
@@ -597,8 +597,8 @@ void data::Tilemap::DrawColliders(Camera2D &camera)
     for (int y = yMin; y < yMax; y++) {
         for (int x = xMin; x < xMax; x++) {
             uint32_t tile_id = At(x, y);
-            const data::TileDef &tileDef = GetTileDef(tile_id);
-            if (tileDef.flags & data::TILEDEF_FLAG_SOLID) {
+            const TileDef &tileDef = GetTileDef(tile_id);
+            if (tileDef.flags & TILEDEF_FLAG_SOLID) {
                 Vector2 tilePos = { (float)x * TILE_W, (float)y * TILE_W };
                 const int pad = 1;
                 DrawRectangleLinesEx(
@@ -615,13 +615,13 @@ void data::Tilemap::DrawColliders(Camera2D &camera)
         }
     }
 }
-void data::Tilemap::DrawEdges(void)
+void Tilemap::DrawEdges(void)
 {
     for (const Edge &edge : edges) {
         edge.Draw(MAGENTA);
     }
 }
-void data::Tilemap::DrawTileIds(Camera2D &camera)
+void Tilemap::DrawTileIds(Camera2D &camera)
 {
     Rectangle cameraRectWorld = GetCameraRectWorld(camera);
     int yMin = CLAMP(floorf(cameraRectWorld.y / TILE_W), 0, height);

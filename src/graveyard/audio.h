@@ -24,4 +24,4 @@ private:
 
 extern SoundCatalog rnSoundCatalog;
 
-extern data::MusFileId rnBackgroundMusic;
+extern MusFileId rnBackgroundMusic;

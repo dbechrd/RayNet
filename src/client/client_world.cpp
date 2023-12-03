@@ -11,58 +11,56 @@ ClientWorld::ClientWorld(void)
     zoomTarget = camera.zoom;
 }
 
-data::Entity *ClientWorld::LocalPlayer(void)
+Entity *ClientWorld::LocalPlayer(void)
 {
-    data::Entity *localPlayer = entityDb->FindEntity(localPlayerEntityId, data::ENTITY_PLAYER);
+    Entity *localPlayer = entityDb->FindEntity(localPlayerEntityId, ENTITY_PLAYER);
     return localPlayer;
 }
 uint32_t ClientWorld::LocalPlayerMapId(void)
 {
-    data::Entity *localPlayer = LocalPlayer();
+    Entity *localPlayer = LocalPlayer();
     if (localPlayer && localPlayer->map_id) {
         return localPlayer->map_id;
     }
     return 0;
 }
-data::Tilemap *ClientWorld::LocalPlayerMap(void)
+Tilemap *ClientWorld::LocalPlayerMap(void)
 {
-    data::Entity *localPlayer = LocalPlayer();
+    Entity *localPlayer = LocalPlayer();
     if (localPlayer && localPlayer->map_id) {
         return FindOrLoadMap(localPlayer->map_id);
     }
     return 0;
 }
-data::Tilemap *ClientWorld::FindOrLoadMap(uint32_t map_id)
+Tilemap *ClientWorld::FindOrLoadMap(uint32_t map_id)
 {
-    data::Tilemap &map = data::packs[1].FindTilemap(map_id);
+    Tilemap &map = packs[1].FindTilemap(map_id);
     return &map;
 }
 
 void ClientWorld::ApplySpawnEvent(const Msg_S_EntitySpawn &entitySpawn)
 {
-    size_t entityIndex = entityDb->FindEntityIndex(entitySpawn.entity_id);
-    if (!entityIndex) {
+    Entity *entity = entityDb->FindEntity(entitySpawn.entity_id);
+    if (!entity) {
         printf("[client_world] Failed to spawn entity. Entity id %u not found.\n", entitySpawn.entity_id);
         return;
     }
 
-    data::Entity &entity = entityDb->entities[entityIndex];
-
-    entity.type     = entitySpawn.type;
-    entity.spec     = entitySpawn.spec;
-    entity.name     = entitySpawn.name;
-    entity.map_id   = entitySpawn.map_id;
-    entity.position = entitySpawn.position;
-    entity.radius   = entitySpawn.radius;
-    entity.drag     = entitySpawn.drag;
-    entity.speed    = entitySpawn.speed;
-    entity.velocity = entitySpawn.velocity;
-    entity.hp_max   = entitySpawn.hp_max;
-    entity.hp       = entitySpawn.hp;
-    entity.sprite   = entitySpawn.sprite;
+    entity->type     = entitySpawn.type;
+    entity->spec     = entitySpawn.spec;
+    entity->name     = entitySpawn.name;
+    entity->map_id   = entitySpawn.map_id;
+    entity->position = entitySpawn.position;
+    entity->radius   = entitySpawn.radius;
+    entity->drag     = entitySpawn.drag;
+    entity->speed    = entitySpawn.speed;
+    entity->velocity = entitySpawn.velocity;
+    entity->hp_max   = entitySpawn.hp_max;
+    entity->hp       = entitySpawn.hp;
+    entity->sprite   = entitySpawn.sprite;
 }
-void ClientWorld::ApplyStateInterpolated(data::Entity &entity,
-    const data::GhostSnapshot &a, const data::GhostSnapshot &b, float alpha, float dt)
+void ClientWorld::ApplyStateInterpolated(Entity &entity,
+    const GhostSnapshot &a, const GhostSnapshot &b, float alpha, float dt)
 {
     if (b.map_id != a.map_id) {
         alpha = 1.0f;
@@ -80,7 +78,7 @@ void ClientWorld::ApplyStateInterpolated(data::Entity &entity,
     entity.hp_smooth = LERP(entity.hp_smooth, entity.hp, 1.0f - powf(1.0f - 0.999f, dt));
     //entity.hp_smooth += ((entity.hp_smooth < entity.hp) ? 1 : -1) * dt * 20;
 }
-Err ClientWorld::CreateDialog(data::Entity &entity, uint32_t dialogId, const std::string &title, const std::string &message, double now)
+Err ClientWorld::CreateDialog(Entity &entity, uint32_t dialogId, const std::string &title, const std::string &message, double now)
 {
     entity.dialog_spawned_at = now;
     entity.dialog_id = dialogId;
@@ -89,14 +87,14 @@ Err ClientWorld::CreateDialog(data::Entity &entity, uint32_t dialogId, const std
     return RN_SUCCESS;
 }
 
-void ClientWorld::UpdateMap(data::Tilemap &map)
+void ClientWorld::UpdateMap(Tilemap &map)
 {
     // TODO(cleanup): What else is there to update now?
-    //data::Tilemap *map = LocalPlayerMap();
+    //Tilemap *map = LocalPlayerMap();
     //map->UpdateAnimations(client.frameDt);
     map.UpdateEdges();
 }
-void ClientWorld::UpdateLocalPlayerHisto(GameClient &client, data::Entity &entity, HistoData &histoData)
+void ClientWorld::UpdateLocalPlayerHisto(GameClient &client, Entity &entity, HistoData &histoData)
 {
     if (Histogram::paused) {
         return;
@@ -130,14 +128,14 @@ void ClientWorld::UpdateLocalPlayerHisto(GameClient &client, data::Entity &entit
         histoData.cmdAccumDt
     );
 }
-void ClientWorld::UpdateLocalPlayer(GameClient &client, data::Entity &entity, data::AspectGhost &ghost)
+void ClientWorld::UpdateLocalPlayer(GameClient &client, Entity &entity)
 {
     uint32_t latestSnapInputSeq = 0;
 
     // Apply latest snapshot
-    const data::GhostSnapshot &latestSnapshot = ghost.newest();
+    const GhostSnapshot &latestSnapshot = entity.ghost->newest();
     if (latestSnapshot.server_time) {
-        ApplyStateInterpolated(entity, ghost.newest(), ghost.newest(), 0, client.frameDt);
+        ApplyStateInterpolated(entity, entity.ghost->newest(), entity.ghost->newest(), 0, client.frameDt);
         latestSnapInputSeq = latestSnapshot.last_processed_input_cmd;
     }
 
@@ -145,7 +143,7 @@ void ClientWorld::UpdateLocalPlayer(GameClient &client, data::Entity &entity, da
     Vector3 cmdAccumForce{};
 
 #if CL_CLIENT_SIDE_PREDICT
-    data::Tilemap *map = FindOrLoadMap(entity.map_id);
+    Tilemap *map = FindOrLoadMap(entity.map_id);
     if (map) {
         // Apply unacked input
         for (size_t cmdIndex = 0; cmdIndex < client.controller.cmdQueue.size(); cmdIndex++) {
@@ -165,14 +163,6 @@ void ClientWorld::UpdateLocalPlayer(GameClient &client, data::Entity &entity, da
             entityDb->EntityTick(entity, SV_TICK_DT);
             map->ResolveEntityCollisions(entity);
 
-            if (entity.position.x < entity.radius ||
-                entity.position.y < entity.radius ||
-                entity.position.x + entity.radius > map->width * TILE_W ||
-                entity.position.y + entity.radius > map->height * TILE_W)
-            {
-                printf("");
-            }
-
             entity.position.x = LERP(posBefore.x, entity.position.x, cmdAccumDt / SV_TICK_DT);
             entity.position.y = LERP(posBefore.y, entity.position.y, cmdAccumDt / SV_TICK_DT);
         }
@@ -191,30 +181,30 @@ void ClientWorld::UpdateLocalPlayer(GameClient &client, data::Entity &entity, da
     histoData.cmdAccumForce = cmdAccumForce;
     UpdateLocalPlayerHisto(client, entity, histoData);
 }
-void ClientWorld::UpdateLocalGhost(GameClient &client, data::Entity &entity, data::AspectGhost &ghost, uint32_t player_map_id)
+void ClientWorld::UpdateLocalGhost(GameClient &client, Entity &entity, uint32_t player_map_id)
 {
     // TODO(dlb): Find snapshots nearest to (GetTime() - clientTimeDeltaVsServer)
     const double renderAt = client.ServerNow() - SV_TICK_DT;
 
     size_t snapshotBIdx = 0;
-    while (snapshotBIdx < ghost.size()
-        && ghost[snapshotBIdx].server_time <= renderAt)
+    while (snapshotBIdx < entity.ghost->size()
+        && (*entity.ghost)[snapshotBIdx].server_time <= renderAt)
     {
         snapshotBIdx++;
     }
 
-    const data::GhostSnapshot *snapshotA = 0;
-    const data::GhostSnapshot *snapshotB = 0;
+    const GhostSnapshot *snapshotA = 0;
+    const GhostSnapshot *snapshotB = 0;
 
     if (snapshotBIdx <= 0) {
-        snapshotA = &ghost.oldest();
-        snapshotB = &ghost.oldest();
+        snapshotA = &entity.ghost->oldest();
+        snapshotB = &entity.ghost->oldest();
     } else if (snapshotBIdx >= CL_SNAPSHOT_COUNT) {
-        snapshotA = &ghost.newest();
-        snapshotB = &ghost.newest();
+        snapshotA = &entity.ghost->newest();
+        snapshotB = &entity.ghost->newest();
     } else {
-        snapshotA = &ghost[snapshotBIdx - 1];
-        snapshotB = &ghost[snapshotBIdx];
+        snapshotA = &(*entity.ghost)[snapshotBIdx - 1];
+        snapshotB = &(*entity.ghost)[snapshotBIdx];
     }
 
     float alpha = 0;
@@ -229,7 +219,7 @@ void ClientWorld::UpdateLocalGhost(GameClient &client, data::Entity &entity, dat
         bool hover = dlb_CheckCollisionPointRec(cursorWorldPos, entityDb->EntityRect(entity.id));
         if (hover) {
             hoveredEntityId = entity.id;
-            if (entity.spec == data::ENTITY_SPEC_NPC_TOWNFOLK) {
+            if (entity.spec == ENTITY_SPEC_NPC_TOWNFOLK) {
                 // NOTE: This has to check for ENTITY_TOWNFOLK or entity.attackable, etc.,
                 // otherwise you can't shoot da enemies!
                 io.PushScope(IO::IO_GameNPC);
@@ -237,11 +227,11 @@ void ClientWorld::UpdateLocalGhost(GameClient &client, data::Entity &entity, dat
                 io.PopScope();
             }
 
-            data::Entity *e_player = entityDb->FindEntity(localPlayerEntityId, data::ENTITY_PLAYER);
+            Entity *e_player = entityDb->FindEntity(localPlayerEntityId, ENTITY_PLAYER);
             if (e_player) {
                 const float dist_x = fabs(e_player->position.x - entity.position.x);
                 const float dist_y = fabs(e_player->position.y - entity.position.y);
-                const Rectangle rect = data::GetSpriteRect(entity);
+                const Rectangle rect = GetSpriteRect(entity);
                 if (dist_x <= SV_MAX_ENTITY_INTERACT_DIST && dist_y <= SV_MAX_ENTITY_INTERACT_DIST) {
                     hoveredEntityInRange = true;
                 }
@@ -258,29 +248,26 @@ void ClientWorld::UpdateEntities(GameClient &client)
 
     const uint32_t player_map_id = LocalPlayerMapId();
 
-    data::Entity *e_player = entityDb->FindEntity(localPlayerEntityId, data::ENTITY_PLAYER);
+    Entity *e_player = entityDb->FindEntity(localPlayerEntityId, ENTITY_PLAYER);
     if (!e_player) {
         assert(!"player entity not found!?");
         return;
     }
 
-    for (data::Entity &entity : entityDb->entities) {
+    for (Entity &entity : entityDb->entities) {
         if (!entity.type) {
             continue;
         }
 
-        uint32_t entityIndex = entityDb->FindEntityIndex(entity.id);
-        data::AspectGhost &ghost = entityDb->ghosts[entityIndex];
-
         // Local player
         if (entity.id == localPlayerEntityId) {
-            UpdateLocalPlayer(client, entity, ghost);
+            UpdateLocalPlayer(client, entity);
         } else {
-            UpdateLocalGhost(client, entity, ghost, player_map_id);
+            UpdateLocalGhost(client, entity, player_map_id);
         }
 
         bool newlySpawned = entity.spawned_at == client.now;
-        data::UpdateSprite(entity, client.frameDt, newlySpawned);
+        UpdateSprite(entity, client.frameDt, newlySpawned);
 
         const double duration = CL_DIALOG_DURATION_MIN + CL_DIALOG_DURATION_PER_CHAR * entity.dialog_message.size();
         if (entity.dialog_spawned_at && client.now - entity.dialog_spawned_at > duration) {
@@ -289,7 +276,7 @@ void ClientWorld::UpdateEntities(GameClient &client)
     }
 
     if (hoveredEntityId && hoveredEntityInRange) {
-        data::Entity *hoveredEntity = entityDb->FindEntity(hoveredEntityId);
+        Entity *hoveredEntity = entityDb->FindEntity(hoveredEntityId);
         if (hoveredEntity) {
             bool pressed = io.MouseButtonPressed(MOUSE_BUTTON_LEFT);
             if (pressed) {
@@ -300,12 +287,12 @@ void ClientWorld::UpdateEntities(GameClient &client)
 }
 void ClientWorld::UpdateCamera(GameClient &client)
 {
-    data::Entity *localPlayer = LocalPlayer();
+    Entity *localPlayer = LocalPlayer();
     if (!localPlayer) {
         return;
     }
 
-    data::Entity &target = *localPlayer;
+    Entity &target = *localPlayer;
     Vector2 targetPos = target.Position2D();
 
     camera.offset = {
@@ -350,7 +337,7 @@ void ClientWorld::UpdateCamera(GameClient &client)
         warpFadeInStartedAt = client.now;
 
         // TODO: Send SHOW_TITLE message from server during warp
-        data::Tilemap &map = data::packs[1].FindTilemap(target.map_id);
+        Tilemap &map = packs[1].FindTilemap(target.map_id);
         if (map.title.size()) {
             titleText = map.title;
         } else {
@@ -389,8 +376,8 @@ void ClientWorld::UpdateCamera(GameClient &client)
 }
 void ClientWorld::Update(GameClient &client)
 {
-    data::UpdateTileDefAnimations(client.frameDt);
-    data::Tilemap *map = LocalPlayerMap();
+    UpdateTileDefAnimations(client.frameDt);
+    Tilemap *map = LocalPlayerMap();
     if (map) {
         UpdateMap(*map);
     } else {
@@ -406,7 +393,7 @@ void ClientWorld::Update(GameClient &client)
 
     // TODO: Idk how to make this frame independent, but it's a hack so wutevs. Fix it one day.
     if ((int)fmod(client.now * 100, 100) == GetRandomValue(0, 9)) {
-        data::PlaySound("sfx_chicken_cluck");
+        PlaySound("sfx_chicken_cluck");
     }
 }
 
@@ -422,20 +409,22 @@ void ClientWorld::DrawHoveredTileIndicator(GameClient &client)
         DrawRectangleLinesEx(tileRect, 2.0f, WHITE);
     }
 }
-void ClientWorld::DrawEntitySnapshotShadows(GameClient &client, data::Entity &entity, Controller &controller)
+void ClientWorld::DrawEntitySnapshotShadows(GameClient &client, Entity &entity, Controller &controller)
 {
     // TODO: Everything that says "ghostInstance" needs to be an entity_id, but we don't
     // want to modify the actual entity... so perhaps we need a "temp" entity that we can
     // use for drawing shadows? Or some other way to simulate the entity moving without
     // modifying the actual entity.
-    size_t entityIndex = entityDb->FindEntityIndex(entity.id);
-    assert(entityIndex);
+    struct EntityData {
+        Entity      entity {};
+        AspectGhost ghost  {};
+    };
 
-    data::AspectGhost &ghost = entityDb->ghosts[entityIndex];
+    AspectGhost &ghost = *entity.ghost;
 
-    data::EntityData ghostData{};
-    ghostData.entity = entityDb->entities[entityIndex];
-    ghostData.ghosts = entityDb->ghosts[entityIndex];
+    EntityData ghostData{};
+    ghostData.entity = entity;
+    ghostData.ghost = *entity.ghost;
     // Prevents accidentally overwriting real entities if someone we pass a tuple
     // to decides to look up the entity by id instead of using the tuple's data.
     ghostData.entity.id = 0;
@@ -447,7 +436,7 @@ void ClientWorld::DrawEntitySnapshotShadows(GameClient &client, data::Entity &en
         ApplyStateInterpolated(ghostData.entity, ghost[i], ghost[i], 0, client.frameDt);
 
         //const float scalePer = 1.0f / (CL_SNAPSHOT_COUNT + 1);
-        Rectangle ghostRect = data::GetSpriteRect(ghostData.entity);
+        Rectangle ghostRect = GetSpriteRect(ghostData.entity);
         //ghostRect = RectShrink(ghostRect, scalePer);
         ghostRect.x = floorf(ghostRect.x);
         ghostRect.y = floorf(ghostRect.y);
@@ -460,10 +449,10 @@ void ClientWorld::DrawEntitySnapshotShadows(GameClient &client, data::Entity &en
     // NOTE(dlb): These aren't actually snapshot shadows, they're client-side prediction shadows
     if (entity.id == localPlayerEntityId) {
 #if CL_CLIENT_SIDE_PREDICT
-        data::Tilemap *map = FindOrLoadMap(entity.map_id);
+        Tilemap *map = FindOrLoadMap(entity.map_id);
         if (map) {
             uint32_t lastProcessedInputCmd = 0;
-            const data::GhostSnapshot &latestSnapshot = ghost.newest();
+            const GhostSnapshot &latestSnapshot = ghost.newest();
             if (latestSnapshot.server_time) {
                 ApplyStateInterpolated(ghostData.entity, latestSnapshot, latestSnapshot, 0, client.frameDt);
                 lastProcessedInputCmd = latestSnapshot.last_processed_input_cmd;
@@ -475,7 +464,7 @@ void ClientWorld::DrawEntitySnapshotShadows(GameClient &client, data::Entity &en
                     ghostData.entity.ApplyForce(inputCmd.GenerateMoveForce(ghostData.entity.speed));
                     entityDb->EntityTick(ghostData.entity, SV_TICK_DT);
                     map->ResolveEntityCollisions(ghostData.entity);
-                    Rectangle ghostRect = data::GetSpriteRect(ghostData.entity);
+                    Rectangle ghostRect = GetSpriteRect(ghostData.entity);
                     DrawRectangleRec(ghostRect, Fade(GREEN, 0.1f));
                     DrawRectangleLinesEx(ghostRect, 1, Fade(GREEN, 0.8f));
                 }
@@ -495,7 +484,7 @@ void ClientWorld::DrawEntitySnapshotShadows(GameClient &client, data::Entity &en
             ghostData.entity.position.y = LERP(posBefore.y, ghostData.entity.position.y, cmdAccumDt / SV_TICK_DT);
             ghostData.entity.position.x = LERP(posBefore.x, ghostData.entity.position.x, cmdAccumDt / SV_TICK_DT);
         }
-        Rectangle ghostRect = data::GetSpriteRect(ghostData.entity);
+        Rectangle ghostRect = GetSpriteRect(ghostData.entity);
         ghostRect.x = floorf(ghostRect.x);
         ghostRect.y = floorf(ghostRect.y);
         ghostRect.width = floorf(ghostRect.width);
@@ -505,10 +494,10 @@ void ClientWorld::DrawEntitySnapshotShadows(GameClient &client, data::Entity &en
 #endif
     }
 }
-void ClientWorld::DrawEntities(GameClient &client, data::Tilemap &map, data::DrawCmdQueue &sortedDraws)
+void ClientWorld::DrawEntities(GameClient &client, Tilemap &map, DrawCmdQueue &sortedDraws)
 {
     if (showSnapshotShadows) {
-        for (data::Entity &entity : entityDb->entities) {
+        for (Entity &entity : entityDb->entities) {
             if (!entity.type || entity.despawned_at || entity.map_id != map.id) {
                 continue;
             }
@@ -517,7 +506,7 @@ void ClientWorld::DrawEntities(GameClient &client, data::Tilemap &map, data::Dra
         }
     }
 
-    for (data::Entity &entity : entityDb->entities) {
+    for (Entity &entity : entityDb->entities) {
         if (!entity.type || entity.despawned_at || entity.map_id != map.id) {
             continue;
         }
@@ -525,15 +514,15 @@ void ClientWorld::DrawEntities(GameClient &client, data::Tilemap &map, data::Dra
         entityDb->DrawEntity(entity, sortedDraws, entity.id == hoveredEntityId);
     }
 }
-void ClientWorld::DrawHoveredObjectIndicator(GameClient &client, data::Tilemap &map)
+void ClientWorld::DrawHoveredObjectIndicator(GameClient &client, Tilemap &map)
 {
     // Object interact indicator (cursor ornament in screen space)
     if (client.controller.tile_hovered) {
         uint32_t object_id = 0;
         map.AtTry_Obj(client.controller.tile_x, client.controller.tile_y, object_id);
         if (object_id) {
-            const data::GfxFrame &gfx_frame = map.GetTileGfxFrame(object_id);
-            const data::GfxFile &gfx_file = data::packs[0].FindGraphic(gfx_frame.gfx);
+            const GfxFrame &gfx_frame = map.GetTileGfxFrame(object_id);
+            const GfxFile &gfx_file = packs[0].FindGraphic(gfx_frame.gfx);
             const Rectangle texRect{ (float)gfx_frame.x, (float)gfx_frame.y, (float)gfx_frame.w, (float)gfx_frame.h };
 
             Vector2 texAspect{ 1.0f, 1.0f };
@@ -555,7 +544,7 @@ void ClientWorld::DrawHoveredObjectIndicator(GameClient &client, data::Tilemap &
         }
     }
 }
-void ClientWorld::DrawDialog(GameClient &client, data::Entity &entity, Vector2 bottomCenterScreen, std::vector<FancyTextTip> &tips)
+void ClientWorld::DrawDialog(GameClient &client, Entity &entity, Vector2 bottomCenterScreen, std::vector<FancyTextTip> &tips)
 {
     Font &font = fntMedium;
 
@@ -713,14 +702,14 @@ void ClientWorld::DrawDialogs(GameClient &client)
 {
     IO::Scoped scope(IO::IO_GameNPCDialog);
 
-    data::Tilemap *map = LocalPlayerMap();
+    Tilemap *map = LocalPlayerMap();
     if (!map) {
         return;
     }
 
     std::vector<FancyTextTip> tips{};
 
-    for (data::Entity &entity : entityDb->entities) {
+    for (Entity &entity : entityDb->entities) {
         if (!entity.type || entity.despawned_at || entity.map_id != map->id) {
             continue;
         }
@@ -746,7 +735,7 @@ void ClientWorld::DrawHUDEntityHoverInfo(void)
         return;
     }
 
-    data::Entity *entity = entityDb->FindEntity(hoveredEntityId);
+    Entity *entity = entityDb->FindEntity(hoveredEntityId);
     if (!entity) {
         // We were probably hovering an entity while it was despawning?
         assert(!"huh? how can we hover an entity that doesn't exist");
@@ -754,7 +743,7 @@ void ClientWorld::DrawHUDEntityHoverInfo(void)
         return;
     }
 
-    data::Entity &e_hovered = *entity;
+    Entity &e_hovered = *entity;
     if (!e_hovered.hp_max) {
         return;
     }
@@ -867,7 +856,7 @@ void ClientWorld::DrawHUDSignEditor(void)
         io.CaptureKeyboard();
         io.CaptureMouse();
 
-        data::Entity *player = LocalPlayer();
+        Entity *player = LocalPlayer();
         assert(player);
 
         Vector2 playerTopWorld = entityDb->EntityTopCenter(player->id);
@@ -942,20 +931,20 @@ void ClientWorld::DrawHUDMenu(void)
     uiHUDMenu.Text(holdingItem);
     uiHUDMenu.Newline();
 
-    data::Tilemap *map = LocalPlayerMap();
+    Tilemap *map = LocalPlayerMap();
     uiHUDMenu.Text(map ? map->background_music.c_str() : "-Empty-");
     uiHUDMenu.Newline();
 }
 void ClientWorld::Draw(GameClient &client)
 {
-    data::Tilemap *map = LocalPlayerMap();
+    Tilemap *map = LocalPlayerMap();
     if (!map) {
         return;
     }
 
     BeginMode2D(camera);
 
-    data::DrawCmdQueue sortedDraws{};
+    DrawCmdQueue sortedDraws{};
     map->Draw(camera, sortedDraws);
     DrawHoveredTileIndicator(client);
     DrawEntities(client, *map, sortedDraws);

@@ -41,7 +41,7 @@ private:
 
     int    msg_index        {};
     double msg_last_updated {};
-    data::Entity campfire   {};
+    Entity campfire   {};
 };
 
 struct MenuSystem {

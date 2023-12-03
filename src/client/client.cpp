@@ -51,7 +51,7 @@ void draw_f3_menu(GameClient &client)
         Camera2D &camera = client.world->camera;
         Vector2 cursorWorldPos = GetScreenToWorld2D(GetMousePosition(), camera);
         DRAW_TEXT("cursorWld", "%.f, %.f", cursorWorldPos.x, cursorWorldPos.y);
-        data::Entity *localPlayer = client.world->LocalPlayer();
+        Entity *localPlayer = client.world->LocalPlayer();
         if (localPlayer) {
             DRAW_TEXT("player", "%.2f, %.2f", localPlayer->position.x, localPlayer->position.y);
         }
@@ -208,9 +208,9 @@ int main(int argc, char *argv[])
 
         // TODO: Send PLAY_BACKGROUND_MUSIC from server???
         if (client->yj_client->IsConnected()) {
-            data::Tilemap *map = client->world->LocalPlayerMap();
+            Tilemap *map = client->world->LocalPlayerMap();
             if (map) {
-                const data::MusFile &mus_file = data::packs[0].FindMusic(map->background_music);
+                const MusFile &mus_file = packs[0].FindMusic(map->background_music);
                 if (!IsMusicStreamPlaying(mus_file.music)) {
                     PlayMusicStream(mus_file.music);
                 }
@@ -278,7 +278,7 @@ int main(int argc, char *argv[])
         //--------------------
         // Accmulate input every frame
         if (client->yj_client->IsConnected()) {
-            data::Entity *localPlayer = client->world->LocalPlayer();
+            Entity *localPlayer = client->world->LocalPlayer();
             if (localPlayer) {
                 const bool button_up = io.KeyDown(KEY_W);
                 const bool button_left = io.KeyDown(KEY_A);
@@ -316,12 +316,12 @@ int main(int argc, char *argv[])
                 controller.tile_x = 0;
                 controller.tile_y = 0;
 
-                data::Tilemap* map = client->world->LocalPlayerMap();
+                Tilemap* map = client->world->LocalPlayerMap();
                 {
-                    data::Tilemap::Coord tile_coord{};
+                    Tilemap::Coord tile_coord{};
                     if (map) {
                         if (map->WorldToTileIndex(cursorWorldPos.x, cursorWorldPos.y, tile_coord)) {
-                            data::Tilemap::Coord player_coord{};
+                            Tilemap::Coord player_coord{};
                             if (map->WorldToTileIndex(localPlayer->position.x, localPlayer->position.y, player_coord)) {
                                 const int dist_x = abs((int)player_coord.x - (int)tile_coord.x);
                                 const int dist_y = abs((int)player_coord.y - (int)tile_coord.y);
@@ -379,7 +379,7 @@ int main(int argc, char *argv[])
         histoFps.Push(histoEntry);
 
         if (client->yj_client->IsConnected()) {
-            data::Entity *localPlayer = client->world->LocalPlayer();
+            Entity *localPlayer = client->world->LocalPlayer();
             if (localPlayer) {
                 // Update world
                 client->world->Update(*client);

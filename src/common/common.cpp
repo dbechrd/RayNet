@@ -42,7 +42,7 @@ Err InitCommon(void)
     PerfTimer t{ "InitCommon" };
 
     Err err = RN_SUCCESS;
-    ERR_RETURN(data::Init());
+    ERR_RETURN(Init());
 
     rnStringCatalog.Init();
 
@@ -85,7 +85,7 @@ void FreeCommon(void)
     UnloadFont(fntSmall);
     UnloadFont(fntMedium);
     UnloadFont(fntBig);
-    data::Free();
+    Free();
 }
 
 // LoadPack font from memory buffer, fileType refers to extension: i.e. ".ttf"
@@ -517,7 +517,7 @@ void dlb_DrawTexturePro(Texture2D texture, Rectangle source, Rectangle dest, Vec
 
 void dlb_DrawNPatch(Rectangle rec)
 {
-    const data::GfxFile &gfx_file = data::packs[0].FindGraphic("gfx_dlg_npatch");
+    const GfxFile &gfx_file = packs[0].FindGraphic("gfx_dlg_npatch");
     NPatchInfo nPatch{};
     nPatch.source = { 0, 0, (float)gfx_file.texture.width, (float)gfx_file.texture.height };
     nPatch.left   = 16;

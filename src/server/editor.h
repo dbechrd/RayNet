@@ -66,7 +66,7 @@ struct EditModeSfxFiles {
 };
 
 struct EditModePackFiles {
-    data::Pack *selectedPack{};
+    Pack *selectedPack{};
     int selectedPackEntryOffset{};
 };
 

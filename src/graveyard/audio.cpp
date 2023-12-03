@@ -1,7 +1,7 @@
 #include "audio.h"
 
 SoundCatalog rnSoundCatalog;
-data::MusFileId rnBackgroundMusic;
+MusFileId rnBackgroundMusic;
 
 void SoundCatalog::Init(void)
 {

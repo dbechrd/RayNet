@@ -4,126 +4,116 @@
 // TODO: Move this into GameClient prolly, eh?
 EntityDB *entityDb{};
 
-size_t EntityDB::FindEntityIndex(uint32_t entityId)
+Entity *EntityDB::FindEntity(uint32_t entity_id, bool evenIfDespawned)
 {
-    if (entityId) {
-        const auto &entry = entityIndexById.find(entityId);
-        if (entry != entityIndexById.end()) {
-            size_t entityIndex = entry->second;
-            assert(entityIndex < SV_MAX_ENTITIES);
-            return entityIndex;
-        }
+    const auto &iter = entities_by_id.find(entity_id);
+    if (iter == entities_by_id.end()) {
+        return 0;
     }
-    return 0;
-}
-data::Entity *EntityDB::FindEntity(uint32_t entityId, bool evenIfDespawned)
-{
-    size_t entityIndex = FindEntityIndex(entityId);
-    if (entityIndex) {
-        data::Entity &entity = entities[entityIndex];
-        assert(entity.id == entityId);
-        assert(entity.type);
-        if (evenIfDespawned || !entity.despawned_at) {
-            return &entity;
-        }
+
+    Entity &entity = entities[iter->second];
+    assert(entity.type);
+    if (entity.despawned_at && !evenIfDespawned) {
+        return 0;
     }
-    return 0;
+
+    return &entity;
 }
-data::Entity *EntityDB::FindEntity(uint32_t entityId, data::EntityType type, bool evenIfDespawned)
+Entity *EntityDB::FindEntity(uint32_t entity_id, EntityType type, bool evenIfDespawned)
 {
-    data::Entity *entity = FindEntity(entityId, evenIfDespawned);
+    Entity *entity = FindEntity(entity_id, evenIfDespawned);
     if (entity && entity->type != type) {
         return 0;
     }
     return entity;
 }
-data::Entity *EntityDB::SpawnEntity(uint32_t entityId, data::EntityType type, double now)
+Entity *EntityDB::SpawnEntity(uint32_t entity_id, EntityType type, double now)
 {
-    assert(entityId);
+    assert(entity_id);
     assert(type);
 
-    data::Entity *entity = FindEntity(entityId);
+    Entity *entity = FindEntity(entity_id);
     if (entity) {
-        printf("[entity_db] Failed to spawn entity id %u of type %s. An entity with that id already exists.\n", entityId, EntityTypeStr(type));
+        printf("[entity_db] Failed to spawn entity id %u of type %s. An entity with that id already exists.\n", entity_id, EntityTypeStr(type));
         assert(!"entity already exists.. huh?");
         return 0;
     }
 
-    if (entityIndexById.size() < SV_MAX_ENTITIES) {
+    if (entities_by_id.size() < SV_MAX_ENTITIES) {
         for (int i = 1; i < entities.size(); i++) {
             if (!entities[i].id) {
                 entity = &entities[i];
-                entity->id = entityId;
+                entity->id = entity_id;
                 entity->type = type;
                 entity->spawned_at = now;
-                entityIndexById[entityId] = i;
+                entity->ghost = &ghosts[i];
+                entities_by_id[entity_id] = i;
                 break;
             }
         }
     }
 
     if (!entity) {
-        printf("[entity_db] Failed to spawn entity id %u of type %s. Max entities.\n", entityId, EntityTypeStr(type));
+        printf("[entity_db] Failed to spawn entity id %u of type %s. Max entities.\n", entity_id, EntityTypeStr(type));
     }
     return entity;
 }
-bool EntityDB::DespawnEntity(uint32_t entityId, double now)
+bool EntityDB::DespawnEntity(uint32_t entity_id, double now)
 {
-    assert(entityId);
+    assert(entity_id);
 
-    data::Entity *entity = FindEntity(entityId);
-    if (entity && !entity->despawned_at) {
+    Entity *entity = FindEntity(entity_id);
+    assert(!entity->despawned_at);  // in case we change how FindEntity works
+    if (entity) {
         entity->despawned_at = now;
         return true;
     } else {
-        printf("[entity_db] Failed to despawn entity id %u. Entity id not found.\n", entityId);
+        printf("[entity_db] Failed to despawn entity id %u. Entity id not found.\n", entity_id);
     }
     return false;
 }
-void EntityDB::DestroyEntity(uint32_t entityId)
+void EntityDB::DestroyEntity(uint32_t entity_id)
 {
-    assert(entityId);
+    assert(entity_id);
 
-    size_t entityIndex = FindEntityIndex(entityId);
-    if (entityIndex) {
-        data::Entity &entity = entities[entityIndex];
-        assert(entity.id);   // wtf happened man
-        assert(entity.type); // wtf happened man
+    Entity *entity = FindEntity(entity_id, true);
+    if (entity) {
+        assert(entity->id);   // wtf happened man
+        assert(entity->type); // wtf happened man
 
         // Clear aspects
-        entities [entityIndex] = {};
-        ghosts   [entityIndex] = {};
+        *entity->ghost = {};
+        *entity = {};
 
-        // Remove from map
-        entityIndexById.erase(entityId);
+        entities_by_id.erase(entity_id);
     } else {
         assert(0);
-        printf("error: entityId %u out of range\n", entityId);
+        printf("error: entity_id %u out of range\n", entity_id);
     }
 }
 
-Rectangle EntityDB::EntityRect(uint32_t entityId)
+Rectangle EntityDB::EntityRect(uint32_t entity_id)
 {
-    assert(entityId);
+    assert(entity_id);
 
-    data::Entity *entity = FindEntity(entityId);
+    Entity *entity = FindEntity(entity_id);
     if (entity) {
-        return data::GetSpriteRect(*entity);
+        return GetSpriteRect(*entity);
     }
     return {};
 }
-Vector2 EntityDB::EntityTopCenter(uint32_t entityId)
+Vector2 EntityDB::EntityTopCenter(uint32_t entity_id)
 {
-    assert(entityId);
+    assert(entity_id);
 
-    const Rectangle rect = EntityRect(entityId);
+    const Rectangle rect = EntityRect(entity_id);
     const Vector2 topCenter{
         rect.x + rect.width / 2,
         rect.y
     };
     return topCenter;
 }
-void EntityDB::EntityTick(data::Entity &entity, double dt)
+void EntityDB::EntityTick(Entity &entity, double dt)
 {
     Vector3 &pos = entity.position;
     Vector3 &vel = entity.velocity;
@@ -169,19 +159,19 @@ void EntityDB::EntityTick(data::Entity &entity, double dt)
     pos = Vector3Add(pos, Vector3Scale(vel, dt));
 }
 
-void EntityDB::DrawEntityIds(uint32_t entityId, Camera2D &camera)
+void EntityDB::DrawEntityIds(uint32_t entity_id, Camera2D &camera)
 {
-    assert(entityId);
-    data::Entity *entity = FindEntity(entityId);
+    assert(entity_id);
+    Entity *entity = FindEntity(entity_id);
     if (entity) {
-        assert(entity->id == entityId);
+        assert(entity->id == entity_id);
         assert(entity->type);
         DrawTextEx(fntSmall, TextFormat("%u", entity->id), entity->Position2D(),
             fntSmall.baseSize / camera.zoom, 1 / camera.zoom, WHITE);
     }
 }
-void EntityDB::DrawEntity(data::Entity &entity, data::DrawCmdQueue &sortedDraws, bool highlight)
+void EntityDB::DrawEntity(Entity &entity, DrawCmdQueue &sortedDraws, bool highlight)
 {
-    const Rectangle rect = data::GetSpriteRect(entity);
-    data::DrawSprite(entity, &sortedDraws, highlight);
+    const Rectangle rect = GetSpriteRect(entity);
+    DrawSprite(entity, &sortedDraws, highlight);
 }

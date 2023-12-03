@@ -66,7 +66,7 @@ void Editor::DrawGroundOverlays(Camera2D &camera, double now)
 {
     io.PushScope(IO::IO_EditorGroundOverlay);
 
-    auto &map = data::packs[1].FindTilemap(map_id);
+    auto &map = packs[1].FindTilemap(map_id);
 
     // Draw tile collision layer
     if (state.showColliders) {
@@ -116,9 +116,9 @@ void Editor::DrawGroundOverlay_Tiles(Camera2D &camera, double now)
 
         uint32_t &cursorTile = state.tiles.cursor.tile_id;
         uint32_t hoveredTile{};
-        auto &map = data::packs[1].FindTilemap(map_id);
+        auto &map = packs[1].FindTilemap(map_id);
 
-        data::Tilemap::Coord coord{};
+        Tilemap::Coord coord{};
         bool validCoord = map.WorldToTileIndex(cursorWorldPos.x, cursorWorldPos.y, coord);
         if (validCoord) {
             hoveredTile = map.At(coord.x, coord.y);
@@ -146,17 +146,17 @@ void Editor::DrawGroundOverlay_Paths(Camera2D &camera, double now)
     const Vector2 cursorWorldPos = GetScreenToWorld2D({ (float)GetMouseX(), (float)GetMouseY() }, camera);
 
     // Draw path edges
-    auto &map = data::packs[1].FindTilemap(map_id);
+    auto &map = packs[1].FindTilemap(map_id);
     for (uint32_t aiPathId = 0; aiPathId < map.paths.size(); aiPathId++) {
-        data::AiPath *aiPath = map.GetPath(aiPathId);
+        AiPath *aiPath = map.GetPath(aiPathId);
         if (!aiPath) {
             continue;
         }
 
         for (uint32_t aiPathNodeIndex = aiPath->pathNodeStart; aiPathNodeIndex < aiPath->pathNodeStart + aiPath->pathNodeCount; aiPathNodeIndex++) {
             uint32_t aiPathNodeNextIndex = map.GetNextPathNodeIndex(aiPathId, aiPathNodeIndex);
-            data::AiPathNode *aiPathNode = map.GetPathNode(aiPathId, aiPathNodeIndex);
-            data::AiPathNode *aiPathNodeNext = map.GetPathNode(aiPathId, aiPathNodeNextIndex);
+            AiPathNode *aiPathNode = map.GetPathNode(aiPathId, aiPathNodeIndex);
+            AiPathNode *aiPathNodeNext = map.GetPathNode(aiPathId, aiPathNodeNextIndex);
             assert(aiPathNode);
             assert(aiPathNodeNext);
             DrawLine(
@@ -170,13 +170,13 @@ void Editor::DrawGroundOverlay_Paths(Camera2D &camera, double now)
     // Draw path nodes
     const float pathRectRadius = 5;
     for (uint32_t aiPathId = 0; aiPathId < map.paths.size(); aiPathId++) {
-        data::AiPath *aiPath = map.GetPath(aiPathId);
+        AiPath *aiPath = map.GetPath(aiPathId);
         if (!aiPath) {
             continue;
         }
 
         for (uint32_t aiPathNodeIndex = aiPath->pathNodeStart; aiPathNodeIndex < aiPath->pathNodeStart + aiPath->pathNodeCount; aiPathNodeIndex++) {
-            data::AiPathNode *aiPathNode = map.GetPathNode(aiPathId, aiPathNodeIndex);
+            AiPathNode *aiPathNode = map.GetPathNode(aiPathId, aiPathNodeIndex);
             assert(aiPathNode);
 
             Rectangle nodeRect{
@@ -235,9 +235,9 @@ void Editor::DrawGroundOverlay_Paths(Camera2D &camera, double now)
             newNodePos.y = roundf(newNodePos.y / 8) * 8;
         }
         Vector2SubtractValue(newNodePos, pathRectRadius);
-        data::AiPath *aiPath = map.GetPath(cursor.dragPathId);
+        AiPath *aiPath = map.GetPath(cursor.dragPathId);
         if (aiPath) {
-            data::AiPathNode *aiPathNode = map.GetPathNode(cursor.dragPathId, cursor.dragPathNodeIndex);
+            AiPathNode *aiPathNode = map.GetPathNode(cursor.dragPathId, cursor.dragPathNodeIndex);
             assert(aiPathNode);
             aiPathNode->pos.x = newNodePos.x;
             aiPathNode->pos.y = newNodePos.y;
@@ -248,8 +248,8 @@ void Editor::DrawGroundOverlay_Paths(Camera2D &camera, double now)
 }
 void Editor::DrawGroundOverlay_Warps(Camera2D &camera, double now)
 {
-    for (const data::Entity &entity : data::packs[0].entities) {
-        if (entity.type == data::ENTITY_SPEC_OBJ_WARP) {
+    for (const Entity &entity : packs[0].entities) {
+        if (entity.type == ENTITY_SPEC_OBJ_WARP) {
             DrawRectangleRec(entity.warp_collider, Fade(SKYBLUE, 0.7f));
         }
     }
@@ -259,15 +259,15 @@ void Editor::DrawEntityOverlays(Camera2D &camera, double now)
 {
     io.PushScope(IO::IO_EditorEntityOverlay);
 
-    data::Entity *selectedEntity = entityDb->FindEntity(state.entities.selectedId);
-    auto &map = data::packs[1].FindTilemap(map_id);
+    Entity *selectedEntity = entityDb->FindEntity(state.entities.selectedId);
+    auto &map = packs[1].FindTilemap(map_id);
     if (selectedEntity && selectedEntity->map_id == map.id) {
         DrawTextEx(fntSmall, TextFormat("[selected in editor]\n%u", selectedEntity->id),
             selectedEntity->Position2D(), fntSmall.baseSize / camera.zoom, 1 / camera.zoom, WHITE);
     }
 
     if (state.showEntityIds) {
-        for (data::Entity &entity : entityDb->entities) {
+        for (Entity &entity : entityDb->entities) {
             if (entity.map_id == map.id && entity.id != state.entities.selectedId) {
                 entityDb->DrawEntityIds(entity.id, camera);
             }
@@ -299,8 +299,8 @@ void Editor::DrawEntityOverlays(Camera2D &camera, double now)
 }
 void Editor::DrawEntityOverlay_Collision(Camera2D &camera, double now)
 {
-    auto &map = data::packs[1].FindTilemap(map_id);
-    for (data::Entity &entity : entityDb->entities) {
+    auto &map = packs[1].FindTilemap(map_id);
+    for (Entity &entity : entityDb->entities) {
         if (entity.map_id != map.id) {
             continue;
         }
@@ -482,7 +482,7 @@ UIState Editor::DrawUI_ActionBar(Vector2 position, GameServer &server, double no
     static std::string openRequest;
     static std::string saveAsRequest;
 
-    auto &map = data::packs[1].FindTilemap(map_id);
+    auto &map = packs[1].FindTilemap(map_id);
 
 #if 0
     UIState openButton = uiActionBar.Button("Open");
@@ -502,7 +502,7 @@ UIState Editor::DrawUI_ActionBar(Vector2 position, GameServer &server, double no
         openFileThread.detach();
     }
     if (openRequest.size()) {
-        data::Tilemap *openedMap = server.FindOrLoadMap(openRequest);
+        Tilemap *openedMap = server.FindOrLoadMap(openRequest);
         if (!openedMap) {
             std::thread errorThread([]{
                 const char *msg = TextFormat("Failed to load file %s.\n", openRequest);
@@ -516,7 +516,7 @@ UIState Editor::DrawUI_ActionBar(Vector2 position, GameServer &server, double no
     UIState saveButton = uiActionBar.Button("Save");
     if (saveButton.released) {
         std::string filename = "resources/map/" + map.name + ".mdesk";
-        Err err = data::SaveTilemap(filename, map);
+        Err err = SaveTilemap(filename, map);
         if (err) {
             std::thread errorThread([filename, err]{
                 const char *msg = TextFormat("Failed to save file %s. %s\n", filename.c_str(), ErrStr(err));
@@ -541,7 +541,7 @@ UIState Editor::DrawUI_ActionBar(Vector2 position, GameServer &server, double no
         saveAsThread.detach();
     }
     if (saveAsRequest.size()) {
-        Err err = data::SaveTilemap(saveAsRequest, map);
+        Err err = SaveTilemap(saveAsRequest, map);
         if (err) {
             std::thread errorThread([err]{
                 const char *msg = TextFormat("Failed to save file %s. %s\n", saveAsRequest.c_str(), ErrStr(err));
@@ -555,15 +555,15 @@ UIState Editor::DrawUI_ActionBar(Vector2 position, GameServer &server, double no
     UIState reloadButton = uiActionBar.Button("Reload");
     if (reloadButton.released) {
         std::string filename = "resources/map/" + map.name + ".mdesk";
-        data::Pack reload_pack{ "reload_pack.mem" };
-        data::PackAddMeta(reload_pack, filename.c_str());
+        Pack reload_pack{ "reload_pack.mem" };
+        PackAddMeta(reload_pack, filename.c_str());
 
         // HACK(dlb): What the hell is size() == 2?
         Err err = RN_BAD_FILE_READ;
         if (reload_pack.tile_maps.size() == 2) {
-            size_t map_index = data::packs[1].FindTilemapIndex(map.id);
+            size_t map_index = packs[1].FindTilemapIndex(map.id);
             if (map_index) {
-                data::packs[0].tile_maps[map_index] = reload_pack.tile_maps[1];
+                packs[0].tile_maps[map_index] = reload_pack.tile_maps[1];
                 err = RN_SUCCESS;
             }
         }
@@ -666,7 +666,7 @@ UIState Editor::DrawUI_ActionBar(Vector2 position, GameServer &server, double no
 }
 void Editor::DrawUI_MapActions(UI &uiActionBar, GameServer &server, double now)
 {
-    for (const data::Tilemap &map : data::packs[1].tile_maps) {
+    for (const Tilemap &map : packs[1].tile_maps) {
         if (uiActionBar.Button(TextFormat("%s", map.name.c_str())).pressed) {
             map_id = map.id;
         }
@@ -695,7 +695,7 @@ void Editor::DrawUI_TileActions(UI &uiActionBar, double now)
         openFileThread.detach();
     }
     if (openRequest) {
-        Err err = data::Tilemap::ChangeTileset(*map, openRequest, now);
+        Err err = Tilemap::ChangeTileset(*map, openRequest, now);
         if (err) {
             std::thread errorThread([err]{
                 const char *msg = TextFormat("Failed to load file %s. %s\n", openRequest, ErrStr(err));
@@ -708,7 +708,7 @@ void Editor::DrawUI_TileActions(UI &uiActionBar, double now)
     uiActionBar.Newline();
 #endif
 
-    data::Tilemap &map = data::packs[1].FindTilemap(map_id);
+    Tilemap &map = packs[1].FindTilemap(map_id);
 
     static float width = 0;
     static float height = 0;
@@ -739,8 +739,8 @@ void Editor::DrawUI_TileActions(UI &uiActionBar, double now)
             }
         }
 
-        std::vector<data::ObjectData> objDataNew{};
-        for (data::ObjectData &obj_data : map.object_data) {
+        std::vector<ObjectData> objDataNew{};
+        for (ObjectData &obj_data : map.object_data) {
             if (obj_data.x < newWidth && obj_data.y < newHeight) {
                 objDataNew.push_back(obj_data);
             }
@@ -787,8 +787,8 @@ void Editor::DrawUI_Tilesheet(UI &uiActionBar, double now)
 {
     // TODO(dlb): Support multi-select (big rectangle?), and figure out where this lives
 
-    data::Tilemap &map = data::packs[1].FindTilemap(map_id);
-    auto &tile_defs = data::packs[0].tile_defs;
+    Tilemap &map = packs[1].FindTilemap(map_id);
+    auto &tile_defs = packs[0].tile_defs;
 
     int tiles_x = 6;
     int tiles_y = tile_defs.size() / 6 + (tile_defs.size() % 6 > 0);
@@ -841,7 +841,7 @@ void Editor::DrawUI_Tilesheet(UI &uiActionBar, double now)
                     pos.y += tileSixth - size.y / 2.0f;
                     DrawTextShadowEx(fntSmall, "X", pos, WHITE);
                 } else {
-                    if (tile_defs[i].flags & data::TILEDEF_FLAG_SOLID) {
+                    if (tile_defs[i].flags & TILEDEF_FLAG_SOLID) {
                         DrawRectangle(cursor.x, cursor.y, tileThird, tileThird, Fade(DARKGREEN, 0.7f));
 
                         Vector2 size = dlb_MeasureTextEx(fntSmall, "S", 1, 0);
@@ -851,7 +851,7 @@ void Editor::DrawUI_Tilesheet(UI &uiActionBar, double now)
                         DrawTextShadowEx(fntSmall, "S", pos, WHITE);
                     }
                     cursor.x += tileThird + 1;
-                    if (tile_defs[i].flags & data::TILEDEF_FLAG_LIQUID) {
+                    if (tile_defs[i].flags & TILEDEF_FLAG_LIQUID) {
                         DrawRectangle(cursor.x, cursor.y, tileThird, tileThird, Fade(SKYBLUE, 0.7f));
 
                         Vector2 size = dlb_MeasureTextEx(fntSmall, "L", 1, 0);
@@ -963,8 +963,8 @@ void Editor::DrawUI_Tilesheet(UI &uiActionBar, double now)
 
                         if (state.tiles.tileEditMode == TileEditMode_Collision) {
                             switch (tileSegment) {
-                                case 0: tile_defs[tileIdx].flags ^= data::TILEDEF_FLAG_SOLID;  break;
-                                case 1: tile_defs[tileIdx].flags ^= data::TILEDEF_FLAG_LIQUID; break;
+                                case 0: tile_defs[tileIdx].flags ^= TILEDEF_FLAG_SOLID;  break;
+                                case 1: tile_defs[tileIdx].flags ^= TILEDEF_FLAG_LIQUID; break;
                             }
                         } else if (state.tiles.tileEditMode == TileEditMode_AutoTileMask) {
                             //printf("x: %d, y: %d, s: %d\n", tileXSegment, tileYSegment, tileSegment);
@@ -1081,7 +1081,7 @@ void Editor::DrawUI_Wang(UI &uiActionBar, double now)
 
     uiActionBar.PopStyle();
 
-    data::Tilemap &map = data::packs[1].FindTilemap(map_id);
+    Tilemap &map = packs[1].FindTilemap(map_id);
 
     if (uiActionBar.Button("Re-generate Map").pressed) {
         wangTileset.GenerateMap(map.width, map.height, wangMap);
@@ -1097,8 +1097,8 @@ void Editor::DrawUI_Wang(UI &uiActionBar, double now)
 void Editor::DrawUI_WangTile(double now)
 {
     WangTileset &wangTileset = state.wang.wangTileset;
-    data::Tilemap &map = data::packs[1].FindTilemap(map_id);
-    auto &tile_defs = data::packs[0].tile_defs;
+    Tilemap &map = packs[1].FindTilemap(map_id);
+    auto &tile_defs = packs[0].tile_defs;
 
     Rectangle wangBg{ 434, 4, 560, 560 };
 
@@ -1128,8 +1128,8 @@ void Editor::DrawUI_WangTile(double now)
                     uint8_t *pixel = &imgData[templateOffset];
                     uint8_t tile = pixel[0] < tile_defs.size() ? pixel[0] : 0;
 
-                    const data::GfxFrame &gfx_frame = map.GetTileGfxFrame(selectedTile);
-                    const data::GfxFile &gfx_file = data::packs[0].FindGraphic(gfx_frame.gfx);
+                    const GfxFrame &gfx_frame = map.GetTileGfxFrame(selectedTile);
+                    const GfxFile &gfx_file = packs[0].FindGraphic(gfx_frame.gfx);
                     const Rectangle tileRect = map.TileDefRect(tile);
                     if (uiWangTile.Image(gfx_file.texture, tileRect).down) {
                         pixel[0] = selectedTile; //^ (selectedTile*55);
@@ -1150,8 +1150,8 @@ void Editor::DrawUI_WangTile(double now)
                     uint8_t *pixel = &imgData[templateOffset];
                     uint8_t tile = pixel[0] < tile_defs.size() ? pixel[0] : 0;
 
-                    const data::GfxFrame &gfx_frame = map.GetTileGfxFrame(selectedTile);
-                    const data::GfxFile &gfx_file = data::packs[0].FindGraphic(gfx_frame.gfx);
+                    const GfxFrame &gfx_frame = map.GetTileGfxFrame(selectedTile);
+                    const GfxFile &gfx_file = packs[0].FindGraphic(gfx_frame.gfx);
                     const Rectangle tileRect = map.TileDefRect(tile);
                     if (uiWangTile.Image(gfx_file.texture, tileRect).down) {
                         pixel[0] = selectedTile; //^ (selectedTile*55);
@@ -1249,7 +1249,7 @@ void Editor::DrawUI_WarpActions(UI &uiActionBar, double now)
     //uiActionBar.Newline();
 
     if (uiActionBar.Button("Add", DARKGREEN).pressed) {
-        //data::Tilemap &map = data::packs[0].
+        //Tilemap &map = packs[0].
         //map.warps.push_back({});
     }
     uiActionBar.Newline();
@@ -1265,7 +1265,7 @@ void Editor::DrawUI_WarpActions(UI &uiActionBar, double now)
     uiActionBar.Textbox(txtSearch, filter);
     uiActionBar.Newline();
 
-    //for (data::AspectWarp &warp : data::packs[0].warp) {
+    //for (AspectWarp &warp : packs[0].warp) {
     //    //if (!warp.id) {
     //    //    continue;
     //    //}
@@ -1282,8 +1282,8 @@ void Editor::DrawUI_WarpActions(UI &uiActionBar, double now)
     //    uiActionBar.Newline();
     //}
 
-    for (data::Entity &entity : data::packs[0].entities) {
-        if (entity.spec != data::ENTITY_SPEC_OBJ_WARP) {
+    for (Entity &entity : packs[0].entities) {
+        if (entity.spec != ENTITY_SPEC_OBJ_WARP) {
             continue;
         }
 
@@ -1394,7 +1394,7 @@ void Editor::DrawUI_DialogActions(UI &uiActionBar, double now)
                 uiActionBar.Newline();
                 float id = dialog.option_ids[i];
                 uiActionBar.TextboxFloat(txtOptionId[i], id, 0, "%.f");
-                dialog.option_ids[i] = (data::DialogId)CLAMP(id, 0, data::packs[0].dialogs.size() - 1);
+                dialog.option_ids[i] = (DialogId)CLAMP(id, 0, packs[0].dialogs.size() - 1);
                 uiActionBar.Newline();
             }
         } else {
@@ -1407,10 +1407,10 @@ void Editor::DrawUI_DialogActions(UI &uiActionBar, double now)
 }
 void Editor::DrawUI_EntityActions(UI &uiActionBar, double now)
 {
-    auto &map = data::packs[1].FindTilemap(map_id);
+    auto &map = packs[1].FindTilemap(map_id);
     if (uiActionBar.Button("Despawn all", ColorBrightness(MAROON, -0.3f)).pressed) {
-        for (const data::Entity &entity : entityDb->entities) {
-            if (entity.type == data::ENTITY_PLAYER || entity.map_id != map.id) {
+        for (const Entity &entity : entityDb->entities) {
+            if (entity.type == ENTITY_PLAYER || entity.map_id != map.id) {
                 continue;
             }
             assert(entity.id && entity.type);
@@ -1433,7 +1433,7 @@ void Editor::DrawUI_EntityActions(UI &uiActionBar, double now)
     uiActionBar.Newline();
 
     for (uint32_t i = 0; i < SV_MAX_ENTITIES; i++) {
-        data::Entity &entity = entityDb->entities[i];
+        Entity &entity = entityDb->entities[i];
         if (!entity.id || entity.map_id != map.id) {
             continue;
         }
@@ -1453,7 +1453,7 @@ void Editor::DrawUI_EntityActions(UI &uiActionBar, double now)
     uiActionBar.PopStyle();
 
     if (state.entities.selectedId) {
-        data::Entity *entity = entityDb->FindEntity(state.entities.selectedId);
+        Entity *entity = entityDb->FindEntity(state.entities.selectedId);
         if (entity) {
             const int labelWidth = 100;
 
@@ -1558,7 +1558,7 @@ void Editor::DrawUI_SfxFiles(UI &uiActionBar, double now)
     uiActionBar.Textbox(txtSearch, filter);
     uiActionBar.Newline();
 
-    for (data::SfxFile &sfxFile : data::packs[0].sfx_files) {
+    for (SfxFile &sfxFile : packs[0].sfx_files) {
         if (sfxFile.id.empty()) {
             continue;
         }
@@ -1579,7 +1579,7 @@ void Editor::DrawUI_SfxFiles(UI &uiActionBar, double now)
 
     if (!state.sfxFiles.selectedSfx.empty()) {
         const int labelWidth = 100;
-        data::SfxFile &sfx_file = data::packs[0].FindSoundVariant(state.sfxFiles.selectedSfx);
+        SfxFile &sfx_file = packs[0].FindSoundVariant(state.sfxFiles.selectedSfx);
         if (!sfx_file.id.empty()) {
             uiActionBar.Label("id", labelWidth);
             uiActionBar.Text(TextFormat("%d", sfx_file.id));
@@ -1612,7 +1612,7 @@ void Editor::DrawUI_PackFiles(UI &uiActionBar, double now)
     uiActionBar.Textbox(txtSearch, filter);
     uiActionBar.Newline();
 
-    for (data::Pack &pack : data::packs) {
+    for (Pack &pack : packs) {
         if (!pack.version) {
             continue;
         }
@@ -1632,7 +1632,7 @@ void Editor::DrawUI_PackFiles(UI &uiActionBar, double now)
     uiActionBar.PopStyle();
 
     if (state.packFiles.selectedPack) {
-        data::Pack &pack = *state.packFiles.selectedPack;
+        Pack &pack = *state.packFiles.selectedPack;
 
         const int labelWidth = 100;
 
@@ -1648,32 +1648,32 @@ void Editor::DrawUI_PackFiles(UI &uiActionBar, double now)
             bool enabled;
             const char *text;
             Color color;
-        } datTypeFilter[data::DAT_TYP_COUNT]{
-            { true,  "GFX", ColorFromHSV(0 * (360.0f / (float)data::DAT_TYP_COUNT), 0.9f, 0.6f) },
-            { true,  "MUS", ColorFromHSV(1 * (360.0f / (float)data::DAT_TYP_COUNT), 0.9f, 0.6f) },
-            { true,  "SFX", ColorFromHSV(2 * (360.0f / (float)data::DAT_TYP_COUNT), 0.9f, 0.6f) },
-            { true,  "FRM", ColorFromHSV(3 * (360.0f / (float)data::DAT_TYP_COUNT), 0.9f, 0.6f) },
-            { true,  "ANM", ColorFromHSV(4 * (360.0f / (float)data::DAT_TYP_COUNT), 0.9f, 0.6f) },
-            { true,  "MAT", ColorFromHSV(5 * (360.0f / (float)data::DAT_TYP_COUNT), 0.9f, 0.6f) },
-            { true,  "SPT", ColorFromHSV(6 * (360.0f / (float)data::DAT_TYP_COUNT), 0.9f, 0.6f) },
-            { true,  "MAP", ColorFromHSV(7 * (360.0f / (float)data::DAT_TYP_COUNT), 0.9f, 0.6f) },
-            { true,  "ENT", ColorFromHSV(8 * (360.0f / (float)data::DAT_TYP_COUNT), 0.9f, 0.6f) },
+        } datTypeFilter[DAT_TYP_COUNT]{
+            { true,  "GFX", ColorFromHSV(0 * (360.0f / (float)DAT_TYP_COUNT), 0.9f, 0.6f) },
+            { true,  "MUS", ColorFromHSV(1 * (360.0f / (float)DAT_TYP_COUNT), 0.9f, 0.6f) },
+            { true,  "SFX", ColorFromHSV(2 * (360.0f / (float)DAT_TYP_COUNT), 0.9f, 0.6f) },
+            { true,  "FRM", ColorFromHSV(3 * (360.0f / (float)DAT_TYP_COUNT), 0.9f, 0.6f) },
+            { true,  "ANM", ColorFromHSV(4 * (360.0f / (float)DAT_TYP_COUNT), 0.9f, 0.6f) },
+            { true,  "MAT", ColorFromHSV(5 * (360.0f / (float)DAT_TYP_COUNT), 0.9f, 0.6f) },
+            { true,  "SPT", ColorFromHSV(6 * (360.0f / (float)DAT_TYP_COUNT), 0.9f, 0.6f) },
+            { true,  "MAP", ColorFromHSV(7 * (360.0f / (float)DAT_TYP_COUNT), 0.9f, 0.6f) },
+            { true,  "ENT", ColorFromHSV(8 * (360.0f / (float)DAT_TYP_COUNT), 0.9f, 0.6f) },
         };
 
         uiActionBar.PushWidth(34);
-        for (int i = 1; i < data::DAT_TYP_COUNT; i++) {
+        for (int i = 1; i < DAT_TYP_COUNT; i++) {
             DatTypeFilter &filter = datTypeFilter[i];
             if (uiActionBar.Button(filter.text ? filter.text : "???", filter.enabled, DARKGRAY, filter.color).pressed) {
                 if (io.KeyDown(KEY_LEFT_SHIFT)) {
                     filter.enabled = !filter.enabled;
                 } else {
-                    for (int j = 0; j < data::DAT_TYP_COUNT; j++) {
+                    for (int j = 0; j < DAT_TYP_COUNT; j++) {
                         datTypeFilter[j].enabled = false;
                     }
                     filter.enabled = true;
                 }
             }
-            if ((i && i % 7 == 0) || i == data::DAT_TYP_COUNT - 1) {
+            if ((i && i % 7 == 0) || i == DAT_TYP_COUNT - 1) {
                 uiActionBar.Newline();
             }
         }
@@ -1687,7 +1687,7 @@ void Editor::DrawUI_PackFiles(UI &uiActionBar, double now)
         // Defer changing selection until after the loop has rendered every item
         int newSelectedOffset = 0;
 
-        for (data::PackTocEntry &entry : pack.toc.entries) {
+        for (PackTocEntry &entry : pack.toc.entries) {
             DatTypeFilter &filter = datTypeFilter[entry.dtype];
             if (!filter.enabled) {
                 continue;
@@ -1698,58 +1698,58 @@ void Editor::DrawUI_PackFiles(UI &uiActionBar, double now)
             const char *desc = DataTypeStr(entry.dtype);
 
             switch (entry.dtype) {
-                case data::DAT_TYP_GFX_FILE:
+                case DAT_TYP_GFX_FILE:
                 {
-                    data::GfxFile &gfx_file = pack.gfx_files[entry.index];
+                    GfxFile &gfx_file = pack.gfx_files[entry.index];
                     desc = gfx_file.path.c_str();
                     break;
                 }
-                case data::DAT_TYP_MUS_FILE:
+                case DAT_TYP_MUS_FILE:
                 {
-                    data::MusFile &mus_file = pack.mus_files[entry.index];
+                    MusFile &mus_file = pack.mus_files[entry.index];
                     desc = mus_file.id.c_str();
                     break;
                 }
-                case data::DAT_TYP_SFX_FILE:
+                case DAT_TYP_SFX_FILE:
                 {
-                    data::SfxFile &sfx_file = pack.sfx_files[entry.index];
+                    SfxFile &sfx_file = pack.sfx_files[entry.index];
                     desc = sfx_file.id.c_str();
                     break;
                 }
-                case data::DAT_TYP_GFX_FRAME:
+                case DAT_TYP_GFX_FRAME:
                 {
-                    data::GfxFrame &gfx_frame = pack.gfx_frames[entry.index];
+                    GfxFrame &gfx_frame = pack.gfx_frames[entry.index];
                     desc = gfx_frame.id.c_str();
                     break;
                 }
-                case data::DAT_TYP_GFX_ANIM:
+                case DAT_TYP_GFX_ANIM:
                 {
-                    data::GfxAnim &gfx_anim = pack.gfx_anims[entry.index];
+                    GfxAnim &gfx_anim = pack.gfx_anims[entry.index];
                     desc = gfx_anim.id.c_str();
                     break;
                 }
-                case data::DAT_TYP_MATERIAL:
+                case DAT_TYP_TILE_MAT:
                 {
-                    data::Material &material = pack.materials[entry.index];
-                    desc = material.id.c_str();
+                    TileMat &tile_mat = pack.tile_mats[entry.index];
+                    desc = tile_mat.id.c_str();
                     break;
                 }
-                case data::DAT_TYP_SPRITE:
+                case DAT_TYP_SPRITE:
                 {
-                    data::Sprite &sprite = pack.sprites[entry.index];
+                    Sprite &sprite = pack.sprites[entry.index];
                     desc = sprite.id.c_str();
                     break;
                 }
-                case data::DAT_TYP_TILE_MAP:
+                case DAT_TYP_TILE_MAP:
                 {
-                    data::Tilemap &tile_map = pack.tile_maps[entry.index];
+                    Tilemap &tile_map = pack.tile_maps[entry.index];
                     desc = tile_map.name.c_str();
                     break;
                 }
-                case data::DAT_TYP_ENTITY:
+                case DAT_TYP_ENTITY:
                 {
-                    data::Entity &entity = pack.entities[entry.index];
-                    desc = data::EntityTypeStr(entity.type);
+                    Entity &entity = pack.entities[entry.index];
+                    desc = EntityTypeStr(entity.type);
                     break;
                 }
             }
@@ -1775,28 +1775,28 @@ void Editor::DrawUI_PackFiles(UI &uiActionBar, double now)
 
             if (selected) {
                 switch (entry.dtype) {
-                    case data::DAT_TYP_GFX_FILE:
+                    case DAT_TYP_GFX_FILE:
                     {
-                        data::GfxFile &gfxFile = pack.gfx_files[entry.index];
+                        GfxFile &gfxFile = pack.gfx_files[entry.index];
                         uiActionBar.Label("Path", detailsLabelWidth);
                         uiActionBar.Text(gfxFile.path.c_str());
                         uiActionBar.Newline();
                         break;
                     }
-                    case data::DAT_TYP_MUS_FILE:
+                    case DAT_TYP_MUS_FILE:
                     {
-                        data::MusFile &musFile = pack.mus_files[entry.index];
+                        MusFile &musFile = pack.mus_files[entry.index];
                         uiActionBar.Label("Path", detailsLabelWidth);
                         uiActionBar.Text(musFile.path.c_str());
                         uiActionBar.Newline();
                         break;
                     }
-                    case data::DAT_TYP_SFX_FILE:
+                    case DAT_TYP_SFX_FILE:
                     {
                         static int labelWidth = 100;
                         const float textboxWidth = 400 - 16 - labelWidth;
 
-                        data::SfxFile &sfxFile = pack.sfx_files[entry.index];
+                        SfxFile &sfxFile = pack.sfx_files[entry.index];
 
                         int newLabelWidth = 0;
                         UIState uiPath = uiActionBar.Label("path", labelWidth);
@@ -1813,13 +1813,13 @@ void Editor::DrawUI_PackFiles(UI &uiActionBar, double now)
                         uiActionBar.TextboxFloat(txtPitchVariance, sfxFile.pitch_variance, textboxWidth, "%.2f", 0.01f);
                         uiActionBar.Newline();
 
-                        if (!data::IsSoundPlaying(sfxFile.id)) {
+                        if (!IsSoundPlaying(sfxFile.id)) {
                             if (uiActionBar.Button("Play", ColorBrightness(DARKGREEN, -0.3f)).pressed) {
-                                data::PlaySound(sfxFile.id, 0);
+                                PlaySound(sfxFile.id, 0);
                             }
                         } else {
                             if (uiActionBar.Button("Stop", ColorBrightness(MAROON, -0.3f)).pressed) {
-                                data::StopSound(sfxFile.id);
+                                StopSound(sfxFile.id);
                             }
                         }
 
@@ -1828,9 +1828,9 @@ void Editor::DrawUI_PackFiles(UI &uiActionBar, double now)
                         labelWidth = newLabelWidth;
                         break;
                     }
-                    case data::DAT_TYP_GFX_FRAME:
+                    case DAT_TYP_GFX_FRAME:
                     {
-                        data::GfxFrame &gfxFrame = pack.gfx_frames[entry.index];
+                        GfxFrame &gfxFrame = pack.gfx_frames[entry.index];
                         //uiActionBar.Label("rect", detailsLabelWidth);
                         //uiActionBar.Text(TextFormat("%hu", gfxFrame.x));
                         //uiActionBar.Text(TextFormat("%hu", gfxFrame.y));
@@ -1865,9 +1865,9 @@ void Editor::DrawUI_PackFiles(UI &uiActionBar, double now)
                         uiActionBar.Newline();
                         break;
                     }
-                    case data::DAT_TYP_GFX_ANIM:
+                    case DAT_TYP_GFX_ANIM:
                     {
-                        data::GfxAnim &gfxAnim = pack.gfx_anims[entry.index];
+                        GfxAnim &gfxAnim = pack.gfx_anims[entry.index];
                         uiActionBar.Label("id", detailsLabelWidth);
                         uiActionBar.Text(gfxAnim.id.c_str());
                         uiActionBar.Newline();
@@ -1893,24 +1893,24 @@ void Editor::DrawUI_PackFiles(UI &uiActionBar, double now)
                         }
                         break;
                     }
-                    case data::DAT_TYP_MATERIAL:
+                    case DAT_TYP_TILE_MAT:
                     {
-                        data::Material &material = pack.materials[entry.index];
+                        TileMat &tile_mat = pack.tile_mats[entry.index];
 
                         uiActionBar.Label("id", detailsLabelWidth);
-                        uiActionBar.Text(material.id.c_str());
+                        uiActionBar.Text(tile_mat.id.c_str());
                         uiActionBar.Newline();
 
                         uiActionBar.Label("footstep", detailsLabelWidth);
-                        uiActionBar.Text(material.footstep_sound.c_str());
+                        uiActionBar.Text(tile_mat.footstep_sound.c_str());
                         uiActionBar.Newline();
 
                         uiActionBar.Newline();
                         break;
                     }
-                    case data::DAT_TYP_SPRITE:
+                    case DAT_TYP_SPRITE:
                     {
-                        data::Sprite &sprite = pack.sprites[entry.index];
+                        Sprite &sprite = pack.sprites[entry.index];
 
                         const float labelWidth = 20.0f;
                         uiActionBar.Label("id", labelWidth);
@@ -1918,45 +1918,45 @@ void Editor::DrawUI_PackFiles(UI &uiActionBar, double now)
                         uiActionBar.Newline();
 
                         uiActionBar.Label("N ", labelWidth);
-                        uiActionBar.Text(sprite.anims[data::DIR_N].c_str());
+                        uiActionBar.Text(sprite.anims[DIR_N].c_str());
                         uiActionBar.Newline();
 
                         uiActionBar.Label("E ", labelWidth);
-                        uiActionBar.Text(sprite.anims[data::DIR_E].c_str());
+                        uiActionBar.Text(sprite.anims[DIR_E].c_str());
                         uiActionBar.Newline();
 
                         uiActionBar.Label("S ", labelWidth);
-                        uiActionBar.Text(sprite.anims[data::DIR_S].c_str());
+                        uiActionBar.Text(sprite.anims[DIR_S].c_str());
                         uiActionBar.Newline();
 
                         uiActionBar.Label("S ", labelWidth);
-                        uiActionBar.Text(sprite.anims[data::DIR_W].c_str());
+                        uiActionBar.Text(sprite.anims[DIR_W].c_str());
                         uiActionBar.Newline();
 
                         uiActionBar.Label("NE", labelWidth);
-                        uiActionBar.Text(sprite.anims[data::DIR_SE].c_str());
+                        uiActionBar.Text(sprite.anims[DIR_SE].c_str());
                         uiActionBar.Newline();
 
                         uiActionBar.Label("SE", labelWidth);
-                        uiActionBar.Text(sprite.anims[data::DIR_SE].c_str());
+                        uiActionBar.Text(sprite.anims[DIR_SE].c_str());
                         uiActionBar.Newline();
 
                         uiActionBar.Label("SW", labelWidth);
-                        uiActionBar.Text(sprite.anims[data::DIR_SW].c_str());
+                        uiActionBar.Text(sprite.anims[DIR_SW].c_str());
                         uiActionBar.Newline();
 
                         uiActionBar.Label("NW", labelWidth);
-                        uiActionBar.Text(sprite.anims[data::DIR_NW].c_str());
+                        uiActionBar.Text(sprite.anims[DIR_NW].c_str());
                         uiActionBar.Newline();
                         break;
                     }
-                    case data::DAT_TYP_TILE_MAP:
+                    case DAT_TYP_TILE_MAP:
                     {
                         uiActionBar.Text("TODO");
                         uiActionBar.Newline();
                         break;
                     }
-                    case data::DAT_TYP_ENTITY:
+                    case DAT_TYP_ENTITY:
                     {
                         uiActionBar.Text("TODO");
                         uiActionBar.Newline();

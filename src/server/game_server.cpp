@@ -22,15 +22,15 @@ void GameServer::OnClientJoin(int clientIdx)
         SKYBLUE
     };
 
-    data::Entity *player = SpawnEntity(data::ENTITY_PLAYER);
+    Entity *player = SpawnEntity(ENTITY_PLAYER);
     if (player) {
         ServerPlayer &sv_player = players[clientIdx];
         sv_player.needsClockSync = true;
         sv_player.joinedAt = now;
         sv_player.entityId = player->id;
 
-        player->type = data::ENTITY_PLAYER;
-        data::Tilemap &level_001 = data::packs[1].FindTilemapByName(LEVEL_001);
+        player->type = ENTITY_PLAYER;
+        Tilemap &level_001 = packs[1].FindTilemapByName(LEVEL_001);
         player->map_id = level_001.id;
         const Vector3 caveEntrance{ 3100, 1100, 0 };
         const Vector3 townCenter{ 1660, 2360, 0 };
@@ -42,7 +42,7 @@ void GameServer::OnClientJoin(int clientIdx)
         player->speed = 3000;
         player->drag = 0.9f;
         player->sprite = "sprite_chr_mage";
-        //projectile->direction = data::DIR_E;  // what's it do if it defaults to North?
+        //projectile->direction = DIR_E;  // what's it do if it defaults to North?
 
         TileChunkRecord mainMap{};
         sv_player.chunkList.push(mainMap);
@@ -59,7 +59,7 @@ void GameServer::OnClientLeave(int clientIdx)
     if (!maps.size()) return;
 
     // TODO: Which map is this sv_player currently on? Need to despawn them from that map.
-    data::Tilemap &map = *maps[0];
+    Tilemap &map = *maps[0];
 #endif
 
     ServerPlayer &serverPlayer = players[clientIdx];
@@ -174,11 +174,11 @@ void GameServer::Stop(void)
     delete entityDb;
 }
 
-data::Tilemap *GameServer::FindOrLoadMap(uint32_t map_id)
+Tilemap *GameServer::FindOrLoadMap(uint32_t map_id)
 {
 #if 1
     // TODO: Go back to assuming it's not already loaded once we figure out packs
-    data::Tilemap &map = data::packs[1].FindTilemap(map_id);
+    Tilemap &map = packs[1].FindTilemap(map_id);
     if (map.id) {
         return &map;
     } else {
@@ -191,7 +191,7 @@ data::Tilemap *GameServer::FindOrLoadMap(uint32_t map_id)
         return maps[mapIndex];
     } else {
         Err err = RN_SUCCESS;
-        data::Tilemap *map = new data::Tilemap();
+        Tilemap *map = new Tilemap();
         do {
             if (!map) {
                 printf("Failed to load map %s with code %d\n", filename.c_str(), err);
@@ -218,17 +218,17 @@ data::Tilemap *GameServer::FindOrLoadMap(uint32_t map_id)
     }
 #endif
 }
-data::Tilemap *GameServer::FindMap(uint32_t map_id)
+Tilemap *GameServer::FindMap(uint32_t map_id)
 {
-    // TODO: Remove this alias and call data::* directly?
-    auto &tile_map = data::packs[1].FindTilemap(map_id);
+    // TODO: Remove this alias and call * directly?
+    auto &tile_map = packs[1].FindTilemap(map_id);
     return &tile_map;
 }
 
-data::Entity *GameServer::SpawnEntity(data::EntityType type)
+Entity *GameServer::SpawnEntity(EntityType type)
 {
     uint32_t entityId = nextEntityId++;
-    data::Entity *entity = entityDb->SpawnEntity(entityId, type, now);
+    Entity *entity = entityDb->SpawnEntity(entityId, type, now);
     return entity;
 }
 void GameServer::DespawnEntity(uint32_t entityId)
@@ -239,7 +239,7 @@ void GameServer::DespawnEntity(uint32_t entityId)
 }
 void GameServer::DestroyDespawnedEntities(void)
 {
-    for (data::Entity &entity : entityDb->entities) {
+    for (Entity &entity : entityDb->entities) {
         if (entity.type && entity.despawned_at) {
             assert(entity.id);
             entityDb->DestroyEntity(entity.id);
@@ -252,7 +252,7 @@ void GameServer::SerializeSpawn(uint32_t entityId, Msg_S_EntitySpawn &entitySpaw
     assert(entityId);
     if (!entityId) return;
 
-    data::Entity *entity = entityDb->FindEntity(entityId);
+    Entity *entity = entityDb->FindEntity(entityId);
     assert(entity);
     if (!entity) return;
 
@@ -283,7 +283,7 @@ void GameServer::SerializeSpawn(uint32_t entityId, Msg_S_EntitySpawn &entitySpaw
 }
 void GameServer::SendEntitySpawn(int clientIdx, uint32_t entityId)
 {
-    data::Entity *entity = entityDb->FindEntity(entityId);
+    Entity *entity = entityDb->FindEntity(entityId);
     if (!entity) {
         printf("[game_server] could not find entity id %u. cannot send entity spawn msg.\n", entityId);
         return;
@@ -314,7 +314,7 @@ void GameServer::BroadcastEntitySpawn(uint32_t entityId)
 }
 void GameServer::SendEntityDespawn(int clientIdx, uint32_t entityId)
 {
-    data::Entity *entity = entityDb->FindEntity(entityId, true);
+    Entity *entity = entityDb->FindEntity(entityId, true);
     if (!entity) {
         printf("[game_server] could not find entity id %u. cannot send entity despawn msg.\n", entityId);
         return;
@@ -346,7 +346,7 @@ void GameServer::BroadcastEntityDespawn(uint32_t entityId)
 void GameServer::SendEntitySay(int clientIdx, uint32_t entityId, uint32_t dialogId, const std::string &title, const std::string &message)
 {
     // TODO: Send only if the client is nearby, or the message is a global event
-    data::Entity *entity = entityDb->FindEntity(entityId);
+    Entity *entity = entityDb->FindEntity(entityId);
     if (!entity) {
         printf("[game_server] could not find entity id %u. cannot send entity say msg.\n", entityId);
         return;
@@ -374,12 +374,12 @@ void GameServer::BroadcastEntitySay(uint32_t entityId, const std::string &title,
     }
 }
 
-void GameServer::SendTileChunk(int clientIdx, data::Tilemap &map, uint32_t x, uint32_t y)
+void GameServer::SendTileChunk(int clientIdx, Tilemap &map, uint32_t x, uint32_t y)
 {
     if (yj_server->CanSendMessage(clientIdx, CHANNEL_R_TILE_EVENT)) {
         Msg_S_TileChunk *msg = (Msg_S_TileChunk *)yj_server->CreateMessage(clientIdx, MSG_S_TILE_CHUNK);
         if (msg) {
-            data::TileChunk *chunk = (data::TileChunk *)yj_server->AllocateBlock(clientIdx, sizeof(data::TileChunk));
+            TileChunk *chunk = (TileChunk *)yj_server->AllocateBlock(clientIdx, sizeof(TileChunk));
 
             msg->map_id = map.id;
             msg->x = x;
@@ -395,12 +395,12 @@ void GameServer::SendTileChunk(int clientIdx, data::Tilemap &map, uint32_t x, ui
                 }
             }
 
-            yj_server->AttachBlockToMessage(clientIdx, msg, (uint8_t *)chunk, sizeof(data::TileChunk));
+            yj_server->AttachBlockToMessage(clientIdx, msg, (uint8_t *)chunk, sizeof(TileChunk));
             yj_server->SendMessage(clientIdx, CHANNEL_R_TILE_EVENT, msg);
         }
     }
 }
-void GameServer::BroadcastTileChunk(data::Tilemap &map, uint32_t x, uint32_t y)
+void GameServer::BroadcastTileChunk(Tilemap &map, uint32_t x, uint32_t y)
 {
     for (int clientIdx = 0; clientIdx < SV_MAX_PLAYERS; clientIdx++) {
         if (!yj_server->IsClientConnected(clientIdx)) {
@@ -410,7 +410,7 @@ void GameServer::BroadcastTileChunk(data::Tilemap &map, uint32_t x, uint32_t y)
         SendTileChunk(clientIdx, map, x, y);
     }
 }
-void GameServer::SendTileUpdate(int clientIdx, data::Tilemap &map, uint32_t x, uint32_t y)
+void GameServer::SendTileUpdate(int clientIdx, Tilemap &map, uint32_t x, uint32_t y)
 {
     if (yj_server->CanSendMessage(clientIdx, CHANNEL_R_TILE_EVENT)) {
         Msg_S_TileUpdate *msg = (Msg_S_TileUpdate *)yj_server->CreateMessage(clientIdx, MSG_S_TILE_UPDATE);
@@ -428,7 +428,7 @@ void GameServer::SendTileUpdate(int clientIdx, data::Tilemap &map, uint32_t x, u
         }
     }
 }
-void GameServer::BroadcastTileUpdate(data::Tilemap &map, uint32_t x, uint32_t y)
+void GameServer::BroadcastTileUpdate(Tilemap &map, uint32_t x, uint32_t y)
 {
     for (int clientIdx = 0; clientIdx < SV_MAX_PLAYERS; clientIdx++) {
         if (!yj_server->IsClientConnected(clientIdx)) {
@@ -439,7 +439,7 @@ void GameServer::BroadcastTileUpdate(data::Tilemap &map, uint32_t x, uint32_t y)
     }
 }
 
-void GameServer::RequestDialog(int clientIdx, data::Entity &entity, Dialog &dialog)
+void GameServer::RequestDialog(int clientIdx, Entity &entity, Dialog &dialog)
 {
     // Overridable by listeners
     uint32_t dialog_id = dialog.id;
@@ -473,10 +473,10 @@ void GameServer::ProcessMsg(int clientIdx, Msg_C_EntityInteract &msg)
     // TODO: Check if sv_player is allowed to actually interact with this
     // particular entity. E.g. are they even in the same map as them!?
     // Proximity, etc.
-    data::Entity *entity = entityDb->FindEntity(msg.entityId, data::ENTITY_NPC);
+    Entity *entity = entityDb->FindEntity(msg.entityId, ENTITY_NPC);
     if (entity) {
         ServerPlayer &player = players[clientIdx];
-        data::Entity *e_player = entityDb->FindEntity(player.entityId, data::ENTITY_PLAYER);
+        Entity *e_player = entityDb->FindEntity(player.entityId, ENTITY_PLAYER);
         if (!e_player) {
             assert(!"player entity not found.. huh?");
             return;
@@ -521,7 +521,7 @@ void GameServer::ProcessMsg(int clientIdx, Msg_C_EntityInteractDialogOption &msg
     // TODO: Check if player is allowed to actually interact with this
     // particular entity. E.g. are they even in the same map as them!?
     // Proximity, etc. If they leave proximity, send EntityInteractCancel
-    data::Entity *entity = entityDb->FindEntity(msg.entity_id, data::ENTITY_NPC);
+    Entity *entity = entityDb->FindEntity(msg.entity_id, ENTITY_NPC);
     if (entity) {
         DialogNode &optionTag = prevDialog->nodes[msg.option_id];
 
@@ -550,7 +550,7 @@ void GameServer::ProcessMsg(int clientIdx, Msg_C_TileInteract &msg)
 {
     ServerPlayer &player = players[clientIdx];
 
-    data::Entity *e_player = entityDb->FindEntity(player.entityId, data::ENTITY_PLAYER);
+    Entity *e_player = entityDb->FindEntity(player.entityId, ENTITY_PLAYER);
     if (msg.map_id != e_player->map_id) {
         // Wrong map, kick player?
         return;
@@ -562,13 +562,13 @@ void GameServer::ProcessMsg(int clientIdx, Msg_C_TileInteract &msg)
     // TODO: Check if sv_player is allowed to actually interact with this
     // particular tile. E.g. are they even in the same map as it!?
     // Holding the right tool, proximity, etc.
-    data::Tilemap *map = FindMap(msg.map_id);
+    Tilemap *map = FindMap(msg.map_id);
     if (!map) {
         // Map not loaded, kick player?
         return;
     }
 
-    data::Tilemap::Coord player_coord{};
+    Tilemap::Coord player_coord{};
     if (!map->WorldToTileIndex(e_player->position.x, e_player->position.y, player_coord)) {
         // Player somehow not on a tile!? Server error!?!?
         assert(!"player outside of map, wot?");
@@ -600,7 +600,7 @@ void GameServer::ProcessMsg(int clientIdx, Msg_C_TileInteract &msg)
     }
 
     //uint32_t object_id = map->At_Obj(msg.x, msg.y);
-    data::ObjectData *obj_data = map->GetObjectData(msg.x, msg.y);
+    ObjectData *obj_data = map->GetObjectData(msg.x, msg.y);
 
     if (msg.primary == false && obj_data) {
         if (obj_data->type == "lever") {
@@ -623,7 +623,7 @@ void GameServer::ProcessMsg(int clientIdx, Msg_C_TileInteract &msg)
             );
             SendEntitySay(clientIdx, player.entityId, 0, "Sign", signText);
         } else if (obj_data->type == "warp") {
-            data::Tilemap &map = data::packs[1].FindTilemap(obj_data->warp_map_id);
+            Tilemap &map = packs[1].FindTilemap(obj_data->warp_map_id);
             const char *warpInfo = TextFormat("%s (%u, %u)",
                 map.name.c_str(),
                 obj_data->warp_dest_x,
@@ -632,7 +632,7 @@ void GameServer::ProcessMsg(int clientIdx, Msg_C_TileInteract &msg)
             SendEntitySay(clientIdx, player.entityId, 0, "Warp", warpInfo);
         }
     } else if (msg.primary) {
-        const data::TileDef &tile_def = map->GetTileDef(tile_id);
+        const TileDef &tile_def = map->GetTileDef(tile_id);
         const char *new_tile_def_name = 0;
         if (tile_def.name == "til_water_dark") {
             new_tile_def_name = "til_stone_path";
@@ -641,7 +641,7 @@ void GameServer::ProcessMsg(int clientIdx, Msg_C_TileInteract &msg)
         }
 
         if (new_tile_def_name) {
-            const data::TileDef &new_tile_def = data::packs[0].FindTileDefByName(new_tile_def_name);
+            const TileDef &new_tile_def = packs[0].FindTileDefByName(new_tile_def_name);
             // TODO(perf): Make some kind of map from string -> tile_def_index in the map?
             // * OR * make the maps all have global tile def ids instead of local tile def ids
             if (new_tile_def.id) {
@@ -673,12 +673,12 @@ void GameServer::ProcessMessages(void)
     }
 }
 
-data::Entity *GameServer::SpawnProjectile(uint32_t map_id, Vector3 position, Vector2 direction, Vector3 initial_velocity)
+Entity *GameServer::SpawnProjectile(uint32_t map_id, Vector3 position, Vector2 direction, Vector3 initial_velocity)
 {
-    data::Entity *projectile = SpawnEntity(data::ENTITY_PROJECTILE);
+    Entity *projectile = SpawnEntity(ENTITY_PROJECTILE);
     if (!projectile) return 0;
 
-    projectile->spec = data::ENTITY_SPEC_PRJ_FIREBALL;
+    projectile->spec = ENTITY_SPEC_PRJ_FIREBALL;
 
     // [Entity] position
     projectile->position = position;
@@ -699,7 +699,7 @@ data::Entity *GameServer::SpawnProjectile(uint32_t map_id, Vector3 position, Vec
     projectile->drag = 0.02f;
 
     projectile->sprite = "sprite_prj_fireball";
-    //projectile->direction = data::DIR_E;
+    //projectile->direction = DIR_E;
 
     BroadcastEntitySpawn(projectile->id);
     return projectile;
@@ -719,7 +719,7 @@ void GameServer::UpdateServerPlayers(void)
         }
 
         if (input_cmd) {
-            data::Entity *player = entityDb->FindEntity(sv_player.entityId, data::ENTITY_PLAYER);
+            Entity *player = entityDb->FindEntity(sv_player.entityId, ENTITY_PLAYER);
             if (player) {
                 Vector3 move_force = input_cmd->GenerateMoveForce(player->speed);
                 player->ApplyForce(move_force);
@@ -728,7 +728,7 @@ void GameServer::UpdateServerPlayers(void)
                     if (now - player->last_attacked_at > player->attack_cooldown) {
                         Vector3 projectile_spawn_pos = player->position;
                         projectile_spawn_pos.z += 24;  // "hand" height
-                        data::Entity *projectile = SpawnProjectile(player->map_id, projectile_spawn_pos, input_cmd->facing, player->velocity);
+                        Entity *projectile = SpawnProjectile(player->map_id, projectile_spawn_pos, input_cmd->facing, player->velocity);
                         if (projectile) {
                             Vector3 recoil_force{};
                             recoil_force.x = -projectile->velocity.x;
@@ -746,12 +746,12 @@ void GameServer::UpdateServerPlayers(void)
         }
     }
 }
-data::Entity *SpawnEntityProto(GameServer &server, uint32_t map_id, Vector3 position, data::EntityProto &proto)
+Entity *SpawnEntityProto(GameServer &server, uint32_t map_id, Vector3 position, EntityProto &proto)
 {
-    data::Tilemap *map = server.FindMap(map_id);
+    Tilemap *map = server.FindMap(map_id);
     if (!map) return 0;
 
-    data::Entity *entity = server.SpawnEntity(data::ENTITY_NPC);
+    Entity *entity = server.SpawnEntity(ENTITY_NPC);
     if (!entity) return 0;
 
     entity->spec                 = proto.spec;
@@ -771,7 +771,7 @@ data::Entity *SpawnEntityProto(GameServer &server, uint32_t map_id, Vector3 posi
     entity->sprite               = proto.sprite;
     entity->direction            = proto.direction;
 
-    data::AiPathNode *aiPathNode = map->GetPathNode(entity->path_id, 0);
+    AiPathNode *aiPathNode = map->GetPathNode(entity->path_id, 0);
     if (aiPathNode) {
         entity->position.x = aiPathNode->pos.x;
         entity->position.y = aiPathNode->pos.y;
@@ -782,16 +782,16 @@ data::Entity *SpawnEntityProto(GameServer &server, uint32_t map_id, Vector3 posi
 void GameServer::TickSpawnTownNPCs(uint32_t map_id)
 {
     // TODO: Load protos from an mdesk file
-    static data::EntityProto lily;
-    static data::EntityProto freye;
-    static data::EntityProto nessa;
-    static data::EntityProto elane;
-    static data::EntityProto *townfolk[]{
+    static EntityProto lily;
+    static EntityProto freye;
+    static EntityProto nessa;
+    static EntityProto elane;
+    static EntityProto *townfolk[]{
         &lily, &freye, &nessa, &elane
     };
     static uint32_t townfolk_ids[4];
 
-    static data::EntityProto chicken;
+    static EntityProto chicken;
     static uint32_t chicken_ids[10];
 
     // TODO: put entities in some map mdesk file or something?
@@ -807,8 +807,8 @@ void GameServer::TickSpawnTownNPCs(uint32_t map_id)
     // ]
 
     if (!lily.type) {
-        lily.type = data::ENTITY_NPC;
-        lily.spec = data::ENTITY_SPEC_NPC_TOWNFOLK;
+        lily.type = ENTITY_NPC;
+        lily.spec = ENTITY_SPEC_NPC_TOWNFOLK;
         lily.name = "Lily";
         lily.radius = 16;
         lily.dialog_root_key = "DIALOG_LILY_INTRO";
@@ -818,10 +818,10 @@ void GameServer::TickSpawnTownNPCs(uint32_t map_id)
         lily.speed_max = 600;
         lily.drag = 1.0f;
         lily.sprite = "sprite_npc_lily";
-        lily.direction = data::DIR_E;
+        lily.direction = DIR_E;
 
-        freye.type = data::ENTITY_NPC;
-        freye.spec = data::ENTITY_SPEC_NPC_TOWNFOLK;
+        freye.type = ENTITY_NPC;
+        freye.spec = ENTITY_SPEC_NPC_TOWNFOLK;
         freye.name = "Freye";
         freye.radius = 16;
         freye.dialog_root_key = "DIALOG_FREYE_INTRO";
@@ -831,10 +831,10 @@ void GameServer::TickSpawnTownNPCs(uint32_t map_id)
         freye.speed_max = 600;
         freye.drag = 1.0f;
         freye.sprite = "sprite_npc_freye";
-        freye.direction = data::DIR_E;
+        freye.direction = DIR_E;
 
-        nessa.type = data::ENTITY_NPC;
-        nessa.spec = data::ENTITY_SPEC_NPC_TOWNFOLK;
+        nessa.type = ENTITY_NPC;
+        nessa.spec = ENTITY_SPEC_NPC_TOWNFOLK;
         nessa.name = "Nessa";
         nessa.radius = 16;
         nessa.dialog_root_key = "DIALOG_NESSA_INTRO";
@@ -844,10 +844,10 @@ void GameServer::TickSpawnTownNPCs(uint32_t map_id)
         nessa.speed_max = 600;
         nessa.drag = 1.0f;
         nessa.sprite = "sprite_npc_nessa";
-        nessa.direction = data::DIR_E;
+        nessa.direction = DIR_E;
 
-        elane.type = data::ENTITY_NPC;
-        elane.spec = data::ENTITY_SPEC_NPC_TOWNFOLK;
+        elane.type = ENTITY_NPC;
+        elane.spec = ENTITY_SPEC_NPC_TOWNFOLK;
         elane.name = "Elane";
         elane.radius = 16;
         elane.dialog_root_key = "DIALOG_ELANE_INTRO";
@@ -857,10 +857,10 @@ void GameServer::TickSpawnTownNPCs(uint32_t map_id)
         elane.speed_max = 600;
         elane.drag = 1.0f;
         elane.sprite = "sprite_npc_elane";
-        elane.direction = data::DIR_E;
+        elane.direction = DIR_E;
 
-        chicken.type = data::ENTITY_NPC;
-        chicken.spec = data::ENTITY_SPEC_NPC_CHICKEN;
+        chicken.type = ENTITY_NPC;
+        chicken.spec = ENTITY_SPEC_NPC_CHICKEN;
         chicken.name = "Chicken";
         chicken.ambient_fx = "sfx_chicken_cluck";
         chicken.ambient_fx_delay_min = 15;
@@ -879,7 +879,7 @@ void GameServer::TickSpawnTownNPCs(uint32_t map_id)
     const double townfolkSpawnRate = 2.0;
     if (now - lastTownfolkSpawnedAt >= townfolkSpawnRate) {
         for (int i = 0; i < ARRAY_SIZE(townfolk_ids); i++) {
-            data::Entity *entity = entityDb->FindEntity(townfolk_ids[i], data::ENTITY_NPC);
+            Entity *entity = entityDb->FindEntity(townfolk_ids[i], ENTITY_NPC);
             if (!entity) {
                 entity = SpawnEntityProto(*this, map_id, { 0, 0 }, *townfolk[i]);
                 if (entity) {
@@ -895,7 +895,7 @@ void GameServer::TickSpawnTownNPCs(uint32_t map_id)
     const double chickenSpawnCooldown = 3.0;
     if (now - lastChickenSpawnedAt >= chickenSpawnCooldown) {
         for (int i = 0; i < ARRAY_SIZE(chicken_ids); i++) {
-            data::Entity *entity = entityDb->FindEntity(chicken_ids[i], data::ENTITY_NPC);
+            Entity *entity = entityDb->FindEntity(chicken_ids[i], ENTITY_NPC);
             if (!entity) {
                 Vector3 spawn{};
                 // TODO: If chicken spawns inside something, immediately despawn
@@ -916,9 +916,9 @@ void GameServer::TickSpawnTownNPCs(uint32_t map_id)
 void GameServer::TickSpawnCaveNPCs(uint32_t map_id)
 {
     for (int i = 0; i < ARRAY_SIZE(eid_bots); i++) {
-        data::Entity *entity = entityDb->FindEntity(eid_bots[i], data::ENTITY_NPC);
+        Entity *entity = entityDb->FindEntity(eid_bots[i], ENTITY_NPC);
         if (!entity && ((int)tick % 100 == i * 10)) {
-            entity = SpawnEntity(data::ENTITY_NPC);
+            entity = SpawnEntity(ENTITY_NPC);
             if (!entity) continue;
 
             entity->name = "Cave Lily";
@@ -935,16 +935,16 @@ void GameServer::TickSpawnCaveNPCs(uint32_t map_id)
             entity->drag = 8.0f;
 
             entity->sprite = "sprite_npc_lily";
-            //entity->direction = data::DIR_E;
+            //entity->direction = DIR_E;
 
             BroadcastEntitySpawn(entity->id);
             eid_bots[i] = entity->id;
         }
     }
 }
-void GameServer::TickEntityNPC(data::Entity &e_npc, double dt)
+void GameServer::TickEntityNPC(Entity &e_npc, double dt)
 {
-    data::Tilemap *map = FindMap(e_npc.map_id);
+    Tilemap *map = FindMap(e_npc.map_id);
     if (!map) return;
 
     if (now - e_npc.dialog_spawned_at > SV_ENTITY_DIALOG_INTERESTED_DURATION) {
@@ -954,7 +954,7 @@ void GameServer::TickEntityNPC(data::Entity &e_npc, double dt)
     // TODO: tick_pathfind?
     // TODO: Instead of path_id -1 for "no path" change it to 0 like everything else. After tilemap refactor.
     if (e_npc.path_id >= 0 && !e_npc.dialog_spawned_at) {
-        data::AiPathNode *ai_path_node = map->GetPathNode(e_npc.path_id, e_npc.path_node_target);
+        AiPathNode *ai_path_node = map->GetPathNode(e_npc.path_id, e_npc.path_node_target);
         if (ai_path_node) {
             Vector3 target = ai_path_node->pos;
             Vector3 to_target = Vector3Subtract(target, e_npc.position);
@@ -999,7 +999,7 @@ void GameServer::TickEntityNPC(data::Entity &e_npc, double dt)
     }
 
     // Chicken pathing AI (really bad)
-    if (e_npc.spec == data::ENTITY_SPEC_NPC_CHICKEN) {
+    if (e_npc.spec == ENTITY_SPEC_NPC_CHICKEN) {
         if (e_npc.colliding) {
             e_npc.path_rand_direction = {};
         }
@@ -1026,11 +1026,11 @@ void GameServer::TickEntityNPC(data::Entity &e_npc, double dt)
 
     entityDb->EntityTick(e_npc, dt);
 }
-void GameServer::TickEntityPlayer(data::Entity &e_player, double dt)
+void GameServer::TickEntityPlayer(Entity &e_player, double dt)
 {
     entityDb->EntityTick(e_player, dt);
 }
-void GameServer::TickEntityProjectile(data::Entity &e_projectile, double dt)
+void GameServer::TickEntityProjectile(Entity &e_projectile, double dt)
 {
     // Gravity
     //AspectPhysics &ePhysics = map.ePhysics[entityIndex];
@@ -1046,8 +1046,8 @@ void GameServer::TickEntityProjectile(data::Entity &e_projectile, double dt)
         return;
     }
 
-    for (data::Entity &e_target : entityDb->entities) {
-        if (e_target.type == data::ENTITY_NPC
+    for (Entity &e_target : entityDb->entities) {
+        if (e_target.type == ENTITY_NPC
             && !e_target.despawned_at
             && e_target.Alive()
             && e_target.map_id == e_projectile.map_id)
@@ -1064,12 +1064,12 @@ void GameServer::TickEntityProjectile(data::Entity &e_projectile, double dt)
                 if (e_target.Alive()) {
                     if (!e_target.dialog_spawned_at) {
                         switch (e_target.spec) {
-                            case data::ENTITY_SPEC_NPC_TOWNFOLK: {
+                            case ENTITY_SPEC_NPC_TOWNFOLK: {
                                 //BroadcastEntitySay(victim.id, TextFormat("Ouch! You hit me with\nprojectile #%u!", entity.id));
                                 BroadcastEntitySay(e_target.id, e_target.name, "Ouch!");
                                 break;
                             }
-                            case data::ENTITY_SPEC_NPC_CHICKEN: {
+                            case ENTITY_SPEC_NPC_CHICKEN: {
                                 BroadcastEntitySay(e_target.id, e_target.name, "*squawk*!");
                                 break;
                             }
@@ -1085,9 +1085,9 @@ void GameServer::TickEntityProjectile(data::Entity &e_projectile, double dt)
         }
     }
 }
-void GameServer::WarpEntity(data::Entity &entity, uint32_t dest_map_id, Vector3 dest_pos)
+void GameServer::WarpEntity(Entity &entity, uint32_t dest_map_id, Vector3 dest_pos)
 {
-    data::Tilemap *dest_map = FindOrLoadMap(dest_map_id);
+    Tilemap *dest_map = FindOrLoadMap(dest_map_id);
     if (dest_map) {
         entity.map_id = dest_map->id;
         entity.position = dest_pos;
@@ -1135,16 +1135,16 @@ void GameServer::WarpEntity(data::Entity &entity, uint32_t dest_map_id, Vector3 
 #endif
     }
 }
-void GameServer::TickResolveEntityWarpCollisions(data::Tilemap &map, data::Entity &entity, double now)
+void GameServer::TickResolveEntityWarpCollisions(Tilemap &map, Entity &entity, double now)
 {
     if (!entity.on_warp || entity.on_warp_cooldown) {
         return;
     }
-    if (entity.type != data::ENTITY_PLAYER) {
+    if (entity.type != ENTITY_PLAYER) {
         return;
     }
 
-    data::ObjectData *obj_data = map.GetObjectData(entity.on_warp_coord.x, entity.on_warp_coord.y);
+    ObjectData *obj_data = map.GetObjectData(entity.on_warp_coord.x, entity.on_warp_coord.y);
     if (obj_data) {
         assert(obj_data->type == "warp");
         Vector3 dest{};
@@ -1160,47 +1160,44 @@ void GameServer::TickResolveEntityWarpCollisions(data::Tilemap &map, data::Entit
 void GameServer::Tick(void)
 {
     // TODO: Only do this when the map loads or changes.
-    for (data::Tilemap &map : data::packs[1].tile_maps) {
+    for (Tilemap &map : packs[1].tile_maps) {
         map.UpdateEdges();
     }
 
     // HACK: Only spawn NPCs in map 1, whatever map that may be (hopefully it's Level_001)
-    data::Tilemap &level_001 = data::packs[1].FindTilemapByName(LEVEL_001);
+    Tilemap &level_001 = packs[1].FindTilemapByName(LEVEL_001);
     TickSpawnTownNPCs(level_001.id);
     //TickSpawnCaveNPCs(2);
 
     // Tick entites
-    for (data::Entity &entity : entityDb->entities) {
+    for (Entity &entity : entityDb->entities) {
         if (!entity.type || entity.despawned_at) {
             continue;
         }
         assert(entity.id);
 
-        size_t entityIndex = entityDb->FindEntityIndex(entity.id);
-        assert(entityIndex);
-
         // TODO: if (map.sleeping) continue
 
         switch (entity.type) {
-            case data::ENTITY_NPC:        TickEntityNPC        (entity, SV_TICK_DT); break;
-            case data::ENTITY_PLAYER:     TickEntityPlayer     (entity, SV_TICK_DT); break;
-            case data::ENTITY_PROJECTILE: TickEntityProjectile (entity, SV_TICK_DT); break;
+            case ENTITY_NPC:        TickEntityNPC        (entity, SV_TICK_DT); break;
+            case ENTITY_PLAYER:     TickEntityPlayer     (entity, SV_TICK_DT); break;
+            case ENTITY_PROJECTILE: TickEntityProjectile (entity, SV_TICK_DT); break;
         }
 
-        data::Tilemap *map = FindMap(entity.map_id);
+        Tilemap *map = FindMap(entity.map_id);
         if (map) {
             map->ResolveEntityCollisions(entity);
             TickResolveEntityWarpCollisions(*map, entity, now);
         }
 
         bool newlySpawned = entity.spawned_at == now;
-        data::UpdateSprite(entity, SV_TICK_DT, newlySpawned);
+        UpdateSprite(entity, SV_TICK_DT, newlySpawned);
     }
 
     tick++;
     lastTickedAt = yj_server->GetTime();
 }
-void GameServer::SerializeSnapshot(data::Entity &entity, Msg_S_EntitySnapshot &entitySnapshot)
+void GameServer::SerializeSnapshot(Entity &entity, Msg_S_EntitySnapshot &entitySnapshot)
 {
     entitySnapshot.server_time = lastTickedAt;
 
@@ -1231,14 +1228,14 @@ void GameServer::SendClientSnapshots(void)
         }
 
         ServerPlayer &serverPlayer = players[clientIdx];
-        data::Entity *entity = entityDb->FindEntity(serverPlayer.entityId);
+        Entity *entity = entityDb->FindEntity(serverPlayer.entityId);
         if (!entity) {
             assert(0);
             printf("[game_server] could not find client id %d's entity id %u. cannot send snapshots\n", clientIdx, serverPlayer.entityId);
             continue;
         }
 
-        data::Tilemap *map = FindMap(entity->map_id);
+        Tilemap *map = FindMap(entity->map_id);
         if (!map) {
             assert(0);
             printf("[game_server] could not find client id %d's entity id %u's map. cannot send snapshots\n", clientIdx, serverPlayer.entityId);
@@ -1257,12 +1254,12 @@ void GameServer::SendClientSnapshots(void)
         }
 #endif
 
-        for (const data::Tilemap::Coord &coord : map->dirtyTiles) {
+        for (const Tilemap::Coord &coord : map->dirtyTiles) {
             SendTileUpdate(clientIdx, *map, coord.x, coord.y);
         }
 
         // TODO: Send only the world state that's relevant to this particular client
-        for (data::Entity &entity : entityDb->entities) {
+        for (Entity &entity : entityDb->entities) {
             if (!entity.id || !entity.type) {
                 assert(!entity.id && !entity.type);  // why has one but not other!?
                 continue;
@@ -1298,7 +1295,7 @@ void GameServer::SendClientSnapshots(void)
         }
     }
 
-    for (data::Tilemap &map : data::packs[0].tile_maps) {
+    for (Tilemap &map : packs[0].tile_maps) {
         map.dirtyTiles.clear();
     }
 }

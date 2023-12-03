@@ -56,7 +56,7 @@ void Histogram::Draw(Vector2 position)
             hover.width += barPadding;
             DrawRectangleLinesEx(hover, 2, PINK);
             if (!hovered && hoveredHisto != this || hoveredIdx != i) {
-                data::PlaySound("sfx_soft_tick");
+                PlaySound("sfx_soft_tick");
             }
             hoveredHisto = this;
             hoveredIdx = i;

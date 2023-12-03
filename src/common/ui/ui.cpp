@@ -159,9 +159,9 @@ UIState UI::CalcState(Rectangle &ctrlRect, HoverHash &prevHoverHash)
 void UI::UpdateAudio(const UIState &uiState)
 {
     if (uiState.released) {
-        //data::PlaySound("sfx_soft_tick");
+        //PlaySound("sfx_soft_tick");
     } else if (uiState.entered) {
-        data::PlaySound("sfx_soft_tick", false);
+        PlaySound("sfx_soft_tick", false);
     }
 }
 
