@@ -129,11 +129,15 @@ struct Collision {
     Color col{};
 
     bool operator<(const Collision& rhs) const {
-#if 1
-        return dist_sq < rhs.dist_sq;
-#else
-        return fabsf(dot_vel) < fabsf(rhs.dot_vel);
-#endif
+        //return dist_sq < rhs.dist_sq;
+        //return fabsf(dot_vel) < fabsf(rhs.dot_vel);
+        return manifold.depth < rhs.manifold.depth;
+    }
+
+    bool operator>(const Collision& rhs) const {
+        //return dist_sq < rhs.dist_sq;
+        //return fabsf(dot_vel) < fabsf(rhs.dot_vel);
+        return manifold.depth > rhs.manifold.depth;
     }
 };
 

@@ -152,9 +152,13 @@ bool dlb_CheckCollisionCircleEdge(Vector2 center, float radius, Edge edge, Manif
     if (dist_sq <= radius * radius) {
         if (manifold) {
             manifold->contact = closest_point;
-            Vector2 pen = Vector2Subtract(center, manifold->contact);
-            manifold->depth = radius - Vector2Length(pen);
-            manifold->normal = edge.normal;
+            const Vector2 pen = Vector2Subtract(center, manifold->contact);
+            const float pen_len = Vector2Length(pen);
+            if (pen_len == 0.0f) {
+                return false;  // what to do when circle center == contact point!?
+            }
+            manifold->depth = radius - pen_len;
+            manifold->normal = Vector2Scale(pen, 1.0f/pen_len); // edge.normal;
             if (Vector2DotProduct(pen, manifold->normal) < 0.0f) {
                 manifold->depth = -manifold->depth + radius * 2;
             }

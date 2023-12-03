@@ -264,13 +264,14 @@ void Tilemap::GetEdges(Edge::Array &edges)
 }
 void Tilemap::MergeEdges(Edge::Array &edges)
 {
+#if 0
+    edges.clear();
+    edges.push_back(Edge{{{ 10, 0 }, { 20, 0 }}});
+    edges.push_back(Edge{{{ 30, 0 }, { 40, 0 }}});
+    edges.push_back(Edge{{{ 20, 0 }, { 30, 0 }}});
+#endif
+
     Edge::Map edge_map{};
-
-    //edges.clear();
-    //edges.push_back(Edge{{{ 10, 0 }, { 20, 0 }}});
-    //edges.push_back(Edge{{{ 30, 0 }, { 40, 0 }}});
-    //edges.push_back(Edge{{{ 20, 0 }, { 30, 0 }}});
-
     for (size_t i = 0; i < edges.size(); i++) {
         size_t edge_idx = i;
         Edge *edge = &edges[edge_idx];
@@ -314,30 +315,15 @@ void Tilemap::MergeEdges(Edge::Array &edges)
 
         edge_map[edge->KeyStart()] = edge_idx;
         edge_map[edge->KeyEnd()] = edge_idx;
-
-        //if (!merged) {
-        //    edge_map[edge->KeyStart()] = i;
-        //    edge_map[edge->KeyEnd()] = i;
-        //}
-
-#if 0
-        printf("Edges:\n");
-        for (auto &iter : edge_map) {
-            Edge &edge = edges[iter.second];
-            printf("%d (%d->%d)\n", (int)iter.first.vertex.x, (int)edge.line.start.x, (int)edge.line.end.x);
-        }
-        printf("\n");
-#endif
     }
 
-#if 1
     Edge::Array merged_edges{};
     for (auto &iter : edge_map) {
         Edge &edge = edges[iter.second];
         merged_edges.push_back(edge);
     }
+
     edges = merged_edges;
-#endif
 }
 void Tilemap::UpdateEdges(void)
 {
@@ -354,6 +340,9 @@ void Tilemap::ResolveEntityCollisionsEdges(Entity &entity)
 
     entity.colliding = false;
 
+    float max_depth_x = 0;
+    float max_depth_y = 0;
+
     std::vector<Collision> collisions{};
     for (Edge &edge : edges) {
         Manifold manifold{};
@@ -361,10 +350,16 @@ void Tilemap::ResolveEntityCollisionsEdges(Entity &entity)
             Collision collision{};
             collision.edge = &edge;
             collision.manifold = manifold;
+            //max_depth_x = MAX(max_depth_x, collision.manifold.depth);
             collisions.push_back(collision);
         }
     }
 
+    if (collisions.size() > 1) {
+        std::sort(collisions.begin(), collisions.end(), std::greater<>{});
+    }
+
+#if 1
     for (Collision &collision : collisions) {
         Manifold new_manifold{};
         if (dlb_CheckCollisionCircleEdge(entity.Position2D(), entity.radius, *collision.edge, &new_manifold)) {
@@ -377,15 +372,34 @@ void Tilemap::ResolveEntityCollisionsEdges(Entity &entity)
     // Hard constraint to keep entity in the map
     entity.position.x = CLAMP(entity.position.x, entity.radius, width * TILE_W - entity.radius);
     entity.position.y = CLAMP(entity.position.y, entity.radius, height * TILE_W - entity.radius);
+#else
+    for (Collision &collision : collisions) {
+        Manifold new_manifold{};
+        if (dlb_CheckCollisionCircleEdge(entity.Position2D(), entity.radius, *collision.edge, &new_manifold)) {
+            const Vector2 resolve = Vector2Scale(new_manifold.normal, new_manifold.depth);
+            entity.position.x += resolve.x;
+        }
+    }
+
+    // Hard constraint to keep entity in the map
+    entity.position.x = CLAMP(entity.position.x, entity.radius, width * TILE_W - entity.radius);
+
+    for (Collision &collision : collisions) {
+        Manifold new_manifold{};
+        if (dlb_CheckCollisionCircleEdge(entity.Position2D(), entity.radius, *collision.edge, &new_manifold)) {
+            const Vector2 resolve = Vector2Scale(new_manifold.normal, new_manifold.depth);
+            entity.position.y += resolve.y;
+        }
+    }
+
+    // Hard constraint to keep entity in the map
+    entity.position.y = CLAMP(entity.position.y, entity.radius, height * TILE_W - entity.radius);
+#endif
 }
 void Tilemap::ResolveEntityCollisions(Entity &entity)
 {
     if (!entity.radius || entity.Dead()) {
         return;
-    }
-
-    if (entity.type == ENTITY_PLAYER) {
-        printf("");
     }
 
     Color col[]{

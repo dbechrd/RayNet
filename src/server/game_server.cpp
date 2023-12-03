@@ -35,8 +35,8 @@ void GameServer::OnClientJoin(int clientIdx)
         player->map_id = level_001.id;
         const Vector3 caveEntrance{ 3100, 1100, 0 };
         const Vector3 townCenter{ 1660, 2360, 0 };
-        const Vector3 inTree{ 2980.15f, 832.31 };
-        player->position = inTree;
+        const Vector3 inTree{ 2980.15f, 832.31f };
+        player->position = caveEntrance;
         player->radius = 16;
         player->hp_max = 100;
         player->hp = player->hp_max;
