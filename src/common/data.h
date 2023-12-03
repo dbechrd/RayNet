@@ -340,7 +340,6 @@ struct Tilemap {
     void MergeEdges(Edge::Array &edges);
     void UpdateEdges(void);
     void ResolveEntityCollisionsEdges(Entity &entity);
-    void ResolveEntityCollisions(Entity &entity);
     void ResolveEntityCollisionsTriggers(Entity &entity);
 
     void DrawTile(uint32_t tile_id, Vector2 position, DrawCmdQueue *sortedDraws);
