@@ -80,8 +80,8 @@ void MenuMain::Draw(GameClient &client, bool &back)
 void MenuConnecting::OnEnter(void) {
     msg_index        = 0;
     msg_last_updated = 0;
-    if (campfire.sprite.empty()) {
-        campfire.sprite = "sprite_obj_campfire";
+    if (!campfire.sprite_id) {
+        campfire.sprite_id = packs[0].FindSpriteByName("sprite_obj_campfire").id;
     }
 }
 
@@ -99,7 +99,7 @@ void MenuConnecting::Draw(GameClient &client, bool &back)
         msg_index = ((size_t)msg_index + 1) % ARRAY_SIZE(connecting_msgs);
     }
 
-    const GfxFrame &campfireFrame = GetSpriteFrame(campfire);
+    const GfxFrame &campfireFrame = campfire.GetSpriteFrame();
 
     UIStyle uiStyleMenu {};
     uiStyleMenu.margin = {};

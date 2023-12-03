@@ -92,27 +92,6 @@ void EntityDB::DestroyEntity(uint32_t entity_id)
     }
 }
 
-Rectangle EntityDB::EntityRect(uint32_t entity_id)
-{
-    assert(entity_id);
-
-    Entity *entity = FindEntity(entity_id);
-    if (entity) {
-        return GetSpriteRect(*entity);
-    }
-    return {};
-}
-Vector2 EntityDB::EntityTopCenter(uint32_t entity_id)
-{
-    assert(entity_id);
-
-    const Rectangle rect = EntityRect(entity_id);
-    const Vector2 topCenter{
-        rect.x + rect.width / 2,
-        rect.y
-    };
-    return topCenter;
-}
 void EntityDB::EntityTick(Entity &entity, double dt)
 {
     Vector3 &pos = entity.position;
@@ -172,6 +151,6 @@ void EntityDB::DrawEntityIds(uint32_t entity_id, Camera2D &camera)
 }
 void EntityDB::DrawEntity(Entity &entity, DrawCmdQueue &sortedDraws, bool highlight)
 {
-    const Rectangle rect = GetSpriteRect(entity);
+    const Rectangle rect = entity.GetSpriteRect();
     DrawSprite(entity, &sortedDraws, highlight);
 }

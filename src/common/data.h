@@ -179,7 +179,8 @@ struct TileMat {
 //wraith
 struct Sprite {
     static const DataType dtype = DAT_TYP_SPRITE;
-    std::string id       {};
+    uint32_t    id       {};
+    std::string name     {};
     std::string anims[8] {};  // for each direction
 };
 
@@ -391,7 +392,7 @@ struct EntityProto {
     float         speed_min            {};
     float         speed_max            {};
     float         drag                 {};
-    std::string   sprite               {};
+    uint32_t      sprite_id            {};
     Direction     direction            {};
 };
 
@@ -494,7 +495,7 @@ struct Entity {
     Vector3 velocity    {};
 
     //// Sprite ////
-    std::string  sprite     {};  // sprite resource
+    uint32_t     sprite_id  {};  // sprite resource
     Direction    direction  {};  // current facing direction
     GfxAnimState anim_state {};  // keep track of the animation as it plays
 
@@ -508,39 +509,15 @@ struct Entity {
     uint32_t    warp_template_map     {};  // template map to make a copy of for procgen
     std::string warp_template_tileset {};  // wang tileset to use for procgen
 
-    inline Vector2 Position2D(void) {
-        Vector2 screenPos{
-            floorf(position.x),
-            floorf(position.y - position.z)
-        };
-        return screenPos;
-    }
-
-    inline void ClearDialog(void) {
-        dialog_spawned_at = 0;
-        dialog_title = {};
-        dialog_message = {};
-    }
-
-    inline void TakeDamage(int damage) {
-        if (damage >= hp) {
-            hp = 0;
-        } else {
-            hp -= damage;
-        }
-    }
-
-    inline bool Alive(void) {
-        return hp > 0;
-    }
-
-    inline bool Dead(void) {
-        return !Alive();
-    }
-
-    inline void ApplyForce(Vector3 force) {
-        force_accum = Vector3Add(force_accum, force);
-    }
+    Vector2 Position2D(void);
+    const GfxFrame &GetSpriteFrame() const;
+    Rectangle GetSpriteRect() const;
+    Vector2 TopCenter(void) const;
+    void ClearDialog(void);
+    void TakeDamage(int damage);
+    bool Alive(void);
+    bool Dead(void);
+    void ApplyForce(Vector3 force);
 };
 
 ////////////////////////////////////////////////////////////////////////////
@@ -608,7 +585,8 @@ struct Pack {
     std::unordered_map<std::string, size_t> gfx_anim_by_id{};
     std::unordered_map<std::string, size_t> tile_mat_by_id{};
     std::unordered_map<std::string, size_t> object_by_id{};
-    std::unordered_map<std::string, size_t> sprite_by_id{};
+    std::unordered_map<uint32_t, size_t>    sprite_by_id{};
+    std::unordered_map<std::string, size_t> sprite_by_name{};
     std::unordered_map<uint32_t, size_t>    tile_def_by_id{};
     std::unordered_map<std::string, size_t> tile_def_by_name{};
     std::unordered_map<uint32_t, size_t>    tile_map_by_id{};
@@ -697,13 +675,25 @@ struct Pack {
         }
     }
 
-    Sprite &FindSprite(const std::string &id) {
+    Sprite &FindSprite(uint32_t id) {
         const auto &entry = sprite_by_id.find(id);
         if (entry != sprite_by_id.end()) {
             return sprites[entry->second];
         } else {
-            if (id != "null") {
-                TraceLog(LOG_WARNING, "Missing sprite: %s", id.c_str());
+            if (id) {
+                TraceLog(LOG_WARNING, "Missing sprite: %u", id);
+            }
+            return sprites[0];
+        }
+    }
+
+    Sprite &FindSpriteByName(const std::string &name) {
+        const auto &entry = sprite_by_name.find(name);
+        if (entry != sprite_by_name.end()) {
+            return sprites[entry->second];
+        } else {
+            if (name != "null") {
+                TraceLog(LOG_WARNING, "Missing sprite by name: %s", name.c_str());
             }
             return sprites[0];
         }
@@ -792,8 +782,6 @@ struct PackStream {
     };
 };
 
-extern std::vector<Pack> packs;
-
 void ReadFileIntoDataBuffer(const std::string &filename, DatBuffer &datBuffer);
 void FreeDataBuffer(DatBuffer &datBuffer);
 
@@ -808,8 +796,6 @@ void PlaySound(const std::string &id, float pitchVariance = 0.0f);
 bool IsSoundPlaying(const std::string &id);
 void StopSound(const std::string &id);
 
-const GfxFrame &GetSpriteFrame(const Entity &entity);
-Rectangle GetSpriteRect(const Entity &entity);
 void UpdateSprite(Entity &entity, double dt, bool newlySpawned);
 void ResetSprite(Entity &entity);
 void DrawSprite(const Entity &entity, DrawCmdQueue *sortedDraws, bool highlight = false);
@@ -819,3 +805,5 @@ void UpdateTileDefAnimations(double dt);
 const char *DataTypeStr(DataType type);
 const char *EntityTypeStr(EntityType type);
 const char *EntitySpeciesStr(EntitySpecies type);
+
+extern std::vector<Pack> packs;

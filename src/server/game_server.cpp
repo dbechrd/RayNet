@@ -41,7 +41,7 @@ void GameServer::OnClientJoin(int clientIdx)
         player->hp = player->hp_max;
         player->speed = 3000;
         player->drag = 0.9f;
-        player->sprite = "sprite_chr_mage";
+        player->sprite_id = packs[0].FindSpriteByName("sprite_chr_mage").id;
         //projectile->direction = DIR_E;  // what's it do if it defaults to North?
 
         TileChunkRecord mainMap{};
@@ -279,7 +279,7 @@ void GameServer::SerializeSpawn(uint32_t entityId, Msg_S_EntitySpawn &entitySpaw
     entitySpawn.velocity  = entity->velocity;
 
     // Sprite
-    strncpy(entitySpawn.sprite, entity->sprite.c_str(), SV_MAX_SPRITE_NAME_LEN);
+    entitySpawn.sprite_id = entity->sprite_id;
 }
 void GameServer::SendEntitySpawn(int clientIdx, uint32_t entityId)
 {
@@ -698,7 +698,7 @@ Entity *GameServer::SpawnProjectile(uint32_t map_id, Vector3 position, Vector2 d
     projectile->velocity = velocity;
     projectile->drag = 0.02f;
 
-    projectile->sprite = "sprite_prj_fireball";
+    projectile->sprite_id = packs[0].FindSpriteByName("sprite_prj_fireball").id;
     //projectile->direction = DIR_E;
 
     BroadcastEntitySpawn(projectile->id);
@@ -768,7 +768,7 @@ Entity *SpawnEntityProto(GameServer &server, uint32_t map_id, Vector3 position, 
     entity->path_id              = proto.path_id;  // TODO: Give the path a name, e.g. "PATH_TOWN_LILY"
     entity->drag                 = proto.drag;
     entity->speed                = GetRandomValue(proto.speed_min, proto.speed_max);
-    entity->sprite               = proto.sprite;
+    entity->sprite_id            = proto.sprite_id;
     entity->direction            = proto.direction;
 
     AiPathNode *aiPathNode = map->GetPathNode(entity->path_id, 0);
@@ -817,7 +817,7 @@ void GameServer::TickSpawnTownNPCs(uint32_t map_id)
         lily.speed_min = 300;
         lily.speed_max = 600;
         lily.drag = 1.0f;
-        lily.sprite = "sprite_npc_lily";
+        lily.sprite_id = packs[0].FindSpriteByName("sprite_npc_lily").id;
         lily.direction = DIR_E;
 
         freye.type = ENTITY_NPC;
@@ -830,7 +830,7 @@ void GameServer::TickSpawnTownNPCs(uint32_t map_id)
         freye.speed_min = 300;
         freye.speed_max = 600;
         freye.drag = 1.0f;
-        freye.sprite = "sprite_npc_freye";
+        freye.sprite_id = packs[0].FindSpriteByName("sprite_npc_freye").id;
         freye.direction = DIR_E;
 
         nessa.type = ENTITY_NPC;
@@ -843,7 +843,7 @@ void GameServer::TickSpawnTownNPCs(uint32_t map_id)
         nessa.speed_min = 300;
         nessa.speed_max = 600;
         nessa.drag = 1.0f;
-        nessa.sprite = "sprite_npc_nessa";
+        nessa.sprite_id = packs[0].FindSpriteByName("sprite_npc_nessa").id;
         nessa.direction = DIR_E;
 
         elane.type = ENTITY_NPC;
@@ -856,7 +856,7 @@ void GameServer::TickSpawnTownNPCs(uint32_t map_id)
         elane.speed_min = 300;
         elane.speed_max = 600;
         elane.drag = 1.0f;
-        elane.sprite = "sprite_npc_elane";
+        elane.sprite_id = packs[0].FindSpriteByName("sprite_npc_elane").id;
         elane.direction = DIR_E;
 
         chicken.type = ENTITY_NPC;
@@ -871,7 +871,7 @@ void GameServer::TickSpawnTownNPCs(uint32_t map_id)
         chicken.speed_min = 50;
         chicken.speed_max = 150;
         chicken.drag = 1.0f;
-        chicken.sprite = "sprite_npc_chicken";
+        chicken.sprite_id = packs[0].FindSpriteByName("sprite_npc_chicken").id;
     }
 
     assert(ARRAY_SIZE(townfolk) == ARRAY_SIZE(townfolk_ids));
@@ -934,7 +934,7 @@ void GameServer::TickSpawnCaveNPCs(uint32_t map_id)
             entity->speed = GetRandomValue(300, 600);
             entity->drag = 8.0f;
 
-            entity->sprite = "sprite_npc_lily";
+            entity->sprite_id = packs[0].FindSpriteByName("sprite_npc_lily").id;
             //entity->direction = DIR_E;
 
             BroadcastEntitySpawn(entity->id);
@@ -1057,8 +1057,8 @@ void GameServer::TickEntityProjectile(Entity &e_projectile, double dt)
                 continue;
             }
 
-            Rectangle projectileHitbox = entityDb->EntityRect(e_projectile.id);
-            Rectangle targetHitbox = entityDb->EntityRect(e_target.id);
+            Rectangle projectileHitbox = e_projectile.GetSpriteRect();
+            Rectangle targetHitbox = e_target.GetSpriteRect();
             if (CheckCollisionRecs(projectileHitbox, targetHitbox)) {
                 e_target.TakeDamage(GetRandomValue(3, 8));
                 if (e_target.Alive()) {

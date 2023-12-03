@@ -157,16 +157,16 @@
 @Material mat_water   : sfx_footstep_water
 @Material mat_grass   : sfx_footstep_grass
 
-//      id                    anim_n                anim_e                 anim_s anim_w                 anim_ne anim_se anim_sw anim_nw
-@Sprite sprite_missing      : null                  null                   null   null                   null    null    null    null
-@Sprite sprite_chr_mage     : null                  gfx_anim_chr_mage_e    null   gfx_anim_chr_mage_w    null    null    null    null
-@Sprite sprite_npc_lily     : null                  gfx_anim_npc_lily_e    null   gfx_anim_npc_lily_w    null    null    null    null
-@Sprite sprite_npc_freye    : null                  gfx_anim_npc_freye_e   null   gfx_anim_npc_freye_w   null    null    null    null
-@Sprite sprite_npc_nessa    : null                  gfx_anim_npc_nessa_e   null   gfx_anim_npc_nessa_w   null    null    null    null
-@Sprite sprite_npc_elane    : null                  gfx_anim_npc_elane_e   null   gfx_anim_npc_elane_w   null    null    null    null
-@Sprite sprite_npc_chicken  : null                  gfx_anim_npc_chicken_e null   gfx_anim_npc_chicken_w null    null    null    null
-@Sprite sprite_obj_campfire : gfx_anim_obj_campfire null                   null   null                   null    null    null    null
-@Sprite sprite_prj_fireball : gfx_anim_prj_fireball null                   null   null                   null    null    null    null
+//      id  name                  anim_n                anim_e                 anim_s anim_w                 anim_ne anim_se anim_sw anim_nw
+@Sprite 0 : "sprite_missing"      null                  null                   null   null                   null    null    null    null
+@Sprite 1 : "sprite_chr_mage"     null                  gfx_anim_chr_mage_e    null   gfx_anim_chr_mage_w    null    null    null    null
+@Sprite 2 : "sprite_npc_lily"     null                  gfx_anim_npc_lily_e    null   gfx_anim_npc_lily_w    null    null    null    null
+@Sprite 3 : "sprite_npc_freye"    null                  gfx_anim_npc_freye_e   null   gfx_anim_npc_freye_w   null    null    null    null
+@Sprite 4 : "sprite_npc_nessa"    null                  gfx_anim_npc_nessa_e   null   gfx_anim_npc_nessa_w   null    null    null    null
+@Sprite 5 : "sprite_npc_elane"    null                  gfx_anim_npc_elane_e   null   gfx_anim_npc_elane_w   null    null    null    null
+@Sprite 6 : "sprite_npc_chicken"  null                  gfx_anim_npc_chicken_e null   gfx_anim_npc_chicken_w null    null    null    null
+@Sprite 7 : "sprite_obj_campfire" gfx_anim_obj_campfire null                   null   null                   null    null    null    null
+@Sprite 8 : "sprite_prj_fireball" gfx_anim_prj_fireball null                   null   null                   null    null    null    null
 
 ///////////////////////////////////////////////////////////////////////
 // DO NOT change or reorder the IDs without updating all the map data

@@ -240,26 +240,26 @@ struct Msg_S_EntitySnapshot : public yojimbo::Message
 
 struct Msg_S_EntitySpawn : public yojimbo::Message
 {
-    double            server_time {};
+    double        server_time {};
 
     // Entity
-    uint32_t            entity_id {};
-    EntityType    type      {};
-    EntitySpecies spec      {};
-    char                name      [SV_MAX_ENTITY_NAME_LEN + 1]{};
-    uint32_t            map_id    {};
-    Vector3             position  {};
+    uint32_t      entity_id   {};
+    EntityType    type        {};
+    EntitySpecies spec        {};
+    char          name        [SV_MAX_ENTITY_NAME_LEN + 1]{};
+    uint32_t      map_id      {};
+    Vector3       position    {};
     // Collision
-    float               radius    {};
+    float         radius      {};
     // Life
-    int                 hp_max    {};
-    int                 hp        {};
+    int           hp_max      {};
+    int           hp          {};
     // Physics
-    float               drag      {};  // TODO: EntityType should imply this.. client should have prototypes
-    float               speed     {};
-    Vector3             velocity  {};
+    float         drag        {};  // TODO: EntityType should imply this.. client should have prototypes
+    float         speed       {};
+    Vector3       velocity    {};
     // Sprite
-    char                sprite    [SV_MAX_SPRITE_NAME_LEN + 1]{};
+    uint32_t      sprite_id   {};
 
     template <typename Stream> bool Serialize(Stream &stream)
     {
@@ -292,7 +292,7 @@ struct Msg_S_EntitySpawn : public yojimbo::Message
         serialize_float(stream, velocity.z);
 
         // Sprite
-        serialize_string(stream, sprite, sizeof(sprite));
+        serialize_uint32(stream, sprite_id);
 
         return true;
     }

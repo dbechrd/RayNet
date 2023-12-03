@@ -46,18 +46,18 @@ void ClientWorld::ApplySpawnEvent(const Msg_S_EntitySpawn &entitySpawn)
         return;
     }
 
-    entity->type     = entitySpawn.type;
-    entity->spec     = entitySpawn.spec;
-    entity->name     = entitySpawn.name;
-    entity->map_id   = entitySpawn.map_id;
-    entity->position = entitySpawn.position;
-    entity->radius   = entitySpawn.radius;
-    entity->drag     = entitySpawn.drag;
-    entity->speed    = entitySpawn.speed;
-    entity->velocity = entitySpawn.velocity;
-    entity->hp_max   = entitySpawn.hp_max;
-    entity->hp       = entitySpawn.hp;
-    entity->sprite   = entitySpawn.sprite;
+    entity->type      = entitySpawn.type;
+    entity->spec      = entitySpawn.spec;
+    entity->name      = entitySpawn.name;
+    entity->map_id    = entitySpawn.map_id;
+    entity->position  = entitySpawn.position;
+    entity->radius    = entitySpawn.radius;
+    entity->drag      = entitySpawn.drag;
+    entity->speed     = entitySpawn.speed;
+    entity->velocity  = entitySpawn.velocity;
+    entity->hp_max    = entitySpawn.hp_max;
+    entity->hp        = entitySpawn.hp;
+    entity->sprite_id = entitySpawn.sprite_id;
 }
 void ClientWorld::ApplyStateInterpolated(Entity &entity,
     const GhostSnapshot &a, const GhostSnapshot &b, float alpha, float dt)
@@ -216,7 +216,8 @@ void ClientWorld::UpdateLocalGhost(GameClient &client, Entity &entity, uint32_t 
 
     if (entity.map_id == player_map_id) {
         const Vector2 cursorWorldPos = GetScreenToWorld2D(GetMousePosition(), camera);
-        bool hover = dlb_CheckCollisionPointRec(cursorWorldPos, entityDb->EntityRect(entity.id));
+        const Rectangle rect = entity.GetSpriteRect();
+        bool hover = dlb_CheckCollisionPointRec(cursorWorldPos, rect);
         if (hover) {
             hoveredEntityId = entity.id;
             if (entity.spec == ENTITY_SPEC_NPC_TOWNFOLK) {
@@ -231,7 +232,6 @@ void ClientWorld::UpdateLocalGhost(GameClient &client, Entity &entity, uint32_t 
             if (e_player) {
                 const float dist_x = fabs(e_player->position.x - entity.position.x);
                 const float dist_y = fabs(e_player->position.y - entity.position.y);
-                const Rectangle rect = GetSpriteRect(entity);
                 if (dist_x <= SV_MAX_ENTITY_INTERACT_DIST && dist_y <= SV_MAX_ENTITY_INTERACT_DIST) {
                     hoveredEntityInRange = true;
                 }
@@ -436,7 +436,7 @@ void ClientWorld::DrawEntitySnapshotShadows(GameClient &client, Entity &entity, 
         ApplyStateInterpolated(ghostData.entity, ghost[i], ghost[i], 0, client.frameDt);
 
         //const float scalePer = 1.0f / (CL_SNAPSHOT_COUNT + 1);
-        Rectangle ghostRect = GetSpriteRect(ghostData.entity);
+        Rectangle ghostRect = ghostData.entity.GetSpriteRect();
         //ghostRect = RectShrink(ghostRect, scalePer);
         ghostRect.x = floorf(ghostRect.x);
         ghostRect.y = floorf(ghostRect.y);
@@ -464,7 +464,7 @@ void ClientWorld::DrawEntitySnapshotShadows(GameClient &client, Entity &entity, 
                     ghostData.entity.ApplyForce(inputCmd.GenerateMoveForce(ghostData.entity.speed));
                     entityDb->EntityTick(ghostData.entity, SV_TICK_DT);
                     map->ResolveEntityCollisions(ghostData.entity);
-                    Rectangle ghostRect = GetSpriteRect(ghostData.entity);
+                    Rectangle ghostRect = ghostData.entity.GetSpriteRect();
                     DrawRectangleRec(ghostRect, Fade(GREEN, 0.1f));
                     DrawRectangleLinesEx(ghostRect, 1, Fade(GREEN, 0.8f));
                 }
@@ -484,7 +484,7 @@ void ClientWorld::DrawEntitySnapshotShadows(GameClient &client, Entity &entity, 
             ghostData.entity.position.y = LERP(posBefore.y, ghostData.entity.position.y, cmdAccumDt / SV_TICK_DT);
             ghostData.entity.position.x = LERP(posBefore.x, ghostData.entity.position.x, cmdAccumDt / SV_TICK_DT);
         }
-        Rectangle ghostRect = GetSpriteRect(ghostData.entity);
+        Rectangle ghostRect = ghostData.entity.GetSpriteRect();
         ghostRect.x = floorf(ghostRect.x);
         ghostRect.y = floorf(ghostRect.y);
         ghostRect.width = floorf(ghostRect.width);
@@ -716,7 +716,7 @@ void ClientWorld::DrawDialogs(GameClient &client)
         assert(entity.id);
 
         if (entity.dialog_spawned_at) {
-            const Vector2 topCenter = entityDb->EntityTopCenter(entity.id);
+            const Vector2 topCenter = entity.TopCenter();
             const Vector2 topCenterScreen = GetWorldToScreen2D(topCenter, camera);
             DrawDialog(client, entity, topCenterScreen, tips);
         }
@@ -859,7 +859,7 @@ void ClientWorld::DrawHUDSignEditor(void)
         Entity *player = LocalPlayer();
         assert(player);
 
-        Vector2 playerTopWorld = entityDb->EntityTopCenter(player->id);
+        Vector2 playerTopWorld = player->TopCenter();
         Vector2 playerTopScreen = GetWorldToScreen2D(playerTopWorld, camera);
 
         Vector2 uiSignEditorSize{ 200, 100 };

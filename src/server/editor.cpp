@@ -1737,7 +1737,7 @@ void Editor::DrawUI_PackFiles(UI &uiActionBar, double now)
                 case DAT_TYP_SPRITE:
                 {
                     Sprite &sprite = pack.sprites[entry.index];
-                    desc = sprite.id.c_str();
+                    desc = sprite.name.c_str();
                     break;
                 }
                 case DAT_TYP_TILE_MAP:
@@ -1913,8 +1913,8 @@ void Editor::DrawUI_PackFiles(UI &uiActionBar, double now)
                         Sprite &sprite = pack.sprites[entry.index];
 
                         const float labelWidth = 20.0f;
-                        uiActionBar.Label("id", labelWidth);
-                        uiActionBar.Text(sprite.id.c_str());
+                        uiActionBar.Label("name", labelWidth);
+                        uiActionBar.Text(sprite.name.c_str());
                         uiActionBar.Newline();
 
                         uiActionBar.Label("N ", labelWidth);

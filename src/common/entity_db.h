@@ -13,8 +13,6 @@ struct EntityDB {
     bool DespawnEntity(uint32_t entity_id, double now);
     void DestroyEntity(uint32_t entity_id);
 
-    Rectangle EntityRect(uint32_t entity_id);
-    Vector2 EntityTopCenter(uint32_t entity_id);
     void EntityTick(Entity &entity, double dt);
 
     void DrawEntityIds(uint32_t map_id, Camera2D &camera);

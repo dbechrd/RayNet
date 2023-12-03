@@ -35,6 +35,71 @@ GhostSnapshot::GhostSnapshot(Msg_S_EntitySnapshot &msg)
     velocity = msg.velocity;
 }
 
+Vector2 Entity::Position2D(void) {
+    Vector2 screenPos{
+        floorf(position.x),
+        floorf(position.y - position.z)
+    };
+    return screenPos;
+}
+
+const GfxFrame &Entity::GetSpriteFrame() const
+{
+    const Sprite &sprite = packs[0].FindSprite(sprite_id);
+    const std::string &anim_id = sprite.anims[direction];
+    const GfxAnim &anim = packs[0].FindGraphicAnim(anim_id);
+    const std::string &frame_id = anim.GetFrame(anim_state.frame);
+    const GfxFrame &frame = packs[0].FindGraphicFrame(frame_id);
+    return frame;
+}
+Rectangle Entity::GetSpriteRect() const
+{
+    const GfxFrame &frame = GetSpriteFrame();
+    const Rectangle rect{
+        floorf(position.x - (float)(frame.w / 2)),
+        floorf(position.y - position.z - (float)frame.h),
+        (float)frame.w,
+        (float)frame.h
+    };
+    return rect;
+}
+
+Vector2 Entity::TopCenter(void) const
+{
+    const Rectangle rect = GetSpriteRect();
+    const Vector2 topCenter{
+        rect.x + rect.width / 2,
+        rect.y
+    };
+    return topCenter;
+}
+
+void Entity::ClearDialog(void) {
+    dialog_spawned_at = 0;
+    dialog_title = {};
+    dialog_message = {};
+}
+
+void Entity::TakeDamage(int damage) {
+    if (damage >= hp) {
+        hp = 0;
+    } else {
+        hp -= damage;
+    }
+}
+
+bool Entity::Alive(void) {
+    return hp > 0;
+}
+
+bool Entity::Dead(void) {
+    return !Alive();
+}
+
+void Entity::ApplyForce(Vector3 force) {
+    force_accum = Vector3Add(force_accum, force);
+}
+
 void GenPlaceholderTexture()
 {
     // Generate checkerboard image in slot 0 as a placeholder for when other images fail to load
@@ -490,8 +555,9 @@ void PackAddMeta(Pack &pack, const char *filename)
             } else if (MD_NodeHasTag(node, MD_S8Lit("Sprite"), 0)) {
                 Sprite sprite{};
 
-                META_ID_STR(sprite.id);
+                META_ID_UINT32(sprite.id);
                 META_CHILDREN_BEGIN;
+                    META_STRING(sprite.name);
                     for (int i = 0; i < ARRAY_SIZE(sprite.anims); i++) {
                         META_IDENT(sprite.anims[i]);
                     }
@@ -503,16 +569,16 @@ void PackAddMeta(Pack &pack, const char *filename)
 
                 META_ID_UINT32(tile_def.id);
                 META_CHILDREN_BEGIN;
-                META_STRING(tile_def.name);
-                META_IDENT(tile_def.anim);
-                META_IDENT(tile_def.mat);
-                uint8_t flag_solid = 0;
-                META_UINT8(flag_solid);
-                uint8_t flag_liquid = 0;
-                META_UINT8(flag_liquid);
-                if (flag_solid)  tile_def.flags |= TILEDEF_FLAG_SOLID;
-                if (flag_liquid) tile_def.flags |= TILEDEF_FLAG_LIQUID;
-                META_UINT8(tile_def.auto_tile_mask);
+                    META_STRING(tile_def.name);
+                    META_IDENT(tile_def.anim);
+                    META_IDENT(tile_def.mat);
+                    uint8_t flag_solid = 0;
+                    META_UINT8(flag_solid);
+                    uint8_t flag_liquid = 0;
+                    META_UINT8(flag_liquid);
+                    if (flag_solid)  tile_def.flags |= TILEDEF_FLAG_SOLID;
+                    if (flag_liquid) tile_def.flags |= TILEDEF_FLAG_LIQUID;
+                    META_UINT8(tile_def.auto_tile_mask);
                 META_CHILDREN_END;
 
                 pack.tile_defs.push_back(tile_def);
@@ -628,61 +694,6 @@ void PackAddMeta(Pack &pack, const char *filename)
     }
     MD_ArenaRelease(arena);
 }
-
-#if 0
-void PackDebugPrint(Pack &pack)
-{
-    printf("\n--- %s ---\n", pack.path.c_str());
-    for (GfxFile &gfx_file : pack.gfx_files) {
-        if (!gfx_file.id.size()) continue;
-        printf("%s %s\n", gfx_file.id.c_str(), gfx_file.path.c_str());
-    }
-    for (MusFile &mus_file : pack.mus_files) {
-        if (!mus_file.id.size()) continue;
-        printf("%s %s\n", mus_file.id.c_str(), mus_file.path.c_str());
-    }
-    for (SfxFile &sfx_file : pack.sfx_files) {
-        if (!sfx_file.id.size()) continue;
-        printf("%s %s %d %f %d\n", sfx_file.id.c_str(), sfx_file.path.c_str(), sfx_file.variations,
-            sfx_file.pitch_variance, sfx_file.max_instances);
-    }
-    for (GfxFrame &gfx_frame : pack.gfx_frames) {
-        if (!gfx_frame.id.size()) continue;
-        printf("%s %s %u %u %u %u\n", gfx_frame.id.c_str(), gfx_frame.gfx.c_str(),
-            gfx_frame.x, gfx_frame.y, gfx_frame.w, gfx_frame.h);
-    }
-    for (GfxAnim &gfx_anim : pack.gfx_anims) {
-        if (!gfx_anim.id.size()) continue;
-        printf("%s %s %u %u %u", gfx_anim.id.c_str(), gfx_anim.sound.c_str(),
-            gfx_anim.frame_rate, gfx_anim.frame_count, gfx_anim.frame_delay);
-        for (int i = 0; i < gfx_anim.frames.size(); i++) {
-            printf(" %s", gfx_anim.frames[i].c_str());
-        }
-        printf("\n");
-    }
-    for (Material material : pack.materials) {
-        if (!material.id.size()) continue;
-        printf("%-20s %-20s walk=%d swim=%d\n", material.id.c_str(), material.footstep_sound.c_str(),
-            (bool)(material.flags & MATERIAL_FLAG_WALK),
-            (bool)(material.flags & MATERIAL_FLAG_SWIM)
-        );
-    }
-    for (Sprite &sprite : pack.sprites) {
-        if (!sprite.id.size()) continue;
-        printf("%s %s %s %s %s %s %s %s %s\n",
-            sprite.id.c_str(),
-            sprite.anims[0].c_str(),
-            sprite.anims[1].c_str(),
-            sprite.anims[2].c_str(),
-            sprite.anims[3].c_str(),
-            sprite.anims[4].c_str(),
-            sprite.anims[5].c_str(),
-            sprite.anims[6].c_str(),
-            sprite.anims[7].c_str()
-        );
-    }
-}
-#endif
 
 void CompressFile(const char *srcFileName, const char *dstFileName)
 {
@@ -920,6 +931,7 @@ void Process(PackStream &stream, TileMat &tile_mat, int index)
 }
 void Process(PackStream &stream, Sprite &sprite, int index) {
     PROC(sprite.id);
+    PROC(sprite.name);
     assert(ARRAY_SIZE(sprite.anims) == 8); // if this changes, version must increment
     for (int i = 0; i < 8; i++) {
         PROC(sprite.anims[i]);
@@ -927,6 +939,7 @@ void Process(PackStream &stream, Sprite &sprite, int index) {
 
     if (stream.mode == PACK_MODE_READ) {
         stream.pack->sprite_by_id[sprite.id] = index;
+        stream.pack->sprite_by_name[sprite.name] = index;
     }
 }
 void Process(PackStream &stream, TileDef &tile_def, int index) {
@@ -1001,7 +1014,7 @@ void Process(PackStream &stream, Entity &entity, int index)
     //PROC(entity.force_accum);
     //PROC(entity.velocity);
 
-    PROC(entity.sprite);
+    PROC(entity.sprite_id);
     PROC((uint8_t &)entity.direction);
     //PROC(entity.anim_frame);
     //PROC(entity.anim_accum);
@@ -1466,26 +1479,6 @@ void UpdateGfxAnim(const GfxAnim &anim, double dt, GfxAnimState &anim_state)
     }
 }
 
-const GfxFrame &GetSpriteFrame(const Entity &entity)
-{
-    const Sprite &sprite = packs[0].FindSprite(entity.sprite);
-    const std::string &anim_id = sprite.anims[entity.direction];
-    const GfxAnim &anim = packs[0].FindGraphicAnim(anim_id);
-    const std::string &frame_id = anim.GetFrame(entity.anim_state.frame);
-    const GfxFrame &frame = packs[0].FindGraphicFrame(frame_id);
-    return frame;
-}
-Rectangle GetSpriteRect(const Entity &entity)
-{
-    const GfxFrame &frame = GetSpriteFrame(entity);
-    const Rectangle rect{
-        floorf(entity.position.x - (float)(frame.w / 2)),
-        floorf(entity.position.y - entity.position.z - (float)frame.h),
-        (float)frame.w,
-        (float)frame.h
-    };
-    return rect;
-}
 void UpdateSprite(Entity &entity, double dt, bool newlySpawned)
 {
     // TODO: Make this more general and stop taking in entityType.
@@ -1502,7 +1495,7 @@ void UpdateSprite(Entity &entity, double dt, bool newlySpawned)
         }
     }
 
-    const Sprite &sprite = packs[0].FindSprite(entity.sprite);
+    const Sprite &sprite = packs[0].FindSprite(entity.sprite_id);
     const GfxAnim &anim = packs[0].FindGraphicAnim(sprite.anims[entity.direction]);
     UpdateGfxAnim(anim, dt, entity.anim_state);
 
@@ -1513,7 +1506,7 @@ void UpdateSprite(Entity &entity, double dt, bool newlySpawned)
 }
 void ResetSprite(Entity &entity)
 {
-    const Sprite &sprite = packs[0].FindSprite(entity.sprite);
+    const Sprite &sprite = packs[0].FindSprite(entity.sprite_id);
     GfxAnim &anim = packs[0].FindGraphicAnim(sprite.anims[entity.direction]);
     StopSound(anim.sound);
 
@@ -1522,10 +1515,10 @@ void ResetSprite(Entity &entity)
 }
 void DrawSprite(const Entity &entity, DrawCmdQueue *sortedDraws, bool highlight)
 {
-    const GfxFrame &frame = GetSpriteFrame(entity);
+    const GfxFrame &frame = entity.GetSpriteFrame();
     const GfxFile &gfx_file = packs[0].FindGraphic(frame.gfx);
 
-    Rectangle sprite_rect = GetSpriteRect(entity);
+    Rectangle sprite_rect = entity.GetSpriteRect();
     Vector3 pos = { sprite_rect.x, sprite_rect.y };
     pos.x = floorf(pos.x);
     pos.y = floorf(pos.y);
