@@ -340,9 +340,6 @@ void Tilemap::ResolveEntityCollisionsEdges(Entity &entity)
 
     entity.colliding = false;
 
-    float max_depth_x = 0;
-    float max_depth_y = 0;
-
     std::vector<Collision> collisions{};
     for (Edge &edge : edges) {
         Manifold manifold{};
@@ -350,7 +347,6 @@ void Tilemap::ResolveEntityCollisionsEdges(Entity &entity)
             Collision collision{};
             collision.edge = &edge;
             collision.manifold = manifold;
-            //max_depth_x = MAX(max_depth_x, collision.manifold.depth);
             collisions.push_back(collision);
         }
     }
@@ -402,12 +398,6 @@ void Tilemap::ResolveEntityCollisions(Entity &entity)
         return;
     }
 
-    Color col[]{
-        RED,
-        GREEN,
-        BLUE
-    };
-
     entity.colliding = false;
     //entity.collisions.clear();
 
@@ -449,9 +439,8 @@ void Tilemap::ResolveEntityCollisions(Entity &entity)
                     if (dlb_CheckCollisionCircleRec(entity.Position2D(), entity.radius, tileRect, &collision.manifold)) {
                         collision.rect = tileRect;
                         Vector2 dist = Vector2Subtract(entity.Position2D(), collision.manifold.contact);
-                        collision.dist_sq = Vector2LengthSqr(dist);
-                        collision.dot_vel = Vector2DotProduct(collision.manifold.normal, { entity.velocity.x, entity.velocity.y });
-                        collision.col = col[collisions.size() % ARRAY_SIZE(col)];
+                        //collision.dist_sq = Vector2LengthSqr(dist);
+                        //collision.dot_vel = Vector2DotProduct(collision.manifold.normal, { entity.velocity.x, entity.velocity.y });
                         collisions.push(collision);
                         entity.colliding = true;
                     }
@@ -460,13 +449,8 @@ void Tilemap::ResolveEntityCollisions(Entity &entity)
         }
 
         if (collisions.size()) {
-            bool multi = (collisions.size() > 1);
-
             while (!collisions.empty()) {
                 const Collision &collision = collisions.top();
-                if (multi) {
-                    entity.collisions.push_back(collision);
-                }
 
                 //Manifold manifold{};
                 if (dlb_CheckCollisionCircleRec(entity.Position2D(), entity.radius, collision.rect, 0)) {

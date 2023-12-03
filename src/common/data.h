@@ -426,8 +426,6 @@ typedef RingBuffer<GhostSnapshot, CL_SNAPSHOT_COUNT> AspectGhost;
 struct Entity {
     static const DataType dtype = DAT_TYP_ENTITY;
 
-    std::vector<Collision> collisions{};
-
     //// Entity ////
     uint32_t      id           {};
     EntityType    type         {};

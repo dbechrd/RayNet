@@ -121,12 +121,11 @@ struct Manifold {
 };
 
 struct Collision {
-    float dist_sq{};  // distance squared from POC
-    float dot_vel{};  // dot product with velocity
+    //float dist_sq{};  // distance squared from POC
+    //float dot_vel{};  // dot product with velocity
     Rectangle rect{};
     Edge *edge{};
     Manifold manifold{};
-    Color col{};
 
     bool operator<(const Collision& rhs) const {
         //return dist_sq < rhs.dist_sq;

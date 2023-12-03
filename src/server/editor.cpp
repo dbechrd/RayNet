@@ -338,20 +338,6 @@ void Editor::DrawEntityOverlay_Collision(Camera2D &camera, double now)
                     entity.radius,
                     entity.colliding ? Fade(RED, 0.5) : Fade(LIME, 0.5)
                 );
-
-#if 1
-                for (Collision &collision : entity.collisions) {
-                    DrawLineEx(
-                        { collision.manifold.contact.x,collision.manifold.contact.y },
-                        {
-                            collision.manifold.contact.x + collision.manifold.normal.x * collision.manifold.depth,
-                            collision.manifold.contact.y + collision.manifold.normal.y * collision.manifold.depth
-                        },
-                        1.0f,
-                        collision.col
-                    );
-                }
-#endif
             }
         }
 
