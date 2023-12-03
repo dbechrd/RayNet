@@ -380,9 +380,6 @@ void Tilemap::ResolveEntityCollisionsEdges(Entity &entity)
 }
 void Tilemap::ResolveEntityCollisions(Entity &entity)
 {
-    ResolveEntityCollisionsEdges(entity);
-    return;
-
     if (!entity.radius || entity.Dead()) {
         return;
     }
@@ -505,6 +502,56 @@ void Tilemap::ResolveEntityCollisions(Entity &entity)
     // Hard constraint to keep entity in the map
     entity.position.x = CLAMP(entity.position.x, entity.radius, width * TILE_W - entity.radius);
     entity.position.y = CLAMP(entity.position.y, entity.radius, height * TILE_W - entity.radius);
+
+    if (entity.type == ENTITY_PLAYER) {
+        assert(entity.radius);
+
+        entity.on_warp = false;
+        entity.on_warp_coord = {};
+        for (int y = yMin; y < yMax && !entity.on_warp; y++) {
+            for (int x = xMin; x < xMax && !entity.on_warp; x++) {
+                const ObjectData *object = GetObjectData(x, y);
+                if (object && object->type == "warp") {
+                    Rectangle tileRect{
+                        (float)x * TILE_W,
+                        (float)y * TILE_W,
+                        TILE_W,
+                        TILE_W
+                    };
+
+                    if (dlb_CheckCollisionCircleRec(entity.Position2D(), entity.radius, tileRect, 0)) {
+                        entity.on_warp = true;
+                        entity.on_warp_coord.x = object->x;
+                        entity.on_warp_coord.y = object->y;
+                    }
+                }
+            }
+        }
+    }
+
+    if (!entity.on_warp) {
+        entity.on_warp_cooldown = false;  // ready to warp again
+    }
+}
+void Tilemap::ResolveEntityCollisionsTriggers(Entity &entity)
+{
+    if (!entity.radius || entity.Dead()) {
+        return;
+    }
+
+    Vector2 topLeft{
+        entity.position.x - entity.radius,
+        entity.position.y - entity.radius
+    };
+    Vector2 bottomRight{
+        entity.position.x + entity.radius,
+        entity.position.y + entity.radius
+    };
+
+    int yMin = floorf(topLeft.y / TILE_W) - 1;
+    int yMax = ceilf(bottomRight.y / TILE_W) + 1;
+    int xMin = floorf(topLeft.x / TILE_W) - 1;
+    int xMax = ceilf(bottomRight.x / TILE_W) + 1;
 
     if (entity.type == ENTITY_PLAYER) {
         assert(entity.radius);

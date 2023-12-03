@@ -62,7 +62,6 @@ struct Spinner {
             return;
         }
 
-
         IO::Scope scope(IO::IO_HUDSpinner);
 
         const float innerRadius = 80;
@@ -136,6 +135,78 @@ struct Spinner {
     }
 };
 
+struct Title {
+    std::string text      {};
+    Vector2     text_size {};
+    double      shown_at  {};
+
+    void Show(std::string text, double now)
+    {
+        this->text = text;
+        this->text_size = dlb_MeasureTextEx(fntBig, text.c_str(), text.size());
+        this->shown_at = now;
+    };
+
+    void Clear(void)
+    {
+        shown_at = 0;
+        text = "";
+        text_size = {};
+    }
+
+    void Draw(double now)
+    {
+        if (!shown_at) {
+            return;
+        }
+
+        const Vector2 titlePos{
+            floorf(GetRenderWidth() / 2.0f - text_size.x / 2.0f),
+            floorf(GetRenderHeight() * 0.1f),
+        };
+
+        // TODO: Move this logic to Update() function?
+        double start = shown_at;
+        double end = start + CL_WARP_TITLE_FADE_IN_DELAY;
+        double titleWaitAlpha = (now - start) / (end - start);
+        CLAMP(titleWaitAlpha, 0.0f, 1.0f);
+
+        start = end;
+        end = start + CL_WARP_TITLE_FADE_IN_DURATION;
+        double titleFadeInAlpha = (now - start) / (end - start);
+        CLAMP(titleFadeInAlpha, 0.0f, 1.0f);
+
+        start = end;
+        end = start + CL_WARP_TITLE_SHOW_DURATION;
+        double titleShowAlpha = (now - start) / (end - start);
+        CLAMP(titleShowAlpha, 0.0f, 1.0f);
+
+        start = end;
+        end = start + CL_WARP_TITLE_FADE_OUT_DURATION;
+        double titleFadeOutAlpha = (now - start) / (end - start);
+        CLAMP(titleFadeOutAlpha, 0.0f, 1.0f);
+
+        float alpha = 0.0f;
+        if (titleWaitAlpha < 1.0f) {
+            // wait for warp fade to end before fading in the title
+            //printf("title wait: %.2f\n", titleWaitAlpha);
+        } else if (titleFadeInAlpha < 1.0f) {
+            alpha = titleFadeInAlpha;
+            //printf("title fade in: %.2f\n", alpha);
+        } else if (titleShowAlpha < 1.0f) {
+            alpha = 1.0f;
+            //printf("title show: %.2f\n", alpha);
+        } else if (titleFadeOutAlpha < 1.0f) {
+            alpha = 1.0f - titleFadeOutAlpha;
+            //printf("title fade out: %.2f\n", alpha);
+        } else {
+            Clear();
+            return;
+        }
+        DrawTextShadowEx(fntBig, text.c_str(), titlePos, Fade(WHITE, alpha));
+    }
+};
+
 struct ClientWorld {
     Camera2D camera{};
 
@@ -145,15 +216,13 @@ struct ClientWorld {
 
     double warpFadeInStartedAt{};
 
-    double titleShownAt{};
-    std::string titleText{};
-
     bool showSnapshotShadows{};
 
     uint32_t localPlayerEntityId{};
     uint32_t hoveredEntityId{};   // mouse is over entity
     bool hoveredEntityInRange{};  // player is close enough to interact
 
+    Title title{};
     Spinner spinner{};
 
     // For histogram
@@ -197,7 +266,6 @@ private:
     void DrawDialogs(GameClient &client);
     void DrawHUDEntityHoverInfo(void);
     void DrawHUDSpinner(void);
-    void DrawHUDTitle(GameClient &client);
     void DrawHUDSignEditor(void);
     void DrawHUDMenu(void);
 };

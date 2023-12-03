@@ -24,13 +24,14 @@ void GameServer::OnClientJoin(int clientIdx)
 
     Entity *player = SpawnEntity(ENTITY_PLAYER);
     if (player) {
+        Tilemap &level_001 = packs[1].FindTilemapByName(LEVEL_001);
+
         ServerPlayer &sv_player = players[clientIdx];
         sv_player.needsClockSync = true;
         sv_player.joinedAt = now;
         sv_player.entityId = player->id;
 
         player->type = ENTITY_PLAYER;
-        Tilemap &level_001 = packs[1].FindTilemapByName(LEVEL_001);
         player->map_id = level_001.id;
         const Vector3 caveEntrance{ 3100, 1100, 0 };
         const Vector3 townCenter{ 1660, 2360, 0 };
@@ -48,6 +49,7 @@ void GameServer::OnClientJoin(int clientIdx)
         sv_player.chunkList.push(mainMap);
 
         BroadcastEntitySpawn(player->id);
+        SendTitleShow(clientIdx, level_001.title);
     } else {
         assert(!"world full? hmm.. need to disconnect client somehow");
     }
@@ -70,6 +72,20 @@ void GameServer::OnClientLeave(int clientIdx)
 uint32_t GameServer::GetPlayerEntityId(uint32_t clientIdx)
 {
     return clientIdx + 1;
+}
+
+ServerPlayer *GameServer::FindServerPlayer(uint32_t entity_id, int *client_idx)
+{
+    for (int i = 0; i < ARRAY_SIZE(players); i++) {
+        ServerPlayer &player = players[i];
+        if (player.entityId == entity_id) {
+            if (client_idx) {
+                *client_idx = i;
+            }
+            return &player;
+        }
+    }
+    return 0;
 }
 
 Err GameServer::Start(void)
@@ -262,7 +278,7 @@ void GameServer::SerializeSpawn(uint32_t entityId, Msg_S_EntitySpawn &entitySpaw
     entitySpawn.entity_id = entity->id;
     entitySpawn.type      = entity->type;
     entitySpawn.spec      = entity->spec;
-    strncpy(entitySpawn.name,   entity->name  .c_str(), SV_MAX_ENTITY_NAME_LEN);
+    strncpy(entitySpawn.name,   entity->name.c_str(), SV_MAX_ENTITY_NAME_LEN);
     entitySpawn.map_id    = entity->map_id;
     entitySpawn.position  = entity->position;
 
@@ -436,6 +452,16 @@ void GameServer::BroadcastTileUpdate(Tilemap &map, uint32_t x, uint32_t y)
         }
 
         SendTileUpdate(clientIdx, map, x, y);
+    }
+}
+void GameServer::SendTitleShow(int clientIdx, const std::string &text)
+{
+    if (yj_server->CanSendMessage(clientIdx, CHANNEL_R_GLOBAL_EVENT)) {
+        Msg_S_TitleShow *msg = (Msg_S_TitleShow *)yj_server->CreateMessage(clientIdx, MSG_S_TITLE_SHOW);
+        if (msg) {
+            strncpy(msg->text, text.c_str(), SV_MAX_TITLE_LEN);
+            yj_server->SendMessage(clientIdx, CHANNEL_R_GLOBAL_EVENT, msg);
+        }
     }
 }
 
@@ -1093,6 +1119,17 @@ void GameServer::WarpEntity(Entity &entity, uint32_t dest_map_id, Vector3 dest_p
         entity.position = dest_pos;
         entity.force_accum = {};
         entity.velocity = {};
+
+        if (entity.type == ENTITY_PLAYER) {
+            Tilemap &map = packs[1].FindTilemap(entity.map_id);
+            if (map.title.size()) {
+                int clientIdx = 0;
+                ServerPlayer *player = FindServerPlayer(entity.id, &clientIdx);
+                if (player) {
+                    SendTitleShow(clientIdx, map.title);
+                }
+            }
+        }
     } else {
         // TODO: This needs to ask GameServer to load the new map and
         // we also need to move our victim to the new map
@@ -1186,7 +1223,8 @@ void GameServer::Tick(void)
 
         Tilemap *map = FindMap(entity.map_id);
         if (map) {
-            map->ResolveEntityCollisions(entity);
+            map->ResolveEntityCollisionsEdges(entity);
+            map->ResolveEntityCollisionsTriggers(entity);
             TickResolveEntityWarpCollisions(*map, entity, now);
         }
 

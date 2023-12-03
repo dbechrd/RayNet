@@ -161,7 +161,7 @@ void ClientWorld::UpdateLocalPlayer(GameClient &client, Entity &entity)
             cmdAccumForce = client.controller.cmdAccum.GenerateMoveForce(entity.speed);
             entity.ApplyForce(cmdAccumForce);
             entityDb->EntityTick(entity, SV_TICK_DT);
-            map->ResolveEntityCollisions(entity);
+            map->ResolveEntityCollisionsEdges(entity);
 
             entity.position.x = LERP(posBefore.x, entity.position.x, cmdAccumDt / SV_TICK_DT);
             entity.position.y = LERP(posBefore.y, entity.position.y, cmdAccumDt / SV_TICK_DT);
@@ -335,15 +335,6 @@ void ClientWorld::UpdateCamera(GameClient &client)
 
     if (new_map) {
         warpFadeInStartedAt = client.now;
-
-        // TODO: Send SHOW_TITLE message from server during warp
-        Tilemap &map = packs[1].FindTilemap(target.map_id);
-        if (map.title.size()) {
-            titleText = map.title;
-        } else {
-            titleText = map.id;
-        }
-        titleShownAt = client.now;
     }
 
     // Zoom based on mouse wheel
@@ -463,7 +454,7 @@ void ClientWorld::DrawEntitySnapshotShadows(GameClient &client, Entity &entity, 
                 if (inputCmd.seq > lastProcessedInputCmd) {
                     ghostData.entity.ApplyForce(inputCmd.GenerateMoveForce(ghostData.entity.speed));
                     entityDb->EntityTick(ghostData.entity, SV_TICK_DT);
-                    map->ResolveEntityCollisions(ghostData.entity);
+                    map->ResolveEntityCollisionsEdges(ghostData.entity);
                     Rectangle ghostRect = ghostData.entity.GetSpriteRect();
                     DrawRectangleRec(ghostRect, Fade(GREEN, 0.1f));
                     DrawRectangleLinesEx(ghostRect, 1, Fade(GREEN, 0.8f));
@@ -480,7 +471,7 @@ void ClientWorld::DrawEntitySnapshotShadows(GameClient &client, Entity &entity, 
             Vector3 cmdAccumForce = controller.cmdAccum.GenerateMoveForce(ghostData.entity.speed);
             ghostData.entity.ApplyForce(cmdAccumForce);
             entityDb->EntityTick(ghostData.entity, SV_TICK_DT);
-            map->ResolveEntityCollisions(ghostData.entity);
+            map->ResolveEntityCollisionsEdges(ghostData.entity);
             ghostData.entity.position.y = LERP(posBefore.y, ghostData.entity.position.y, cmdAccumDt / SV_TICK_DT);
             ghostData.entity.position.x = LERP(posBefore.x, ghostData.entity.position.x, cmdAccumDt / SV_TICK_DT);
         }
@@ -791,56 +782,6 @@ void ClientWorld::DrawHUDEntityHoverInfo(void)
     };
     DrawTextShadowEx(fntMedium, e_hovered.name.c_str(), labelPos, WHITE);
 }
-void ClientWorld::DrawHUDTitle(GameClient &client)
-{
-    if (titleShownAt) {
-        const Vector2 titleSize = dlb_MeasureTextEx(fntBig, titleText.c_str(), titleText.size());
-        const Vector2 titlePos{
-            floorf(GetRenderWidth() / 2.0f - titleSize.x / 2.0f),
-            floorf(GetRenderHeight() * 0.1f),
-        };
-
-        double start = titleShownAt;
-        double end = start + CL_WARP_TITLE_FADE_IN_DELAY;
-        double titleWaitAlpha = (client.now - start) / (end - start);
-        CLAMP(titleWaitAlpha, 0.0f, 1.0f);
-
-        start = end;
-        end = start + CL_WARP_TITLE_FADE_IN_DURATION;
-        double titleFadeInAlpha = (client.now - start) / (end - start);
-        CLAMP(titleFadeInAlpha, 0.0f, 1.0f);
-
-        start = end;
-        end = start + CL_WARP_TITLE_SHOW_DURATION;
-        double titleShowAlpha = (client.now - start) / (end - start);
-        CLAMP(titleShowAlpha, 0.0f, 1.0f);
-
-        start = end;
-        end = start + CL_WARP_TITLE_FADE_OUT_DURATION;
-        double titleFadeOutAlpha = (client.now - start) / (end - start);
-        CLAMP(titleFadeOutAlpha, 0.0f, 1.0f);
-
-        float alpha = 0.0f;
-        if (titleWaitAlpha < 1.0f) {
-            // wait for warp fade to end before fading in the title
-            //printf("title wait: %.2f\n", titleWaitAlpha);
-        } else if (titleFadeInAlpha < 1.0f) {
-            alpha = titleFadeInAlpha;
-            //printf("title fade in: %.2f\n", alpha);
-        } else if (titleShowAlpha < 1.0f) {
-            alpha = 1.0f;
-            //printf("title show: %.2f\n", alpha);
-        } else if (titleFadeOutAlpha < 1.0f) {
-            alpha = 1.0f - titleFadeOutAlpha;
-            //printf("title fade out: %.2f\n", alpha);
-        } else {
-            // TODO: ClearTitle() function
-            titleShownAt = 0;
-            titleText = "";
-        }
-        DrawTextShadowEx(fntBig, titleText.c_str(), titlePos, Fade(WHITE, alpha));
-    }
-}
 void ClientWorld::DrawHUDSignEditor(void)
 {
     IO::Scoped scope(IO::IO_HUDSignEditor);
@@ -968,7 +909,7 @@ void ClientWorld::Draw(GameClient &client)
     DrawDialogs(client);
     DrawHUDEntityHoverInfo();
     spinner.Draw();
-    DrawHUDTitle(client);
+    title.Draw(client.now);
     DrawHUDSignEditor();
     DrawHUDMenu();
 

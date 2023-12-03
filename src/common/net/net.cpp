@@ -14,6 +14,8 @@ const char *MsgTypeStr(MsgType type)
         case MSG_S_ENTITY_SNAPSHOT:               return "MSG_S_ENTITY_SNAPSHOT";
         case MSG_S_ENTITY_SPAWN:                  return "MSG_S_ENTITY_SPAWN";
         case MSG_S_TILE_CHUNK:                    return "MSG_S_TILE_CHUNK";
+        case MSG_S_TILE_UPDATE:                   return "MSG_S_TILE_UPDATE";
+        case MSG_S_TITLE_SHOW:                    return "MSG_S_TITLE_SHOW";
 
         default:                                  return "<UNKNOWN_MSG_TYPE>";
     }
@@ -31,6 +33,7 @@ void InitClientServerConfig(yojimbo::ClientServerConfig &config)
     config.channel[CHANNEL_R_CLOCK_SYNC].type = yojimbo::CHANNEL_TYPE_RELIABLE_ORDERED;
     config.channel[CHANNEL_R_ENTITY_EVENT].type = yojimbo::CHANNEL_TYPE_RELIABLE_ORDERED;
     config.channel[CHANNEL_R_TILE_EVENT].type = yojimbo::CHANNEL_TYPE_RELIABLE_ORDERED;
+    config.channel[CHANNEL_R_GLOBAL_EVENT].type = yojimbo::CHANNEL_TYPE_RELIABLE_ORDERED;
 
     //config.bandwidthSmoothingFactor = CL_BANDWIDTH_SMOOTHING_FACTOR;
 }

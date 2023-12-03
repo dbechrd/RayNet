@@ -56,6 +56,7 @@ struct GameClient {
     void ProcessMsg(Msg_S_EntitySpawn &msg);
     void ProcessMsg(Msg_S_TileChunk &msg);
     void ProcessMsg(Msg_S_TileUpdate &msg);
+    void ProcessMsg(Msg_S_TitleShow &msg);
     void ProcessMessages(void);
 
     void Update(void);

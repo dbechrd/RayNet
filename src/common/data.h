@@ -341,6 +341,7 @@ struct Tilemap {
     void UpdateEdges(void);
     void ResolveEntityCollisionsEdges(Entity &entity);
     void ResolveEntityCollisions(Entity &entity);
+    void ResolveEntityCollisionsTriggers(Entity &entity);
 
     void DrawTile(uint32_t tile_id, Vector2 position, DrawCmdQueue *sortedDraws);
     void Draw(Camera2D &camera, DrawCmdQueue &sortedDraws);

@@ -8,6 +8,7 @@ enum ChannelType {
     CHANNEL_R_CLOCK_SYNC,
     CHANNEL_R_ENTITY_EVENT,
     CHANNEL_R_TILE_EVENT,
+    CHANNEL_R_GLOBAL_EVENT,
 
     CHANNEL_COUNT
 };
@@ -26,6 +27,7 @@ enum MsgType
     MSG_S_ENTITY_SPAWN,
     MSG_S_TILE_CHUNK,
     MSG_S_TILE_UPDATE,
+    MSG_S_TITLE_SHOW,
 
     MSG_COUNT
 };
@@ -320,6 +322,7 @@ struct Msg_S_TileChunk : public yojimbo::BlockMessage
 
     YOJIMBO_VIRTUAL_SERIALIZE_FUNCTIONS();
 };
+
 struct Msg_S_TileUpdate : public yojimbo::Message
 {
     uint32_t map_id    {};
@@ -341,6 +344,19 @@ struct Msg_S_TileUpdate : public yojimbo::Message
     YOJIMBO_VIRTUAL_SERIALIZE_FUNCTIONS();
 };
 
+struct Msg_S_TitleShow : public yojimbo::Message
+{
+    char text [SV_MAX_TITLE_LEN + 1]{};
+
+    template <typename Stream> bool Serialize(Stream &stream)
+    {
+        serialize_string(stream, text, sizeof(text));
+        return true;
+    }
+
+    YOJIMBO_VIRTUAL_SERIALIZE_FUNCTIONS();
+};
+
 void InitClientServerConfig(yojimbo::ClientServerConfig &config);
 
 YOJIMBO_MESSAGE_FACTORY_START(MsgFactory, MSG_COUNT);
@@ -355,6 +371,7 @@ YOJIMBO_DECLARE_MESSAGE_TYPE(MSG_S_ENTITY_SNAPSHOT,               Msg_S_EntitySn
 YOJIMBO_DECLARE_MESSAGE_TYPE(MSG_S_ENTITY_SPAWN,                  Msg_S_EntitySpawn);
 YOJIMBO_DECLARE_MESSAGE_TYPE(MSG_S_TILE_CHUNK,                    Msg_S_TileChunk);
 YOJIMBO_DECLARE_MESSAGE_TYPE(MSG_S_TILE_UPDATE,                   Msg_S_TileUpdate);
+YOJIMBO_DECLARE_MESSAGE_TYPE(MSG_S_TITLE_SHOW,                    Msg_S_TitleShow);
 YOJIMBO_MESSAGE_FACTORY_FINISH();
 
 class NetAdapter : public yojimbo::Adapter

@@ -90,6 +90,7 @@ struct GameServer {
     void OnClientLeave(int clientIdx);
 
     uint32_t GetPlayerEntityId(uint32_t clientIdx);
+    ServerPlayer *FindServerPlayer(uint32_t entity_id, int *client_idx = 0);
 
     Err Start(void);
     void Update(void);
@@ -111,8 +112,6 @@ private:
     void SendEntityDespawn(int clientIdx, uint32_t entityId);
     void BroadcastEntityDespawn(uint32_t entityId);
 
-    void SendEntityDespawnTest(int clientIdx, uint32_t testId);
-
     void SendEntitySay(int clientIdx, uint32_t entityId, uint32_t dialogId, const std::string &title, const std::string &message);
     void BroadcastEntitySay(uint32_t entityId, const std::string &title, const std::string &message);
 
@@ -121,6 +120,8 @@ private:
 
     void SendTileUpdate(int clientIdx, Tilemap &map, uint32_t x, uint32_t y);
     void BroadcastTileUpdate(Tilemap &map, uint32_t x, uint32_t y);
+
+    void SendTitleShow(int clientIdx, const std::string &text);
 
     // All part of Update()
     void RequestDialog(int clientIdx, Entity &entity, Dialog &dialog);

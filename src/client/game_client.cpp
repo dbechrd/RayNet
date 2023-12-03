@@ -210,6 +210,10 @@ void GameClient::ProcessMsg(Msg_S_TileUpdate &msg)
         //}
     }
 }
+void GameClient::ProcessMsg(Msg_S_TitleShow &msg)
+{
+    world->title.Show(msg.text, now);
+}
 void GameClient::ProcessMessages(void)
 {
     for (int channelIdx = 0; channelIdx < CHANNEL_COUNT; channelIdx++) {
@@ -233,6 +237,8 @@ void GameClient::ProcessMessages(void)
                     ProcessMsg(*(Msg_S_TileChunk      *)yjMsg); break;
                 case MSG_S_TILE_UPDATE:
                     ProcessMsg(*(Msg_S_TileUpdate     *)yjMsg); break;
+                case MSG_S_TITLE_SHOW:
+                    ProcessMsg(*(Msg_S_TitleShow      *)yjMsg); break;
             }
             yj_client->ReleaseMessage(yjMsg);
             yjMsg = yj_client->ReceiveMessage(channelIdx);
