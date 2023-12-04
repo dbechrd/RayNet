@@ -318,10 +318,17 @@ void Tilemap::MergeEdges(Edge::Array &edges)
         edge_map[edge->KeyEnd()] = edge_idx;
     }
 
+    // HACK(dlb): Every edge is stored twice in edge_map so we need to de-dupe when collecting result
+    std::vector<bool> edge_used{};
+    edge_used.resize(edges.size());
+
     Edge::Array merged_edges{};
     for (auto &iter : edge_map) {
-        Edge &edge = edges[iter.second];
-        merged_edges.push_back(edge);
+        if (!edge_used[iter.second]) {
+            Edge &edge = edges[iter.second];
+            merged_edges.push_back(edge);
+            edge_used[iter.second] = true;
+        }
     }
 
     edges = merged_edges;
