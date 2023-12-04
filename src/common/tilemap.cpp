@@ -197,8 +197,9 @@ ObjectData *Tilemap::GetObjectData(uint32_t x, uint32_t y)
 }
 
 AiPath *Tilemap::GetPath(uint32_t pathId) {
-    if (pathId < paths.size()) {
-        return &paths[pathId];
+    // NOTE: The first path is pathId 1 such that "0" can mean no pathing
+    if (pathId && pathId <= paths.size()) {
+        return &paths[pathId - 1];
     }
     return 0;
 }

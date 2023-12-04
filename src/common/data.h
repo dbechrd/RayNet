@@ -336,8 +336,6 @@ struct Tilemap {
     uint32_t GetNextPathNodeIndex(uint32_t pathId, uint32_t pathNodeIndex);
     AiPathNode *GetPathNode(uint32_t pathId, uint32_t pathNodeIndex);
 
-    void GetEdges(Edge::Array &edges);
-    void MergeEdges(Edge::Array &edges);
     void UpdateEdges(void);
     void ResolveEntityCollisionsEdges(Entity &entity);
     void ResolveEntityCollisionsTriggers(Entity &entity);
@@ -349,6 +347,9 @@ struct Tilemap {
     void DrawTileIds(Camera2D &camera);
 
 private:
+    void GetEdges(Edge::Array &edges);
+    void MergeEdges(Edge::Array &edges);
+
     bool NeedsFill(uint32_t x, uint32_t y, uint32_t old_tile_id);
     void Scan(uint32_t lx, uint32_t rx, uint32_t y, uint32_t old_tile_id, std::stack<Coord> &stack);
 };
@@ -356,22 +357,22 @@ private:
 ////////////////////////////////////////////////////////////////////////////
 
 // Best rap song: "i added it outta habit" by dandymcgee
-#define ENTITY_TYPES(gen)  \
-gen(ENTITY_NONE)       \
-gen(ENTITY_PLAYER)     \
-gen(ENTITY_NPC)        \
-gen(ENTITY_OBJECT)     \
+#define ENTITY_TYPES(gen) \
+gen(ENTITY_NONE)          \
+gen(ENTITY_PLAYER)        \
+gen(ENTITY_NPC)           \
+gen(ENTITY_ITEM)          \
 gen(ENTITY_PROJECTILE)
 
 enum EntityType : uint8_t {
     ENTITY_TYPES(ENUM_GEN_VALUE)
 };
 
-#define ENTITY_SPECIES(gen)       \
+#define ENTITY_SPECIES(gen)   \
 gen(ENTITY_SPEC_NONE)         \
 gen(ENTITY_SPEC_NPC_TOWNFOLK) \
 gen(ENTITY_SPEC_NPC_CHICKEN)  \
-gen(ENTITY_SPEC_OBJ_WARP)     \
+gen(ENTITY_SPEC_ITM_NORMAL)   \
 gen(ENTITY_SPEC_PRJ_FIREBALL)
 
 enum EntitySpecies : uint8_t {
@@ -388,7 +389,7 @@ struct EntityProto {
     float         radius               {};
     std::string   dialog_root_key      {};
     float         hp_max               {};
-    int           path_id              {};
+    uint32_t      path_id              {};
     float         speed_min            {};
     float         speed_max            {};
     float         drag                 {};
@@ -477,10 +478,10 @@ struct Entity {
     float hp_smooth {};  // client-only to smoothly interpolate health changes
 
     //// Pathfinding ////
-    int    path_id                {};
-    int    path_node_last_reached {};
-    int    path_node_target       {};
-    double path_node_arrived_at   {};
+    uint32_t path_id                {};
+    int      path_node_last_reached {};
+    int      path_node_target       {};
+    double   path_node_arrived_at   {};
 
     Vector3 path_rand_direction  {};  // move this direction (if possible)
     double  path_rand_duration   {};  // for this long

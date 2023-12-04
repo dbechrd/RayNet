@@ -179,29 +179,26 @@ struct Msg_S_EntitySnapshot : public yojimbo::Message
     double server_time {};
 
     // Entity
-    uint32_t            entity_id  {};
+    uint32_t      entity_id  {};
     EntityType    type       {};  // doesn't change, but needed for switch statements in deserializer
     EntitySpecies spec       {};
-    uint32_t            map_id     {};
-    Vector3             position   {};
-    bool                on_warp_cooldown {};
+    uint32_t      map_id     {};
+    Vector3       position   {};
+    bool          on_warp_cooldown {};
 
     // Collision
     //float       radius     {};  // when would this ever change? doesn't.. for now.
 
     // Life
-    int         hp_max  {};
-    int         hp      {};
+    int           hp_max  {};
+    int           hp      {};
 
     // Physics
     //float       speed      {};  // we don't need to know speed for ghosts
-    Vector3     velocity   {};
+    Vector3       velocity   {};
 
-    // Only for Entity_Player
-    // TODO: Only send this to the player who actually owns this player entity,
-    //       otherwise we're leaking info about other players' connections.
-    int         client_idx  {};  // TODO: Populate this for lastprocessinputcmd
-    uint32_t    last_processed_input_cmd {};
+    // Only sent to the player who owns this player entity.
+    uint32_t      last_processed_input_cmd {};
 
     template <typename Stream> bool Serialize(Stream &stream)
     {
@@ -215,21 +212,26 @@ struct Msg_S_EntitySnapshot : public yojimbo::Message
         serialize_float(stream, position.x);
         serialize_float(stream, position.y);
         serialize_float(stream, position.z);
-        serialize_bool(stream, on_warp_cooldown);
-
-        // Life
-        serialize_varint32(stream, hp_max);
-        if (hp_max) {
-            serialize_varint32(stream, hp);
-        }
 
         // Physics
         serialize_float(stream, velocity.x);
         serialize_float(stream, velocity.y);
         serialize_float(stream, velocity.z);
 
-        // TODO: Also check if player is the clientIdx player. I.e. don't leak
-        //       input info to all other players.
+        // Life
+        if (type == ENTITY_PLAYER || type == ENTITY_NPC) {
+            serialize_varint32(stream, hp_max);
+            if (hp_max) {
+                serialize_varint32(stream, hp);
+            }
+        }
+
+        // Warp
+        if (type == ENTITY_PLAYER) {
+            serialize_bool(stream, on_warp_cooldown);
+        }
+
+        // Input ack
         if (type == ENTITY_PLAYER) {
             serialize_uint32(stream, last_processed_input_cmd);
         }

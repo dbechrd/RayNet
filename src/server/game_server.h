@@ -57,6 +57,17 @@ public:
     void OnServerClientDisconnected(int clientIdx) override;
 };
 
+struct ProtoDb {
+    EntityProto npc_lily{};
+    EntityProto npc_freye{};
+    EntityProto npc_nessa{};
+    EntityProto npc_elane{};
+    EntityProto npc_chicken{};
+    EntityProto itm_poop{};
+
+    void Load(void);
+};
+
 struct GameServer {
     GameServerNetAdapter adapter{ this };
     yojimbo::Server *yj_server{};
@@ -84,6 +95,8 @@ struct GameServer {
     double lastChickenSpawnedAt{};
     uint32_t eid_bots[1]{};
 
+    ProtoDb protoDb{};
+
     GameServer(double now) : now(now), frameStart(now) {};
 
     void OnClientJoin(int clientIdx);
@@ -92,6 +105,7 @@ struct GameServer {
     uint32_t GetPlayerEntityId(uint32_t clientIdx);
     ServerPlayer *FindServerPlayer(uint32_t entity_id, int *client_idx = 0);
 
+    void LoadProtos(void);  // TODO: Move to pack file
     Err Start(void);
     void Update(void);
     void Stop(void);
@@ -133,6 +147,7 @@ private:
     void ProcessMessages(void);
 
     Entity *SpawnProjectile(uint32_t map_id, Vector3 position, Vector2 direction, Vector3 initial_velocity);
+    Entity *SpawnEntityProto(uint32_t map_id, Vector3 position, EntityProto &proto);
     void UpdateServerPlayers(void);
     void TickSpawnTownNPCs(uint32_t map_id);
     void TickSpawnCaveNPCs(uint32_t map_id);

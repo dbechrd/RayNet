@@ -88,8 +88,90 @@ ServerPlayer *GameServer::FindServerPlayer(uint32_t entity_id, int *client_idx)
     return 0;
 }
 
+void ProtoDb::Load(void)
+{
+    // TODO: Load protos from an mdesk file
+    if (npc_lily.type) {
+        return;
+    }
+
+    npc_lily.type = ENTITY_NPC;
+    npc_lily.spec = ENTITY_SPEC_NPC_TOWNFOLK;
+    npc_lily.name = "Lily";
+    npc_lily.radius = 16;
+    npc_lily.dialog_root_key = "DIALOG_LILY_INTRO";
+    npc_lily.hp_max = 777;
+    npc_lily.path_id = 1;
+    npc_lily.speed_min = 300;
+    npc_lily.speed_max = 600;
+    npc_lily.drag = 1.0f;
+    npc_lily.sprite_id = packs[0].FindSpriteByName("sprite_npc_lily").id;
+    npc_lily.direction = DIR_E;
+
+    npc_freye.type = ENTITY_NPC;
+    npc_freye.spec = ENTITY_SPEC_NPC_TOWNFOLK;
+    npc_freye.name = "Freye";
+    npc_freye.radius = 16;
+    npc_freye.dialog_root_key = "DIALOG_FREYE_INTRO";
+    npc_freye.hp_max = 200;
+    npc_freye.path_id = 1;
+    npc_freye.speed_min = 300;
+    npc_freye.speed_max = 600;
+    npc_freye.drag = 1.0f;
+    npc_freye.sprite_id = packs[0].FindSpriteByName("sprite_npc_freye").id;
+    npc_freye.direction = DIR_E;
+
+    npc_nessa.type = ENTITY_NPC;
+    npc_nessa.spec = ENTITY_SPEC_NPC_TOWNFOLK;
+    npc_nessa.name = "Nessa";
+    npc_nessa.radius = 16;
+    npc_nessa.dialog_root_key = "DIALOG_NESSA_INTRO";
+    npc_nessa.hp_max = 150;
+    npc_nessa.path_id = 1;
+    npc_nessa.speed_min = 300;
+    npc_nessa.speed_max = 600;
+    npc_nessa.drag = 1.0f;
+    npc_nessa.sprite_id = packs[0].FindSpriteByName("sprite_npc_nessa").id;
+    npc_nessa.direction = DIR_E;
+
+    npc_elane.type = ENTITY_NPC;
+    npc_elane.spec = ENTITY_SPEC_NPC_TOWNFOLK;
+    npc_elane.name = "Elane";
+    npc_elane.radius = 16;
+    npc_elane.dialog_root_key = "DIALOG_ELANE_INTRO";
+    npc_elane.hp_max = 100;
+    npc_elane.path_id = 1;
+    npc_elane.speed_min = 300;
+    npc_elane.speed_max = 600;
+    npc_elane.drag = 1.0f;
+    npc_elane.sprite_id = packs[0].FindSpriteByName("sprite_npc_elane").id;
+    npc_elane.direction = DIR_E;
+
+    npc_chicken.type = ENTITY_NPC;
+    npc_chicken.spec = ENTITY_SPEC_NPC_CHICKEN;
+    npc_chicken.name = "Chicken";
+    npc_chicken.ambient_fx = "sfx_chicken_cluck";
+    npc_chicken.ambient_fx_delay_min = 15;
+    npc_chicken.ambient_fx_delay_max = 30;
+    npc_chicken.radius = 5;
+    npc_chicken.hp_max = 15;
+    npc_chicken.speed_min = 50;
+    npc_chicken.speed_max = 150;
+    npc_chicken.drag = 1.0f;
+    npc_chicken.sprite_id = packs[0].FindSpriteByName("sprite_npc_chicken").id;
+
+    itm_poop.type = ENTITY_ITEM;
+    itm_poop.spec = ENTITY_SPEC_ITM_NORMAL;
+    itm_poop.name = "Chicken Poop";
+    itm_poop.radius = 5;
+    itm_poop.drag = 1.0f;
+    itm_poop.sprite_id = packs[0].FindSpriteByName("sprite_itm_poop").id;
+}
+
 Err GameServer::Start(void)
 {
+    protoDb.Load();
+
     // NOTE(DLB): MUST happen after InitWindow() so that GetTime() is valid!!
     if (!InitializeYojimbo()) {
         printf("yj: error: failed to initialize Yojimbo!\n");
@@ -251,6 +333,16 @@ void GameServer::DespawnEntity(uint32_t entityId)
 {
     if (entityDb->DespawnEntity(entityId, now)) {
         BroadcastEntityDespawn(entityId);
+
+        Entity *entity = entityDb->FindEntity(entityId, true);
+
+        // TODO: Generic loot table check
+        if (entity && entity->spec == ENTITY_SPEC_NPC_CHICKEN && entity->hp == 0.0f) {
+            Entity *chicken_poop = SpawnEntityProto(entity->map_id, entity->position, protoDb.itm_poop);
+            if (chicken_poop) {
+                BroadcastEntitySpawn(chicken_poop->id);
+            }
+        }
     }
 }
 void GameServer::DestroyDespawnedEntities(void)
@@ -730,6 +822,41 @@ Entity *GameServer::SpawnProjectile(uint32_t map_id, Vector3 position, Vector2 d
     BroadcastEntitySpawn(projectile->id);
     return projectile;
 }
+Entity *GameServer::SpawnEntityProto(uint32_t map_id, Vector3 position, EntityProto &proto)
+{
+    assert(proto.type);
+
+    Tilemap *map = FindMap(map_id);
+    if (!map) return 0;
+
+    Entity *entity = SpawnEntity(proto.type);
+    if (!entity) return 0;
+
+    entity->spec                 = proto.spec;
+    entity->map_id               = map_id;
+    entity->name                 = proto.name;
+    entity->position             = position;
+    entity->ambient_fx           = proto.ambient_fx;
+    entity->ambient_fx_delay_min = proto.ambient_fx_delay_min;
+    entity->ambient_fx_delay_max = proto.ambient_fx_delay_max;
+    entity->radius               = proto.radius;
+    entity->dialog_root_key      = proto.dialog_root_key;
+    entity->hp_max               = proto.hp_max;
+    entity->hp                   = entity->hp_max;
+    entity->path_id              = proto.path_id;  // TODO: Give the path a name, e.g. "PATH_TOWN_LILY"
+    entity->drag                 = proto.drag;
+    entity->speed                = GetRandomValue(proto.speed_min, proto.speed_max);
+    entity->sprite_id            = proto.sprite_id;
+    entity->direction            = proto.direction;
+
+    AiPathNode *aiPathNode = map->GetPathNode(entity->path_id, 0);
+    if (aiPathNode) {
+        entity->position.x = aiPathNode->pos.x;
+        entity->position.y = aiPathNode->pos.y;
+    }
+
+    return entity;
+}
 void GameServer::UpdateServerPlayers(void)
 {
     for (ServerPlayer &sv_player : players) {
@@ -772,52 +899,15 @@ void GameServer::UpdateServerPlayers(void)
         }
     }
 }
-Entity *SpawnEntityProto(GameServer &server, uint32_t map_id, Vector3 position, EntityProto &proto)
-{
-    Tilemap *map = server.FindMap(map_id);
-    if (!map) return 0;
-
-    Entity *entity = server.SpawnEntity(ENTITY_NPC);
-    if (!entity) return 0;
-
-    entity->spec                 = proto.spec;
-    entity->map_id               = map_id;
-    entity->name                 = proto.name;
-    entity->position             = position;
-    entity->ambient_fx           = proto.ambient_fx;
-    entity->ambient_fx_delay_min = proto.ambient_fx_delay_min;
-    entity->ambient_fx_delay_max = proto.ambient_fx_delay_max;
-    entity->radius               = proto.radius;
-    entity->dialog_root_key      = proto.dialog_root_key;
-    entity->hp_max               = proto.hp_max;
-    entity->hp                   = entity->hp_max;
-    entity->path_id              = proto.path_id;  // TODO: Give the path a name, e.g. "PATH_TOWN_LILY"
-    entity->drag                 = proto.drag;
-    entity->speed                = GetRandomValue(proto.speed_min, proto.speed_max);
-    entity->sprite_id            = proto.sprite_id;
-    entity->direction            = proto.direction;
-
-    AiPathNode *aiPathNode = map->GetPathNode(entity->path_id, 0);
-    if (aiPathNode) {
-        entity->position.x = aiPathNode->pos.x;
-        entity->position.y = aiPathNode->pos.y;
-    }
-
-    return entity;
-}
 void GameServer::TickSpawnTownNPCs(uint32_t map_id)
 {
-    // TODO: Load protos from an mdesk file
-    static EntityProto lily;
-    static EntityProto freye;
-    static EntityProto nessa;
-    static EntityProto elane;
     static EntityProto *townfolk[]{
-        &lily, &freye, &nessa, &elane
+        &protoDb.npc_lily,
+        &protoDb.npc_freye,
+        &protoDb.npc_nessa,
+        &protoDb.npc_elane
     };
     static uint32_t townfolk_ids[4];
-
-    static EntityProto chicken;
     static uint32_t chicken_ids[10];
 
     // TODO: put entities in some map mdesk file or something?
@@ -832,74 +922,6 @@ void GameServer::TickSpawnTownNPCs(uint32_t map_id)
     //     }
     // ]
 
-    if (!lily.type) {
-        lily.type = ENTITY_NPC;
-        lily.spec = ENTITY_SPEC_NPC_TOWNFOLK;
-        lily.name = "Lily";
-        lily.radius = 16;
-        lily.dialog_root_key = "DIALOG_LILY_INTRO";
-        lily.hp_max = 777;
-        lily.path_id = 0;
-        lily.speed_min = 300;
-        lily.speed_max = 600;
-        lily.drag = 1.0f;
-        lily.sprite_id = packs[0].FindSpriteByName("sprite_npc_lily").id;
-        lily.direction = DIR_E;
-
-        freye.type = ENTITY_NPC;
-        freye.spec = ENTITY_SPEC_NPC_TOWNFOLK;
-        freye.name = "Freye";
-        freye.radius = 16;
-        freye.dialog_root_key = "DIALOG_FREYE_INTRO";
-        freye.hp_max = 200;
-        freye.path_id = 0;
-        freye.speed_min = 300;
-        freye.speed_max = 600;
-        freye.drag = 1.0f;
-        freye.sprite_id = packs[0].FindSpriteByName("sprite_npc_freye").id;
-        freye.direction = DIR_E;
-
-        nessa.type = ENTITY_NPC;
-        nessa.spec = ENTITY_SPEC_NPC_TOWNFOLK;
-        nessa.name = "Nessa";
-        nessa.radius = 16;
-        nessa.dialog_root_key = "DIALOG_NESSA_INTRO";
-        nessa.hp_max = 150;
-        nessa.path_id = 0;
-        nessa.speed_min = 300;
-        nessa.speed_max = 600;
-        nessa.drag = 1.0f;
-        nessa.sprite_id = packs[0].FindSpriteByName("sprite_npc_nessa").id;
-        nessa.direction = DIR_E;
-
-        elane.type = ENTITY_NPC;
-        elane.spec = ENTITY_SPEC_NPC_TOWNFOLK;
-        elane.name = "Elane";
-        elane.radius = 16;
-        elane.dialog_root_key = "DIALOG_ELANE_INTRO";
-        elane.hp_max = 100;
-        elane.path_id = 0;
-        elane.speed_min = 300;
-        elane.speed_max = 600;
-        elane.drag = 1.0f;
-        elane.sprite_id = packs[0].FindSpriteByName("sprite_npc_elane").id;
-        elane.direction = DIR_E;
-
-        chicken.type = ENTITY_NPC;
-        chicken.spec = ENTITY_SPEC_NPC_CHICKEN;
-        chicken.name = "Chicken";
-        chicken.ambient_fx = "sfx_chicken_cluck";
-        chicken.ambient_fx_delay_min = 15;
-        chicken.ambient_fx_delay_max = 30;
-        chicken.radius = 5;
-        chicken.hp_max = 15;
-        chicken.path_id = -1;
-        chicken.speed_min = 50;
-        chicken.speed_max = 150;
-        chicken.drag = 1.0f;
-        chicken.sprite_id = packs[0].FindSpriteByName("sprite_npc_chicken").id;
-    }
-
     assert(ARRAY_SIZE(townfolk) == ARRAY_SIZE(townfolk_ids));
 
     const double townfolkSpawnRate = 2.0;
@@ -907,7 +929,7 @@ void GameServer::TickSpawnTownNPCs(uint32_t map_id)
         for (int i = 0; i < ARRAY_SIZE(townfolk_ids); i++) {
             Entity *entity = entityDb->FindEntity(townfolk_ids[i], ENTITY_NPC);
             if (!entity) {
-                entity = SpawnEntityProto(*this, map_id, { 0, 0 }, *townfolk[i]);
+                entity = SpawnEntityProto(map_id, { 0, 0 }, *townfolk[i]);
                 if (entity) {
                     BroadcastEntitySpawn(entity->id);
                     townfolk_ids[i] = entity->id;
@@ -928,7 +950,7 @@ void GameServer::TickSpawnTownNPCs(uint32_t map_id)
                 //       it (or find better strat for this)
                 spawn.x = GetRandomValue(400, 2400);
                 spawn.y = GetRandomValue(2000, 3400);
-                entity = SpawnEntityProto(*this, map_id, spawn, chicken);
+                entity = SpawnEntityProto(map_id, spawn, protoDb.npc_chicken);
                 if (entity) {
                     BroadcastEntitySpawn(entity->id);
                     chicken_ids[i] = entity->id;
@@ -978,8 +1000,7 @@ void GameServer::TickEntityNPC(Entity &e_npc, double dt)
     }
 
     // TODO: tick_pathfind?
-    // TODO: Instead of path_id -1 for "no path" change it to 0 like everything else. After tilemap refactor.
-    if (e_npc.path_id >= 0 && !e_npc.dialog_spawned_at) {
+    if (e_npc.path_id && !e_npc.dialog_spawned_at) {
         AiPathNode *ai_path_node = map->GetPathNode(e_npc.path_id, e_npc.path_node_target);
         if (ai_path_node) {
             Vector3 target = ai_path_node->pos;
@@ -1324,8 +1345,9 @@ void GameServer::SendClientSnapshots(void)
                     Msg_S_EntitySnapshot *msg = (Msg_S_EntitySnapshot *)yj_server->CreateMessage(clientIdx, MSG_S_ENTITY_SNAPSHOT);
                     if (msg) {
                         SerializeSnapshot(entity, *msg);
-                        // TODO: We only need this for the sv_player entity, not EVERY entity. Make it suck less.
-                        msg->last_processed_input_cmd = serverPlayer.lastInputSeq;
+                        if (entity.id == serverPlayer.entityId) {
+                            msg->last_processed_input_cmd = serverPlayer.lastInputSeq;
+                        }
                         yj_server->SendMessage(clientIdx, CHANNEL_U_ENTITY_SNAPSHOT, msg);
                     }
                 }

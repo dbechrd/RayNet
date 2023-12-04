@@ -86,7 +86,7 @@
 @GfxFrame gfx_frame_til_stone_wall_bl   : gfx_til_overworld  0    256  64   64
 @GfxFrame gfx_frame_til_stone_wall_bc   : gfx_til_overworld  64   256  64   64
 @GfxFrame gfx_frame_til_stone_wall_br   : gfx_til_overworld  128  256  64   64
-@GfxFrame null                          : gfx_til_overworld  192  256  64   64
+@GfxFrame gfx_frame_itm_poop            : gfx_til_overworld  192  256  64   64
 @GfxFrame null                          : gfx_til_overworld  256  256  64   64
 @GfxFrame null                          : gfx_til_overworld  320  256  64   64
 @GfxFrame null                          : gfx_til_overworld  384  256  64   64
@@ -123,6 +123,8 @@
 @GfxAnim gfx_anim_til_stone_wall_bl : null          60       1         0         gfx_frame_til_stone_wall_bl
 @GfxAnim gfx_anim_til_stone_wall_bc : null          60       1         0         gfx_frame_til_stone_wall_bc
 @GfxAnim gfx_anim_til_stone_wall_br : null          60       1         0         gfx_frame_til_stone_wall_br
+
+@GfxAnim gfx_anim_itm_poop          : null          60       1         0         gfx_frame_itm_poop
 
 @GfxAnim gfx_anim_obj_bush          : null          60       1         0         gfx_frame_obj_bush
 @GfxAnim gfx_anim_obj_chest_closed  : null          60       1         0         gfx_frame_obj_chest_closed
@@ -167,6 +169,7 @@
 @Sprite 6 : "sprite_npc_chicken"  null                  gfx_anim_npc_chicken_e null   gfx_anim_npc_chicken_w null    null    null    null
 @Sprite 7 : "sprite_obj_campfire" gfx_anim_obj_campfire null                   null   null                   null    null    null    null
 @Sprite 8 : "sprite_prj_fireball" gfx_anim_prj_fireball null                   null   null                   null    null    null    null
+@Sprite 9 : "sprite_itm_poop"     gfx_anim_itm_poop     null                   null   null                   null    null    null    null
 
 ///////////////////////////////////////////////////////////////////////
 // DO NOT change or reorder the IDs without updating all the map data

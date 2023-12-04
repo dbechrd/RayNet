@@ -248,11 +248,14 @@ void Editor::DrawGroundOverlay_Paths(Camera2D &camera, double now)
 }
 void Editor::DrawGroundOverlay_Warps(Camera2D &camera, double now)
 {
+    // TODO: Warps are now on obj tile layer
+#if 0
     for (const Entity &entity : packs[0].entities) {
         if (entity.type == ENTITY_SPEC_OBJ_WARP) {
             DrawRectangleRec(entity.warp_collider, Fade(SKYBLUE, 0.7f));
         }
     }
+#endif
 }
 
 void Editor::DrawEntityOverlays(Camera2D &camera, double now)
@@ -1268,6 +1271,9 @@ void Editor::DrawUI_WarpActions(UI &uiActionBar, double now)
     //    uiActionBar.Newline();
     //}
 
+    uiActionBar.Text("TODO: Warps as tile objs");
+#if 0
+    // TODO: Warps are on tile obj layer now, not entities
     for (Entity &entity : packs[0].entities) {
         if (entity.spec != ENTITY_SPEC_OBJ_WARP) {
             continue;
@@ -1326,7 +1332,7 @@ void Editor::DrawUI_WarpActions(UI &uiActionBar, double now)
         uiActionBar.Textbox(txtTemplateTileset, entity.warp_template_tileset);
         uiActionBar.Newline();
     }
-
+#endif
     uiActionBar.PopStyle();
 }
 void Editor::DrawUI_DialogActions(UI &uiActionBar, double now)
