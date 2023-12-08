@@ -163,7 +163,7 @@ void Tilemap::Fill(uint32_t x, uint32_t y, uint32_t new_tile_id, double now)
 
 TileDef &Tilemap::GetTileDef(uint32_t tile_id)
 {
-    TileDef &tile_def = packs[0].FindTileDefById(tile_id);
+    TileDef &tile_def = packs[0].tile_defs[tile_id]; // FindTileDefById(tile_id);
     return tile_def;
 }
 const GfxFrame &Tilemap::GetTileGfxFrame(uint32_t tile_id)
@@ -224,120 +224,71 @@ AiPathNode *Tilemap::GetPathNode(uint32_t pathId, uint32_t pathNodeIndex) {
 
 void Tilemap::GetEdges(Edge::Array &edges)
 {
-    for (int y = 0; y < height; y++) {
-        for (int x = 0; x < width; x++) {
-            // TODO: Faster way to find solid tiles only?
-            // TODO: Cache edge until until
-            if (IsSolid(x, y)) {
-                const bool top    = IsSolid(x    , y - 1);
-                const bool right  = IsSolid(x + 1, y    );
-                const bool bottom = IsSolid(x    , y + 1);
-                const bool left   = IsSolid(x - 1, y    );
-                if (top && right && bottom && left) {
-                    // Inside tile, no important edges to check
-                    continue;
-                }
+    // Clockwise winding, Edge Normal = (-y, x)
 
-                const Vector2 tilePos{ (float)x * TILE_W, (float)y * TILE_W };
+    int topStartIdx = -1;
+    int bottomStartIdx = -1;
+    for (int y = 0; y <= height; y++) {
+        for (int x = 0; x <= width; x++) {
+            const bool solid = IsSolid(x, y);
+            const bool solidAbove = IsSolid(x, y - 1);
 
-                const Vector2 topLeft     { tilePos.x         , tilePos.y };
-                const Vector2 topRight    { tilePos.x + TILE_W, tilePos.y };
-                const Vector2 bottomRight { tilePos.x + TILE_W, tilePos.y + TILE_W };
-                const Vector2 bottomLeft  { tilePos.x         , tilePos.y + TILE_W };
+            const bool isTopEdge = solid && !solidAbove;
+            if (topStartIdx == -1 && isTopEdge) {
+                topStartIdx = x;
+            } else if (topStartIdx != -1 && (!isTopEdge || x == width )) {
+                const Vector2 left { (float)topStartIdx * TILE_W, (float)y * TILE_W };
+                const Vector2 right{ (float)x           * TILE_W, (float)y * TILE_W };
+                edges.push_back(Edge{{ left, right }});
+                topStartIdx = -1;
+            }
 
-                // Clockwise winding, Edge Normal = (-y, x)
-                if (!top) {
-                    edges.push_back(Edge{{ topLeft, topRight }});
-                }
-                if (!right) {
-                    edges.push_back(Edge{{ topRight, bottomRight }});
-                }
-                if (!bottom) {
-                    edges.push_back(Edge{{ bottomRight, bottomLeft }});
-                }
-                if (!left) {
-                    edges.push_back(Edge{{ bottomLeft, topLeft }});
-                }
-
+            const bool isBottomEdge = !solid && solidAbove;
+            if (bottomStartIdx == -1 && isBottomEdge) {
+                bottomStartIdx = x;
+            } else if (bottomStartIdx != -1 && (!isBottomEdge || x == width )) {
+                const Vector2 left { (float)bottomStartIdx * TILE_W, (float)y * TILE_W };
+                const Vector2 right{ (float)x              * TILE_W, (float)y * TILE_W };
+                edges.push_back(Edge{{ right, left }});
+                bottomStartIdx = -1;
             }
         }
     }
-}
-void Tilemap::MergeEdges(Edge::Array &edges)
-{
-#if 0
-    edges.clear();
-    edges.push_back(Edge{{{ 10, 0 }, { 20, 0 }}});
-    edges.push_back(Edge{{{ 30, 0 }, { 40, 0 }}});
-    edges.push_back(Edge{{{ 20, 0 }, { 30, 0 }}});
-#endif
 
-    Edge::Map edge_map{};
-    for (size_t i = 0; i < edges.size(); i++) {
-        size_t edge_idx = i;
-        Edge *edge = &edges[edge_idx];
-        bool merged = false;
+    int leftStartIdx = -1;
+    int rightStartIdx = -1;
+    for (int x = 0; x <= width; x++) {
+        for (int y = 0; y <= height; y++) {
+            const bool solid = IsSolid(x, y);
+            const bool solidLeft = IsSolid(x - 1, y);
 
-        for (;;) {
-            auto iter_before = edge_map.find(edge->KeyStart());
-            if (iter_before == edge_map.end()) {
-                break;
+            const bool isLeftEdge = solid && !solidLeft;
+            if (leftStartIdx == -1 && isLeftEdge) {
+                leftStartIdx = y;
+            } else if (leftStartIdx != -1 && (!isLeftEdge || y == height )) {
+                const Vector2 top   { (float)x * TILE_W, (float)leftStartIdx * TILE_W };
+                const Vector2 bottom{ (float)x * TILE_W, (float)y            * TILE_W };
+                edges.push_back(Edge{{ bottom, top }});
+                leftStartIdx = -1;
             }
 
-            size_t edge_before_idx = iter_before->second;
-            Edge *edge_before = &edges[edge_before_idx];
-
-            edge_map.erase(edge_before->KeyStart());
-            edge_map.erase(edge_before->KeyEnd());
-            edge_before->Add(*edge);
-
-            edge_idx = edge_before_idx;
-            edge = edge_before;
-            merged = true;
-        }
-
-        for (;;) {
-            auto iter_after = edge_map.find(edge->KeyEnd());
-            if (iter_after == edge_map.end()) {
-                break;
+            const bool isRightEdge = !solid && solidLeft;
+            if (rightStartIdx == -1 && isRightEdge) {
+                rightStartIdx = y;
+            } else if (rightStartIdx != -1 && (!isRightEdge || y == height )) {
+                const Vector2 top   { (float)x * TILE_W, (float)rightStartIdx * TILE_W };
+                const Vector2 bottom{ (float)x * TILE_W, (float)y             * TILE_W };
+                edges.push_back(Edge{{ top, bottom }});
+                rightStartIdx = -1;
             }
-
-            size_t edge_after_idx = iter_after->second;
-            Edge *edge_after = &edges[edge_after_idx];
-
-            edge_map.erase(edge_after->KeyStart());
-            edge_map.erase(edge_after->KeyEnd());
-            edge_after->Add(*edge);
-
-            edge_idx = edge_after_idx;
-            edge = edge_after;
-            merged = true;
-        }
-
-        edge_map[edge->KeyStart()] = edge_idx;
-        edge_map[edge->KeyEnd()] = edge_idx;
-    }
-
-    // HACK(dlb): Every edge is stored twice in edge_map so we need to de-dupe when collecting result
-    std::vector<bool> edge_used{};
-    edge_used.resize(edges.size());
-
-    Edge::Array merged_edges{};
-    for (auto &iter : edge_map) {
-        if (!edge_used[iter.second]) {
-            Edge &edge = edges[iter.second];
-            merged_edges.push_back(edge);
-            edge_used[iter.second] = true;
         }
     }
-
-    edges = merged_edges;
 }
 void Tilemap::UpdateEdges(void)
 {
+    //PerfTimer t{ "UpdateEdges" };
     edges.clear();
     GetEdges(edges);
-    MergeEdges(edges);
 }
 
 void Tilemap::ResolveEntityCollisionsEdges(Entity &entity)
@@ -508,7 +459,7 @@ void Tilemap::DrawColliders(Camera2D &camera)
 void Tilemap::DrawEdges(void)
 {
     for (const Edge &edge : edges) {
-        edge.Draw(MAGENTA);
+        edge.Draw(MAGENTA, 3.0f);
     }
 }
 void Tilemap::DrawTileIds(Camera2D &camera)

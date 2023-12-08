@@ -294,6 +294,7 @@ struct Tilemap {
 
     std::vector<uint32_t>   tiles       {};
     std::vector<uint32_t>   objects     {};
+    //std::vector<bool>       solid       {};
     // TODO(dlb): Consider having vector<Warp>, vector<Lootable> etc. and having vector<ObjectData> be pointers/indices into those tables?
     std::vector<ObjectData> object_data {};
     std::vector<AiPathNode> pathNodes   {};  // 94 19 56 22 57
@@ -348,7 +349,6 @@ struct Tilemap {
 
 private:
     void GetEdges(Edge::Array &edges);
-    void MergeEdges(Edge::Array &edges);
 
     bool NeedsFill(uint32_t x, uint32_t y, uint32_t old_tile_id);
     void Scan(uint32_t lx, uint32_t rx, uint32_t y, uint32_t old_tile_id, std::stack<Coord> &stack);
