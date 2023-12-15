@@ -145,8 +145,9 @@ void EntityDB::DrawEntityIds(uint32_t entity_id, Camera2D &camera)
     if (entity) {
         assert(entity->id == entity_id);
         assert(entity->type);
-        DrawTextEx(fntSmall, TextFormat("%u", entity->id), entity->Position2D(),
-            fntSmall.baseSize / camera.zoom, 1 / camera.zoom, WHITE);
+        const char *text = TextFormat("%u", entity->id);
+        Vector2 pos = GetWorldToScreen2D(entity->Position2D(), camera);
+        dlb_DrawTextShadowEx(fntMedium, CSTRLEN(text), pos, WHITE);
     }
 }
 void EntityDB::DrawEntity(Entity &entity, DrawCmdQueue &sortedDraws, bool highlight)

@@ -102,9 +102,9 @@ void draw_f3_menu(GameServer &server, Camera2D &camera)
             } else { \
                 snprintf(buf, sizeof(buf), fmt, __VA_ARGS__); \
             } \
-            DrawTextShadowEx(fntSmall, buf, hudCursor, RAYWHITE); \
+            dlb_DrawTextShadowEx(fntSmall, CSTRLEN(buf), hudCursor, RAYWHITE); \
             if (measureRect) { \
-                Vector2 measure = MeasureTextEx(fntSmall, buf, (float)fntSmall.baseSize, 1.0); \
+                Vector2 measure = dlb_MeasureTextEx(fntSmall, CSTRLEN(buf)); \
                 *measureRect = { hudCursor.x,hudCursor.y, measure.x, measure.y }; \
             } \
             hudCursor.y += fntSmall.baseSize; \
@@ -279,13 +279,13 @@ Err Play(GameServer &server)
                 // [World] Draw sorted object tiles and entities
                 sortedDraws.Draw();
 
-                // [Editor] Overlays
-                editor.DrawEntityOverlays(camera, server.now);
-
                 // [Debug] Last collision
                 DrawRectangleLinesEx(server.lastCollisionA, 1, RED);
                 DrawRectangleLinesEx(server.lastCollisionB, 1, GREEN);
             EndMode2D();
+
+            // [Editor] Overlays
+            editor.DrawEntityOverlays(camera, server.now);
 
             // [Editor] Menus, action bar, etc.
             editor.DrawUI({}, server, server.now);
@@ -342,7 +342,7 @@ int main(int argc, char *argv[])
         // NOTE(dlb): yojimbo uses rand() for network simulator and random_int()/random_float()
         srand((unsigned int)GetTime());
 
-        err = InitCommon();
+        err = Init();
         if (err) {
             printf("Failed to load common resources\n");
             break;
@@ -418,7 +418,7 @@ int main(int argc, char *argv[])
     server = {};
     ShutdownYojimbo();
 
-    FreeCommon();
+    Free();
     CloseAudioDevice();
     CloseWindow();
 

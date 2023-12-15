@@ -130,16 +130,16 @@ void TodoList::Draw(Vector2 position)
     uiStyle.margin = { 4, 0, 0, 4 };
     UI ui{ position, uiStyle };
 
-    UIState loadButton = ui.Button("Load");
+    UIState loadButton = ui.Button(CSTR("Load"));
     if (loadButton.released) {
         Load(TODO_LIST_PATH);
     }
 
     UIState saveButton;
     if (dirty) {
-        saveButton = ui.Button("Save*", ColorBrightness(ORANGE, -0.2f));
+        saveButton = ui.Button(CSTR("Save*"), ColorBrightness(ORANGE, -0.2f));
     } else {
-        saveButton = ui.Button("Save");
+        saveButton = ui.Button(CSTR("Save"));
     }
     if (saveButton.released) {
         Save(TODO_LIST_PATH);
@@ -147,26 +147,26 @@ void TodoList::Draw(Vector2 position)
 
     ui.Newline();
 
-    //DrawTextShadowEx(fntSmall, TextFormat("dragIdx: %d", textDraggingIndex), Vector2Add(uiPosition, uiCursor), fntSmall.baseSize, WHITE);
+    //dlb_DrawTextShadowEx(fntSmall, TextFormat("dragIdx: %d", textDraggingIndex), Vector2Add(uiPosition, uiCursor), fntSmall.baseSize, WHITE);
     //uiCursor.y += fntSmall.baseSize + 4;
 
     const Vector2 margin { 8, 6 };
     for (int i = 0; i < itemCount; i++) {
         if (items[i].done) {
-            UIState doneButton = ui.Button("Done", DARKGREEN);
+            UIState doneButton = ui.Button(CSTR("Done"), DARKGREEN);
             if (doneButton.released) {
                 items[i].done = false;
                 dirty = true;
             }
         } else {
-            UIState todoButton = ui.Button("Todo", MAROON);
+            UIState todoButton = ui.Button(CSTR("Todo"), MAROON);
             if (todoButton.released) {
                 items[i].done = true;
                 dirty = true;
             }
         }
 
-        UIState dragButton = ui.Button(" ", i == textDraggingIndex ? ORANGE : DARKGRAY);
+        UIState dragButton = ui.Button(CSTR(" "), i == textDraggingIndex ? ORANGE : DARKGRAY);
         if (dragButton.pressed) {
             textDraggingIndex = i;
         } else if (textDraggingIndex == i && !io.MouseButtonDown(MOUSE_BUTTON_LEFT)) {
@@ -207,7 +207,7 @@ void TodoList::Draw(Vector2 position)
 #endif
 
         Vector2 textPos = Vector2Add(ui.CursorScreen(), uiStyle.margin.TopLeft());
-        DrawTextShadowEx(fntSmall, items[i].text, textPos, WHITE);
+        dlb_DrawTextShadowEx(fntSmall, CSTRLEN(items[i].text), textPos, WHITE);
         ui.Newline();
     }
 }

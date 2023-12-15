@@ -90,7 +90,9 @@ void Histogram::DrawHover(void)
             entry.frame,
             entry.now
         );
-        Vector2 tipSize = MeasureTextEx(fntTiny, tipStr, fntTiny.baseSize, 1);
+        size_t tipStrLen = strlen(tipStr);
+
+        Vector2 tipSize = dlb_MeasureTextEx(fntTiny, tipStr, tipStrLen);
         Rectangle tipRect{ tipPos.x, tipPos.y, tipSize.x, tipSize.y };
         tipRect = RectGrow(tipRect, tipPad);
         RectConstrainToScreen(tipRect);
@@ -101,6 +103,6 @@ void Histogram::DrawHover(void)
 
         DrawRectangleRec(tipRect, Fade(BLACK, 0.8));
         DrawRectangleLinesEx(tipRect, 1, BLACK);
-        DrawTextEx(fntTiny, tipStr, tipPos, fntTiny.baseSize, 1, WHITE);
+        dlb_DrawTextEx(fntTiny, tipStr, tipStrLen, tipPos, WHITE);
     }
 }

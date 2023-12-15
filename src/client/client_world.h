@@ -114,15 +114,16 @@ struct Spinner {
             };
 
             const char *menuText = i < ARRAY_SIZE(items) ? items[i] : "-Empty-";
+            size_t menuTextLen = strlen(menuText);
 
             //DrawCircle(iconCenter.x, iconCenter.y, 2, BLACK);
-            Vector2 textSize = MeasureTextEx(fntMedium, menuText, fntMedium.baseSize, 1.0f);
+            Vector2 textSize = dlb_MeasureTextEx(fntMedium, menuText, menuTextLen);
             Vector2 textPos{
                 iconCenter.x - textSize.x / 2.0f,
                 iconCenter.y - textSize.y / 2.0f
             };
             //DrawTextShadowEx(fntMedium, TextFormat("%d %.2f", i, iconPieAlpha), iconCenter, RED);
-            DrawTextShadowEx(fntMedium, menuText, textPos, WHITE);
+            dlb_DrawTextShadowEx(fntMedium, menuText, menuTextLen, textPos, WHITE);
         }
 
 #if 0
@@ -203,7 +204,7 @@ struct Title {
             Clear();
             return;
         }
-        DrawTextShadowEx(fntBig, text.c_str(), titlePos, Fade(WHITE, alpha));
+        dlb_DrawTextShadowEx(fntBig, text.c_str(), text.size(), titlePos, Fade(WHITE, alpha));
     }
 };
 

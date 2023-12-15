@@ -8,86 +8,6 @@
 #define STB_HERRINGBONE_WANG_TILE_IMPLEMENTATION
 #include "stb_herringbone_wang_tile.cpp"
 
-Shader shdSdfText;
-Shader shdPixelFixer;
-int    shdPixelFixerScreenSizeUniformLoc;
-
-Font fntTiny;
-Font fntSmall;
-Font fntMedium;
-Font fntBig;
-
-const char *ErrStr(Err err)
-{
-    switch (err) {
-        case RN_SUCCESS         : return "RN_SUCCESS        ";
-        case RN_BAD_ALLOC       : return "RN_BAD_ALLOC      ";
-        case RN_BAD_MAGIC       : return "RN_BAD_MAGIC      ";
-        case RN_BAD_FILE_READ   : return "RN_BAD_FILE_READ  ";
-        case RN_BAD_FILE_WRITE  : return "RN_BAD_FILE_WRITE ";
-        case RN_INVALID_SIZE    : return "RN_INVALID_SIZE   ";
-        case RN_INVALID_PATH    : return "RN_INVALID_PATH   ";
-        case RN_NET_INIT_FAILED : return "RN_NET_INIT_FAILED";
-        case RN_INVALID_ADDRESS : return "RN_INVALID_ADDRESS";
-        case RN_RAYLIB_ERROR    : return "RN_RAYLIB_ERROR   ";
-        case RN_BAD_ID          : return "RN_BAD_ID         ";
-        case RN_OUT_OF_BOUNDS   : return "RN_OUT_OF_BOUNDS  ";
-        default                 : return TextFormat("Code %d", err);
-    }
-}
-
-// TODO: LoadPack placeholder textures/sounds etc. if fail
-Err InitCommon(void)
-{
-    PerfTimer t{ "InitCommon" };
-
-    Err err = RN_SUCCESS;
-    ERR_RETURN(Init());
-
-    rnStringCatalog.Init();
-
-    // LoadPack SDF required shader (we use default vertex shader)
-    shdSdfText = LoadShader(0, "resources/shader/sdf.fs");
-
-    shdPixelFixer                     = LoadShader("resources/shader/pixelfixer.vs", "resources/shader/pixelfixer.fs");
-    shdPixelFixerScreenSizeUniformLoc = GetShaderLocation(shdPixelFixer, "screenSize");
-
-#if 0
-    const char *fontName = "C:/Windows/Fonts/consolab.ttf";
-    if (!FileExists(fontName)) {
-        fontName = "resources/font/KarminaBold.otf";
-    }
-#else
-    const char *fontName = "resources/font/KarminaBold.otf";
-    //const char *fontName = "resources/font/PixelOperator-Bold.ttf";
-    //const char *fontName = "resources/font/PixelOperatorMono-Bold.ttf";
-#endif
-
-    fntTiny = dlb_LoadFontEx(fontName, 14, 0, 0, FONT_DEFAULT);
-    ERR_RETURN_EX(fntTiny.baseSize, RN_RAYLIB_ERROR);
-
-    fntSmall = dlb_LoadFontEx(fontName, 18, 0, 0, FONT_DEFAULT);
-    ERR_RETURN_EX(fntSmall.baseSize, RN_RAYLIB_ERROR);
-
-    fntMedium = dlb_LoadFontEx(fontName, 20, 0, 0, FONT_DEFAULT);
-    ERR_RETURN_EX(fntMedium.baseSize, RN_RAYLIB_ERROR);
-
-    fntBig = dlb_LoadFontEx(fontName, 46, 0, 0, FONT_DEFAULT);
-    ERR_RETURN_EX(fntBig.baseSize, RN_RAYLIB_ERROR);
-    //SetTextureFilter(fntBig.texture, TEXTURE_FILTER_BILINEAR);    // Required for SDF font
-
-    return err;
-}
-
-void FreeCommon(void)
-{
-    UnloadShader(shdSdfText);
-    UnloadFont(fntSmall);
-    UnloadFont(fntMedium);
-    UnloadFont(fntBig);
-    Free();
-}
-
 // LoadPack font from memory buffer, fileType refers to extension: i.e. ".ttf"
 Font dlb_LoadFontFromMemory(const char *fileType, const unsigned char *fileData, int dataSize, int fontSize, int *fontChars, int glyphCount, int type)
 {
@@ -159,6 +79,9 @@ Vector2 dlb_MeasureTextEx(Font font, const char *text, size_t textLen, Vector2 *
         return textSize;
     }
 
+    const float fontSize = font.baseSize;
+    const float spacing = 1.0f;
+
     Vector2 cur{};
     if (!cursor) {
         cursor = &cur;
@@ -202,7 +125,7 @@ Vector2 dlb_MeasureTextEx(Font font, const char *text, size_t textLen, Vector2 *
             if (!advanceX) {
                 advanceX = font.recs[glyphIndex].width + font.glyphs[glyphIndex].offsetX;
             }
-            cursor->x += advanceX;
+            cursor->x += advanceX + spacing;
             lineChars++;
         }
 
@@ -214,9 +137,6 @@ Vector2 dlb_MeasureTextEx(Font font, const char *text, size_t textLen, Vector2 *
 
     textWidth = MAX(cursor->x, textWidth);
     textHeight += font.baseSize;
-
-    const float fontSize = font.baseSize;
-    const float spacing = 1.0f;
 
     float scaleFactor = fontSize / font.baseSize;
     textSize.x = textWidth * scaleFactor + ((lineCharsMax - 1) * spacing); // Adds chars spacing to measure
@@ -358,24 +278,19 @@ void RandTests(void)
     printf("GetRandomFloatVariance(0.2f): %.2f - %.2f\n", cMin, cMax);
 }
 
-void DrawTextShadowEx(Font font, const char *text, Vector2 pos, Color color)
+void dlb_DrawTextShadowEx(Font font, const char *text, size_t textLen, Vector2 pos, Color color)
 {
     //BeginShaderMode(shdSdfText);
-#if 1
     Vector2 shadowPos = Vector2Add(pos, { 1, 1 });
     if (font.baseSize > 32) {
         shadowPos = Vector2AddValue(pos, 2);
     }
 
-    //DrawRectangle(windowWidth / 2 - textSize.x / 2, 370, textSize.x, textSize.y, WHITE);
     if (color.r || color.g || color.b) {
         // Don't draw shadows on black text
-        DrawTextEx(font, text, shadowPos, font.baseSize, 1, { 0, 0, 0, color.a });
+        dlb_DrawTextEx(font, text, textLen, shadowPos, { 0, 0, 0, color.a });
     }
-    DrawTextEx(font, text, pos, font.baseSize, 1, color);
-#else
-    DrawTextEx(font, text, pos, font.baseSize, 1, color);
-#endif
+    dlb_DrawTextEx(font, text, textLen, pos, color);
     //EndShaderMode();
 }
 
@@ -713,8 +628,10 @@ void dlb_CommonTests(void)
 #include "collision.cpp"
 #include "dlg.cpp"
 #include "data.cpp"
-#include "file_utils.cpp"
+#include "entity.cpp"
 #include "entity_db.cpp"
+#include "error.cpp"
+#include "file_utils.cpp"
 #include "histogram.cpp"
 #include "io.cpp"
 #include "net/net.cpp"

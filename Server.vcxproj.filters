@@ -14,4 +14,7 @@
   <ItemGroup>
     <ResourceCompile Include="src\server\Server.rc" />
   </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="src\common\ui\stb_textedit_config.h" />
+  </ItemGroup>
 </Project>

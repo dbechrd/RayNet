@@ -23,9 +23,9 @@ void draw_f3_menu(GameClient &client)
     char buf[128];
 #define DRAW_TEXT_MEASURE(measureRect, label, fmt, ...) { \
                 snprintf(buf, sizeof(buf), "%-11s : " fmt, label, __VA_ARGS__); \
-                DrawTextShadowEx(fntSmall, buf, hudCursor, RAYWHITE); \
+                dlb_DrawTextShadowEx(fntSmall, CSTRLEN(buf), hudCursor, RAYWHITE); \
                 if (measureRect) { \
-                    Vector2 measure = MeasureTextEx(fntSmall, buf, (float)fntSmall.baseSize, 1.0); \
+                    Vector2 measure = dlb_MeasureTextEx(fntSmall, CSTRLEN(buf)); \
                     *measureRect = { hudCursor.x, hudCursor.y, measure.x, measure.y }; \
                 } \
                 hudCursor.y += fntSmall.baseSize; \
@@ -151,7 +151,7 @@ int main(int argc, char *argv[])
     // NOTE(dlb): yojimbo uses rand() for network simulator and random_int()/random_float()
     srand((unsigned int)GetTime());
 
-    err = InitCommon();
+    err = Init();
     if (err) {
         printf("Failed to load common resources\n");
     }
@@ -489,7 +489,7 @@ int main(int argc, char *argv[])
     delete client;
     ShutdownYojimbo();
 
-    FreeCommon();
+    Free();
     CloseAudioDevice();
     CloseWindow();
 

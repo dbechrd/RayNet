@@ -60,15 +60,15 @@ void MenuMain::Draw(GameClient &client, bool &back)
         DrawRectangleLinesEx(menuBgRect, 20, BLACK);
     }
 #endif
-    UIState connectButton = uiMenu.Button("Play");
+    UIState connectButton = uiMenu.Button(CSTR("Play"));
     if (connectButton.released) {
         //rnSoundCatalog.Play(RN_Sound_Lily_Introduction);
         client.TryConnect();
     }
     uiMenu.Newline();
-    uiMenu.Button("Options");
+    uiMenu.Button(CSTR("Options"));
     uiMenu.Newline();
-    UIState quitButton = uiMenu.Button("Quit");
+    UIState quitButton = uiMenu.Button(CSTR("Quit"));
     if (quitButton.released) {
         back = true;
     }
@@ -122,9 +122,9 @@ void MenuConnecting::Draw(GameClient &client, bool &back)
     uiMenu.Space({ 0, (float)uiStyleMenu.font->baseSize / 2 });
 
     if (client.yj_client->IsConnecting()) {
-        uiMenu.Text(connecting_msgs[msg_index]);
+        uiMenu.Text(CSTRLEN(connecting_msgs[msg_index]));
     } else {
-        uiMenu.Text("   Loading...");
+        uiMenu.Text(CSTR("   Loading..."));
     }
     uiMenu.Newline();
 }

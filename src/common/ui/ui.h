@@ -1,5 +1,5 @@
 #pragma once
-#include "../common.h"
+#include "../data.h"
 
 enum UI_CtrlType {
     UI_CtrlTypeDefault,
@@ -101,17 +101,17 @@ struct UI {
 
     void Newline(void);
     void Space(Vector2 space);
-    UIState Text(const char *text);
-    UIState Text(const char *text, Color fgColor, Color bgColor = BLANK);
-    UIState Label(const char *text, int width);
+    UIState Text(const char *text, size_t textLen);
+    UIState Text(const char *text, size_t textLen, Color fgColor, Color bgColor = BLANK);
+    UIState Label(const char *text, size_t textLen, int width);
     UIState Image(const Texture &texture, Rectangle srcRect = {});
-    UIState Button(const char *text);
-    UIState Button(const char *text, Color bgColor);
-    UIState Button(const char *text, bool pressed, Color bgColor, Color bgColorPressed);
+    UIState Button(const char *text, size_t textLen);
+    UIState Button(const char *text, size_t textLen, Color bgColor);
+    UIState Button(const char *text, size_t textLen, bool pressed, Color bgColor, Color bgColorPressed);
 
     typedef void (*KeyPreCallback)(std::string &str, void *userData, bool &keyHandled);
     typedef void (*KeyPostCallback)(std::string &str, void *userData);
-    UIState Textbox(STB_TexteditState &state, std::string &text, KeyPreCallback preCallback = 0, KeyPostCallback postCallback = 0, void *userData = 0);
+    UIState Textbox(STB_TexteditState &state, std::string &text, bool singleline = true, KeyPreCallback preCallback = 0, KeyPostCallback postCallback = 0, void *userData = 0);
     UIState TextboxFloat(STB_TexteditState &stbState, float &value, float width = 0, const char *fmt = "%.2f", float increment = 1);
 
     inline Vector2 CursorScreen(void) {

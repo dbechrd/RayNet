@@ -189,7 +189,7 @@ void UI::Space(Vector2 space)
     cursor = Vector2Add(cursor, space);
 }
 
-UIState UI::Text(const char *text)
+UIState UI::Text(const char *text, size_t textLen)
 {
     const UIStyle &style = GetStyle();
 
@@ -200,7 +200,7 @@ UIState UI::Text(const char *text)
 
     Vector2 contentSize = style.size;
     if (contentSize.x <= 0 || contentSize.y <= 0) {
-        Vector2 textSize = MeasureTextEx(*style.font, text, style.font->baseSize, 1.0f);
+        Vector2 textSize = dlb_MeasureTextEx(*style.font, text, textLen);
         if (contentSize.x <= 0) {
             contentSize.x = textSize.x;
         }
@@ -237,7 +237,7 @@ UIState UI::Text(const char *text)
     }
 
     // Draw text
-    DrawTextShadowEx(*style.font, text, contentPos, style.fgColor);
+    dlb_DrawTextShadowEx(*style.font, text, textLen, contentPos, style.fgColor);
 
     //state.contentRect = ctrlRect;
     state.contentRect = { contentPos.x, contentPos.y, contentSize.x, contentSize.y };
@@ -245,21 +245,21 @@ UIState UI::Text(const char *text)
     return state;
 }
 
-UIState UI::Text(const char *text, Color fgColor, Color bgColor)
+UIState UI::Text(const char *text, size_t textLen, Color fgColor, Color bgColor)
 {
     UIStyle style = GetStyle();
     style.bgColor[UI_CtrlTypeDefault] = bgColor;
     style.fgColor = fgColor;
     PushStyle(style);
-    UIState state = Text(text);
+    UIState state = Text(text, textLen);
     PopStyle();
     return state;
 }
 
-UIState UI::Label(const char *text, int width)
+UIState UI::Label(const char *text, size_t textLen, int width)
 {
     PushWidth(width);
-    UIState state = Text(text);
+    UIState state = Text(text, textLen);
     PopStyle();
     return state;
 }
@@ -316,7 +316,7 @@ UIState UI::Image(const Texture &texture, Rectangle srcRect)
     return state;
 }
 
-UIState UI::Button(const char *text)
+UIState UI::Button(const char *text, size_t textLen)
 {
     const UIStyle &style = GetStyle();
 
@@ -330,7 +330,7 @@ UIState UI::Button(const char *text)
 
     Vector2 size = style.size;
     if (!size.x || !size.y) {
-        Vector2 textSize = MeasureTextEx(*style.font, text, style.font->baseSize, 1.0f);
+        Vector2 textSize = dlb_MeasureTextEx(*style.font, text, textLen);
         if (!size.x) size.x = textSize.x;
         if (!size.y) size.y = textSize.y;
     }
@@ -382,7 +382,7 @@ UIState UI::Button(const char *text)
     DrawRectangleRounded(contentRect, cornerRoundness, cornerSegments, bgColorFx);
 
     // Draw button text
-    DrawTextShadowEx(*style.font, text,
+    dlb_DrawTextShadowEx(*style.font, text, textLen,
         {
             contentRect.x + style.pad.left,
             contentRect.y + style.pad.top
@@ -396,23 +396,23 @@ UIState UI::Button(const char *text)
     return state;
 }
 
-UIState UI::Button(const char *text, Color bgColor)
+UIState UI::Button(const char *text, size_t textLen, Color bgColor)
 {
     UIStyle style = GetStyle();
     style.bgColor[UI_CtrlTypeButton] = bgColor;
     PushStyle(style);
-    UIState state = Button(text);
+    UIState state = Button(text, textLen);
     PopStyle();
     return state;
 }
 
-UIState UI::Button(const char *text, bool pressed, Color bgColor, Color bgColorPressed)
+UIState UI::Button(const char *text, size_t textLen, bool pressed, Color bgColor, Color bgColorPressed)
 {
     UIStyle style = GetStyle();
     style.bgColor[UI_CtrlTypeButton] = pressed ? bgColorPressed : bgColor;
     style.buttonPressed = pressed;
     PushStyle(style);
-    UIState state = Button(text);
+    UIState state = Button(text, textLen);
     PopStyle();
     return state;
 }
@@ -429,8 +429,10 @@ void RN_stb_layout_row(StbTexteditRow *row, StbString *str, int startIndex)
 {
     assert(startIndex == 0); // We're not handling multi-line for now
 
-    Vector2 textSize = MeasureTextEx(*str->font, str->data.c_str() + startIndex, str->font->baseSize, 1);
-    assert(textSize.y == str->font->baseSize);
+    Vector2 textSize = dlb_MeasureTextEx(*str->font, CSTRLEN(str->data.c_str() + startIndex));
+
+    // TODO: Handle multiline
+    //assert(textSize.y == str->font->baseSize);
 
     row->x0 = 0;
     row->x1 = textSize.x;
@@ -442,7 +444,7 @@ void RN_stb_layout_row(StbTexteditRow *row, StbString *str, int startIndex)
 
 int RN_stb_get_char_width(StbString *str, int startIndex, int offset) {
     std::string oneChar = str->data.substr((size_t)startIndex + offset, 1);
-    Vector2 charSize = MeasureTextEx(*str->font, oneChar.c_str(), str->font->baseSize, 1);
+    Vector2 charSize = dlb_MeasureTextEx(*str->font, CSTRS(oneChar));
     // NOTE(dlb): Wtf? Raylib probably doing int truncation bullshit.
     return charSize.x + 1;
 }
@@ -451,8 +453,11 @@ int RN_stb_key_to_char(int key)
 {
     if (isascii(key)) {
         return key;
+    } else if (key == KEY_ENTER || key == KEY_KP_ENTER) {
+        return '\n';
+    } else {
+        return -1;
     }
-    return -1;
 }
 
 int RN_stb_get_char(StbString *str, int index)
@@ -479,9 +484,8 @@ bool RN_stb_is_space(char ch)
 #define STB_TEXTEDIT_IMPLEMENTATION
 #include "stb_textedit.h"
 
-UIState UI::Textbox(STB_TexteditState &stbState,
-    std::string &text, KeyPreCallback preCallback,
-    KeyPostCallback postCallback, void *userData)
+UIState UI::Textbox(STB_TexteditState &stbState, std::string &text, bool singleline,
+                    KeyPreCallback preCallback, KeyPostCallback postCallback, void *userData)
 {
     const Vector2 textOffset{ 8, 2 };
     const UIStyle &style = GetStyle();
@@ -494,7 +498,7 @@ UIState UI::Textbox(STB_TexteditState &stbState,
 
     Vector2 contentSize = style.size;
     if (contentSize.x <= 0 || contentSize.y <= 0) {
-        Vector2 textSize = MeasureTextEx(*style.font, text.c_str(), style.font->baseSize, 1.0f);
+        Vector2 textSize = dlb_MeasureTextEx(*style.font, CSTRS(text));
         if (contentSize.x <= 0) {
             contentSize.x = textSize.x;
         }
@@ -551,7 +555,7 @@ UIState UI::Textbox(STB_TexteditState &stbState,
         const double timeSinceLastClick = now - lastClickTime;
 
         if (newlyActive) {
-            stb_textedit_initialize_state(&stbState, true);
+            stb_textedit_initialize_state(&stbState, singleline);
             prevActiveEditor = activeEditor;
             newlyActivePress = true;
         }
@@ -715,6 +719,8 @@ UIState UI::Textbox(STB_TexteditState &stbState,
             if (shift) mod |= STB_TEXTEDIT_K_SHIFT;
 
 #define STB_KEY(key) if (io.KeyPressed(key, true)) { stb_textedit_key(&str, &stbState, mod | key); }
+            STB_KEY(KEY_ENTER);
+            STB_KEY(KEY_KP_ENTER);
             STB_KEY(KEY_LEFT);
             STB_KEY(KEY_RIGHT);
             STB_KEY(KEY_UP);
@@ -816,7 +822,8 @@ UIState UI::Textbox(STB_TexteditState &stbState,
     }
 
     // Text
-    DrawTextShadowEx(*style.font, text.c_str(), { ctrlPosition.x + textOffset.x, ctrlPosition.y + textOffset.y }, RAYWHITE);
+    dlb_DrawTextShadowEx(*style.font, text.c_str(), text.size(),
+        { ctrlPosition.x + textOffset.x, ctrlPosition.y + textOffset.y }, RAYWHITE);
 
     // Selection highlight
     if (isActive) {
@@ -826,11 +833,11 @@ UIState UI::Textbox(STB_TexteditState &stbState,
             float selectOffsetX = 0;
             if (selectLeft) {
                 std::string textBeforeSelection = text.substr(0, selectLeft);
-                Vector2 textBeforeSelectionSize = MeasureTextEx(*style.font, textBeforeSelection.c_str(), style.font->baseSize, 1);
+                Vector2 textBeforeSelectionSize = dlb_MeasureTextEx(*style.font, CSTRS(textBeforeSelection));
                 selectOffsetX = textBeforeSelectionSize.x + 1;
             }
             std::string selectedText = text.substr(selectLeft, (size_t)selectRight - selectLeft);
-            Vector2 selectedTextSize = MeasureTextEx(*style.font, selectedText.c_str(), style.font->baseSize, 1);
+            Vector2 selectedTextSize = dlb_MeasureTextEx(*style.font, CSTRS(selectedText));
             float selectWidth = selectedTextSize.x;
             Rectangle selectionRect{
                 ctrlRect.x + textOffset.x + selectOffsetX,
@@ -841,23 +848,18 @@ UIState UI::Textbox(STB_TexteditState &stbState,
             DrawRectangleRec(selectionRect, Fade(SKYBLUE, 0.5f));
         }
 
-        float textBeforeCursorX = 0;
+        Vector2 measureCursor{};
         if (stbState.cursor) {
             std::string textBeforeCursor = text.substr(0, stbState.cursor);
-            Vector2 textBeforeCursorSize = MeasureTextEx(*style.font, textBeforeCursor.c_str(), style.font->baseSize, 1);
-            textBeforeCursorX = textBeforeCursorSize.x;
+            dlb_MeasureTextEx(*style.font, CSTRS(textBeforeCursor), &measureCursor);
         }
-        Vector2 cursorPos{
-            ctrlRect.x + textOffset.x + textBeforeCursorX,
-            ctrlRect.y + textOffset.y
-        };
+        Vector2 cursorPos = Vector2Add(ctrlPosition, Vector2Add(textOffset, measureCursor));
         Rectangle cursorRect{
             cursorPos.x,
             cursorPos.y,
             1,
             (float)style.font->baseSize
         };
-        //DrawTextEx(*style.font, "|", cursorPos, style.font->baseSize, 1, WHITE);
         DrawRectangleRec(cursorRect, RAYWHITE);
     }
 
@@ -941,7 +943,7 @@ UIState UI::TextboxFloat(STB_TexteditState &stbState, float &value, float width,
     std::string valueStr{valueCstr};
     if (width) PushWidth(width);
     TextboxFloatCallbackData data{ fmt, &value, increment };
-    UIState state = Textbox(stbState, valueStr, AdjustFloat, 0, (void *)&data);
+    UIState state = Textbox(stbState, valueStr, true, AdjustFloat, 0, (void *)&data);
     if (width) PopStyle();
     char *end = 0;
     float newValue = strtof(valueStr.c_str(), &end);

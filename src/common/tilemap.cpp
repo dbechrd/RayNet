@@ -288,6 +288,8 @@ void Tilemap::UpdateEdges(void)
 {
     //PerfTimer t{ "UpdateEdges" };
     edges.clear();
+
+    // TODO: Only run this when the edge list is dirty
     GetEdges(edges);
 }
 

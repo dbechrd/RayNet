@@ -11,117 +11,18 @@
 struct GameState {
     bool freye_introduced;
 };
+GameState game_state;
 
-Texture placeholderTex{};
-std::vector<Pack> packs{};
-GameState game_state{};
+std::vector<Pack> packs;
 
-GhostSnapshot::GhostSnapshot(Msg_S_EntitySnapshot &msg)
-{
-    server_time              = msg.server_time;
-    last_processed_input_cmd = msg.last_processed_input_cmd;
+Shader shdSdfText;
+Shader shdPixelFixer;
+int    shdPixelFixerScreenSizeUniformLoc;
 
-    // Entity
-    map_id   = msg.map_id;
-    position = msg.position;
-    on_warp_cooldown = msg.on_warp_cooldown;
-
-    // Life
-    hp_max   = msg.hp_max;
-    hp       = msg.hp;
-
-    // Physics
-    //speed    = msg.speed;
-    velocity = msg.velocity;
-}
-
-Vector2 Entity::Position2D(void) {
-    Vector2 screenPos{
-        floorf(position.x),
-        floorf(position.y - position.z)
-    };
-    return screenPos;
-}
-
-const GfxFrame &Entity::GetSpriteFrame() const
-{
-    const Sprite &sprite = packs[0].FindSprite(sprite_id);
-    const std::string &anim_id = sprite.anims[direction];
-    const GfxAnim &anim = packs[0].FindGraphicAnim(anim_id);
-    const std::string &frame_id = anim.GetFrame(anim_state.frame);
-    const GfxFrame &frame = packs[0].FindGraphicFrame(frame_id);
-    return frame;
-}
-Rectangle Entity::GetSpriteRect() const
-{
-    const GfxFrame &frame = GetSpriteFrame();
-    const Rectangle rect{
-        floorf(position.x - (float)(frame.w / 2)),
-        floorf(position.y - position.z - (float)frame.h),
-        (float)frame.w,
-        (float)frame.h
-    };
-    return rect;
-}
-
-Vector2 Entity::TopCenter(void) const
-{
-    const Rectangle rect = GetSpriteRect();
-    const Vector2 topCenter{
-        rect.x + rect.width / 2,
-        rect.y
-    };
-    return topCenter;
-}
-
-void Entity::ClearDialog(void) {
-    dialog_spawned_at = 0;
-    dialog_title = {};
-    dialog_message = {};
-}
-
-void Entity::TakeDamage(int damage) {
-    if (damage >= hp) {
-        hp = 0;
-    } else {
-        hp -= damage;
-    }
-}
-
-bool Entity::Alive(void) {
-    return hp > 0;
-}
-
-bool Entity::Dead(void) {
-    return !Alive();
-}
-
-void Entity::ApplyForce(Vector3 force) {
-    force_accum = Vector3Add(force_accum, force);
-}
-
-void GenPlaceholderTexture()
-{
-    // Generate checkerboard image in slot 0 as a placeholder for when other images fail to load
-    Image placeholderImg = GenImageChecked(16, 16, 4, 4, MAGENTA, WHITE);
-    if (placeholderImg.width) {
-        placeholderTex = LoadTextureFromImage(placeholderImg);
-        if (placeholderTex.width) {
-            //pack.gfx_files[0].id = GFX_FILE_NONE;
-            //pack.gfx_files[0].texture = placeholderTex;
-
-            //pack.gfx_frames[0].id = GFX_FRAME_NONE;
-            //pack.gfx_frames[0].gfx = GFX_FILE_NONE;
-            //pack.gfx_frames[0].w = placeholderTex.width;
-            //pack.gfx_frames[0].h = placeholderTex.height;
-        } else {
-            printf("[data] WARN: Failed to generate placeholder texture\n");
-        }
-        UnloadImage(placeholderImg);
-    } else {
-        printf("[data] WARN: Failed to generate placeholder image\n");
-    }
-}
+Font fntTiny;
+Font fntSmall;
+Font fntMedium;
+Font fntBig;
 
 uint32_t FreyeIntroListener(uint32_t source_id, uint32_t target_id, uint32_t dialog_id) {
     uint32_t final_dialog_id = dialog_id;
@@ -717,7 +618,41 @@ Err LoadResources(Pack &pack);
 
 Err Init(void)
 {
+    PerfTimer t{ "InitCommon" };
+
     Err err = RN_SUCCESS;
+
+    rnStringCatalog.Init();
+
+    // LoadPack SDF required shader (we use default vertex shader)
+    shdSdfText = LoadShader(0, "resources/shader/sdf.fs");
+
+    shdPixelFixer                     = LoadShader("resources/shader/pixelfixer.vs", "resources/shader/pixelfixer.fs");
+    shdPixelFixerScreenSizeUniformLoc = GetShaderLocation(shdPixelFixer, "screenSize");
+
+#if 0
+    const char *fontName = "C:/Windows/Fonts/consolab.ttf";
+    if (!FileExists(fontName)) {
+        fontName = "resources/font/KarminaBold.otf";
+    }
+#else
+    const char *fontName = "resources/font/KarminaBold.otf";
+    //const char *fontName = "resources/font/PixelOperator-Bold.ttf";
+    //const char *fontName = "resources/font/PixelOperatorMono-Bold.ttf";
+#endif
+
+    fntTiny = dlb_LoadFontEx(fontName, 14, 0, 0, FONT_DEFAULT);
+    ERR_RETURN_EX(fntTiny.baseSize, RN_RAYLIB_ERROR);
+
+    fntSmall = dlb_LoadFontEx(fontName, 18, 0, 0, FONT_DEFAULT);
+    ERR_RETURN_EX(fntSmall.baseSize, RN_RAYLIB_ERROR);
+
+    fntMedium = dlb_LoadFontEx(fontName, 20, 0, 0, FONT_DEFAULT);
+    ERR_RETURN_EX(fntMedium.baseSize, RN_RAYLIB_ERROR);
+
+    fntBig = dlb_LoadFontEx(fontName, 46, 0, 0, FONT_DEFAULT);
+    ERR_RETURN_EX(fntBig.baseSize, RN_RAYLIB_ERROR);
+    //SetTextureFilter(fntBig.texture, TEXTURE_FILTER_BILINEAR);    // Required for SDF font
 
     //GenPlaceholderTexture();
 
@@ -770,6 +705,13 @@ Err Init(void)
 }
 void Free(void)
 {
+    UnloadShader(shdSdfText);
+    UnloadShader(shdPixelFixer);
+    UnloadFont(fntTiny);
+    UnloadFont(fntSmall);
+    UnloadFont(fntMedium);
+    UnloadFont(fntBig);
+
     // NOTE(dlb): ~Material is crashing for unknown reason. double free or trying to free string constant??
     // NOTE(dlb): delete pack takes *forever*. Who cares. Let OS figure it out.
 #ifndef FAST_EXIT_SKIP_FREE
@@ -1354,22 +1296,6 @@ Err LoadResources(Pack &pack)
             }
         }
     }
-
-#if 0
-    // Place checkerboard image in slot 0 as a placeholder for when other images fail to load
-    assert(placeholderTex.width);
-
-    assert(pack.gfx_files.size());
-    assert(pack.gfx_files[0].id.empty());
-    pack.gfx_files[0].texture = placeholderTex;
-
-    assert(pack.gfx_frames.size());
-    assert(pack.gfx_frames[0].id.empty());
-    //pack.gfx_frames[0].id = GFX_FRAME_NONE;
-    //pack.gfx_frames[0].gfx = GFX_FILE_NONE;
-    pack.gfx_frames[0].w = placeholderTex.width;
-    pack.gfx_frames[0].h = placeholderTex.height;
-#endif
 
     return err;
 }

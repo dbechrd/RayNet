@@ -24,6 +24,9 @@
   <ItemGroup>
     <ResourceCompile Include="src\server\Server.rc" />
   </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="src\common\ui\stb_textedit_config.h" />
+  </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>16.0</VCProjectVersion>
     <Keyword>Win32Proj</Keyword>

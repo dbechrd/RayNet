@@ -382,9 +382,11 @@ void ClientWorld::Update(GameClient &client)
     UpdateCamera(client);
     spinner.Update();
 
-    // TODO: Idk how to make this frame independent, but it's a hack so wutevs. Fix it one day.
-    if ((int)fmod(client.now * 100, 100) == GetRandomValue(0, 9)) {
+    // TODO: Make this based on something (at the very least, the # of chickens nearby)
+    static double next_cluck_at = 0;
+    if (client.now >= next_cluck_at) {
         PlaySound("sfx_chicken_cluck");
+        next_cluck_at = client.now + 5 + GetRandomFloatVariance(4);
     }
 }
 
@@ -545,7 +547,7 @@ void ClientWorld::DrawDialog(GameClient &client, Entity &entity, Vector2 bottomC
     const float marginBottom = 4.0f;
     const Vector2 bgPad{ 12, 8 };
 
-    const Vector2 titleSize = MeasureTextEx(font, entity.dialog_title.c_str(), font.baseSize, 1);
+    const Vector2 titleSize = dlb_MeasureTextEx(font, CSTRS(entity.dialog_title));
 
     DialogNodeList msgNodes{};
     char *msgBuf = (char *)entity.dialog_message.c_str();
@@ -560,7 +562,7 @@ void ClientWorld::DrawDialog(GameClient &client, Entity &entity, Vector2 bottomC
     Vector2 msgCursor{};
     Vector2 msgSize{};
     for (DialogNode &node : msgNodes) {
-        Vector2 nodeSize = dlb_MeasureTextEx(font, node.text.data(), node.text.size(), &msgCursor);
+        Vector2 nodeSize = dlb_MeasureTextEx(font, CSTRS(node.text), &msgCursor);
         msgSize.x = MAX(msgSize.x, nodeSize.x);
         msgSize.y = msgCursor.y + MIN(nodeSize.y, font.baseSize);
     }
@@ -617,7 +619,7 @@ void ClientWorld::DrawDialog(GameClient &client, Entity &entity, Vector2 bottomC
     dlb_DrawNPatch(bgRect);
     //DrawRectangleRounded(msgBgRect, 0.2f, 6, Fade(BLACK, 0.5));
     //DrawRectangleRoundedLines(msgBgRect, 0.2f, 6, 1.0f, RAYWHITE);
-    DrawTextEx(font, entity.dialog_title.c_str(), titlePos, font.baseSize, 1.0f, GOLD);
+    dlb_DrawTextEx(font, CSTRS(entity.dialog_title), titlePos, GOLD);
 
     float separatorY = titlePos.y + titleSize.y + bgPad.y / 2;
     DrawLine(
@@ -673,7 +675,7 @@ void ClientWorld::DrawDialogTips(std::vector<FancyTextTip> tips)
         Vector2 tipPos = Vector2Add(GetMousePosition(), { 0, 20 });
         tipPos.x = floorf(tipPos.x);
         tipPos.y = floorf(tipPos.y);
-        Vector2 tipSize = MeasureTextEx(*tip.font, tipText, tip.font->baseSize, 1);
+        Vector2 tipSize = dlb_MeasureTextEx(*tip.font, CSTRLEN(tipText));
 
         Rectangle tipRec{
             tipPos.x, tipPos.y,
@@ -775,19 +777,18 @@ void ClientWorld::DrawHUDEntityHoverInfo(void)
         DrawRectangleRec(hpBar, ColorBrightness(MAROON, -0.4));
     }
 
-    Vector2 labelSize = MeasureTextEx(fntMedium, e_hovered.name.c_str(), fntMedium.baseSize, 1);
+    Vector2 labelSize = dlb_MeasureTextEx(fntMedium, CSTRS(e_hovered.name));
     Vector2 labelPos{
         floorf(hpBarBg.x + hpBarBg.width / 2 - labelSize.x / 2),
         floorf(hpBarBg.y + hpBarBg.height / 2 - labelSize.y / 2)
     };
-    DrawTextShadowEx(fntMedium, e_hovered.name.c_str(), labelPos, WHITE);
+    dlb_DrawTextShadowEx(fntMedium, e_hovered.name.c_str(), e_hovered.name.size(), labelPos, WHITE);
 }
 void ClientWorld::DrawHUDSignEditor(void)
 {
     IO::Scoped scope(IO::IO_HUDSignEditor);
 
     static bool editingSign = false;
-    static char signText[64]{ "This is some sign text" };
 
     if (!editingSign) {
         if (io.KeyPressed(KEY_ONE)) {
@@ -828,20 +829,18 @@ void ClientWorld::DrawHUDSignEditor(void)
         UIState uiState{};
         uiState.hover = dlb_CheckCollisionPointRec(GetMousePosition(), uiSignedEditorRect);
 
-        static STB_TexteditState txtEditSign[4]{};
-        static std::string signText[4]{};
+        static STB_TexteditState txtEditSign{};
+        static std::string signText{};
 
         UIPad margin = uiSignEditorStyle.margin;
         //margin.left -= 4;
         //margin.bottom -= 4;
         uiSignEditor.PushMargin(margin);
         uiSignEditor.PushWidth(uiSignEditorSize.x); // - (uiSignEditorStyle.margin.left + uiSignEditorStyle.margin.right));
-        //uiSignEditor.PushBgColor(Fade(PINK, 0.2f), UI_CtrlTypeTextbox);
-        uiSignEditor.PushBgColor(BLANK, UI_CtrlTypeTextbox);
-        for (int i = 0; i < 4; i++) {
-            uiSignEditor.Textbox(txtEditSign[i], signText[i], 0, LimitStringLength, (void *)15);
-            uiSignEditor.Newline();
-        }
+        uiSignEditor.PushBgColor(Fade(PINK, 0.2f), UI_CtrlTypeTextbox);
+        //uiSignEditor.PushBgColor(BLANK, UI_CtrlTypeTextbox);
+        uiSignEditor.Textbox(txtEditSign, signText, false, 0, LimitStringLength, (void *)128);
+        uiSignEditor.Newline();
         uiSignEditor.PopStyle();
         uiSignEditor.PopStyle();
         uiSignEditor.PopStyle();
@@ -859,21 +858,25 @@ void ClientWorld::DrawHUDMenu(void)
     UI uiHUDMenu{ {}, uiHUDMenuStyle };
 
     // TODO: Add Quit button to the menu at the very least
-    uiHUDMenu.Button("Menu");
-    uiHUDMenu.Button("Quests");
-    uiHUDMenu.Button("Inventory");
-    uiHUDMenu.Button("Map");
+    uiHUDMenu.Button(CSTR("Menu"));
+    uiHUDMenu.Button(CSTR("Quests"));
+    uiHUDMenu.Button(CSTR("Inventory"));
+    uiHUDMenu.Button(CSTR("Map"));
     uiHUDMenu.Newline();
 
     const char *holdingItem = spinner.ItemName();
     if (!holdingItem) {
         holdingItem = "-Empty-";
     }
-    uiHUDMenu.Text(holdingItem);
+    uiHUDMenu.Text(CSTRLEN(holdingItem));
     uiHUDMenu.Newline();
 
     Tilemap *map = LocalPlayerMap();
-    uiHUDMenu.Text(map ? map->background_music.c_str() : "-Empty-");
+    if (map) {
+        uiHUDMenu.Text(map->background_music.c_str(), map->background_music.size());
+    } else {
+        uiHUDMenu.Text(CSTR("-Empty-"));
+    }
     uiHUDMenu.Newline();
 }
 void ClientWorld::Draw(GameClient &client)

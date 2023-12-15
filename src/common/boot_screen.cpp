@@ -1,21 +1,41 @@
 #include "boot_screen.h"
 
-void DrawBootScreen(void)
+void DrawBootScreenMessage(const char *msg, int dots)
 {
     BeginDrawing();
     ClearBackground(BLACK);
-    static const std::string loadingText = "Loading...";
-    Vector2 loadingTextSize = MeasureTextEx(GetFontDefault(), loadingText.c_str(), 96.0f, 4.0f);
-    DrawTextEx(
-        GetFontDefault(),
-        loadingText.c_str(),
-        {
-            GetRenderWidth() / 2.0f - loadingTextSize.x / 2.0f,
-            GetRenderHeight() / 2.0f - loadingTextSize.y / 2.0f
-        },
-        96.0f,
-        4.0f,
-        WHITE
-    );
+    Font font = GetFontDefault();
+    const float fontSize = 48.0f;
+    const float spacing = 4.0f;
+    Vector2 msgSize = MeasureTextEx(font, msg, fontSize, spacing);
+    Vector2 msgPos{
+        GetRenderWidth() / 2.0f - msgSize.x / 2.0f,
+        GetRenderHeight() / 2.0f - msgSize.y / 2.0f
+    };
+    DrawTextEx(font, msg, msgPos, fontSize, spacing, WHITE);
+
+    if (dots) {
+        Vector2 dotPos = msgPos;
+        dotPos.x += msgSize.x + spacing;
+
+        const char *dotBuf = "...";
+        DrawTextEx(font, TextFormat("%.*s", CLAMP(dots, 1, 3), dotBuf), dotPos, fontSize, spacing, WHITE);
+    }
+
     EndDrawing();
+}
+
+void DrawBootScreen(void)
+{
+    const char *msgs[]{
+        "Dusting off the scripts",
+        "Modernizing the humor",
+        "Clearing the narrator's throat",
+    };
+    for (const char *msg : msgs) {
+        for (int i = 0; i <= 3; i++) {
+            DrawBootScreenMessage(msg, i);
+            yojimbo_sleep(0.1);
+        }
+    }
 }
