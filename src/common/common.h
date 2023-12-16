@@ -95,6 +95,7 @@
 
 #define SV_PORT                              4040 //40000
 #define SV_TICK_DT                           (1.0/30.0)
+#define SV_RENDER                            1
 #define SV_MAX_PLAYERS                       8
 #define SV_MAX_ENTITIES                      256
 #define SV_MAX_ENTITY_NAME_LEN               63 // "Goranza The Arch-Nemesis Defiler of Doom" was the longest name I could think of when I wrote this

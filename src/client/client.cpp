@@ -21,18 +21,21 @@ void draw_f3_menu(GameClient &client)
     hudCursor.y += (Histogram::histoHeight + 8) * 3;
 
     char buf[128];
-#define DRAW_TEXT_MEASURE(measureRect, label, fmt, ...) { \
-                snprintf(buf, sizeof(buf), "%-11s : " fmt, label, __VA_ARGS__); \
-                dlb_DrawTextShadowEx(fntSmall, CSTRLEN(buf), hudCursor, RAYWHITE); \
-                if (measureRect) { \
-                    Vector2 measure = dlb_MeasureTextEx(fntSmall, CSTRLEN(buf)); \
-                    *measureRect = { hudCursor.x, hudCursor.y, measure.x, measure.y }; \
-                } \
-                hudCursor.y += fntSmall.baseSize; \
-            }
+
+#define DRAW_TEXT_MEASURE(measureRect, label, fmt, ...) \
+    { \
+        snprintf(buf, sizeof(buf), "%-12s : " fmt, label, __VA_ARGS__); \
+        dlb_DrawTextShadowEx(fntSmall, CSTRLEN(buf), hudCursor, RAYWHITE); \
+        if (measureRect) { \
+            Vector2 measure = dlb_MeasureTextEx(fntSmall, CSTRLEN(buf)); \
+            *measureRect = { hudCursor.x, hudCursor.y, measure.x, measure.y }; \
+        } \
+        hudCursor.y += fntSmall.baseSize; \
+    }
 
 #define DRAW_TEXT(label, fmt, ...) \
-                DRAW_TEXT_MEASURE((Rectangle *)0, label, fmt, __VA_ARGS__)
+    DRAW_TEXT_MEASURE((Rectangle *)0, label, fmt, __VA_ARGS__)
+
 
     DRAW_TEXT("frameDt", "%.2f fps (%.2f ms) (vsync=%s)",
         1.0 / client.frameDtSmooth,
@@ -184,8 +187,6 @@ int main(int argc, char *argv[])
     GameClient *client = new GameClient(GetTime());
     client->Start();
     client->menu_system.TransitionTo(Menu::MENU_MAIN);
-
-    static float texMenuBgScale = 0;
 
     bool quit = false;
     while (!quit) {
@@ -358,11 +359,6 @@ int main(int argc, char *argv[])
         //--------------------
         // Networking
         if (doNetTick) {
-            texMenuBgScale += 0.001f;
-            if (texMenuBgScale > 1.1f) {
-                texMenuBgScale = 0;
-            }
-
             client->Update();
             client->lastNetTick = client->now;
             client->netTickAccum -= SV_TICK_DT;

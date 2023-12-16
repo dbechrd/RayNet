@@ -35,7 +35,7 @@ void DrawBootScreen(void)
     for (const char *msg : msgs) {
         for (int i = 0; i <= 3; i++) {
             DrawBootScreenMessage(msg, i);
-            yojimbo_sleep(0.1);
+            //yojimbo_sleep(0.1);
         }
     }
 }

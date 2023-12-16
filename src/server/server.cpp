@@ -5,6 +5,7 @@
 #include "../common/perf_timer.h"
 #include "../common/ui/ui.h"
 #include "editor.h"
+#include "f3_menu.h"
 #include "game_server.h"
 
 void RN_TraceLogCallback(int logLevel, const char *text, va_list args)
@@ -83,100 +84,6 @@ void UpdateCamera(Camera2D &camera)
     }
 }
 
-void draw_f3_menu(GameServer &server, Camera2D &camera)
-{
-    io.PushScope(IO::IO_F3Menu);
-
-    Vector2 hudCursor{
-        GetRenderWidth() - 360.0f - 8.0f,
-        8.0f
-    };
-
-    Vector2 histoCursor = hudCursor;
-    hudCursor.y += (Histogram::histoHeight + 8) * 1;
-
-    char buf[128];
-#define DRAW_TEXT_MEASURE(measureRect, label, fmt, ...) { \
-            if (label) { \
-                snprintf(buf, sizeof(buf), "%-12s : " fmt, label, __VA_ARGS__); \
-            } else { \
-                snprintf(buf, sizeof(buf), fmt, __VA_ARGS__); \
-            } \
-            dlb_DrawTextShadowEx(fntSmall, CSTRLEN(buf), hudCursor, RAYWHITE); \
-            if (measureRect) { \
-                Vector2 measure = dlb_MeasureTextEx(fntSmall, CSTRLEN(buf)); \
-                *measureRect = { hudCursor.x,hudCursor.y, measure.x, measure.y }; \
-            } \
-            hudCursor.y += fntSmall.baseSize; \
-        }
-
-#define DRAW_TEXT(label, fmt, ...) \
-        DRAW_TEXT_MEASURE((Rectangle *)0, label, fmt, __VA_ARGS__)
-
-    DRAW_TEXT((const char *)0, "%.2f fps (%.2f ms) (vsync=%s)",
-        1.0 / server.frameDt,
-        server.frameDt * 1000.0,
-        IsWindowState(FLAG_VSYNC_HINT) ? "on" : "off"
-    );
-    DRAW_TEXT("time", "%.02f", server.yj_server->GetTime());
-    DRAW_TEXT("tick", "%" PRIu64, server.tick);
-    DRAW_TEXT("tickAccum", "%.02f", server.tickAccum);
-    DRAW_TEXT("window", "%d, %d", GetScreenWidth(), GetScreenHeight());
-    DRAW_TEXT("render", "%d, %d", GetRenderWidth(), GetRenderHeight());
-    DRAW_TEXT("cursorScn", "%d, %d", GetMouseX(), GetMouseY());
-    const Vector2 cursorWorldPos = GetScreenToWorld2D({ (float)GetMouseX(), (float)GetMouseY() }, camera);
-    DRAW_TEXT("cursorWld", "%.f, %.f", cursorWorldPos.x, cursorWorldPos.y);
-    DRAW_TEXT("clients", "%d", server.yj_server->GetNumConnectedClients());
-
-    static bool showClientInfo[yojimbo::MaxClients];
-    for (int clientIdx = 0; clientIdx < yojimbo::MaxClients; clientIdx++) {
-        if (!server.yj_server->IsClientConnected(clientIdx)) {
-            continue;
-        }
-
-        Rectangle clientRowRect{};
-        DRAW_TEXT_MEASURE(&clientRowRect,
-            showClientInfo[clientIdx] ? "[-] client" : "[+] client",
-            "%d", clientIdx
-        );
-
-        bool hudHover = CheckCollisionPointRec({ (float)GetMouseX(), (float)GetMouseY() }, clientRowRect);
-        if (hudHover) {
-            io.CaptureMouse();
-            if (io.MouseButtonPressed(MOUSE_BUTTON_LEFT)) {
-                showClientInfo[clientIdx] = !showClientInfo[clientIdx];
-            }
-        }
-        if (showClientInfo[clientIdx]) {
-            hudCursor.x += 16.0f;
-            yojimbo::NetworkInfo netInfo{};
-            server.yj_server->GetNetworkInfo(clientIdx, netInfo);
-            DRAW_TEXT("  rtt", "%.02f", netInfo.RTT);
-            DRAW_TEXT("  % loss", "%.02f", netInfo.packetLoss);
-            DRAW_TEXT("  sent (kbps)", "%.02f", netInfo.sentBandwidth);
-            DRAW_TEXT("  recv (kbps)", "%.02f", netInfo.receivedBandwidth);
-            DRAW_TEXT("  ack  (kbps)", "%.02f", netInfo.ackedBandwidth);
-            DRAW_TEXT("  sent (pckt)", "%" PRIu64, netInfo.numPacketsSent);
-            DRAW_TEXT("  recv (pckt)", "%" PRIu64, netInfo.numPacketsReceived);
-            DRAW_TEXT("  ack  (pckt)", "%" PRIu64, netInfo.numPacketsAcked);
-            hudCursor.x -= 16.0f;
-        }
-    }
-
-    histoFps.Draw(histoCursor);
-    histoCursor.y += Histogram::histoHeight + 8;
-    //histoInput.Draw(histoCursor);
-    //histoCursor.y += Histogram::histoHeight + 8;
-    //histoDx.Draw(histoCursor);
-    //histoCursor.y += Histogram::histoHeight + 8;
-
-    histoFps.DrawHover();
-    //histoInput.DrawHover();
-    //histoDx.DrawHover();
-
-    io.PopScope();
-}
-
 Err Play(GameServer &server)
 {
     Err err = RN_SUCCESS;
@@ -197,11 +104,9 @@ Err Play(GameServer &server)
         server.frameDt = MIN(server.now - server.frameStart, SV_TICK_DT * 3);  // arbitrary limit for now
         server.frameDtSmooth = LERP(server.frameDtSmooth, server.frameDt, 0.1);
         server.frameStart = server.now;
-
         server.tickAccum += server.frameDt;
 
-        bool doNetTick = server.tickAccum >= SV_TICK_DT;
-
+#if SV_RENDER
         // Global Input (ignores io stack; only for function keys)
         if (IsKeyPressed(KEY_F3)) {
             server.showF3Menu = !server.showF3Menu;
@@ -240,19 +145,22 @@ Err Play(GameServer &server)
 
         Histogram::Entry histoEntry{ server.frame, server.now };
         histoEntry.value = server.frameDt * 1000.0f;
+        const bool doNetTick = server.tickAccum >= SV_TICK_DT;
         histoEntry.color = doNetTick ? DARKPURPLE : RAYWHITE;
         histoFps.Push(histoEntry);
+#endif
 
+        uint64_t oldTick = server.tick;
         if (server.tickAccum >= SV_TICK_DT) {
             //printf("[%.2f][%.2f] ServerUpdate %d\n", server.tickAccum, now, (int)server.tick);
-            double accum = server.tickAccum;
             server.Update();
-            accum -= server.tickAccum;
+        }
+        const double dt = (server.tick - oldTick) * SV_TICK_DT;
 
+#if SV_RENDER
+        if (dt) {
             // Editor/graphical stuff
-            UpdateTileDefAnimations(accum);
-            //auto &editor_map = packs[1].FindTilemap(editor.map_id);
-            //editor_map.UpdateAnimations(accum);
+            UpdateTileDefAnimations(dt);
         }
 
         //--------------------
@@ -288,13 +196,17 @@ Err Play(GameServer &server)
             editor.DrawEntityOverlays(camera, server.now);
 
             // [Editor] Menus, action bar, etc.
-            editor.DrawUI({}, server, server.now);
+            editor.DrawUI({}, server.now);
 
             // [Debug] FPS, clock, etc.
             if (server.showF3Menu) {
-                draw_f3_menu(server, camera);
+                F3Menu_Draw(server, camera);
             }
         EndDrawing();  // has to be last thing in loop (i.e. raylib does all its finalization stuff here)
+#else
+        BeginDrawing();
+        EndDrawing();
+#endif
 
         yojimbo_sleep(0.001);
 
@@ -427,5 +339,6 @@ int main(int argc, char *argv[])
 
 #include "../common/common.cpp"
 #include "../common/boot_screen.cpp"
-#include "game_server.cpp"
 #include "editor.cpp"
+#include "f3_menu.cpp"
+#include "game_server.cpp"

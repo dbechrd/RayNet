@@ -251,7 +251,6 @@ void GameServer::Update(void)
 
     bool hasDelta = false;
     while (tickAccum >= SV_TICK_DT) {
-        UpdateServerPlayers();
         Tick();
         tickAccum -= SV_TICK_DT;
         hasDelta = true;
@@ -329,6 +328,133 @@ Entity *GameServer::SpawnEntity(EntityType type)
     Entity *entity = entityDb->SpawnEntity(entityId, type, now);
     return entity;
 }
+Entity *GameServer::SpawnEntityProto(uint32_t map_id, Vector3 position, EntityProto &proto)
+{
+    assert(proto.type);
+
+    Tilemap *map = FindMap(map_id);
+    if (!map) return 0;
+
+    Entity *entity = SpawnEntity(proto.type);
+    if (!entity) return 0;
+
+    entity->spec                 = proto.spec;
+    entity->map_id               = map_id;
+    entity->name                 = proto.name;
+    entity->position             = position;
+    entity->ambient_fx           = proto.ambient_fx;
+    entity->ambient_fx_delay_min = proto.ambient_fx_delay_min;
+    entity->ambient_fx_delay_max = proto.ambient_fx_delay_max;
+    entity->radius               = proto.radius;
+    entity->dialog_root_key      = proto.dialog_root_key;
+    entity->hp_max               = proto.hp_max;
+    entity->hp                   = entity->hp_max;
+    entity->path_id              = proto.path_id;  // TODO: Give the path a name, e.g. "PATH_TOWN_LILY"
+    entity->drag                 = proto.drag;
+    entity->speed                = GetRandomValue(proto.speed_min, proto.speed_max);
+    entity->sprite_id            = proto.sprite_id;
+    entity->direction            = proto.direction;
+
+    AiPathNode *aiPathNode = map->GetPathNode(entity->path_id, 0);
+    if (aiPathNode) {
+        entity->position.x = aiPathNode->pos.x;
+        entity->position.y = aiPathNode->pos.y;
+    }
+
+    return entity;
+}
+Entity *GameServer::SpawnProjectile(uint32_t map_id, Vector3 position, Vector2 direction, Vector3 initial_velocity)
+{
+    Entity *projectile = SpawnEntity(ENTITY_PROJECTILE);
+    if (!projectile) return 0;
+
+    projectile->spec = ENTITY_SPEC_PRJ_FIREBALL;
+
+    // [Entity] position
+    projectile->position = position;
+    projectile->map_id = map_id;
+
+    // [Physics] shoot in facing direction
+    Vector2 dir = Vector2Scale(direction, 100);
+    // [Physics] add a bit of random spread
+    dir.x += GetRandomValue(-20, 20);
+    dir.y += GetRandomValue(-20, 20);
+    dir = Vector2Normalize(dir);
+    const float random_speed = GetRandomValue(400, 500);
+    Vector3 velocity = initial_velocity;
+    velocity.x += dir.x * random_speed;
+    velocity.y += dir.y * random_speed;
+    // [Physics] random speed
+    projectile->velocity = velocity;
+    projectile->drag = 0.02f;
+
+    projectile->sprite_id = packs[0].FindSpriteByName("sprite_prj_fireball").id;
+    //projectile->direction = DIR_E;
+
+    BroadcastEntitySpawn(projectile->id);
+    return projectile;
+}
+void GameServer::WarpEntity(Entity &entity, uint32_t dest_map_id, Vector3 dest_pos)
+{
+    Tilemap *dest_map = FindOrLoadMap(dest_map_id);
+    if (dest_map) {
+        entity.map_id = dest_map->id;
+        entity.position = dest_pos;
+        entity.force_accum = {};
+        entity.velocity = {};
+
+        if (entity.type == ENTITY_PLAYER) {
+            Tilemap &map = packs[1].FindTilemap(entity.map_id);
+            if (map.title.size()) {
+                int clientIdx = 0;
+                ServerPlayer *player = FindServerPlayer(entity.id, &clientIdx);
+                if (player) {
+                    SendTitleShow(clientIdx, map.title);
+                }
+            }
+        }
+    } else {
+        // TODO: This needs to ask GameServer to load the new map and
+        // we also need to move our victim to the new map
+
+        assert(!"TODO: Load map dynamically");
+        //Err err = Load(warp.templateMap);
+        //if (err) {
+        //    assert(!"UH-OH");
+        //    exit(EXIT_FAILURE);
+        //}
+
+#if 0
+        // TODO: Make a copy of the template map if you wanna edit it
+        err = Save(warp.destMap);
+        if (err) {
+            assert(!"UH-OH");
+            exit(EXIT_FAILURE);
+        }
+#endif
+
+#if 0
+        // TODO: The GameServer should be making a new map using the
+        // template. Not this function. Return something useful to the
+        // game server (e.g. map_id or mapTemplateId).
+        WangTileset wangTileset{};
+        err = wangTileset.Load(*this, warp.templateTileset);
+        if (err) {
+            assert(!"UH-OH");
+            exit(EXIT_FAILURE);
+        }
+
+        WangMap wangMap{};
+        err = wangTileset.GenerateMap(width, height, *this, wangMap);
+        if (err) {
+            assert(!"UH-OH");
+            exit(EXIT_FAILURE);
+        }
+
+        SetFromWangMap(wangMap, now);
+#endif
+    }
+}
 void GameServer::DespawnEntity(uint32_t entityId)
 {
     if (entityDb->DespawnEntity(entityId, now)) {
@@ -353,6 +479,347 @@ void GameServer::DestroyDespawnedEntities(void)
             entityDb->DestroyEntity(entity.id);
         }
     }
+}
+
+void GameServer::TickPlayers(void)
+{
+    for (ServerPlayer &sv_player : players) {
+        const InputCmd *input_cmd = 0;
+        for (int i = 0; i < sv_player.inputQueue.size(); i++) {
+            const InputCmd &cmd = sv_player.inputQueue[i];
+            if (cmd.seq > sv_player.lastInputSeq) {
+                input_cmd = &cmd;
+                sv_player.lastInputSeq = input_cmd->seq;
+                //printf("Processed command %d\n", (int32_t)tick - (int32_t)input_cmd->seq);
+                break;
+            }
+        }
+
+        if (input_cmd) {
+            Entity *player = entityDb->FindEntity(sv_player.entityId, ENTITY_PLAYER);
+            if (player) {
+                Vector3 move_force = input_cmd->GenerateMoveForce(player->speed);
+                player->ApplyForce(move_force);
+
+                if (input_cmd->fire) {
+                    if (now - player->last_attacked_at > player->attack_cooldown) {
+                        Vector3 projectile_spawn_pos = player->position;
+                        projectile_spawn_pos.z += 24;  // "hand" height
+                        Entity *projectile = SpawnProjectile(player->map_id, projectile_spawn_pos, input_cmd->facing, player->velocity);
+                        if (projectile) {
+                            Vector3 recoil_force{};
+                            recoil_force.x = -projectile->velocity.x;
+                            recoil_force.y = -projectile->velocity.y;
+                            player->ApplyForce(recoil_force);
+                        }
+                        player->last_attacked_at = now;
+                        player->attack_cooldown = 0.3;
+                    }
+                }
+            } else {
+                assert(0);
+                printf("[game_server] Player entityId %u out of range. Cannot process inputCmd.\n", sv_player.entityId);
+            }
+        }
+    }
+}
+void GameServer::TickSpawnTownNPCs(uint32_t map_id)
+{
+    static EntityProto *townfolk[]{
+        &protoDb.npc_lily,
+        &protoDb.npc_freye,
+        &protoDb.npc_nessa,
+        &protoDb.npc_elane
+    };
+    static uint32_t townfolk_ids[4];
+    static uint32_t chicken_ids[10];
+
+    // TODO: put entities in some map mdesk file or something?
+    // when join game, make new save directory that copies all the datas:
+    //  "saves/20231016/map/overworld.mdesk"  (contains all entity states, modified blocks, etc.)
+    //  "saves/20231016/dungeon/cave.mdesk"   (contains RNG generated cave map for this playthrough)
+    // entities: [
+    //     {
+    //         proto_name: npc_chicken
+    //         position: 300 200 108
+    //         health: 300
+    //     }
+    // ]
+
+    assert(ARRAY_SIZE(townfolk) == ARRAY_SIZE(townfolk_ids));
+
+    const double townfolkSpawnRate = 2.0;
+    if (now - lastTownfolkSpawnedAt >= townfolkSpawnRate) {
+        for (int i = 0; i < ARRAY_SIZE(townfolk_ids); i++) {
+            Entity *entity = entityDb->FindEntity(townfolk_ids[i], ENTITY_NPC);
+            if (!entity) {
+                entity = SpawnEntityProto(map_id, { 0, 0 }, *townfolk[i]);
+                if (entity) {
+                    BroadcastEntitySpawn(entity->id);
+                    townfolk_ids[i] = entity->id;
+                    lastTownfolkSpawnedAt = now;
+                }
+                break;
+            }
+        }
+    }
+
+    const double chickenSpawnCooldown = 3.0;
+    if (now - lastChickenSpawnedAt >= chickenSpawnCooldown) {
+        for (int i = 0; i < ARRAY_SIZE(chicken_ids); i++) {
+            Entity *entity = entityDb->FindEntity(chicken_ids[i], ENTITY_NPC);
+            if (!entity) {
+                Vector3 spawn{};
+                // TODO: If chicken spawns inside something, immediately despawn
+                //       it (or find better strat for this)
+                spawn.x = GetRandomValue(400, 2400);
+                spawn.y = GetRandomValue(2000, 3400);
+                entity = SpawnEntityProto(map_id, spawn, protoDb.npc_chicken);
+                if (entity) {
+                    BroadcastEntitySpawn(entity->id);
+                    chicken_ids[i] = entity->id;
+                    lastChickenSpawnedAt = now;
+                }
+                break;
+            }
+        }
+    }
+}
+void GameServer::TickSpawnCaveNPCs(uint32_t map_id)
+{
+    for (int i = 0; i < ARRAY_SIZE(eid_bots); i++) {
+        Entity *entity = entityDb->FindEntity(eid_bots[i], ENTITY_NPC);
+        if (!entity && ((int)tick % 100 == i * 10)) {
+            entity = SpawnEntity(ENTITY_NPC);
+            if (!entity) continue;
+
+            entity->name = "Cave Lily";
+
+            entity->map_id = map_id;
+            entity->position = { 1620, 450 };
+
+            entity->radius = 10;
+
+            entity->hp_max = 100;
+            entity->hp = entity->hp_max;
+
+            entity->speed = GetRandomValue(300, 600);
+            entity->drag = 8.0f;
+
+            entity->sprite_id = packs[0].FindSpriteByName("sprite_npc_lily").id;
+            //entity->direction = DIR_E;
+
+            BroadcastEntitySpawn(entity->id);
+            eid_bots[i] = entity->id;
+        }
+    }
+}
+void GameServer::TickEntityNPC(Entity &e_npc, double dt)
+{
+    Tilemap *map = FindMap(e_npc.map_id);
+    if (!map) return;
+
+    if (now - e_npc.dialog_spawned_at > SV_ENTITY_DIALOG_INTERESTED_DURATION) {
+        e_npc.dialog_spawned_at = 0;
+    }
+
+    // TODO: tick_pathfind?
+    if (e_npc.path_id && !e_npc.dialog_spawned_at) {
+        AiPathNode *ai_path_node = map->GetPathNode(e_npc.path_id, e_npc.path_node_target);
+        if (ai_path_node) {
+            Vector3 target = ai_path_node->pos;
+            Vector3 to_target = Vector3Subtract(target, e_npc.position);
+            if (Vector3LengthSqr(to_target) < 10 * 10) {
+                if (e_npc.path_node_last_reached != e_npc.path_node_target) {
+                    // Arrived at a new node
+                    e_npc.path_node_last_reached = e_npc.path_node_target;
+                    e_npc.path_node_arrived_at = now;
+                }
+                if (now - e_npc.path_node_arrived_at > ai_path_node->waitFor) {
+                    // Been at node long enough, move on
+                    e_npc.path_node_target = map->GetNextPathNodeIndex(e_npc.path_id, e_npc.path_node_target);
+                }
+            } else {
+                e_npc.path_node_last_reached = 0;
+                e_npc.path_node_arrived_at = 0;
+
+                Vector3 move_force = to_target;
+                move_force = Vector3Normalize(move_force);
+                move_force = Vector3Scale(move_force, e_npc.speed);
+                e_npc.ApplyForce(move_force);
+            }
+
+#if 0
+            InputCmd aiCmd{};
+            if (eBot.position.x < target.x) {
+                aiCmd.east = true;
+            } else if (eBot.position.x > target.x) {
+                aiCmd.west = true;
+            }
+            if (eBot.position.y < target.y) {
+                aiCmd.south = true;
+            } else if (eBot.position.y > target.y) {
+                aiCmd.north = true;
+            }
+
+            Vector2 move_force = aiCmd.GenerateMoveForce(eBot.speed);
+#else
+
+#endif
+        }
+    }
+
+    // Chicken pathing AI (really bad)
+    if (e_npc.spec == ENTITY_SPEC_NPC_CHICKEN) {
+        if (e_npc.colliding) {
+            e_npc.path_rand_direction = {};
+        }
+
+        if (now - e_npc.path_rand_started_at >= e_npc.path_rand_duration) {
+            double duration = 0;
+            Vector3 dir{};
+            if (Vector3LengthSqr(e_npc.path_rand_direction) == 0) {
+                dir.x = GetRandomFloatMinusOneToOne();
+                dir.y = GetRandomFloatMinusOneToOne();
+                dir = Vector3Normalize(dir);
+                duration = GetRandomValue(2, 4);
+            } else {
+                dir = {};
+                duration = GetRandomValue(5, 10);
+            }
+            e_npc.path_rand_started_at = now;
+            e_npc.path_rand_direction = dir;
+            e_npc.path_rand_duration = duration;
+        }
+        Vector3 move = Vector3Scale(e_npc.path_rand_direction, e_npc.speed);
+        e_npc.ApplyForce(move);
+    }
+
+    entityDb->EntityTick(e_npc, dt);
+}
+void GameServer::TickEntityPlayer(Entity &e_player, double dt)
+{
+    entityDb->EntityTick(e_player, dt);
+}
+void GameServer::TickEntityProjectile(Entity &e_projectile, double dt)
+{
+    // Gravity
+    //AspectPhysics &ePhysics = map.ePhysics[entityIndex];
+    //playerEntity.ApplyForce({ 0, 5 });
+
+    entityDb->EntityTick(e_projectile, dt);
+
+    if (now - e_projectile.spawned_at > 1.0) {
+        DespawnEntity(e_projectile.id);
+    }
+
+    if (e_projectile.despawned_at) {
+        return;
+    }
+
+    for (Entity &e_target : entityDb->entities) {
+        if (e_target.type == ENTITY_NPC
+            && !e_target.despawned_at
+            && e_target.Alive()
+            && e_target.map_id == e_projectile.map_id)
+        {
+            assert(e_target.id);
+            if (e_target.Dead()) {
+                continue;
+            }
+
+            Rectangle projectileHitbox = e_projectile.GetSpriteRect();
+            Rectangle targetHitbox = e_target.GetSpriteRect();
+            if (CheckCollisionRecs(projectileHitbox, targetHitbox)) {
+                e_target.TakeDamage(GetRandomValue(3, 8));
+                if (e_target.Alive()) {
+                    if (!e_target.dialog_spawned_at) {
+                        switch (e_target.spec) {
+                            case ENTITY_SPEC_NPC_TOWNFOLK: {
+                                //BroadcastEntitySay(victim.id, TextFormat("Ouch! You hit me with\nprojectile #%u!", entity.id));
+                                BroadcastEntitySay(e_target.id, e_target.name, "Ouch!");
+                                break;
+                            }
+                            case ENTITY_SPEC_NPC_CHICKEN: {
+                                BroadcastEntitySay(e_target.id, e_target.name, "*squawk*!");
+                                break;
+                            }
+                        }
+                    }
+                } else {
+                    DespawnEntity(e_target.id);
+                }
+                DespawnEntity(e_projectile.id);
+                lastCollisionA = projectileHitbox;
+                lastCollisionB = targetHitbox;
+            }
+        }
+    }
+}
+void GameServer::TickResolveEntityWarpCollisions(Tilemap &map, Entity &entity, double now)
+{
+    if (!entity.on_warp || entity.on_warp_cooldown) {
+        return;
+    }
+    if (entity.type != ENTITY_PLAYER) {
+        return;
+    }
+
+    ObjectData *obj_data = map.GetObjectData(entity.on_warp_coord.x, entity.on_warp_coord.y);
+    if (obj_data) {
+        assert(obj_data->type == "warp");
+        Vector3 dest{};
+        dest.x = obj_data->warp_dest_x * TILE_W + TILE_W * 0.5f;
+        dest.y = obj_data->warp_dest_y * TILE_W + TILE_W - entity.radius; // * 0.5f;
+        dest.z = obj_data->warp_dest_z;
+        WarpEntity(entity, obj_data->warp_map_id, dest);
+        entity.on_warp_cooldown = true;
+    } else {
+        TraceLog(LOG_WARNING, "We're on a warp, but there's no warp object found at that coord. Did it disappear?");
+    }
+}
+void GameServer::Tick(void)
+{
+    TickPlayers();
+
+    // TODO: Only do this when the map loads or changes.
+    for (Tilemap &map : packs[1].tile_maps) {
+        map.UpdateEdges();
+    }
+
+    // HACK: Only spawn NPCs in map 1, whatever map that may be (hopefully it's Level_001)
+    Tilemap &level_001 = packs[1].FindTilemapByName(LEVEL_001);
+    TickSpawnTownNPCs(level_001.id);
+    //TickSpawnCaveNPCs(2);
+
+    // Tick entites
+    for (Entity &entity : entityDb->entities) {
+        if (!entity.type || entity.despawned_at) {
+            continue;
+        }
+        assert(entity.id);
+
+        // TODO: if (map.sleeping) continue
+
+        switch (entity.type) {
+            case ENTITY_NPC:        TickEntityNPC        (entity, SV_TICK_DT); break;
+            case ENTITY_PLAYER:     TickEntityPlayer     (entity, SV_TICK_DT); break;
+            case ENTITY_PROJECTILE: TickEntityProjectile (entity, SV_TICK_DT); break;
+        }
+
+        Tilemap *map = FindMap(entity.map_id);
+        if (map) {
+            map->ResolveEntityCollisionsEdges(entity);
+            map->ResolveEntityCollisionsTriggers(entity);
+            TickResolveEntityWarpCollisions(*map, entity, now);
+        }
+
+        bool newlySpawned = entity.spawned_at == now;
+        UpdateSprite(entity, SV_TICK_DT, newlySpawned);
+    }
+
+    tick++;
+    lastTickedAt = yj_server->GetTime();
 }
 
 void GameServer::SerializeSpawn(uint32_t entityId, Msg_S_EntitySpawn &entitySpawn)
@@ -791,471 +1258,6 @@ void GameServer::ProcessMessages(void)
     }
 }
 
-Entity *GameServer::SpawnProjectile(uint32_t map_id, Vector3 position, Vector2 direction, Vector3 initial_velocity)
-{
-    Entity *projectile = SpawnEntity(ENTITY_PROJECTILE);
-    if (!projectile) return 0;
-
-    projectile->spec = ENTITY_SPEC_PRJ_FIREBALL;
-
-    // [Entity] position
-    projectile->position = position;
-    projectile->map_id = map_id;
-
-    // [Physics] shoot in facing direction
-    Vector2 dir = Vector2Scale(direction, 100);
-    // [Physics] add a bit of random spread
-    dir.x += GetRandomValue(-20, 20);
-    dir.y += GetRandomValue(-20, 20);
-    dir = Vector2Normalize(dir);
-    const float random_speed = GetRandomValue(400, 500);
-    Vector3 velocity = initial_velocity;
-    velocity.x += dir.x * random_speed;
-    velocity.y += dir.y * random_speed;
-    // [Physics] random speed
-    projectile->velocity = velocity;
-    projectile->drag = 0.02f;
-
-    projectile->sprite_id = packs[0].FindSpriteByName("sprite_prj_fireball").id;
-    //projectile->direction = DIR_E;
-
-    BroadcastEntitySpawn(projectile->id);
-    return projectile;
-}
-Entity *GameServer::SpawnEntityProto(uint32_t map_id, Vector3 position, EntityProto &proto)
-{
-    assert(proto.type);
-
-    Tilemap *map = FindMap(map_id);
-    if (!map) return 0;
-
-    Entity *entity = SpawnEntity(proto.type);
-    if (!entity) return 0;
-
-    entity->spec                 = proto.spec;
-    entity->map_id               = map_id;
-    entity->name                 = proto.name;
-    entity->position             = position;
-    entity->ambient_fx           = proto.ambient_fx;
-    entity->ambient_fx_delay_min = proto.ambient_fx_delay_min;
-    entity->ambient_fx_delay_max = proto.ambient_fx_delay_max;
-    entity->radius               = proto.radius;
-    entity->dialog_root_key      = proto.dialog_root_key;
-    entity->hp_max               = proto.hp_max;
-    entity->hp                   = entity->hp_max;
-    entity->path_id              = proto.path_id;  // TODO: Give the path a name, e.g. "PATH_TOWN_LILY"
-    entity->drag                 = proto.drag;
-    entity->speed                = GetRandomValue(proto.speed_min, proto.speed_max);
-    entity->sprite_id            = proto.sprite_id;
-    entity->direction            = proto.direction;
-
-    AiPathNode *aiPathNode = map->GetPathNode(entity->path_id, 0);
-    if (aiPathNode) {
-        entity->position.x = aiPathNode->pos.x;
-        entity->position.y = aiPathNode->pos.y;
-    }
-
-    return entity;
-}
-void GameServer::UpdateServerPlayers(void)
-{
-    for (ServerPlayer &sv_player : players) {
-        const InputCmd *input_cmd = 0;
-        for (int i = 0; i < sv_player.inputQueue.size(); i++) {
-            const InputCmd &cmd = sv_player.inputQueue[i];
-            if (cmd.seq > sv_player.lastInputSeq) {
-                input_cmd = &cmd;
-                sv_player.lastInputSeq = input_cmd->seq;
-                //printf("Processed command %d\n", (int32_t)tick - (int32_t)input_cmd->seq);
-                break;
-            }
-        }
-
-        if (input_cmd) {
-            Entity *player = entityDb->FindEntity(sv_player.entityId, ENTITY_PLAYER);
-            if (player) {
-                Vector3 move_force = input_cmd->GenerateMoveForce(player->speed);
-                player->ApplyForce(move_force);
-
-                if (input_cmd->fire) {
-                    if (now - player->last_attacked_at > player->attack_cooldown) {
-                        Vector3 projectile_spawn_pos = player->position;
-                        projectile_spawn_pos.z += 24;  // "hand" height
-                        Entity *projectile = SpawnProjectile(player->map_id, projectile_spawn_pos, input_cmd->facing, player->velocity);
-                        if (projectile) {
-                            Vector3 recoil_force{};
-                            recoil_force.x = -projectile->velocity.x;
-                            recoil_force.y = -projectile->velocity.y;
-                            player->ApplyForce(recoil_force);
-                        }
-                        player->last_attacked_at = now;
-                        player->attack_cooldown = 0.3;
-                    }
-                }
-            } else {
-                assert(0);
-                printf("[game_server] Player entityId %u out of range. Cannot process inputCmd.\n", sv_player.entityId);
-            }
-        }
-    }
-}
-void GameServer::TickSpawnTownNPCs(uint32_t map_id)
-{
-    static EntityProto *townfolk[]{
-        &protoDb.npc_lily,
-        &protoDb.npc_freye,
-        &protoDb.npc_nessa,
-        &protoDb.npc_elane
-    };
-    static uint32_t townfolk_ids[4];
-    static uint32_t chicken_ids[10];
-
-    // TODO: put entities in some map mdesk file or something?
-    // when join game, make new save directory that copies all the datas:
-    //  "saves/20231016/map/overworld.mdesk"  (contains all entity states, modified blocks, etc.)
-    //  "saves/20231016/dungeon/cave.mdesk"   (contains RNG generated cave map for this playthrough)
-    // entities: [
-    //     {
-    //         proto_name: npc_chicken
-    //         position: 300 200 108
-    //         health: 300
-    //     }
-    // ]
-
-    assert(ARRAY_SIZE(townfolk) == ARRAY_SIZE(townfolk_ids));
-
-    const double townfolkSpawnRate = 2.0;
-    if (now - lastTownfolkSpawnedAt >= townfolkSpawnRate) {
-        for (int i = 0; i < ARRAY_SIZE(townfolk_ids); i++) {
-            Entity *entity = entityDb->FindEntity(townfolk_ids[i], ENTITY_NPC);
-            if (!entity) {
-                entity = SpawnEntityProto(map_id, { 0, 0 }, *townfolk[i]);
-                if (entity) {
-                    BroadcastEntitySpawn(entity->id);
-                    townfolk_ids[i] = entity->id;
-                    lastTownfolkSpawnedAt = now;
-                }
-                break;
-            }
-        }
-    }
-
-    const double chickenSpawnCooldown = 3.0;
-    if (now - lastChickenSpawnedAt >= chickenSpawnCooldown) {
-        for (int i = 0; i < ARRAY_SIZE(chicken_ids); i++) {
-            Entity *entity = entityDb->FindEntity(chicken_ids[i], ENTITY_NPC);
-            if (!entity) {
-                Vector3 spawn{};
-                // TODO: If chicken spawns inside something, immediately despawn
-                //       it (or find better strat for this)
-                spawn.x = GetRandomValue(400, 2400);
-                spawn.y = GetRandomValue(2000, 3400);
-                entity = SpawnEntityProto(map_id, spawn, protoDb.npc_chicken);
-                if (entity) {
-                    BroadcastEntitySpawn(entity->id);
-                    chicken_ids[i] = entity->id;
-                    lastChickenSpawnedAt = now;
-                }
-                break;
-            }
-        }
-    }
-}
-void GameServer::TickSpawnCaveNPCs(uint32_t map_id)
-{
-    for (int i = 0; i < ARRAY_SIZE(eid_bots); i++) {
-        Entity *entity = entityDb->FindEntity(eid_bots[i], ENTITY_NPC);
-        if (!entity && ((int)tick % 100 == i * 10)) {
-            entity = SpawnEntity(ENTITY_NPC);
-            if (!entity) continue;
-
-            entity->name = "Cave Lily";
-
-            entity->map_id = map_id;
-            entity->position = { 1620, 450 };
-
-            entity->radius = 10;
-
-            entity->hp_max = 100;
-            entity->hp = entity->hp_max;
-
-            entity->speed = GetRandomValue(300, 600);
-            entity->drag = 8.0f;
-
-            entity->sprite_id = packs[0].FindSpriteByName("sprite_npc_lily").id;
-            //entity->direction = DIR_E;
-
-            BroadcastEntitySpawn(entity->id);
-            eid_bots[i] = entity->id;
-        }
-    }
-}
-void GameServer::TickEntityNPC(Entity &e_npc, double dt)
-{
-    Tilemap *map = FindMap(e_npc.map_id);
-    if (!map) return;
-
-    if (now - e_npc.dialog_spawned_at > SV_ENTITY_DIALOG_INTERESTED_DURATION) {
-        e_npc.dialog_spawned_at = 0;
-    }
-
-    // TODO: tick_pathfind?
-    if (e_npc.path_id && !e_npc.dialog_spawned_at) {
-        AiPathNode *ai_path_node = map->GetPathNode(e_npc.path_id, e_npc.path_node_target);
-        if (ai_path_node) {
-            Vector3 target = ai_path_node->pos;
-            Vector3 to_target = Vector3Subtract(target, e_npc.position);
-            if (Vector3LengthSqr(to_target) < 10 * 10) {
-                if (e_npc.path_node_last_reached != e_npc.path_node_target) {
-                    // Arrived at a new node
-                    e_npc.path_node_last_reached = e_npc.path_node_target;
-                    e_npc.path_node_arrived_at = now;
-                }
-                if (now - e_npc.path_node_arrived_at > ai_path_node->waitFor) {
-                    // Been at node long enough, move on
-                    e_npc.path_node_target = map->GetNextPathNodeIndex(e_npc.path_id, e_npc.path_node_target);
-                }
-            } else {
-                e_npc.path_node_last_reached = 0;
-                e_npc.path_node_arrived_at = 0;
-
-                Vector3 move_force = to_target;
-                move_force = Vector3Normalize(move_force);
-                move_force = Vector3Scale(move_force, e_npc.speed);
-                e_npc.ApplyForce(move_force);
-            }
-
-    #if 0
-            InputCmd aiCmd{};
-            if (eBot.position.x < target.x) {
-                aiCmd.east = true;
-            } else if (eBot.position.x > target.x) {
-                aiCmd.west = true;
-            }
-            if (eBot.position.y < target.y) {
-                aiCmd.south = true;
-            } else if (eBot.position.y > target.y) {
-                aiCmd.north = true;
-            }
-
-            Vector2 move_force = aiCmd.GenerateMoveForce(eBot.speed);
-    #else
-
-    #endif
-        }
-    }
-
-    // Chicken pathing AI (really bad)
-    if (e_npc.spec == ENTITY_SPEC_NPC_CHICKEN) {
-        if (e_npc.colliding) {
-            e_npc.path_rand_direction = {};
-        }
-
-        if (now - e_npc.path_rand_started_at >= e_npc.path_rand_duration) {
-            double duration = 0;
-            Vector3 dir{};
-            if (Vector3LengthSqr(e_npc.path_rand_direction) == 0) {
-                dir.x = GetRandomFloatMinusOneToOne();
-                dir.y = GetRandomFloatMinusOneToOne();
-                dir = Vector3Normalize(dir);
-                duration = GetRandomValue(2, 4);
-            } else {
-                dir = {};
-                duration = GetRandomValue(5, 10);
-            }
-            e_npc.path_rand_started_at = now;
-            e_npc.path_rand_direction = dir;
-            e_npc.path_rand_duration = duration;
-        }
-        Vector3 move = Vector3Scale(e_npc.path_rand_direction, e_npc.speed);
-        e_npc.ApplyForce(move);
-    }
-
-    entityDb->EntityTick(e_npc, dt);
-}
-void GameServer::TickEntityPlayer(Entity &e_player, double dt)
-{
-    entityDb->EntityTick(e_player, dt);
-}
-void GameServer::TickEntityProjectile(Entity &e_projectile, double dt)
-{
-    // Gravity
-    //AspectPhysics &ePhysics = map.ePhysics[entityIndex];
-    //playerEntity.ApplyForce({ 0, 5 });
-
-    entityDb->EntityTick(e_projectile, dt);
-
-    if (now - e_projectile.spawned_at > 1.0) {
-        DespawnEntity(e_projectile.id);
-    }
-
-    if (e_projectile.despawned_at) {
-        return;
-    }
-
-    for (Entity &e_target : entityDb->entities) {
-        if (e_target.type == ENTITY_NPC
-            && !e_target.despawned_at
-            && e_target.Alive()
-            && e_target.map_id == e_projectile.map_id)
-        {
-            assert(e_target.id);
-            if (e_target.Dead()) {
-                continue;
-            }
-
-            Rectangle projectileHitbox = e_projectile.GetSpriteRect();
-            Rectangle targetHitbox = e_target.GetSpriteRect();
-            if (CheckCollisionRecs(projectileHitbox, targetHitbox)) {
-                e_target.TakeDamage(GetRandomValue(3, 8));
-                if (e_target.Alive()) {
-                    if (!e_target.dialog_spawned_at) {
-                        switch (e_target.spec) {
-                            case ENTITY_SPEC_NPC_TOWNFOLK: {
-                                //BroadcastEntitySay(victim.id, TextFormat("Ouch! You hit me with\nprojectile #%u!", entity.id));
-                                BroadcastEntitySay(e_target.id, e_target.name, "Ouch!");
-                                break;
-                            }
-                            case ENTITY_SPEC_NPC_CHICKEN: {
-                                BroadcastEntitySay(e_target.id, e_target.name, "*squawk*!");
-                                break;
-                            }
-                        }
-                    }
-                } else {
-                    DespawnEntity(e_target.id);
-                }
-                DespawnEntity(e_projectile.id);
-                lastCollisionA = projectileHitbox;
-                lastCollisionB = targetHitbox;
-            }
-        }
-    }
-}
-void GameServer::WarpEntity(Entity &entity, uint32_t dest_map_id, Vector3 dest_pos)
-{
-    Tilemap *dest_map = FindOrLoadMap(dest_map_id);
-    if (dest_map) {
-        entity.map_id = dest_map->id;
-        entity.position = dest_pos;
-        entity.force_accum = {};
-        entity.velocity = {};
-
-        if (entity.type == ENTITY_PLAYER) {
-            Tilemap &map = packs[1].FindTilemap(entity.map_id);
-            if (map.title.size()) {
-                int clientIdx = 0;
-                ServerPlayer *player = FindServerPlayer(entity.id, &clientIdx);
-                if (player) {
-                    SendTitleShow(clientIdx, map.title);
-                }
-            }
-        }
-    } else {
-        // TODO: This needs to ask GameServer to load the new map and
-        // we also need to move our victim to the new map
-
-        assert(!"TODO: Load map dynamically");
-        //Err err = Load(warp.templateMap);
-        //if (err) {
-        //    assert(!"UH-OH");
-        //    exit(EXIT_FAILURE);
-        //}
-
-#if 0
-        // TODO: Make a copy of the template map if you wanna edit it
-        err = Save(warp.destMap);
-        if (err) {
-            assert(!"UH-OH");
-            exit(EXIT_FAILURE);
-        }
-#endif
-
-#if 0
-        // TODO: The GameServer should be making a new map using the
-        // template. Not this function. Return something useful to the
-        // game server (e.g. map_id or mapTemplateId).
-        WangTileset wangTileset{};
-        err = wangTileset.Load(*this, warp.templateTileset);
-        if (err) {
-            assert(!"UH-OH");
-            exit(EXIT_FAILURE);
-        }
-
-        WangMap wangMap{};
-        err = wangTileset.GenerateMap(width, height, *this, wangMap);
-        if (err) {
-            assert(!"UH-OH");
-            exit(EXIT_FAILURE);
-        }
-
-        SetFromWangMap(wangMap, now);
-#endif
-    }
-}
-void GameServer::TickResolveEntityWarpCollisions(Tilemap &map, Entity &entity, double now)
-{
-    if (!entity.on_warp || entity.on_warp_cooldown) {
-        return;
-    }
-    if (entity.type != ENTITY_PLAYER) {
-        return;
-    }
-
-    ObjectData *obj_data = map.GetObjectData(entity.on_warp_coord.x, entity.on_warp_coord.y);
-    if (obj_data) {
-        assert(obj_data->type == "warp");
-        Vector3 dest{};
-        dest.x = obj_data->warp_dest_x * TILE_W + TILE_W * 0.5f;
-        dest.y = obj_data->warp_dest_y * TILE_W + TILE_W - entity.radius; // * 0.5f;
-        dest.z = obj_data->warp_dest_z;
-        WarpEntity(entity, obj_data->warp_map_id, dest);
-        entity.on_warp_cooldown = true;
-    } else {
-        TraceLog(LOG_WARNING, "We're on a warp, but there's no warp object found at that coord. Did it disappear?");
-    }
-}
-void GameServer::Tick(void)
-{
-    // TODO: Only do this when the map loads or changes.
-    for (Tilemap &map : packs[1].tile_maps) {
-        map.UpdateEdges();
-    }
-
-    // HACK: Only spawn NPCs in map 1, whatever map that may be (hopefully it's Level_001)
-    Tilemap &level_001 = packs[1].FindTilemapByName(LEVEL_001);
-    TickSpawnTownNPCs(level_001.id);
-    //TickSpawnCaveNPCs(2);
-
-    // Tick entites
-    for (Entity &entity : entityDb->entities) {
-        if (!entity.type || entity.despawned_at) {
-            continue;
-        }
-        assert(entity.id);
-
-        // TODO: if (map.sleeping) continue
-
-        switch (entity.type) {
-            case ENTITY_NPC:        TickEntityNPC        (entity, SV_TICK_DT); break;
-            case ENTITY_PLAYER:     TickEntityPlayer     (entity, SV_TICK_DT); break;
-            case ENTITY_PROJECTILE: TickEntityProjectile (entity, SV_TICK_DT); break;
-        }
-
-        Tilemap *map = FindMap(entity.map_id);
-        if (map) {
-            map->ResolveEntityCollisionsEdges(entity);
-            map->ResolveEntityCollisionsTriggers(entity);
-            TickResolveEntityWarpCollisions(*map, entity, now);
-        }
-
-        bool newlySpawned = entity.spawned_at == now;
-        UpdateSprite(entity, SV_TICK_DT, newlySpawned);
-    }
-
-    tick++;
-    lastTickedAt = yj_server->GetTime();
-}
 void GameServer::SerializeSnapshot(Entity &entity, Msg_S_EntitySnapshot &entitySnapshot)
 {
     entitySnapshot.server_time = lastTickedAt;

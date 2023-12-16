@@ -101,7 +101,7 @@ struct Editor {
     void HandleInput(Camera2D &camera);
     void DrawGroundOverlays(Camera2D &camera, double now);
     void DrawEntityOverlays(Camera2D &camera, double now);
-    UIState DrawUI(Vector2 position, GameServer &server, double now);
+    UIState DrawUI(Vector2 position, double now);
 
 private:
     // Ground overlays (above tiles, below entities)
@@ -114,8 +114,8 @@ private:
     void DrawEntityOverlay_Collision(Camera2D &camera, double now);
 
     // Action bar and mode tabs
-    UIState DrawUI_ActionBar(Vector2 position, GameServer &server, double now);
-    void DrawUI_MapActions(UI &uiActionBar, GameServer &server, double now);
+    UIState DrawUI_ActionBar(Vector2 position, double now);
+    void DrawUI_MapActions(UI &uiActionBar, double now);
     void DrawUI_TileActions(UI &uiActionBar, double now);
     void DrawUI_Tilesheet(UI &uiActionBar, double now);
     void DrawUI_WangTile(double now);

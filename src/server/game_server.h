@@ -110,14 +110,25 @@ struct GameServer {
     void Update(void);
     void Stop(void);
 
+private:
     Tilemap *FindOrLoadMap(uint32_t map_id);
     Tilemap *FindMap(uint32_t map_id);
 
     Entity *SpawnEntity(EntityType type);
+    Entity *SpawnEntityProto(uint32_t map_id, Vector3 position, EntityProto &proto);
+    Entity *SpawnProjectile(uint32_t map_id, Vector3 position, Vector2 direction, Vector3 initial_velocity);
+    void WarpEntity(Entity &entity, uint32_t dest_map_id, Vector3 dest_pos);
     void DespawnEntity(uint32_t entityId);
-
-private:
     void DestroyDespawnedEntities(void);
+
+    void TickPlayers(void);
+    void TickSpawnTownNPCs(uint32_t map_id);
+    void TickSpawnCaveNPCs(uint32_t map_id);
+    void TickEntityNPC(Entity &entity, double dt);
+    void TickEntityPlayer(Entity &entity, double dt);
+    void TickEntityProjectile(Entity &entity, double dt);
+    void TickResolveEntityWarpCollisions(Tilemap &map, Entity &entity, double now);
+    void Tick(void);
 
     void SerializeSpawn(uint32_t entityId, Msg_S_EntitySpawn &entitySpawn);
     void SendEntitySpawn(int clientIdx, uint32_t entityId);
@@ -146,17 +157,6 @@ private:
     void ProcessMsg(int clientIdx, Msg_C_TileInteract &msg);
     void ProcessMessages(void);
 
-    Entity *SpawnProjectile(uint32_t map_id, Vector3 position, Vector2 direction, Vector3 initial_velocity);
-    Entity *SpawnEntityProto(uint32_t map_id, Vector3 position, EntityProto &proto);
-    void UpdateServerPlayers(void);
-    void TickSpawnTownNPCs(uint32_t map_id);
-    void TickSpawnCaveNPCs(uint32_t map_id);
-    void TickEntityNPC(Entity &entity, double dt);
-    void TickEntityPlayer(Entity &entity, double dt);
-    void TickEntityProjectile(Entity &entity, double dt);
-    void WarpEntity(Entity &entity, uint32_t dest_map_id, Vector3 dest_pos);
-    void TickResolveEntityWarpCollisions(Tilemap &map, Entity &entity, double now);
-    void Tick(void);
     void SerializeSnapshot(Entity &entity, Msg_S_EntitySnapshot &entitySnapshot);
     void SendClientSnapshots(void);
     void SendClockSync(void);

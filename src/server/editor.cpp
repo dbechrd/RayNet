@@ -435,13 +435,13 @@ void EndScrollPanel(UI &ui, ScrollPanel &scrollPanel)
     DrawRectangleLinesEx(scrollPanel.panelRect, 2, BLACK);
 }
 
-UIState Editor::DrawUI(Vector2 position, GameServer &server, double now)
+UIState Editor::DrawUI(Vector2 position, double now)
 {
     io.PushScope(IO::IO_EditorUI);
 
     UIState state{};
     if (active) {
-        state = DrawUI_ActionBar(position, server, now);
+        state = DrawUI_ActionBar(position, now);
         if (state.hover) {
             io.CaptureMouse();
         }
@@ -450,7 +450,7 @@ UIState Editor::DrawUI(Vector2 position, GameServer &server, double now)
     io.PopScope();
     return state;
 }
-UIState Editor::DrawUI_ActionBar(Vector2 position, GameServer &server, double now)
+UIState Editor::DrawUI_ActionBar(Vector2 position, double now)
 {
     UIStyle uiActionBarStyle{};
     UI uiActionBar{ position, uiActionBarStyle };
@@ -611,7 +611,7 @@ UIState Editor::DrawUI_ActionBar(Vector2 position, GameServer &server, double no
 
     switch (mode) {
         case EditMode_Maps: {
-            DrawUI_MapActions(uiActionBar, server, now);
+            DrawUI_MapActions(uiActionBar, now);
             break;
         }
         case EditMode_Tiles: {
@@ -654,7 +654,7 @@ UIState Editor::DrawUI_ActionBar(Vector2 position, GameServer &server, double no
 
     return uiState;
 }
-void Editor::DrawUI_MapActions(UI &uiActionBar, GameServer &server, double now)
+void Editor::DrawUI_MapActions(UI &uiActionBar, double now)
 {
     for (const Tilemap &map : packs[1].tile_maps) {
         if (uiActionBar.Button(CSTRLEN(TextFormat("%s", map.name.c_str()))).pressed) {

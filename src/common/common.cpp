@@ -75,20 +75,16 @@ Vector2 dlb_MeasureTextEx(Font font, const char *text, size_t textLen, Vector2 *
 {
     Vector2 textSize{};
 
-    if ((font.texture.id == 0) || (text == NULL)) {
+    if (text == NULL || textLen == 0 || font.texture.id == 0) {
         return textSize;
     }
 
-    const float fontSize = font.baseSize;
     const float spacing = 1.0f;
 
     Vector2 cur{};
     if (!cursor) {
         cursor = &cur;
     }
-
-    int lineCharsMax = 0;
-    int lineChars = 0;
 
     float textWidth = 0.0f;
     float textHeight = 0.0f;
@@ -111,7 +107,6 @@ Vector2 dlb_MeasureTextEx(Font font, const char *text, size_t textLen, Vector2 *
             // don't measure
         } else if (codepoint == '\n') {
             textWidth = MAX(cursor->x, textWidth);
-            lineChars = 0;
             cursor->x = 0;
 
             float lineHeight = charHeight;
@@ -125,11 +120,12 @@ Vector2 dlb_MeasureTextEx(Font font, const char *text, size_t textLen, Vector2 *
             if (!advanceX) {
                 advanceX = font.recs[glyphIndex].width + font.glyphs[glyphIndex].offsetX;
             }
-            cursor->x += advanceX + spacing;
-            lineChars++;
+            cursor->x += advanceX;
+            if (i < textLen - 1 && text[i] != '\n') {
+                cursor->x += spacing;
+            }
         }
 
-        lineCharsMax = MAX(lineChars, lineCharsMax);
         if (codepoint != '\r') {
             prevCodepoint = codepoint;
         }
@@ -138,9 +134,8 @@ Vector2 dlb_MeasureTextEx(Font font, const char *text, size_t textLen, Vector2 *
     textWidth = MAX(cursor->x, textWidth);
     textHeight += font.baseSize;
 
-    float scaleFactor = fontSize / font.baseSize;
-    textSize.x = textWidth * scaleFactor + ((lineCharsMax - 1) * spacing); // Adds chars spacing to measure
-    textSize.y = textHeight * scaleFactor;
+    textSize.x = textWidth; // Adds chars spacing to measure
+    textSize.y = textHeight;
 
     return textSize;
 }
@@ -151,7 +146,6 @@ void dlb_DrawTextEx(Font font, const char *text, size_t textLen, Vector2 positio
         font = GetFontDefault();
     }
 
-    const float fontSize = font.baseSize;
     const float spacing = 1.0f;
 
     Vector2 cur{};
@@ -159,9 +153,8 @@ void dlb_DrawTextEx(Font font, const char *text, size_t textLen, Vector2 positio
         cursor = &cur;
     }
 
-    float scaleFactor = fontSize / font.baseSize; // Character quad scaling factor
     // TODO(dlb): No idea why Raylib casts this to int.. *shrugs*
-    const float charHeight = (int)((font.baseSize * TEXT_LINE_SPACING) * scaleFactor);
+    const float charHeight = (int)(font.baseSize * TEXT_LINE_SPACING);
 
     struct GlyphDrawCmd {
         int codepoint;
@@ -202,7 +195,7 @@ void dlb_DrawTextEx(Font font, const char *text, size_t textLen, Vector2 positio
                 advanceX = font.recs[index].width;
             }
 
-            const float advanceXWithSpacing = advanceX * scaleFactor + spacing;
+            const float advanceXWithSpacing = advanceX + spacing;
             cursor->x += advanceXWithSpacing;
 
             if (hovered) {
@@ -229,7 +222,7 @@ void dlb_DrawTextEx(Font font, const char *text, size_t textLen, Vector2 positio
 
     Color col = (hovered && *hovered) ? ColorBrightness(tint, 0.5f) : tint;
     for (GlyphDrawCmd &cmd : glyphDrawCmds) {
-        DrawTextCodepoint(font, cmd.codepoint, cmd.pos, fontSize, col);
+        DrawTextCodepoint(font, cmd.codepoint, cmd.pos, font.baseSize, col);
     }
 }
 
