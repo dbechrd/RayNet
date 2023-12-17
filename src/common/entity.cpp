@@ -1,3 +1,23 @@
+#include "entity.h"
+
+GhostSnapshot::GhostSnapshot(Msg_S_EntitySpawn &msg)
+{
+    server_time              = msg.server_time;
+    last_processed_input_cmd = msg.last_processed_input_cmd;
+
+    // Entity
+    map_id   = msg.map_id;
+    position = msg.position;
+    //on_warp_cooldown = msg.on_warp_cooldown;
+
+    // Life
+    hp_max   = msg.hp_max;
+    hp       = msg.hp;
+
+    // Physics
+    //speed    = msg.speed;
+    velocity = msg.velocity;
+}
 
 GhostSnapshot::GhostSnapshot(Msg_S_EntitySnapshot &msg)
 {

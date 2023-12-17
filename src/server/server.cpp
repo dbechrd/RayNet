@@ -91,7 +91,7 @@ Err Play(GameServer &server)
     Camera2D camera{};
     camera.zoom = 1;
 
-    Tilemap &level_001 = packs[1].FindTilemapByName(LEVEL_001);
+    Tilemap &level_001 = packs[1].FindTilemapByName(MAP_OVERWORLD);
     Editor editor{ level_001.id };
     editor.Init();
 
@@ -297,11 +297,11 @@ int main(int argc, char *argv[])
 
         //--------------------
         // Load necessary maps
-        //if (!server->FindOrLoadMap(LEVEL_001)) {
+        //if (!server->FindOrLoadMap(MAP_OVERWORLD)) {
         //    err = RN_BAD_FILE_READ;
         //    break;
         //}
-        //if (!server->FindOrLoadMap(LEVEL_002)) break;
+        //if (!server->FindOrLoadMap(MAP_CAVE)) break;
 
         //--------------------
         // Start the server

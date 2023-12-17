@@ -92,10 +92,10 @@ void EntityDB::DestroyEntity(uint32_t entity_id)
     }
 }
 
-void EntityDB::EntityTick(Entity &entity, double dt)
+void EntityDB::EntityTick(Entity &entity, double dt, double now)
 {
-    Vector3 &pos = entity.position;
-    Vector3 &vel = entity.velocity;
+    Vector3 pos = entity.position;
+    Vector3 vel = entity.velocity;
 
     vel = Vector3Add(vel, Vector3Scale(entity.force_accum, dt));
     entity.force_accum = {};
@@ -136,6 +136,12 @@ void EntityDB::EntityTick(Entity &entity, double dt)
 #endif
 
     pos = Vector3Add(pos, Vector3Scale(vel, dt));
+
+    if (!Vector3Equals(pos, entity.position) || Vector3LengthSqr(entity.position) != 0) {
+        entity.velocity = vel;
+        entity.position = pos;
+        entity.last_moved_at = now;
+    }
 }
 
 void EntityDB::DrawEntityIds(uint32_t entity_id, Camera2D &camera)

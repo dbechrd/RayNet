@@ -150,7 +150,7 @@ void ClientWorld::UpdateLocalPlayer(GameClient &client, Entity &entity)
             InputCmd &inputCmd = client.controller.cmdQueue[cmdIndex];
             if (inputCmd.seq > latestSnapInputSeq) {
                 entity.ApplyForce(inputCmd.GenerateMoveForce(entity.speed));
-                entityDb->EntityTick(entity, SV_TICK_DT);
+                entityDb->EntityTick(entity, SV_TICK_DT, client.now);
                 map->ResolveEntityCollisionsEdges(entity);
             }
         }
@@ -160,7 +160,7 @@ void ClientWorld::UpdateLocalPlayer(GameClient &client, Entity &entity)
             Vector3 posBefore = entity.position;
             cmdAccumForce = client.controller.cmdAccum.GenerateMoveForce(entity.speed);
             entity.ApplyForce(cmdAccumForce);
-            entityDb->EntityTick(entity, SV_TICK_DT);
+            entityDb->EntityTick(entity, SV_TICK_DT, client.now);
             map->ResolveEntityCollisionsEdges(entity);
 
             entity.position.x = LERP(posBefore.x, entity.position.x, cmdAccumDt / SV_TICK_DT);
@@ -455,7 +455,7 @@ void ClientWorld::DrawEntitySnapshotShadows(GameClient &client, Entity &entity, 
                 InputCmd &inputCmd = controller.cmdQueue[cmdIndex];
                 if (inputCmd.seq > lastProcessedInputCmd) {
                     ghostData.entity.ApplyForce(inputCmd.GenerateMoveForce(ghostData.entity.speed));
-                    entityDb->EntityTick(ghostData.entity, SV_TICK_DT);
+                    entityDb->EntityTick(ghostData.entity, SV_TICK_DT, client.now);
                     map->ResolveEntityCollisionsEdges(ghostData.entity);
                     Rectangle ghostRect = ghostData.entity.GetSpriteRect();
                     DrawRectangleRec(ghostRect, Fade(GREEN, 0.1f));
@@ -472,7 +472,7 @@ void ClientWorld::DrawEntitySnapshotShadows(GameClient &client, Entity &entity, 
             Vector3 posBefore = ghostData.entity.position;
             Vector3 cmdAccumForce = controller.cmdAccum.GenerateMoveForce(ghostData.entity.speed);
             ghostData.entity.ApplyForce(cmdAccumForce);
-            entityDb->EntityTick(ghostData.entity, SV_TICK_DT);
+            entityDb->EntityTick(ghostData.entity, SV_TICK_DT, client.now);
             map->ResolveEntityCollisionsEdges(ghostData.entity);
             ghostData.entity.position.y = LERP(posBefore.y, ghostData.entity.position.y, cmdAccumDt / SV_TICK_DT);
             ghostData.entity.position.x = LERP(posBefore.x, ghostData.entity.position.x, cmdAccumDt / SV_TICK_DT);

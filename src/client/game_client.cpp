@@ -156,8 +156,11 @@ void GameClient::ProcessMsg(Msg_S_EntitySpawn &msg)
         Tilemap *map = world->FindOrLoadMap(msg.map_id);
         assert(map && "why no map? we get chunks before entities, right!?");
         if (map) {
-            if (entityDb->SpawnEntity(msg.entity_id, msg.type, now)) {
+            Entity *entity = entityDb->SpawnEntity(msg.entity_id, msg.type, now);
+            if (entity) {
                 world->ApplySpawnEvent(msg);
+                GhostSnapshot ghostSnapshot{ msg };
+                entity->ghost->push(ghostSnapshot);
             }
         } else {
             printf("[game_client] Failed to load map id %u to spawn entity id %u\n", msg.map_id, msg.entity_id);
@@ -220,25 +223,22 @@ void GameClient::ProcessMessages(void)
         yojimbo::Message *yjMsg = yj_client->ReceiveMessage(channelIdx);
         while (yjMsg) {
             if (yjMsg->GetType() != MSG_S_ENTITY_SNAPSHOT) {
-                printf("[game_client] RECV msgId=%d msgType=%s\n", yjMsg->GetId(), MsgTypeStr((MsgType)yjMsg->GetType()));
+                printf("[game_client] RECV msgId=%d msgType=%s", yjMsg->GetId(), MsgTypeStr((MsgType)yjMsg->GetType()));
+                if (yjMsg->GetType() == MSG_S_ENTITY_SPAWN) {
+                    const auto &spawn = *(Msg_S_EntitySpawn*)yjMsg;
+                    printf(" entType=%s", EntityTypeStr(spawn.type));
+                }
+                printf("\n");
             }
             switch (yjMsg->GetType()) {
-                case MSG_S_CLOCK_SYNC:
-                    ProcessMsg(*(Msg_S_ClockSync      *)yjMsg); break;
-                case MSG_S_ENTITY_DESPAWN:
-                    ProcessMsg(*(Msg_S_EntityDespawn  *)yjMsg); break;
-                case MSG_S_ENTITY_SAY:
-                    ProcessMsg(*(Msg_S_EntitySay      *)yjMsg); break;
-                case MSG_S_ENTITY_SNAPSHOT:
-                    ProcessMsg(*(Msg_S_EntitySnapshot *)yjMsg); break;
-                case MSG_S_ENTITY_SPAWN:
-                    ProcessMsg(*(Msg_S_EntitySpawn    *)yjMsg); break;
-                case MSG_S_TILE_CHUNK:
-                    ProcessMsg(*(Msg_S_TileChunk      *)yjMsg); break;
-                case MSG_S_TILE_UPDATE:
-                    ProcessMsg(*(Msg_S_TileUpdate     *)yjMsg); break;
-                case MSG_S_TITLE_SHOW:
-                    ProcessMsg(*(Msg_S_TitleShow      *)yjMsg); break;
+                case MSG_S_CLOCK_SYNC:      ProcessMsg(*(Msg_S_ClockSync      *)yjMsg); break;
+                case MSG_S_ENTITY_DESPAWN:  ProcessMsg(*(Msg_S_EntityDespawn  *)yjMsg); break;
+                case MSG_S_ENTITY_SAY:      ProcessMsg(*(Msg_S_EntitySay      *)yjMsg); break;
+                case MSG_S_ENTITY_SNAPSHOT: ProcessMsg(*(Msg_S_EntitySnapshot *)yjMsg); break;
+                case MSG_S_ENTITY_SPAWN:    ProcessMsg(*(Msg_S_EntitySpawn    *)yjMsg); break;
+                case MSG_S_TILE_CHUNK:      ProcessMsg(*(Msg_S_TileChunk      *)yjMsg); break;
+                case MSG_S_TILE_UPDATE:     ProcessMsg(*(Msg_S_TileUpdate     *)yjMsg); break;
+                case MSG_S_TITLE_SHOW:      ProcessMsg(*(Msg_S_TitleShow      *)yjMsg); break;
             }
             yj_client->ReleaseMessage(yjMsg);
             yjMsg = yj_client->ReceiveMessage(channelIdx);

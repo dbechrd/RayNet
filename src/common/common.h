@@ -45,8 +45,8 @@
 #define TODO_LIST_PATH "todo.txt"
 
 #define PATH_LEN_MAX 1024
-#define LEVEL_001  "map_overworld"
-#define LEVEL_002  "map_cave"
+#define MAP_OVERWORLD  "map_overworld"
+#define MAP_CAVE  "map_cave"
 
 // Developer macros
 

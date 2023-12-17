@@ -1,5 +1,8 @@
 #pragma once
 
+struct Msg_S_EntitySpawn;
+struct Msg_S_EntitySnapshot;
+
 // Best rap song: "i added it outta habit" by dandymcgee
 #define ENTITY_TYPES(gen) \
 gen(ENTITY_NONE)          \
@@ -61,6 +64,7 @@ struct GhostSnapshot {
     uint32_t last_processed_input_cmd {};
 
     GhostSnapshot(void) {}
+    GhostSnapshot(Msg_S_EntitySpawn &msg);
     GhostSnapshot(Msg_S_EntitySnapshot &msg);
 };
 typedef RingBuffer<GhostSnapshot, CL_SNAPSHOT_COUNT> AspectGhost;
@@ -71,17 +75,18 @@ struct Entity {
     static const DataType dtype = DAT_TYP_ENTITY;
 
     //// Entity ////
-    uint32_t      id           {};
-    EntityType    type         {};
-    EntitySpecies spec         {};
-    std::string   name         {};
-    uint32_t      caused_by    {};  // who spawned the projectile?
-    double        spawned_at   {};
-    double        despawned_at {};
-    AspectGhost   *ghost       {};
+    uint32_t      id            {};
+    EntityType    type          {};
+    EntitySpecies spec          {};
+    std::string   name          {};
+    uint32_t      caused_by     {};  // who spawned the projectile?
+    double        spawned_at    {};
+    double        last_moved_at {};
+    double        despawned_at  {};
+    AspectGhost   *ghost        {};
 
-    uint32_t      map_id       {};
-    Vector3       position     {};
+    uint32_t      map_id        {};
+    Vector3       position      {};
 
     //// Audio ////
     std::string ambient_fx           {};  // some sound they play occasionally

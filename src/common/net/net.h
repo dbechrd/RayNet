@@ -1,5 +1,6 @@
 #pragma once
 #include "../common.h"
+#include "../input_command.h"
 
 enum ChannelType {
     CHANNEL_U_INPUT_COMMANDS,
@@ -265,6 +266,9 @@ struct Msg_S_EntitySpawn : public yojimbo::Message
     // Sprite
     uint32_t      sprite_id   {};
 
+    // Only sent to the player who owns this player entity.
+    uint32_t      last_processed_input_cmd {};
+
     template <typename Stream> bool Serialize(Stream &stream)
     {
         serialize_double(stream, server_time);
@@ -297,6 +301,9 @@ struct Msg_S_EntitySpawn : public yojimbo::Message
 
         // Sprite
         serialize_uint32(stream, sprite_id);
+
+        // Player
+        serialize_uint32(stream, last_processed_input_cmd);
 
         return true;
     }

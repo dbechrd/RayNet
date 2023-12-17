@@ -124,10 +124,10 @@ private:
     void TickPlayers(void);
     void TickSpawnTownNPCs(uint32_t map_id);
     void TickSpawnCaveNPCs(uint32_t map_id);
-    void TickEntityNPC(Entity &entity, double dt);
-    void TickEntityPlayer(Entity &entity, double dt);
-    void TickEntityProjectile(Entity &entity, double dt);
-    void TickResolveEntityWarpCollisions(Tilemap &map, Entity &entity, double now);
+    void TickEntityNPC(Entity &entity, double dt, double now);
+    void TickEntityPlayer(Entity &entity, double dt, double now);
+    void TickEntityProjectile(Entity &entity, double dt, double now);
+    void TickResolveEntityWarpCollisions(Tilemap &map, Entity &entity);
     void Tick(void);
 
     void SerializeSpawn(uint32_t entityId, Msg_S_EntitySpawn &entitySpawn);

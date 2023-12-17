@@ -24,7 +24,7 @@ void GameServer::OnClientJoin(int clientIdx)
 
     Entity *player = SpawnEntity(ENTITY_PLAYER);
     if (player) {
-        Tilemap &level_001 = packs[1].FindTilemapByName(LEVEL_001);
+        Tilemap &level_001 = packs[1].FindTilemapByName(MAP_OVERWORLD);
 
         ServerPlayer &sv_player = players[clientIdx];
         sv_player.needsClockSync = true;
@@ -402,6 +402,7 @@ void GameServer::WarpEntity(Entity &entity, uint32_t dest_map_id, Vector3 dest_p
         entity.position = dest_pos;
         entity.force_accum = {};
         entity.velocity = {};
+        entity.last_moved_at = now;
 
         if (entity.type == ENTITY_PLAYER) {
             Tilemap &map = packs[1].FindTilemap(entity.map_id);
@@ -596,7 +597,7 @@ void GameServer::TickSpawnCaveNPCs(uint32_t map_id)
             entity->name = "Cave Lily";
 
             entity->map_id = map_id;
-            entity->position = { 1620, 450 };
+            entity->position = { 100, 100 };
 
             entity->radius = 10;
 
@@ -614,7 +615,7 @@ void GameServer::TickSpawnCaveNPCs(uint32_t map_id)
         }
     }
 }
-void GameServer::TickEntityNPC(Entity &e_npc, double dt)
+void GameServer::TickEntityNPC(Entity &e_npc, double dt, double now)
 {
     Tilemap *map = FindMap(e_npc.map_id);
     if (!map) return;
@@ -695,19 +696,19 @@ void GameServer::TickEntityNPC(Entity &e_npc, double dt)
         e_npc.ApplyForce(move);
     }
 
-    entityDb->EntityTick(e_npc, dt);
+    entityDb->EntityTick(e_npc, dt, now);
 }
-void GameServer::TickEntityPlayer(Entity &e_player, double dt)
+void GameServer::TickEntityPlayer(Entity &e_player, double dt, double now)
 {
-    entityDb->EntityTick(e_player, dt);
+    entityDb->EntityTick(e_player, dt, now);
 }
-void GameServer::TickEntityProjectile(Entity &e_projectile, double dt)
+void GameServer::TickEntityProjectile(Entity &e_projectile, double dt, double now)
 {
     // Gravity
     //AspectPhysics &ePhysics = map.ePhysics[entityIndex];
     //playerEntity.ApplyForce({ 0, 5 });
 
-    entityDb->EntityTick(e_projectile, dt);
+    entityDb->EntityTick(e_projectile, dt, now);
 
     if (now - e_projectile.spawned_at > 1.0) {
         DespawnEntity(e_projectile.id);
@@ -756,7 +757,7 @@ void GameServer::TickEntityProjectile(Entity &e_projectile, double dt)
         }
     }
 }
-void GameServer::TickResolveEntityWarpCollisions(Tilemap &map, Entity &entity, double now)
+void GameServer::TickResolveEntityWarpCollisions(Tilemap &map, Entity &entity)
 {
     if (!entity.on_warp || entity.on_warp_cooldown) {
         return;
@@ -788,9 +789,10 @@ void GameServer::Tick(void)
     }
 
     // HACK: Only spawn NPCs in map 1, whatever map that may be (hopefully it's Level_001)
-    Tilemap &level_001 = packs[1].FindTilemapByName(LEVEL_001);
-    TickSpawnTownNPCs(level_001.id);
-    //TickSpawnCaveNPCs(2);
+    Tilemap &map_overworld = packs[1].FindTilemapByName(MAP_OVERWORLD);
+    Tilemap &map_cave = packs[1].FindTilemapByName(MAP_CAVE);
+    TickSpawnTownNPCs(map_overworld.id);
+    TickSpawnCaveNPCs(map_cave.id);
 
     // Tick entites
     for (Entity &entity : entityDb->entities) {
@@ -802,16 +804,16 @@ void GameServer::Tick(void)
         // TODO: if (map.sleeping) continue
 
         switch (entity.type) {
-            case ENTITY_NPC:        TickEntityNPC        (entity, SV_TICK_DT); break;
-            case ENTITY_PLAYER:     TickEntityPlayer     (entity, SV_TICK_DT); break;
-            case ENTITY_PROJECTILE: TickEntityProjectile (entity, SV_TICK_DT); break;
+            case ENTITY_NPC:        TickEntityNPC        (entity, SV_TICK_DT, now); break;
+            case ENTITY_PLAYER:     TickEntityPlayer     (entity, SV_TICK_DT, now); break;
+            case ENTITY_PROJECTILE: TickEntityProjectile (entity, SV_TICK_DT, now); break;
         }
 
         Tilemap *map = FindMap(entity.map_id);
         if (map) {
             map->ResolveEntityCollisionsEdges(entity);
             map->ResolveEntityCollisionsTriggers(entity);
-            TickResolveEntityWarpCollisions(*map, entity, now);
+            TickResolveEntityWarpCollisions(*map, entity);
         }
 
         bool newlySpawned = entity.spawned_at == now;
@@ -1320,29 +1322,29 @@ void GameServer::SendClientSnapshots(void)
         }
 
         // TODO: Send only the world state that's relevant to this particular client
+        const bool fullSnapshot = serverPlayer.joinedAt == now;
         for (Entity &entity : entityDb->entities) {
-            if (!entity.id || !entity.type) {
-                assert(!entity.id && !entity.type);  // why has one but not other!?
+            if (!entity.id || !entity.type || entity.despawned_at) {
                 continue;
             }
 
-            if (serverPlayer.joinedAt == now && !entity.despawned_at) {
+            if (fullSnapshot) {
                 if (yj_server->CanSendMessage(clientIdx, CHANNEL_R_ENTITY_EVENT)) {
                     Msg_S_EntitySpawn *msg = (Msg_S_EntitySpawn *)yj_server->CreateMessage(clientIdx, MSG_S_ENTITY_SPAWN);
                     if (msg) {
                         SerializeSpawn(entity.id, *msg);
+                        // TODO: MSG_S_ACK_INPUT as unrealible msg? (keep max on receiving end)
+                        if (entity.id == serverPlayer.entityId) {
+                            msg->last_processed_input_cmd = serverPlayer.lastInputSeq;
+                        }
                         yj_server->SendMessage(clientIdx, CHANNEL_R_ENTITY_EVENT, msg);
                     }
                 }
-           /* } else if (entity.despawned_at == now) {
-                if (yj_server->CanSendMessage(clientIdx, CHANNEL_R_ENTITY_EVENT)) {
-                    Msg_S_EntityDespawn *msg = (Msg_S_EntityDespawn *)yj_server->CreateMessage(clientIdx, MSG_S_ENTITY_DESPAWN);
-                    if (msg) {
-                        msg->entityId = entity.id;
-                        yj_server->SendMessage(clientIdx, CHANNEL_R_ENTITY_EVENT, msg);
-                    }
-                }*/
-            } else if (!entity.despawned_at) {
+            }
+
+            const bool spawned = entity.spawned_at == now;
+            const bool moved = entity.last_moved_at == now;
+            if (spawned || moved) {
                 if (yj_server->CanSendMessage(clientIdx, CHANNEL_U_ENTITY_SNAPSHOT)) {
                     Msg_S_EntitySnapshot *msg = (Msg_S_EntitySnapshot *)yj_server->CreateMessage(clientIdx, MSG_S_ENTITY_SNAPSHOT);
                     if (msg) {
