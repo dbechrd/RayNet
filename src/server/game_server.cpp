@@ -1344,6 +1344,12 @@ void GameServer::SendClientSnapshots(void)
 
             const bool spawned = entity.spawned_at == now;
             const bool moved = entity.last_moved_at == now;
+
+            if (entity.spec == ENTITY_SPEC_NPC_CHICKEN && !moved) {
+                printf("");
+            }
+
+            //if (entity.id == serverPlayer.entityId) {
             if (spawned || moved) {
                 if (yj_server->CanSendMessage(clientIdx, CHANNEL_U_ENTITY_SNAPSHOT)) {
                     Msg_S_EntitySnapshot *msg = (Msg_S_EntitySnapshot *)yj_server->CreateMessage(clientIdx, MSG_S_ENTITY_SNAPSHOT);

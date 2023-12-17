@@ -422,6 +422,9 @@ void ClientWorld::DrawEntitySnapshotShadows(GameClient &client, Entity &entity, 
     // to decides to look up the entity by id instead of using the tuple's data.
     ghostData.entity.id = 0;
 
+    const bool resting = (client.ServerNow() - entity.ghost->newest().server_time) > SV_TICK_DT * 3;
+    Color snapColor = resting ? GRAY : RED;
+
     for (int i = 0; i < ghost.size(); i++) {
         if (!ghost[i].server_time) {
             continue;
@@ -435,8 +438,8 @@ void ClientWorld::DrawEntitySnapshotShadows(GameClient &client, Entity &entity, 
         ghostRect.y = floorf(ghostRect.y);
         ghostRect.width = floorf(ghostRect.width);
         ghostRect.height = floorf(ghostRect.height);
-        DrawRectangleRec(ghostRect, Fade(RED, 0.1f));
-        DrawRectangleLinesEx(ghostRect, 1, Fade(RED, 0.8f));
+        DrawRectangleRec(ghostRect, Fade(snapColor, 0.1f));
+        DrawRectangleLinesEx(ghostRect, 1, Fade(snapColor, 0.8f));
     }
 
     // NOTE(dlb): These aren't actually snapshot shadows, they're client-side prediction shadows

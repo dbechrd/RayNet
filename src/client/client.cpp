@@ -364,7 +364,6 @@ int main(int argc, char *argv[])
             client->netTickAccum -= SV_TICK_DT;
         }
 
-
         //--------------------
         // Update
         Histogram::Entry histoEntry{ client->frame, client->now };

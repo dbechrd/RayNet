@@ -133,28 +133,30 @@ void EntityDB::EntityTick(Entity &entity, double dt, double now)
     // Damping: current *= Mathf.Exp(-Sharpness * Time.deltaTime);
 
     vel = Vector3Scale(vel, exp2f(-10.0f * (entity.drag) * dt));
+    if (Vector3LengthSqr(vel) < 0.1f * 0.1f) {
+        vel = Vector3Zero();
+    }
 #endif
 
     pos = Vector3Add(pos, Vector3Scale(vel, dt));
 
-    if (!Vector3Equals(pos, entity.position) || Vector3LengthSqr(entity.position) != 0) {
+    if (!Vector3Equals(pos, entity.position) || Vector3LengthSqr(entity.velocity) != 0) {
         entity.velocity = vel;
         entity.position = pos;
         entity.last_moved_at = now;
     }
 }
 
-void EntityDB::DrawEntityIds(uint32_t entity_id, Camera2D &camera)
+void EntityDB::DrawEntityId(Entity &entity, Camera2D &camera)
 {
-    assert(entity_id);
-    Entity *entity = FindEntity(entity_id);
-    if (entity) {
-        assert(entity->id == entity_id);
-        assert(entity->type);
-        const char *text = TextFormat("%u", entity->id);
-        Vector2 pos = GetWorldToScreen2D(entity->Position2D(), camera);
-        dlb_DrawTextShadowEx(fntMedium, CSTRLEN(text), pos, WHITE);
-    }
+    const char *text = TextFormat("%u", entity.id);
+    Vector2 pos = GetWorldToScreen2D(entity.Position2D(), camera);
+    Vector2 textSize = dlb_MeasureTextEx(fntMedium, CSTRLEN(text));
+    Vector2 textPos{
+        floorf(pos.x - textSize.x / 2.0f),
+        pos.y
+    };
+    dlb_DrawTextShadowEx(fntMedium, CSTRLEN(text), pos, WHITE);
 }
 void EntityDB::DrawEntity(Entity &entity, DrawCmdQueue &sortedDraws, bool highlight)
 {

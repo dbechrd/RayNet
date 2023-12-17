@@ -265,15 +265,20 @@ void Editor::DrawEntityOverlays(Camera2D &camera, double now)
     Entity *selectedEntity = entityDb->FindEntity(state.entities.selectedId);
     auto &map = packs[1].FindTilemap(map_id);
     if (selectedEntity && selectedEntity->map_id == map.id) {
-        const char *text = TextFormat("%u\n[selected]", selectedEntity->id);
-        Vector2 pos = GetWorldToScreen2D(selectedEntity->Position2D(), camera);
-        dlb_DrawTextShadowEx(fntMedium, CSTRLEN(text), pos, WHITE);
+        const char *text = TextFormat("[selected]");
+        Vector2 tc = GetWorldToScreen2D(selectedEntity->TopCenter(), camera);
+        Vector2 textSize = dlb_MeasureTextEx(fntMedium, CSTRLEN(text));
+        Vector2 textPos{
+            floorf(tc.x - textSize.x / 2.0f),
+            tc.y - textSize.y
+        };
+        dlb_DrawTextShadowEx(fntMedium, CSTRLEN(text), textPos, WHITE);
     }
 
     if (state.showEntityIds) {
         for (Entity &entity : entityDb->entities) {
-            if (entity.map_id == map.id && entity.id != state.entities.selectedId) {
-                entityDb->DrawEntityIds(entity.id, camera);
+            if (entity.map_id == map.id) {
+                entityDb->DrawEntityId(entity, camera);
             }
         }
     }

@@ -15,7 +15,7 @@ struct EntityDB {
 
     void EntityTick(Entity &entity, double dt, double now);
 
-    void DrawEntityIds(uint32_t map_id, Camera2D &camera);
+    void DrawEntityId(Entity &entity, Camera2D &camera);
     void DrawEntity(Entity &entity, DrawCmdQueue &sortedDraws, bool highlight = false);
 };
 
