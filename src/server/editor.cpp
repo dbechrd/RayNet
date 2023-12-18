@@ -1641,15 +1641,16 @@ void Editor::DrawUI_PackFiles(UI &uiActionBar, double now)
             const char *text;
             Color color;
         } datTypeFilter[DAT_TYP_COUNT]{
-            { true,  "GFX", ColorFromHSV(0 * (360.0f / (float)DAT_TYP_COUNT), 0.9f, 0.6f) },
-            { true,  "MUS", ColorFromHSV(1 * (360.0f / (float)DAT_TYP_COUNT), 0.9f, 0.6f) },
-            { true,  "SFX", ColorFromHSV(2 * (360.0f / (float)DAT_TYP_COUNT), 0.9f, 0.6f) },
-            { true,  "FRM", ColorFromHSV(3 * (360.0f / (float)DAT_TYP_COUNT), 0.9f, 0.6f) },
-            { true,  "ANM", ColorFromHSV(4 * (360.0f / (float)DAT_TYP_COUNT), 0.9f, 0.6f) },
-            { true,  "MAT", ColorFromHSV(5 * (360.0f / (float)DAT_TYP_COUNT), 0.9f, 0.6f) },
-            { true,  "SPT", ColorFromHSV(6 * (360.0f / (float)DAT_TYP_COUNT), 0.9f, 0.6f) },
-            { true,  "MAP", ColorFromHSV(7 * (360.0f / (float)DAT_TYP_COUNT), 0.9f, 0.6f) },
-            { true,  "ENT", ColorFromHSV(8 * (360.0f / (float)DAT_TYP_COUNT), 0.9f, 0.6f) },
+            { true,  "GFX", ColorFromHSV((int)DAT_TYP_GFX_FILE  * (360.0f / (float)DAT_TYP_COUNT), 0.9f, 0.6f) },
+            { true,  "MUS", ColorFromHSV((int)DAT_TYP_MUS_FILE  * (360.0f / (float)DAT_TYP_COUNT), 0.9f, 0.6f) },
+            { true,  "SFX", ColorFromHSV((int)DAT_TYP_SFX_FILE  * (360.0f / (float)DAT_TYP_COUNT), 0.9f, 0.6f) },
+            { true,  "FRM", ColorFromHSV((int)DAT_TYP_GFX_FRAME * (360.0f / (float)DAT_TYP_COUNT), 0.9f, 0.6f) },
+            { true,  "ANM", ColorFromHSV((int)DAT_TYP_GFX_ANIM  * (360.0f / (float)DAT_TYP_COUNT), 0.9f, 0.6f) },
+            { true,  "SPT", ColorFromHSV((int)DAT_TYP_SPRITE    * (360.0f / (float)DAT_TYP_COUNT), 0.9f, 0.6f) },
+            { true,  "DEF", ColorFromHSV((int)DAT_TYP_TILE_DEF  * (360.0f / (float)DAT_TYP_COUNT), 0.9f, 0.6f) },
+            { true,  "MAT", ColorFromHSV((int)DAT_TYP_TILE_MAT  * (360.0f / (float)DAT_TYP_COUNT), 0.9f, 0.6f) },
+            { true,  "MAP", ColorFromHSV((int)DAT_TYP_TILE_MAP  * (360.0f / (float)DAT_TYP_COUNT), 0.9f, 0.6f) },
+            { true,  "ENT", ColorFromHSV((int)DAT_TYP_ENTITY    * (360.0f / (float)DAT_TYP_COUNT), 0.9f, 0.6f) },
         };
 
         uiActionBar.PushWidth(34);
@@ -1720,16 +1721,22 @@ void Editor::DrawUI_PackFiles(UI &uiActionBar, double now)
                     desc = gfx_anim.id.c_str();
                     break;
                 }
-                case DAT_TYP_TILE_MAT:
-                {
-                    TileMat &tile_mat = pack.tile_mats[entry.index];
-                    desc = tile_mat.id.c_str();
-                    break;
-                }
                 case DAT_TYP_SPRITE:
                 {
                     Sprite &sprite = pack.sprites[entry.index];
                     desc = sprite.name.c_str();
+                    break;
+                }
+                case DAT_TYP_TILE_DEF:
+                {
+                    TileDef &tile_def = pack.tile_defs[entry.index];
+                    desc = tile_def.name.c_str();
+                    break;
+                }
+                case DAT_TYP_TILE_MAT:
+                {
+                    TileMat &tile_mat = pack.tile_mats[entry.index];
+                    desc = tile_mat.name.c_str();
                     break;
                 }
                 case DAT_TYP_TILE_MAP:
@@ -1885,21 +1892,6 @@ void Editor::DrawUI_PackFiles(UI &uiActionBar, double now)
                         }
                         break;
                     }
-                    case DAT_TYP_TILE_MAT:
-                    {
-                        TileMat &tile_mat = pack.tile_mats[entry.index];
-
-                        uiActionBar.Label(CSTR("id"), detailsLabelWidth);
-                        uiActionBar.Text(CSTRS(tile_mat.id));
-                        uiActionBar.Newline();
-
-                        uiActionBar.Label(CSTR("footstep"), detailsLabelWidth);
-                        uiActionBar.Text(CSTRS(tile_mat.footstep_sound));
-                        uiActionBar.Newline();
-
-                        uiActionBar.Newline();
-                        break;
-                    }
                     case DAT_TYP_SPRITE:
                     {
                         Sprite &sprite = pack.sprites[entry.index];
@@ -1939,6 +1931,38 @@ void Editor::DrawUI_PackFiles(UI &uiActionBar, double now)
 
                         uiActionBar.Label(CSTR("NW"), labelWidth);
                         uiActionBar.Text(CSTRS(sprite.anims[DIR_NW]));
+                        uiActionBar.Newline();
+                        break;
+                    }
+                    case DAT_TYP_TILE_DEF:
+                    {
+                        TileDef &tile_def = pack.tile_defs[entry.index];
+
+                        const float labelWidth = 20.0f;
+                        uiActionBar.Label(CSTR("name"), labelWidth);
+                        uiActionBar.Text(CSTRS(tile_def.name));
+                        uiActionBar.Newline();
+
+                        uiActionBar.Label(CSTR("material_id"), detailsLabelWidth);
+                        uiActionBar.Text(CSTRLEN(TextFormat("%u", tile_def.material_id)));
+                        uiActionBar.Newline();
+
+                        uiActionBar.Newline();
+                        break;
+                    }
+                    case DAT_TYP_TILE_MAT:
+                    {
+                        TileMat &tile_mat = pack.tile_mats[entry.index];
+
+                        const float labelWidth = 20.0f;
+                        uiActionBar.Label(CSTR("name"), labelWidth);
+                        uiActionBar.Text(CSTRS(tile_mat.name));
+                        uiActionBar.Newline();
+
+                        uiActionBar.Label(CSTR("footstep"), detailsLabelWidth);
+                        uiActionBar.Text(CSTRS(tile_mat.footstep_sound));
+                        uiActionBar.Newline();
+
                         uiActionBar.Newline();
                         break;
                     }

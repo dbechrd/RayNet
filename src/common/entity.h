@@ -81,7 +81,6 @@ struct Entity {
     std::string   name          {};
     uint32_t      caused_by     {};  // who spawned the projectile?
     double        spawned_at    {};
-    double        last_moved_at {};
     double        despawned_at  {};
     AspectGhost   *ghost        {};
 
@@ -137,10 +136,11 @@ struct Entity {
     double  path_rand_started_at {};  // when we started moving this way
 
     //// Physics ////
-    float   drag        {};
-    float   speed       {};
-    Vector3 force_accum {};
-    Vector3 velocity    {};
+    float   drag          {};
+    float   speed         {};
+    Vector3 force_accum   {};
+    Vector3 velocity      {};
+    double  last_moved_at {};
 
     //// Sprite ////
     uint32_t     sprite_id  {};  // sprite resource
@@ -162,8 +162,10 @@ struct Entity {
     Rectangle GetSpriteRect() const;
     Vector2 TopCenter(void) const;
     void ClearDialog(void);
+    bool Attack(double now);
     void TakeDamage(int damage);
     bool Alive(void);
     bool Dead(void);
+    bool Active(double now);
     void ApplyForce(Vector3 force);
 };

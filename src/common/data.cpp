@@ -113,7 +113,7 @@ Err SaveTilemap(const std::string &path, Tilemap &tilemap)
                 fprintf(file, "%u ", obj_data.tile_def_unpowered);
                 fprintf(file, "%u ", obj_data.tile_def_powered);
             } else if (obj_data.type == "lootable") {
-                fprintf(file, "%s ", obj_data.loot_table_id.c_str());
+                fprintf(file, "%u ", obj_data.loot_table_id);
             } else if (obj_data.type == "sign") {
                 fprintf(file, "\"%s\" ", obj_data.sign_text[0].c_str());
                 fprintf(file, "\"%s\" ", obj_data.sign_text[1].c_str());
@@ -444,15 +444,6 @@ void PackAddMeta(Pack &pack, const char *filename)
                 META_CHILDREN_END;
 
                 pack.gfx_anims.push_back(gfx_anim);
-            } else if (MD_NodeHasTag(node, MD_S8Lit("TileMat"), 0)) {
-                TileMat tile_mat{};
-
-                META_ID_STR(tile_mat.id);
-                META_CHILDREN_BEGIN;
-                    META_IDENT(tile_mat.footstep_sound);
-                META_CHILDREN_END;
-
-                pack.tile_mats.push_back(tile_mat);
             } else if (MD_NodeHasTag(node, MD_S8Lit("Sprite"), 0)) {
                 Sprite sprite{};
 
@@ -472,7 +463,7 @@ void PackAddMeta(Pack &pack, const char *filename)
                 META_CHILDREN_BEGIN;
                     META_STRING(tile_def.name);
                     META_IDENT(tile_def.anim);
-                    META_IDENT(tile_def.mat);
+                    META_UINT32(tile_def.material_id);
                     uint8_t flag_solid = 0;
                     META_UINT8(flag_solid);
                     uint8_t flag_liquid = 0;
@@ -483,6 +474,16 @@ void PackAddMeta(Pack &pack, const char *filename)
                 META_CHILDREN_END;
 
                 pack.tile_defs.push_back(tile_def);
+            } else if (MD_NodeHasTag(node, MD_S8Lit("TileMat"), 0)) {
+                TileMat tile_mat{};
+
+                META_ID_UINT32(tile_mat.id);
+                META_CHILDREN_BEGIN;
+                    META_STRING(tile_mat.name);
+                    META_IDENT(tile_mat.footstep_sound);
+                META_CHILDREN_END;
+
+                pack.tile_mats.push_back(tile_mat);
             } else if (MD_NodeHasTag(node, MD_S8Lit("Tilemap"), 0)) {
                 Tilemap map{};
 
@@ -530,7 +531,7 @@ void PackAddMeta(Pack &pack, const char *filename)
                                         META_UINT32(obj_data.tile_def_unpowered);
                                         META_UINT32(obj_data.tile_def_powered);
                                     } else if (obj_data.type == "lootable") {
-                                        META_IDENT(obj_data.loot_table_id);
+                                        META_UINT32(obj_data.loot_table_id);
                                     } else if (obj_data.type == "sign") {
                                         META_STRING(obj_data.sign_text[0]);
                                         META_STRING(obj_data.sign_text[1]);
@@ -869,6 +870,7 @@ void Process(PackStream &stream, TileMat &tile_mat, int index)
 
     if (stream.mode == PACK_MODE_READ) {
         stream.pack->tile_mat_by_id[tile_mat.id] = index;
+        stream.pack->tile_mat_by_name[tile_mat.name] = index;
     }
 }
 void Process(PackStream &stream, Sprite &sprite, int index) {
@@ -888,7 +890,7 @@ void Process(PackStream &stream, TileDef &tile_def, int index) {
     PROC(tile_def.id);
     PROC(tile_def.name);
     PROC(tile_def.anim);
-    PROC(tile_def.mat);
+    PROC(tile_def.material_id);
     PROC(tile_def.flags);
     PROC(tile_def.auto_tile_mask);
 

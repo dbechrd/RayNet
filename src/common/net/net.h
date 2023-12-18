@@ -227,13 +227,8 @@ struct Msg_S_EntitySnapshot : public yojimbo::Message
             }
         }
 
-        // Warp
         if (type == ENTITY_PLAYER) {
             serialize_bool(stream, on_warp_cooldown);
-        }
-
-        // Input ack
-        if (type == ENTITY_PLAYER) {
             serialize_uint32(stream, last_processed_input_cmd);
         }
 
@@ -303,7 +298,9 @@ struct Msg_S_EntitySpawn : public yojimbo::Message
         serialize_uint32(stream, sprite_id);
 
         // Player
-        serialize_uint32(stream, last_processed_input_cmd);
+        if (type == ENTITY_PLAYER) {
+            serialize_uint32(stream, last_processed_input_cmd);
+        }
 
         return true;
     }

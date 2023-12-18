@@ -41,9 +41,9 @@ struct DrawCmdQueue : public std::priority_queue<DrawCmd> {
                                         \
     gen(DAT_TYP_GFX_FRAME, "GFXFRAME") \
     gen(DAT_TYP_GFX_ANIM,  "GFXANIM ") \
-    gen(DAT_TYP_TILE_MAT,  "TILEMAT ") \
     gen(DAT_TYP_SPRITE,    "SPRITE  ") \
     gen(DAT_TYP_TILE_DEF,  "TILEDEF ") \
+    gen(DAT_TYP_TILE_MAT,  "TILEMAT ") \
                                         \
     gen(DAT_TYP_TILE_MAP,  "TILEMAP ") \
     gen(DAT_TYP_ENTITY,    "ENTITY  ")
@@ -161,8 +161,9 @@ struct GfxAnimState {
 
 struct TileMat {
     static const DataType dtype = DAT_TYP_TILE_MAT;
-    std::string   id             {};
-    std::string   footstep_sound {};
+    uint32_t    id             {};
+    std::string name           {};
+    std::string footstep_sound {};
 };
 
 //apparition
@@ -195,7 +196,7 @@ struct TileDef {
     uint32_t     id             {};
     std::string  name           {};
     std::string  anim           {};
-    std::string  mat            {};
+    uint32_t     material_id    {};
     TileDefFlags flags          {};
     uint8_t      auto_tile_mask {};  // not used atm, but this is where it would go once tiledefs are moved to tilesets
 
@@ -221,7 +222,7 @@ struct ObjectData {
     uint32_t tile_def_powered   {};
 
     // type == "lootable"
-    std::string loot_table_id {};
+    uint32_t loot_table_id {};
 
     // type == "sign"
     std::string sign_text[4] {};
@@ -417,7 +418,8 @@ struct Pack {
 
     std::unordered_map<std::string, size_t> gfx_frame_by_id{};
     std::unordered_map<std::string, size_t> gfx_anim_by_id{};
-    std::unordered_map<std::string, size_t> tile_mat_by_id{};
+    std::unordered_map<uint32_t, size_t>    tile_mat_by_id{};
+    std::unordered_map<std::string, size_t> tile_mat_by_name{};
     std::unordered_map<std::string, size_t> object_by_id{};
     std::unordered_map<uint32_t, size_t>    sprite_by_id{};
     std::unordered_map<std::string, size_t> sprite_by_name{};
@@ -497,13 +499,25 @@ struct Pack {
         }
     }
 
-    TileMat &FindTileMat(const std::string &id) {
+    TileMat &FindTileMatById(uint32_t id) {
         const auto &entry = tile_mat_by_id.find(id);
         if (entry != tile_mat_by_id.end()) {
             return tile_mats[entry->second];
         } else {
-            if (id != "null") {
-                TraceLog(LOG_WARNING, "Missing tile material: %s", id.c_str());
+            if (id) {
+                TraceLog(LOG_WARNING, "Missing tile material: %u", id);
+            }
+            return tile_mats[0];
+        }
+    }
+
+    TileMat &FindTileMatByName(const std::string &name) {
+        const auto &entry = tile_mat_by_name.find(name);
+        if (entry != tile_mat_by_name.end()) {
+            return tile_mats[entry->second];
+        } else {
+            if (name != "null") {
+                TraceLog(LOG_WARNING, "Missing tile material: %s", name.c_str());
             }
             return tile_mats[0];
         }

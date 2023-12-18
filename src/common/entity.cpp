@@ -85,6 +85,16 @@ void Entity::ClearDialog(void)
     dialog_message = {};
 }
 
+bool Entity::Attack(double now)
+{
+    if (now - last_attacked_at > attack_cooldown) {
+        last_attacked_at = now;
+        attack_cooldown = 0.3;  // todo add cooldown to weapon or config or something
+        return true;
+    }
+    return false;
+}
+
 void Entity::TakeDamage(int damage)
 {
     if (damage >= hp) {
@@ -102,6 +112,17 @@ bool Entity::Alive(void)
 bool Entity::Dead(void)
 {
     return !Alive();
+}
+
+bool Entity::Active(double now)
+{
+    if (despawned_at) {
+        return false;
+    }
+
+    return spawned_at == now
+        || last_moved_at == now
+        || last_attacked_at == now;
 }
 
 void Entity::ApplyForce(Vector3 force)

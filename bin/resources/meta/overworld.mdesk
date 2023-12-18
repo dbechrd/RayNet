@@ -23,6 +23,8 @@
 @SfxFile sfx_campfire       : "resources/sound/campfire.wav"                   1           0.00            1
 @SfxFile sfx_footstep_grass : "resources/sound/footstep_grass.wav"             1           0.00            1
 @SfxFile sfx_footstep_stone : "resources/sound/footstep_stone.wav"             1           0.00            1
+@SfxFile sfx_footstep_water : "resources/sound/footstep_water.wav"             1           0.00            1
+@SfxFile sfx_footstep_wood  : "resources/sound/footstep_wood.wav"              1           0.00            1
 @SfxFile sfx_fireball       : "resources/sound/copyright/fireball.wav"         1           0.10            5
 @SfxFile sfx_chicken_squawk : "resources/sound/copyright/chicken_squawk.wav"   1           0.05            10
 @SfxFile sfx_chicken_cluck  : "resources/sound/copyright/chicken_cluck.wav"    5           0.05            10
@@ -145,19 +147,12 @@
 @Item item_sword_steel    : weapon sword        7      50
 @item item_axe_wood       : tool   axe
 
-//         id                 rolls items
-@LootTable loot_missing   : { 0     [{ null 1.0 }] }
-@LootTable loot_basic     : { 5     [{ null 0.2 }{ item_sword     0.2 }{ item_axe     0.1 }] }
-@LootTable loot_uncommon  : { 4     [{ null 0.3 }{ item_ruby      0.2 }{ item_saphire 0.1 }] }
-@LootTable loot_rare      : { 3     [{ null 0.4 }{ item_gold      0.2 }{ item_diamond 0.1 }] }
-@LootTable loot_legendary : { 2     [{ null 0.5 }{ item_excalibur 0.2 }{ item_hamaxe  0.1 }] }
-
-//        id            footstep_sound
-@Material mat_missing : null
-@Material mat_void    : null
-@Material mat_stone   : sfx_footstep_stone
-@Material mat_water   : sfx_footstep_water
-@Material mat_grass   : sfx_footstep_grass
+//         id    name             rolls items
+@LootTable 0 : { "loot_missing"   0     [{ null 1.0 }] }
+@LootTable 1 : { "loot_basic"     5     [{ null 0.2 }{ item_sword     0.2 }{ item_axe     0.1 }] }
+@LootTable 2 : { "loot_uncommon"  4     [{ null 0.3 }{ item_ruby      0.2 }{ item_saphire 0.1 }] }
+@LootTable 3 : { "loot_rare"      3     [{ null 0.4 }{ item_gold      0.2 }{ item_diamond 0.1 }] }
+@LootTable 4 : { "loot_legendary" 2     [{ null 0.5 }{ item_excalibur 0.2 }{ item_hamaxe  0.1 }] }
 
 //      id  name                  anim_n                anim_e                 anim_s anim_w                 anim_ne anim_se anim_sw anim_nw
 @Sprite 0 : "sprite_missing"      null                  null                   null   null                   null    null    null    null
@@ -174,26 +169,34 @@
 ///////////////////////////////////////////////////////////////////////
 // DO NOT change or reorder the IDs without updating all the map data
 ///////////////////////////////////////////////////////////////////////
-//       id   name                animation                  material    solid liquid auto_tile_mask
-@TileDef 0  : "til_missing"       gfx_anim_missing           mat_missing 0     0      0
-@TileDef 1  : "til_void"          gfx_anim_til_void          mat_void    1     0      0
-@TileDef 2  : "til_stone_path"    gfx_anim_til_stone_path    mat_stone   0     0      0
-@TileDef 3  : "til_water_dark"    gfx_anim_til_water_dark    mat_water   0     1      0
-@TileDef 4  : "til_grass_weeds"   gfx_anim_til_grass_weeds   mat_grass   0     0      0
-@TileDef 5  : "til_grass_flowers" gfx_anim_til_grass_flowers mat_grass   0     0      0
-@TileDef 6  : "til_stone_wall_tl" gfx_anim_til_stone_wall_tl mat_stone   1     0      0
-@TileDef 7  : "til_stone_wall_tc" gfx_anim_til_stone_wall_tc mat_stone   1     0      0
-@TileDef 8  : "til_stone_wall_tr" gfx_anim_til_stone_wall_tr mat_stone   1     0      0
-@TileDef 9  : "til_stone_wall_cl" gfx_anim_til_stone_wall_cl mat_stone   1     0      0
-@TileDef 10 : "til_stone_wall_cc" gfx_anim_til_stone_wall_cc mat_stone   1     0      0
-@TileDef 11 : "til_stone_wall_cr" gfx_anim_til_stone_wall_cr mat_stone   1     0      0
-@TileDef 12 : "til_stone_wall_bl" gfx_anim_til_stone_wall_bl mat_stone   1     0      0
-@TileDef 13 : "til_stone_wall_bc" gfx_anim_til_stone_wall_bc mat_stone   1     0      0
-@TileDef 14 : "til_stone_wall_br" gfx_anim_til_stone_wall_br mat_stone   1     0      0
-@TileDef 15 : "obj_bush"          gfx_anim_obj_bush          mat_grass   1     0      0
-@TileDef 16 : "obj_chest_basic"   gfx_anim_obj_chest_closed  mat_wood    1     0      0
-@TileDef 17 : "obj_portal"        gfx_anim_obj_portal        mat_void    0     0      0
-@TileDef 18 : "obj_sign"          gfx_anim_obj_sign          mat_wood    0     0      0
+//       id   name                animation                  material_id solid liquid auto_tile_mask
+@TileDef 0  : "til_missing"       gfx_anim_missing           0           0     0      0
+@TileDef 1  : "til_void"          gfx_anim_til_void          1           1     0      0
+@TileDef 2  : "til_stone_path"    gfx_anim_til_stone_path    2           0     0      0
+@TileDef 3  : "til_water_dark"    gfx_anim_til_water_dark    3           0     1      0
+@TileDef 4  : "til_grass_weeds"   gfx_anim_til_grass_weeds   4           0     0      0
+@TileDef 5  : "til_grass_flowers" gfx_anim_til_grass_flowers 4           0     0      0
+@TileDef 6  : "til_stone_wall_tl" gfx_anim_til_stone_wall_tl 2           1     0      0
+@TileDef 7  : "til_stone_wall_tc" gfx_anim_til_stone_wall_tc 2           1     0      0
+@TileDef 8  : "til_stone_wall_tr" gfx_anim_til_stone_wall_tr 2           1     0      0
+@TileDef 9  : "til_stone_wall_cl" gfx_anim_til_stone_wall_cl 2           1     0      0
+@TileDef 10 : "til_stone_wall_cc" gfx_anim_til_stone_wall_cc 2           1     0      0
+@TileDef 11 : "til_stone_wall_cr" gfx_anim_til_stone_wall_cr 2           1     0      0
+@TileDef 12 : "til_stone_wall_bl" gfx_anim_til_stone_wall_bl 2           1     0      0
+@TileDef 13 : "til_stone_wall_bc" gfx_anim_til_stone_wall_bc 2           1     0      0
+@TileDef 14 : "til_stone_wall_br" gfx_anim_til_stone_wall_br 2           1     0      0
+@TileDef 15 : "obj_bush"          gfx_anim_obj_bush          4           1     0      0
+@TileDef 16 : "obj_chest_basic"   gfx_anim_obj_chest_closed  5           1     0      0
+@TileDef 17 : "obj_portal"        gfx_anim_obj_portal        1           0     0      0
+@TileDef 18 : "obj_sign"          gfx_anim_obj_sign          5           0     0      0
+
+//      id   name          footstep_sound
+@TileMat 0 : "mat_missing" null
+@TileMat 1 : "mat_void"    null
+@TileMat 2 : "mat_stone"   sfx_footstep_stone
+@TileMat 3 : "mat_water"   sfx_footstep_water
+@TileMat 4 : "mat_grass"   sfx_footstep_grass
+@TileMat 5 : "mat_wood"    sfx_footstep_wood
 
 // 1st sub: 0x29
 // 2nd sub: itz_kuda gifted 0x29

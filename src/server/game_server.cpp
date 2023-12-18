@@ -503,7 +503,7 @@ void GameServer::TickPlayers(void)
                 player->ApplyForce(move_force);
 
                 if (input_cmd->fire) {
-                    if (now - player->last_attacked_at > player->attack_cooldown) {
+                    if (player->Attack(now)) {
                         Vector3 projectile_spawn_pos = player->position;
                         projectile_spawn_pos.z += 24;  // "hand" height
                         Entity *projectile = SpawnProjectile(player->map_id, projectile_spawn_pos, input_cmd->facing, player->velocity);
@@ -513,8 +513,6 @@ void GameServer::TickPlayers(void)
                             recoil_force.y = -projectile->velocity.y;
                             player->ApplyForce(recoil_force);
                         }
-                        player->last_attacked_at = now;
-                        player->attack_cooldown = 0.3;
                     }
                 }
             } else {
@@ -1200,7 +1198,7 @@ void GameServer::ProcessMsg(int clientIdx, Msg_C_TileInteract &msg)
             }
             BroadcastTileUpdate(*map, msg.x, msg.y);
         } else if (obj_data->type == "lootable") {
-            SendEntitySay(clientIdx, player.entityId, 0, "Chest", obj_data->loot_table_id);
+            SendEntitySay(clientIdx, player.entityId, 0, "Chest", TextFormat("loot_table_id: %u", obj_data->loot_table_id));
         } else if (obj_data->type == "sign") {
             const char *signText = TextFormat("%s\n%s\n%s\n%s",
                 obj_data->sign_text[0].c_str(),
@@ -1328,13 +1326,15 @@ void GameServer::SendClientSnapshots(void)
                 continue;
             }
 
+            const bool owner = entity.id == serverPlayer.entityId;
+
             if (fullSnapshot) {
                 if (yj_server->CanSendMessage(clientIdx, CHANNEL_R_ENTITY_EVENT)) {
                     Msg_S_EntitySpawn *msg = (Msg_S_EntitySpawn *)yj_server->CreateMessage(clientIdx, MSG_S_ENTITY_SPAWN);
                     if (msg) {
                         SerializeSpawn(entity.id, *msg);
                         // TODO: MSG_S_ACK_INPUT as unrealible msg? (keep max on receiving end)
-                        if (entity.id == serverPlayer.entityId) {
+                        if (owner) {
                             msg->last_processed_input_cmd = serverPlayer.lastInputSeq;
                         }
                         yj_server->SendMessage(clientIdx, CHANNEL_R_ENTITY_EVENT, msg);
@@ -1342,20 +1342,12 @@ void GameServer::SendClientSnapshots(void)
                 }
             }
 
-            const bool spawned = entity.spawned_at == now;
-            const bool moved = entity.last_moved_at == now;
-
-            if (entity.spec == ENTITY_SPEC_NPC_CHICKEN && !moved) {
-                printf("");
-            }
-
-            //if (entity.id == serverPlayer.entityId) {
-            if (spawned || moved) {
+            if (owner || entity.Active(now)) {
                 if (yj_server->CanSendMessage(clientIdx, CHANNEL_U_ENTITY_SNAPSHOT)) {
                     Msg_S_EntitySnapshot *msg = (Msg_S_EntitySnapshot *)yj_server->CreateMessage(clientIdx, MSG_S_ENTITY_SNAPSHOT);
                     if (msg) {
                         SerializeSnapshot(entity, *msg);
-                        if (entity.id == serverPlayer.entityId) {
+                        if (owner) {
                             msg->last_processed_input_cmd = serverPlayer.lastInputSeq;
                         }
                         yj_server->SendMessage(clientIdx, CHANNEL_U_ENTITY_SNAPSHOT, msg);
