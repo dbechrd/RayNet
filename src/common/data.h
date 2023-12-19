@@ -602,7 +602,7 @@ struct Pack {
 
 enum PackStreamType {
     PACK_TYPE_BINARY,
-    //PACK_TYPE_TEXT,
+    PACK_TYPE_TEXT
 };
 
 enum PackStreamMode {

@@ -679,6 +679,9 @@ Err Init(void)
 
         ERR_RETURN(SavePack(packAssets, PACK_TYPE_BINARY));
         ERR_RETURN(SavePack(packMaps, PACK_TYPE_BINARY));
+
+        packAssets.path = "pack/assets.txt";
+        ERR_RETURN(SavePack(packAssets, PACK_TYPE_TEXT));
     }
 #endif
 
@@ -738,9 +741,24 @@ void Process(PackStream &stream, T &v)
 
     if (stream.type == PACK_TYPE_BINARY) {
         stream.process(&v, sizeof(v), 1, stream.file);
-    } else {
-        // text mode not implemented
-        assert("nope");
+    } else if (stream.type == PACK_TYPE_TEXT) {
+        if (stream.mode == PACK_MODE_WRITE) {
+            if      constexpr (std::is_same_v<T, char    >) fprintf(stream.file, "c   %c\n", v);
+            else if constexpr (std::is_same_v<T, int8_t  >) fprintf(stream.file, "i8  %" PRId8  "\n", v);
+            else if constexpr (std::is_same_v<T, int16_t >) fprintf(stream.file, "i16 %" PRId16 "\n", v);
+            else if constexpr (std::is_same_v<T, int32_t >) fprintf(stream.file, "i32 %" PRId32 "\n", v);
+            else if constexpr (std::is_same_v<T, int64_t >) fprintf(stream.file, "i64 %" PRId64 "\n", v);
+            else if constexpr (std::is_same_v<T, uint8_t >) fprintf(stream.file, "u8  %" PRIu8  "\n", v);
+            else if constexpr (std::is_same_v<T, uint16_t>) fprintf(stream.file, "u16 %" PRIu16 "\n", v);
+            else if constexpr (std::is_same_v<T, uint32_t>) fprintf(stream.file, "u32 %" PRIu32 "\n", v);
+            else if constexpr (std::is_same_v<T, uint64_t>) fprintf(stream.file, "u64 %" PRIu64 "\n" , v);
+            else if constexpr (std::is_same_v<T, float   >) fprintf(stream.file, "f   %f\n", v);
+            else if constexpr (std::is_same_v<T, double  >) fprintf(stream.file, "d   %d\n", v);
+            else fprintf(stream.file, "? %s\n", typeid(T).name());
+        } else {
+            // text mode read not implemented
+            assert("nope");
+        }
     }
 
     if (stream.mode == PACK_MODE_WRITE) {
@@ -750,10 +768,19 @@ void Process(PackStream &stream, T &v)
 void Process(PackStream &stream, std::string &str)
 {
     uint16_t strLen = (uint16_t)str.size();
-    PROC(strLen);
-    str.resize(strLen);
-    for (int i = 0; i < strLen; i++) {
-        PROC(str[i]);
+    if (stream.type == PACK_TYPE_TEXT) {
+        if (stream.mode == PACK_MODE_WRITE) {
+            fprintf(stream.file, "str %s\n", str.c_str());
+        } else {
+            // text mode read not implemented
+            assert("nope");
+        }
+    } else {
+        PROC(strLen);
+        str.resize(strLen);
+        for (int i = 0; i < strLen; i++) {
+            PROC(str[i]);
+        }
     }
 }
 void Process(PackStream &stream, Vector2 &vec)
@@ -1151,16 +1178,18 @@ Err Process(PackStream &stream)
 
         #undef WRITE_ARRAY
 
-        int tocOffset = ftell(stream.file);
-        int entryCount = (int)pack.toc.entries.size();
-        PROC(entryCount);
-        for (PackTocEntry &tocEntry : pack.toc.entries) {
-            PROC((uint8_t &)tocEntry.dtype);
-            PROC(tocEntry.offset);
-        }
+        if (stream.type == PACK_TYPE_BINARY) {
+            int tocOffset = ftell(stream.file);
+            int entryCount = (int)pack.toc.entries.size();
+            PROC(entryCount);
+            for (PackTocEntry &tocEntry : pack.toc.entries) {
+                PROC((uint8_t &)tocEntry.dtype);
+                PROC(tocEntry.offset);
+            }
 
-        fseek(stream.file, tocOffsetPos, SEEK_SET);
-        PROC(tocOffset);
+            fseek(stream.file, tocOffsetPos, SEEK_SET);
+            PROC(tocOffset);
+        }
     } else {
         fseek(stream.file, pack.toc_offset, SEEK_SET);
         int entryCount = 0;

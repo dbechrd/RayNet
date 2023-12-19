@@ -1,0 +1,201 @@
+# 1st sub: 0x29
+# 2nd sub: itz_kuda gifted 0x29
+# 2rd sub: itz_kuda gifted iKOSOVA
+
+# forging:
+# toughness (defense)    : resistance to fracturing on impact                  (durability decreases when incoming damage > toughness)
+# hardness  (damage)     : resistance to deformation, scratching               (chance that durability decreases with each use)
+# strength  (durability) : resistance to tension, compression and shear forces (chance that durability decreases when your attack is blocked)
+
+gfx_files = [
+    { name = "gfx_missing"       , path = "resources/graphics/missing.png"          },
+    { name = "gfx_dlg_npatch"    , path = "resources/graphics/npatch.png"           },
+    { name = "gfx_chr_mage"      , path = "resources/graphics/mage.png"             },
+    { name = "gfx_npc_lily"      , path = "resources/graphics/lily.png"             },
+    { name = "gfx_npc_freye"     , path = "resources/graphics/freye.png"            },
+    { name = "gfx_npc_nessa"     , path = "resources/graphics/nessa.png"            },
+    { name = "gfx_npc_elane"     , path = "resources/graphics/elane.png"            },
+    { name = "gfx_npc_chicken"   , path = "resources/graphics/chicken.png"          },
+    { name = "gfx_obj_campfire"  , path = "resources/graphics/campfire.png"         },
+    { name = "gfx_prj_fireball"  , path = "resources/graphics/fireball.png"         },
+    { name = "gfx_til_overworld" , path = "resources/graphics/tiles64tm.png"        },
+    { name = "gfx_til_auto_grass", path = "resources/graphics/autotile_3x3_min.png" },
+]
+mus_files = [
+    { name = "mus_bathroom"        , path = "resources/music/copyright/O9s5lzHl6W8.wav" },
+    { name = "mus_ambient_outdoors", path = "resources/music/copyright/345470__philip_goddard__branscombe-landslip-birds-and-sea-echoes-ese-from-cave-track.ogg" },
+    { name = "mus_ambient_cave"    , path = "resources/music/copyright/69391__zixem__cave_amb.wav" },
+]
+sfx_files = [
+    { name = "sfx_missing"       , path = "resources/sound/mic_test.wav"                , variations = 1, pitch_variance = 0.00, max_instances = 10 },
+    { name = "sfx_soft_tick"     , path = "resources/sound/soft_tick.wav"               , variations = 1, pitch_variance = 0.03, max_instances = 5  },
+    { name = "sfx_campfire"      , path = "resources/sound/campfire.wav"                , variations = 1, pitch_variance = 0.00, max_instances = 1  },
+    { name = "sfx_footstep_grass", path = "resources/sound/footstep_grass.wav"          , variations = 1, pitch_variance = 0.00, max_instances = 1  },
+    { name = "sfx_footstep_stone", path = "resources/sound/footstep_stone.wav"          , variations = 1, pitch_variance = 0.00, max_instances = 1  },
+    { name = "sfx_footstep_water", path = "resources/sound/footstep_water.wav"          , variations = 1, pitch_variance = 0.00, max_instances = 1  },
+    { name = "sfx_footstep_wood" , path = "resources/sound/footstep_wood.wav"           , variations = 1, pitch_variance = 0.00, max_instances = 1  },
+    { name = "sfx_fireball"      , path = "resources/sound/copyright/fireball.wav"      , variations = 1, pitch_variance = 0.10, max_instances = 5  },
+    { name = "sfx_chicken_squawk", path = "resources/sound/copyright/chicken_squawk.wav", variations = 1, pitch_variance = 0.05, max_instances = 10 },
+    { name = "sfx_chicken_cluck" , path = "resources/sound/copyright/chicken_cluck.wav" , variations = 5, pitch_variance = 0.05, max_instances = 10 },
+]
+gfx_frames = [
+    { name = "gfx_frame_missing"            , gfx_file = "gfx_missing"      , x = 0   , y = 0  , w = 32 , h = 32  },
+    { name = "gfx_frame_chr_mage_e_0"       , gfx_file = "gfx_chr_mage"     , x = 0   , y = 0  , w = 64 , h = 128 },
+    { name = "gfx_frame_chr_mage_w_0"       , gfx_file = "gfx_chr_mage"     , x = 64  , y = 0  , w = 64 , h = 128 },
+    { name = "gfx_frame_npc_lily_e_0"       , gfx_file = "gfx_npc_lily"     , x = 0   , y = 0  , w = 64 , h = 128 },
+    { name = "gfx_frame_npc_lily_w_0"       , gfx_file = "gfx_npc_lily"     , x = 64  , y = 0  , w = 64 , h = 128 },
+    { name = "gfx_frame_npc_freye_e_0"      , gfx_file = "gfx_npc_freye"    , x = 0   , y = 0  , w = 64 , h = 128 },
+    { name = "gfx_frame_npc_freye_w_0"      , gfx_file = "gfx_npc_freye"    , x = 64  , y = 0  , w = 64 , h = 128 },
+    { name = "gfx_frame_npc_nessa_e_0"      , gfx_file = "gfx_npc_nessa"    , x = 0   , y = 0  , w = 64 , h = 128 },
+    { name = "gfx_frame_npc_nessa_w_0"      , gfx_file = "gfx_npc_nessa"    , x = 64  , y = 0  , w = 64 , h = 128 },
+    { name = "gfx_frame_npc_elane_e_0"      , gfx_file = "gfx_npc_elane"    , x = 0   , y = 0  , w = 64 , h = 128 },
+    { name = "gfx_frame_npc_elane_w_0"      , gfx_file = "gfx_npc_elane"    , x = 64  , y = 0  , w = 64 , h = 128 },
+    { name = "gfx_frame_npc_chicken_e_0"    , gfx_file = "gfx_npc_chicken"  , x = 0   , y = 0  , w = 64 , h = 64  },
+    { name = "gfx_frame_npc_chicken_w_0"    , gfx_file = "gfx_npc_chicken"  , x = 64  , y = 0  , w = 64 , h = 64  },
+    { name = "gfx_frame_obj_campfire_0"     , gfx_file = "gfx_obj_campfire" , x = 0   , y = 0  , w = 256, h = 256 },
+    { name = "gfx_frame_obj_campfire_1"     , gfx_file = "gfx_obj_campfire" , x = 256 , y = 0  , w = 256, h = 256 },
+    { name = "gfx_frame_obj_campfire_2"     , gfx_file = "gfx_obj_campfire" , x = 512 , y = 0  , w = 256, h = 256 },
+    { name = "gfx_frame_obj_campfire_3"     , gfx_file = "gfx_obj_campfire" , x = 768 , y = 0  , w = 256, h = 256 },
+    { name = "gfx_frame_obj_campfire_4"     , gfx_file = "gfx_obj_campfire" , x = 1024, y = 0  , w = 256, h = 256 },
+    { name = "gfx_frame_obj_campfire_5"     , gfx_file = "gfx_obj_campfire" , x = 1280, y = 0  , w = 256, h = 256 },
+    { name = "gfx_frame_obj_campfire_6"     , gfx_file = "gfx_obj_campfire" , x = 1536, y = 0  , w = 256, h = 256 },
+    { name = "gfx_frame_obj_campfire_7"     , gfx_file = "gfx_obj_campfire" , x = 1792, y = 0  , w = 256, h = 256 },
+    { name = "gfx_frame_prj_fireball_0"     , gfx_file = "gfx_prj_fireball" , x = 0   , y = 0  , w = 16 , h = 16  },
+    { name = "gfx_frame_til_void"           , gfx_file = "gfx_til_overworld", x = 0   , y = 0  , w = 64 , h = 64  },
+    { name = "gfx_frame_til_stone_path"     , gfx_file = "gfx_til_overworld", x = 64  , y = 0  , w = 64 , h = 64  },
+    { name = "gfx_frame_til_water_dark_0"   , gfx_file = "gfx_til_overworld", x = 128 , y = 0  , w = 64 , h = 64  },
+    { name = "gfx_frame_til_water_dark_1"   , gfx_file = "gfx_til_overworld", x = 192 , y = 0  , w = 64 , h = 64  },
+    { name = "gfx_frame_til_water_dark_2"   , gfx_file = "gfx_til_overworld", x = 256 , y = 0  , w = 64 , h = 64  },
+    { name = "null"                         , gfx_file = "gfx_til_overworld", x = 320 , y = 0  , w = 64 , h = 64  },
+    { name = "null"                         , gfx_file = "gfx_til_overworld", x = 384 , y = 0  , w = 64 , h = 64  },
+    { name = "null"                         , gfx_file = "gfx_til_overworld", x = 448 , y = 0  , w = 64 , h = 64  },
+    { name = "gfx_frame_til_grass_weeds_0"  , gfx_file = "gfx_til_overworld", x = 0   , y = 64 , w = 64 , h = 64  },
+    { name = "gfx_frame_til_grass_weeds_1"  , gfx_file = "gfx_til_overworld", x = 64  , y = 64 , w = 64 , h = 64  },
+    { name = "gfx_frame_til_grass_flowers_0", gfx_file = "gfx_til_overworld", x = 128 , y = 64 , w = 64 , h = 64  },
+    { name = "gfx_frame_til_grass_flowers_1", gfx_file = "gfx_til_overworld", x = 192 , y = 64 , w = 64 , h = 64  },
+    { name = "null"                         , gfx_file = "gfx_til_overworld", x = 256 , y = 64 , w = 64 , h = 64  },
+    { name = "null"                         , gfx_file = "gfx_til_overworld", x = 320 , y = 64 , w = 64 , h = 64  },
+    { name = "null"                         , gfx_file = "gfx_til_overworld", x = 384 , y = 64 , w = 64 , h = 64  },
+    { name = "null"                         , gfx_file = "gfx_til_overworld", x = 448 , y = 64 , w = 64 , h = 64  },
+    { name = "gfx_frame_til_stone_wall_tl"  , gfx_file = "gfx_til_overworld", x = 0   , y = 128, w = 64 , h = 64  },
+    { name = "gfx_frame_til_stone_wall_tc"  , gfx_file = "gfx_til_overworld", x = 64  , y = 128, w = 64 , h = 64  },
+    { name = "gfx_frame_til_stone_wall_tr"  , gfx_file = "gfx_til_overworld", x = 128 , y = 128, w = 64 , h = 64  },
+    { name = "gfx_frame_obj_bush"           , gfx_file = "gfx_til_overworld", x = 192 , y = 128, w = 64 , h = 64  },
+    { name = "null"                         , gfx_file = "gfx_til_overworld", x = 256 , y = 128, w = 64 , h = 64  },
+    { name = "gfx_frame_obj_portal_0"       , gfx_file = "gfx_til_overworld", x = 320 , y = 128, w = 64 , h = 128 },
+    { name = "gfx_frame_obj_portal_1"       , gfx_file = "gfx_til_overworld", x = 384 , y = 128, w = 64 , h = 128 },
+    { name = "gfx_frame_obj_portal_2"       , gfx_file = "gfx_til_overworld", x = 448 , y = 128, w = 64 , h = 128 },
+    { name = "gfx_frame_til_stone_wall_cl"  , gfx_file = "gfx_til_overworld", x = 0   , y = 192, w = 64 , h = 64  },
+    { name = "gfx_frame_til_stone_wall_cc"  , gfx_file = "gfx_til_overworld", x = 64  , y = 192, w = 64 , h = 64  },
+    { name = "gfx_frame_til_stone_wall_cr"  , gfx_file = "gfx_til_overworld", x = 128 , y = 192, w = 64 , h = 64  },
+    { name = "gfx_frame_obj_sign"           , gfx_file = "gfx_til_overworld", x = 192 , y = 192, w = 64 , h = 64  },
+    { name = "gfx_frame_obj_chest_closed"   , gfx_file = "gfx_til_overworld", x = 256 , y = 192, w = 64 , h = 64  },
+    { name = "null"                         , gfx_file = "gfx_til_overworld", x = 320 , y = 192, w = 64 , h = 64  },
+    { name = "null"                         , gfx_file = "gfx_til_overworld", x = 384 , y = 192, w = 64 , h = 64  },
+    { name = "null"                         , gfx_file = "gfx_til_overworld", x = 448 , y = 192, w = 64 , h = 64  },
+    { name = "gfx_frame_til_stone_wall_bl"  , gfx_file = "gfx_til_overworld", x = 0   , y = 256, w = 64 , h = 64  },
+    { name = "gfx_frame_til_stone_wall_bc"  , gfx_file = "gfx_til_overworld", x = 64  , y = 256, w = 64 , h = 64  },
+    { name = "gfx_frame_til_stone_wall_br"  , gfx_file = "gfx_til_overworld", x = 128 , y = 256, w = 64 , h = 64  },
+    { name = "gfx_frame_itm_poop"           , gfx_file = "gfx_til_overworld", x = 192 , y = 256, w = 64 , h = 64  },
+    { name = "null"                         , gfx_file = "gfx_til_overworld", x = 256 , y = 256, w = 64 , h = 64  },
+    { name = "null"                         , gfx_file = "gfx_til_overworld", x = 320 , y = 256, w = 64 , h = 64  },
+    { name = "null"                         , gfx_file = "gfx_til_overworld", x = 384 , y = 256, w = 64 , h = 64  },
+    { name = "null"                         , gfx_file = "gfx_til_overworld", x = 448 , y = 256, w = 64 , h = 64  },
+]
+gfx_anims = [
+    { name = "gfx_anim_missing"          , sound_effect = "null"        , frmrate = 60, frmcount = 1, frmdelay = 0, frames = ["gfx_frame_missing"] },
+    { name = "gfx_anim_chr_mage_e"       , sound_effect = "null"        , frmrate = 60, frmcount = 1, frmdelay = 0, frames = ["gfx_frame_chr_mage_e_0"] },
+    { name = "gfx_anim_chr_mage_w"       , sound_effect = "null"        , frmrate = 60, frmcount = 1, frmdelay = 0, frames = ["gfx_frame_chr_mage_w_0"] },
+    { name = "gfx_anim_npc_lily_e"       , sound_effect = "null"        , frmrate = 60, frmcount = 1, frmdelay = 0, frames = ["gfx_frame_npc_lily_e_0"] },
+    { name = "gfx_anim_npc_lily_w"       , sound_effect = "null"        , frmrate = 60, frmcount = 1, frmdelay = 0, frames = ["gfx_frame_npc_lily_w_0"] },
+    { name = "gfx_anim_npc_freye_e"      , sound_effect = "null"        , frmrate = 60, frmcount = 1, frmdelay = 0, frames = ["gfx_frame_npc_freye_e_0"] },
+    { name = "gfx_anim_npc_freye_w"      , sound_effect = "null"        , frmrate = 60, frmcount = 1, frmdelay = 0, frames = ["gfx_frame_npc_freye_w_0"] },
+    { name = "gfx_anim_npc_nessa_e"      , sound_effect = "null"        , frmrate = 60, frmcount = 1, frmdelay = 0, frames = ["gfx_frame_npc_nessa_e_0"] },
+    { name = "gfx_anim_npc_nessa_w"      , sound_effect = "null"        , frmrate = 60, frmcount = 1, frmdelay = 0, frames = ["gfx_frame_npc_nessa_w_0"] },
+    { name = "gfx_anim_npc_elane_e"      , sound_effect = "null"        , frmrate = 60, frmcount = 1, frmdelay = 0, frames = ["gfx_frame_npc_elane_e_0"] },
+    { name = "gfx_anim_npc_elane_w"      , sound_effect = "null"        , frmrate = 60, frmcount = 1, frmdelay = 0, frames = ["gfx_frame_npc_elane_w_0"] },
+    { name = "gfx_anim_npc_chicken_e"    , sound_effect = "null"        , frmrate = 60, frmcount = 1, frmdelay = 0, frames = ["gfx_frame_npc_chicken_e_0"] },
+    { name = "gfx_anim_npc_chicken_w"    , sound_effect = "null"        , frmrate = 60, frmcount = 1, frmdelay = 0, frames = ["gfx_frame_npc_chicken_w_0"] },
+    { name = "gfx_anim_obj_campfire"     , sound_effect = "sfx_campfire", frmrate = 60, frmcount = 8, frmdelay = 4, frames = ["gfx_frame_obj_campfire_0", "gfx_frame_obj_campfire_1", "gfx_frame_obj_campfire_2", "gfx_frame_obj_campfire_3", "gfx_frame_obj_campfire_4", "gfx_frame_obj_campfire_5", "gfx_frame_obj_campfire_6", "gfx_frame_obj_campfire_7"] },
+    { name = "gfx_anim_prj_fireball"     , sound_effect = "sfx_fireball", frmrate = 60, frmcount = 1, frmdelay = 0, frames = ["gfx_frame_prj_fireball_0"] },
+    { name = "gfx_anim_til_void"         , sound_effect = "null"        , frmrate = 60, frmcount = 1, frmdelay = 0, frames = ["gfx_frame_til_void"] },
+    { name = "gfx_anim_til_stone_path"   , sound_effect = "null"        , frmrate = 60, frmcount = 1, frmdelay = 0, frames = ["gfx_frame_til_stone_path"] },
+    { name = "gfx_anim_til_water_dark"   , sound_effect = "null"        , frmrate =  2, frmcount = 4, frmdelay = 1, frames = ["gfx_frame_til_water_dark_0", "gfx_frame_til_water_dark_1", "gfx_frame_til_water_dark_2", "gfx_frame_til_water_dark_1"] },
+    { name = "gfx_anim_til_grass_weeds"  , sound_effect = "null"        , frmrate =  3, frmcount = 2, frmdelay = 1, frames = ["gfx_frame_til_grass_weeds_0", "gfx_frame_til_grass_weeds_1"] },
+    { name = "gfx_anim_til_grass_flowers", sound_effect = "null"        , frmrate =  2, frmcount = 2, frmdelay = 1, frames = ["gfx_frame_til_grass_flowers_0", "gfx_frame_til_grass_flowers_1"] },
+    { name = "gfx_anim_til_stone_wall_tl", sound_effect = "null"        , frmrate = 60, frmcount = 1, frmdelay = 0, frames = ["gfx_frame_til_stone_wall_tl"] },
+    { name = "gfx_anim_til_stone_wall_tc", sound_effect = "null"        , frmrate = 60, frmcount = 1, frmdelay = 0, frames = ["gfx_frame_til_stone_wall_tc"] },
+    { name = "gfx_anim_til_stone_wall_tr", sound_effect = "null"        , frmrate = 60, frmcount = 1, frmdelay = 0, frames = ["gfx_frame_til_stone_wall_tr"] },
+    { name = "gfx_anim_til_stone_wall_cl", sound_effect = "null"        , frmrate = 60, frmcount = 1, frmdelay = 0, frames = ["gfx_frame_til_stone_wall_cl"] },
+    { name = "gfx_anim_til_stone_wall_cc", sound_effect = "null"        , frmrate = 60, frmcount = 1, frmdelay = 0, frames = ["gfx_frame_til_stone_wall_cc"] },
+    { name = "gfx_anim_til_stone_wall_cr", sound_effect = "null"        , frmrate = 60, frmcount = 1, frmdelay = 0, frames = ["gfx_frame_til_stone_wall_cr"] },
+    { name = "gfx_anim_til_stone_wall_bl", sound_effect = "null"        , frmrate = 60, frmcount = 1, frmdelay = 0, frames = ["gfx_frame_til_stone_wall_bl"] },
+    { name = "gfx_anim_til_stone_wall_bc", sound_effect = "null"        , frmrate = 60, frmcount = 1, frmdelay = 0, frames = ["gfx_frame_til_stone_wall_bc"] },
+    { name = "gfx_anim_til_stone_wall_br", sound_effect = "null"        , frmrate = 60, frmcount = 1, frmdelay = 0, frames = ["gfx_frame_til_stone_wall_br"] },
+    { name = "gfx_anim_itm_poop"         , sound_effect = "null"        , frmrate = 60, frmcount = 1, frmdelay = 0, frames = ["gfx_frame_itm_poop"] },
+    { name = "gfx_anim_obj_bush"         , sound_effect = "null"        , frmrate = 60, frmcount = 1, frmdelay = 0, frames = ["gfx_frame_obj_bush"] },
+    { name = "gfx_anim_obj_chest_closed" , sound_effect = "null"        , frmrate = 60, frmcount = 1, frmdelay = 0, frames = ["gfx_frame_obj_chest_closed"] },
+    { name = "gfx_anim_obj_portal"       , sound_effect = "null"        , frmrate = 60, frmcount = 3, frmdelay = 6, frames = ["gfx_frame_obj_portal_0", "gfx_frame_obj_portal_1", "gfx_frame_obj_portal_2"] },
+    { name = "gfx_anim_obj_sign"         , sound_effect = "null"        , frmrate = 60, frmcount = 1, frmdelay = 0, frames = ["gfx_frame_obj_sign"] },
+]
+
+
+item_defs = [
+    { name = "item_missing"       , type = "weapon", weapon_class = "sword", damage = 0, toughness = 0  },
+    { name = "item_sword_wood"    , type = "weapon", weapon_class = "sword", damage = 1, toughness = 10 },
+    { name = "item_sword_copper"  , type = "weapon", weapon_class = "sword", damage = 3, toughness = 30 },
+    { name = "item_sword_bronze"  , type = "weapon", weapon_class = "sword", damage = 3, toughness = 35 },
+    { name = "item_sword_obsidian", type = "weapon", weapon_class = "sword", damage = 5, toughness = 15 },
+    { name = "item_sword_steel"   , type = "weapon", weapon_class = "sword", damage = 7, toughness = 50 },
+    { name = "item_axe_wood"      , type = "tool"  , weapon_class = "axe"  , damage = 2, toughness = 25 },
+]
+//         id    name             rolls items
+@LootTable 0 : { "loot_missing"   0     [{ null 1.0 }] }
+@LootTable 1 : { "loot_basic"     5     [{ null 0.2 }{ item_sword     0.2 }{ item_axe     0.1 }] }
+@LootTable 2 : { "loot_uncommon"  4     [{ null 0.3 }{ item_ruby      0.2 }{ item_saphire 0.1 }] }
+@LootTable 3 : { "loot_rare"      3     [{ null 0.4 }{ item_gold      0.2 }{ item_diamond 0.1 }] }
+@LootTable 4 : { "loot_legendary" 2     [{ null 0.5 }{ item_excalibur 0.2 }{ item_hamaxe  0.1 }] }
+
+//      id  name                  anim_n                anim_e                 anim_s anim_w                 anim_ne anim_se anim_sw anim_nw
+@Sprite 0 : "sprite_missing"      null                  null                   null   null                   null    null    null    null
+@Sprite 1 : "sprite_chr_mage"     null                  gfx_anim_chr_mage_e    null   gfx_anim_chr_mage_w    null    null    null    null
+@Sprite 2 : "sprite_npc_lily"     null                  gfx_anim_npc_lily_e    null   gfx_anim_npc_lily_w    null    null    null    null
+@Sprite 3 : "sprite_npc_freye"    null                  gfx_anim_npc_freye_e   null   gfx_anim_npc_freye_w   null    null    null    null
+@Sprite 4 : "sprite_npc_nessa"    null                  gfx_anim_npc_nessa_e   null   gfx_anim_npc_nessa_w   null    null    null    null
+@Sprite 5 : "sprite_npc_elane"    null                  gfx_anim_npc_elane_e   null   gfx_anim_npc_elane_w   null    null    null    null
+@Sprite 6 : "sprite_npc_chicken"  null                  gfx_anim_npc_chicken_e null   gfx_anim_npc_chicken_w null    null    null    null
+@Sprite 7 : "sprite_obj_campfire" gfx_anim_obj_campfire null                   null   null                   null    null    null    null
+@Sprite 8 : "sprite_prj_fireball" gfx_anim_prj_fireball null                   null   null                   null    null    null    null
+@Sprite 9 : "sprite_itm_poop"     gfx_anim_itm_poop     null                   null   null                   null    null    null    null
+
+///////////////////////////////////////////////////////////////////////
+// DO NOT change or reorder the IDs without updating all the map data
+///////////////////////////////////////////////////////////////////////
+//       id   name                animation                  material_id solid liquid auto_tile_mask
+@TileDef 0  : "til_missing"       gfx_anim_missing           0           0     0      0
+@TileDef 1  : "til_void"          gfx_anim_til_void          1           1     0      0
+@TileDef 2  : "til_stone_path"    gfx_anim_til_stone_path    2           0     0      0
+@TileDef 3  : "til_water_dark"    gfx_anim_til_water_dark    3           0     1      0
+@TileDef 4  : "til_grass_weeds"   gfx_anim_til_grass_weeds   4           0     0      0
+@TileDef 5  : "til_grass_flowers" gfx_anim_til_grass_flowers 4           0     0      0
+@TileDef 6  : "til_stone_wall_tl" gfx_anim_til_stone_wall_tl 2           1     0      0
+@TileDef 7  : "til_stone_wall_tc" gfx_anim_til_stone_wall_tc 2           1     0      0
+@TileDef 8  : "til_stone_wall_tr" gfx_anim_til_stone_wall_tr 2           1     0      0
+@TileDef 9  : "til_stone_wall_cl" gfx_anim_til_stone_wall_cl 2           1     0      0
+@TileDef 10 : "til_stone_wall_cc" gfx_anim_til_stone_wall_cc 2           1     0      0
+@TileDef 11 : "til_stone_wall_cr" gfx_anim_til_stone_wall_cr 2           1     0      0
+@TileDef 12 : "til_stone_wall_bl" gfx_anim_til_stone_wall_bl 2           1     0      0
+@TileDef 13 : "til_stone_wall_bc" gfx_anim_til_stone_wall_bc 2           1     0      0
+@TileDef 14 : "til_stone_wall_br" gfx_anim_til_stone_wall_br 2           1     0      0
+@TileDef 15 : "obj_bush"          gfx_anim_obj_bush          4           1     0      0
+@TileDef 16 : "obj_chest_basic"   gfx_anim_obj_chest_closed  5           1     0      0
+@TileDef 17 : "obj_portal"        gfx_anim_obj_portal        1           0     0      0
+@TileDef 18 : "obj_sign"          gfx_anim_obj_sign          5           0     0      0
+
+//      id   name          footstep_sound
+@TileMat 0 : "mat_missing" null
+@TileMat 1 : "mat_void"    null
+@TileMat 2 : "mat_stone"   sfx_footstep_stone
+@TileMat 3 : "mat_water"   sfx_footstep_water
+@TileMat 4 : "mat_grass"   sfx_footstep_grass
+@TileMat 5 : "mat_wood"    sfx_footstep_wood

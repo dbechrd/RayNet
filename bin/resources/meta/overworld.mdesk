@@ -145,7 +145,7 @@
 @Item item_sword_bronze   : weapon sword        3      35
 @Item item_sword_obsidian : weapon sword        5      15
 @Item item_sword_steel    : weapon sword        7      50
-@item item_axe_wood       : tool   axe
+@item item_axe_wood       : tool   axe          2      25
 
 //         id    name             rolls items
 @LootTable 0 : { "loot_missing"   0     [{ null 1.0 }] }
