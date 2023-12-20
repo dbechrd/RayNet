@@ -619,6 +619,8 @@ Err LoadResources(Pack &pack);
 
 Err Init(void)
 {
+    //NewEnt::run_tests();
+
     PerfTimer t{ "InitCommon" };
 
     Err err = RN_SUCCESS;
@@ -753,7 +755,7 @@ void Process(PackStream &stream, T &v)
             else if constexpr (std::is_same_v<T, uint32_t>) fprintf(stream.file, "u32 %" PRIu32 "\n", v);
             else if constexpr (std::is_same_v<T, uint64_t>) fprintf(stream.file, "u64 %" PRIu64 "\n" , v);
             else if constexpr (std::is_same_v<T, float   >) fprintf(stream.file, "f   %f\n", v);
-            else if constexpr (std::is_same_v<T, double  >) fprintf(stream.file, "d   %d\n", v);
+            else if constexpr (std::is_same_v<T, double  >) fprintf(stream.file, "d   %f\n", v);
             else fprintf(stream.file, "? %s\n", typeid(T).name());
         } else {
             // text mode read not implemented

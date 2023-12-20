@@ -15,6 +15,7 @@
 #include <cctype>
 
 #include <array>
+#include <bitset>
 #include <fstream>
 #include <iostream>
 #include <memory>

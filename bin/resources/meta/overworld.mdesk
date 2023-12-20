@@ -93,45 +93,52 @@
 @GfxFrame null                          : gfx_til_overworld  320  256  64   64
 @GfxFrame null                          : gfx_til_overworld  384  256  64   64
 @GfxFrame null                          : gfx_til_overworld  448  256  64   64
+@GfxFrame gfx_frame_obj_lever_unpowered : gfx_til_overworld  0    320  64   64
+@GfxFrame gfx_frame_obj_lever_powered_0 : gfx_til_overworld  64   320  64   64
+@GfxFrame gfx_frame_obj_lever_powered_1 : gfx_til_overworld  128  320  64   64
+@GfxFrame null                          : gfx_til_overworld  192  320  64   64
+@GfxFrame null                          : gfx_til_overworld  256  320  64   64
+@GfxFrame null                          : gfx_til_overworld  320  320  64   64
+@GfxFrame null                          : gfx_til_overworld  384  320  64   64
+@GfxFrame null                          : gfx_til_overworld  448  320  64   64
 
-//       id                           sound_effect  frmrate  frmcount  frmdelay  frames
-@GfxAnim gfx_anim_missing           : null          60       1         0         gfx_frame_missing
-@GfxAnim gfx_anim_chr_mage_e        : null          60       1         0         gfx_frame_chr_mage_e_0
-@GfxAnim gfx_anim_chr_mage_w        : null          60       1         0         gfx_frame_chr_mage_w_0
-@GfxAnim gfx_anim_npc_lily_e        : null          60       1         0         gfx_frame_npc_lily_e_0
-@GfxAnim gfx_anim_npc_lily_w        : null          60       1         0         gfx_frame_npc_lily_w_0
-@GfxAnim gfx_anim_npc_freye_e       : null          60       1         0         gfx_frame_npc_freye_e_0
-@GfxAnim gfx_anim_npc_freye_w       : null          60       1         0         gfx_frame_npc_freye_w_0
-@GfxAnim gfx_anim_npc_nessa_e       : null          60       1         0         gfx_frame_npc_nessa_e_0
-@GfxAnim gfx_anim_npc_nessa_w       : null          60       1         0         gfx_frame_npc_nessa_w_0
-@GfxAnim gfx_anim_npc_elane_e       : null          60       1         0         gfx_frame_npc_elane_e_0
-@GfxAnim gfx_anim_npc_elane_w       : null          60       1         0         gfx_frame_npc_elane_w_0
-@GfxAnim gfx_anim_npc_chicken_e     : null          60       1         0         gfx_frame_npc_chicken_e_0
-@GfxAnim gfx_anim_npc_chicken_w     : null          60       1         0         gfx_frame_npc_chicken_w_0
-@GfxAnim gfx_anim_obj_campfire      : sfx_campfire  60       8         4         gfx_frame_obj_campfire_0 gfx_frame_obj_campfire_1 gfx_frame_obj_campfire_2 gfx_frame_obj_campfire_3 gfx_frame_obj_campfire_4 gfx_frame_obj_campfire_5 gfx_frame_obj_campfire_6 gfx_frame_obj_campfire_7
-@GfxAnim gfx_anim_prj_fireball      : sfx_fireball  60       1         0         gfx_frame_prj_fireball_0
-
-@GfxAnim gfx_anim_til_void          : null          60       1         0         gfx_frame_til_void
-@GfxAnim gfx_anim_til_stone_path    : null          60       1         0         gfx_frame_til_stone_path
-@GfxAnim gfx_anim_til_water_dark    : null           2       4         1         gfx_frame_til_water_dark_0 gfx_frame_til_water_dark_1 gfx_frame_til_water_dark_2 gfx_frame_til_water_dark_1
-@GfxAnim gfx_anim_til_grass_weeds   : null           3       2         1         gfx_frame_til_grass_weeds_0 gfx_frame_til_grass_weeds_1
-@GfxAnim gfx_anim_til_grass_flowers : null           2       2         1         gfx_frame_til_grass_flowers_0 gfx_frame_til_grass_flowers_1
-@GfxAnim gfx_anim_til_stone_wall_tl : null          60       1         0         gfx_frame_til_stone_wall_tl
-@GfxAnim gfx_anim_til_stone_wall_tc : null          60       1         0         gfx_frame_til_stone_wall_tc
-@GfxAnim gfx_anim_til_stone_wall_tr : null          60       1         0         gfx_frame_til_stone_wall_tr
-@GfxAnim gfx_anim_til_stone_wall_cl : null          60       1         0         gfx_frame_til_stone_wall_cl
-@GfxAnim gfx_anim_til_stone_wall_cc : null          60       1         0         gfx_frame_til_stone_wall_cc
-@GfxAnim gfx_anim_til_stone_wall_cr : null          60       1         0         gfx_frame_til_stone_wall_cr
-@GfxAnim gfx_anim_til_stone_wall_bl : null          60       1         0         gfx_frame_til_stone_wall_bl
-@GfxAnim gfx_anim_til_stone_wall_bc : null          60       1         0         gfx_frame_til_stone_wall_bc
-@GfxAnim gfx_anim_til_stone_wall_br : null          60       1         0         gfx_frame_til_stone_wall_br
-
-@GfxAnim gfx_anim_itm_poop          : null          60       1         0         gfx_frame_itm_poop
-
-@GfxAnim gfx_anim_obj_bush          : null          60       1         0         gfx_frame_obj_bush
-@GfxAnim gfx_anim_obj_chest_closed  : null          60       1         0         gfx_frame_obj_chest_closed
-@GfxAnim gfx_anim_obj_portal        : null          60       3         6         gfx_frame_obj_portal_0 gfx_frame_obj_portal_1 gfx_frame_obj_portal_2
-@GfxAnim gfx_anim_obj_sign          : null          60       1         0         gfx_frame_obj_sign
+//       id                             sound_effect  frmrate  frmcount  frmdelay  frames
+@GfxAnim gfx_anim_missing             : null          60       1         0         gfx_frame_missing
+@GfxAnim gfx_anim_chr_mage_e          : null          60       1         0         gfx_frame_chr_mage_e_0
+@GfxAnim gfx_anim_chr_mage_w          : null          60       1         0         gfx_frame_chr_mage_w_0
+@GfxAnim gfx_anim_npc_lily_e          : null          60       1         0         gfx_frame_npc_lily_e_0
+@GfxAnim gfx_anim_npc_lily_w          : null          60       1         0         gfx_frame_npc_lily_w_0
+@GfxAnim gfx_anim_npc_freye_e         : null          60       1         0         gfx_frame_npc_freye_e_0
+@GfxAnim gfx_anim_npc_freye_w         : null          60       1         0         gfx_frame_npc_freye_w_0
+@GfxAnim gfx_anim_npc_nessa_e         : null          60       1         0         gfx_frame_npc_nessa_e_0
+@GfxAnim gfx_anim_npc_nessa_w         : null          60       1         0         gfx_frame_npc_nessa_w_0
+@GfxAnim gfx_anim_npc_elane_e         : null          60       1         0         gfx_frame_npc_elane_e_0
+@GfxAnim gfx_anim_npc_elane_w         : null          60       1         0         gfx_frame_npc_elane_w_0
+@GfxAnim gfx_anim_npc_chicken_e       : null          60       1         0         gfx_frame_npc_chicken_e_0
+@GfxAnim gfx_anim_npc_chicken_w       : null          60       1         0         gfx_frame_npc_chicken_w_0
+@GfxAnim gfx_anim_obj_campfire        : sfx_campfire  60       8         4         gfx_frame_obj_campfire_0 gfx_frame_obj_campfire_1 gfx_frame_obj_campfire_2 gfx_frame_obj_campfire_3 gfx_frame_obj_campfire_4 gfx_frame_obj_campfire_5 gfx_frame_obj_campfire_6 gfx_frame_obj_campfire_7
+@GfxAnim gfx_anim_prj_fireball        : sfx_fireball  60       1         0         gfx_frame_prj_fireball_0
+@GfxAnim gfx_anim_til_void            : null          60       1         0         gfx_frame_til_void
+@GfxAnim gfx_anim_til_stone_path      : null          60       1         0         gfx_frame_til_stone_path
+@GfxAnim gfx_anim_til_water_dark      : null           2       4         1         gfx_frame_til_water_dark_0 gfx_frame_til_water_dark_1 gfx_frame_til_water_dark_2 gfx_frame_til_water_dark_1
+@GfxAnim gfx_anim_til_grass_weeds     : null           3       2         1         gfx_frame_til_grass_weeds_0 gfx_frame_til_grass_weeds_1
+@GfxAnim gfx_anim_til_grass_flowers   : null           2       2         1         gfx_frame_til_grass_flowers_0 gfx_frame_til_grass_flowers_1
+@GfxAnim gfx_anim_til_stone_wall_tl   : null          60       1         0         gfx_frame_til_stone_wall_tl
+@GfxAnim gfx_anim_til_stone_wall_tc   : null          60       1         0         gfx_frame_til_stone_wall_tc
+@GfxAnim gfx_anim_til_stone_wall_tr   : null          60       1         0         gfx_frame_til_stone_wall_tr
+@GfxAnim gfx_anim_til_stone_wall_cl   : null          60       1         0         gfx_frame_til_stone_wall_cl
+@GfxAnim gfx_anim_til_stone_wall_cc   : null          60       1         0         gfx_frame_til_stone_wall_cc
+@GfxAnim gfx_anim_til_stone_wall_cr   : null          60       1         0         gfx_frame_til_stone_wall_cr
+@GfxAnim gfx_anim_til_stone_wall_bl   : null          60       1         0         gfx_frame_til_stone_wall_bl
+@GfxAnim gfx_anim_til_stone_wall_bc   : null          60       1         0         gfx_frame_til_stone_wall_bc
+@GfxAnim gfx_anim_til_stone_wall_br   : null          60       1         0         gfx_frame_til_stone_wall_br
+@GfxAnim gfx_anim_itm_poop            : null          60       1         0         gfx_frame_itm_poop
+@GfxAnim gfx_anim_obj_bush            : null          60       1         0         gfx_frame_obj_bush
+@GfxAnim gfx_anim_obj_chest_closed    : null          60       1         0         gfx_frame_obj_chest_closed
+@GfxAnim gfx_anim_obj_portal          : null          60       3         6         gfx_frame_obj_portal_0 gfx_frame_obj_portal_1 gfx_frame_obj_portal_2
+@GfxAnim gfx_anim_obj_sign            : null          60       1         0         gfx_frame_obj_sign
+@GfxAnim gfx_anim_obj_lever_unpowered : null           3       1         0         gfx_frame_obj_lever_unpowered
+@GfxAnim gfx_anim_obj_lever_powered   : null           4       4         1         gfx_frame_obj_lever_powered_0 gfx_frame_obj_lever_powered_0 gfx_frame_obj_lever_powered_0 gfx_frame_obj_lever_powered_1
 
 // forging:
 // toughness (defense)    : resistance to fracturing on impact                  (durability decreases when incoming damage > toughness)
@@ -166,30 +173,6 @@
 @Sprite 8 : "sprite_prj_fireball" gfx_anim_prj_fireball null                   null   null                   null    null    null    null
 @Sprite 9 : "sprite_itm_poop"     gfx_anim_itm_poop     null                   null   null                   null    null    null    null
 
-///////////////////////////////////////////////////////////////////////
-// DO NOT change or reorder the IDs without updating all the map data
-///////////////////////////////////////////////////////////////////////
-//       id   name                animation                  material_id solid liquid auto_tile_mask
-@TileDef 0  : "til_missing"       gfx_anim_missing           0           0     0      0
-@TileDef 1  : "til_void"          gfx_anim_til_void          1           1     0      0
-@TileDef 2  : "til_stone_path"    gfx_anim_til_stone_path    2           0     0      0
-@TileDef 3  : "til_water_dark"    gfx_anim_til_water_dark    3           0     1      0
-@TileDef 4  : "til_grass_weeds"   gfx_anim_til_grass_weeds   4           0     0      0
-@TileDef 5  : "til_grass_flowers" gfx_anim_til_grass_flowers 4           0     0      0
-@TileDef 6  : "til_stone_wall_tl" gfx_anim_til_stone_wall_tl 2           1     0      0
-@TileDef 7  : "til_stone_wall_tc" gfx_anim_til_stone_wall_tc 2           1     0      0
-@TileDef 8  : "til_stone_wall_tr" gfx_anim_til_stone_wall_tr 2           1     0      0
-@TileDef 9  : "til_stone_wall_cl" gfx_anim_til_stone_wall_cl 2           1     0      0
-@TileDef 10 : "til_stone_wall_cc" gfx_anim_til_stone_wall_cc 2           1     0      0
-@TileDef 11 : "til_stone_wall_cr" gfx_anim_til_stone_wall_cr 2           1     0      0
-@TileDef 12 : "til_stone_wall_bl" gfx_anim_til_stone_wall_bl 2           1     0      0
-@TileDef 13 : "til_stone_wall_bc" gfx_anim_til_stone_wall_bc 2           1     0      0
-@TileDef 14 : "til_stone_wall_br" gfx_anim_til_stone_wall_br 2           1     0      0
-@TileDef 15 : "obj_bush"          gfx_anim_obj_bush          4           1     0      0
-@TileDef 16 : "obj_chest_basic"   gfx_anim_obj_chest_closed  5           1     0      0
-@TileDef 17 : "obj_portal"        gfx_anim_obj_portal        1           0     0      0
-@TileDef 18 : "obj_sign"          gfx_anim_obj_sign          5           0     0      0
-
 //      id   name          footstep_sound
 @TileMat 0 : "mat_missing" null
 @TileMat 1 : "mat_void"    null
@@ -197,6 +180,32 @@
 @TileMat 3 : "mat_water"   sfx_footstep_water
 @TileMat 4 : "mat_grass"   sfx_footstep_grass
 @TileMat 5 : "mat_wood"    sfx_footstep_wood
+
+///////////////////////////////////////////////////////////////////////
+// DO NOT change or reorder the IDs without updating all the map data
+///////////////////////////////////////////////////////////////////////
+//       id   name                  animation                    material_id solid liquid auto_tile_mask
+@TileDef 0  : "til_missing"         gfx_anim_missing             0           0     0      0
+@TileDef 1  : "til_void"            gfx_anim_til_void            1           1     0      0
+@TileDef 2  : "til_stone_path"      gfx_anim_til_stone_path      2           0     0      0
+@TileDef 3  : "til_water_dark"      gfx_anim_til_water_dark      3           0     1      0
+@TileDef 4  : "til_grass_weeds"     gfx_anim_til_grass_weeds     4           0     0      0
+@TileDef 5  : "til_grass_flowers"   gfx_anim_til_grass_flowers   4           0     0      0
+@TileDef 6  : "til_stone_wall_tl"   gfx_anim_til_stone_wall_tl   2           1     0      0
+@TileDef 7  : "til_stone_wall_tc"   gfx_anim_til_stone_wall_tc   2           1     0      0
+@TileDef 8  : "til_stone_wall_tr"   gfx_anim_til_stone_wall_tr   2           1     0      0
+@TileDef 9  : "til_stone_wall_cl"   gfx_anim_til_stone_wall_cl   2           1     0      0
+@TileDef 10 : "til_stone_wall_cc"   gfx_anim_til_stone_wall_cc   2           1     0      0
+@TileDef 11 : "til_stone_wall_cr"   gfx_anim_til_stone_wall_cr   2           1     0      0
+@TileDef 12 : "til_stone_wall_bl"   gfx_anim_til_stone_wall_bl   2           1     0      0
+@TileDef 13 : "til_stone_wall_bc"   gfx_anim_til_stone_wall_bc   2           1     0      0
+@TileDef 14 : "til_stone_wall_br"   gfx_anim_til_stone_wall_br   2           1     0      0
+@TileDef 15 : "obj_bush"            gfx_anim_obj_bush            4           1     0      0
+@TileDef 16 : "obj_chest_basic"     gfx_anim_obj_chest_closed    5           1     0      0
+@TileDef 17 : "obj_portal"          gfx_anim_obj_portal          1           0     0      0
+@TileDef 18 : "obj_sign"            gfx_anim_obj_sign            5           0     0      0
+@TileDef 19 : "obj_lever_unpowered" gfx_anim_obj_lever_unpowered 2           0     0      0
+@TileDef 20 : "obj_lever_powered"   gfx_anim_obj_lever_powered   2           0     0      0
 
 // 1st sub: 0x29
 // 2nd sub: itz_kuda gifted 0x29
