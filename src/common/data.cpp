@@ -2,11 +2,21 @@
 #include "file_utils.h"
 #include "net/net.h"
 #include "perf_timer.h"
+#include "schema.h"
+
 #define MD_HIJACK_STRING_CONSTANTS 0
 #include "md.h"
-#include <sstream>
-#include <iomanip>
-#include <type_traits>
+
+#include "capnp/message.h"
+#include "capnp/serialize.h"
+#include "capnp/serialize-text.h"
+#include "meta/resource_library.capnp.h"
+
+#include <io.h>
+#include <fcntl.h>
+//#include <iomanip>
+//#include <sstream>
+//#include <type_traits>
 
 struct GameState {
     bool freye_introduced;
@@ -619,7 +629,37 @@ Err LoadResources(Pack &pack);
 
 Err Init(void)
 {
+    {
+        capnp::MallocMessageBuilder message;
+
+        meta::ResourceLibrary::Builder resourceLibrary = message.initRoot<meta::ResourceLibrary>();
+        capnp::List<meta::Resource>::Builder resources = resourceLibrary.initResources(2);
+
+        meta::Resource::Builder gfx_missing = resources[0];
+        gfx_missing.setId(0);
+        gfx_missing.setName("gfx_missing");
+        gfx_missing.setPath("resources/graphics/missing.png");
+
+        meta::Resource::Builder gfx_dlg_npatch = resources[1];
+        gfx_dlg_npatch.setId(1);
+        gfx_dlg_npatch.setName("gfx_dlg_npatch");
+        gfx_dlg_npatch.setPath("resources/graphics/npatch.png");
+
+        int fd = _open("capnp/resource_library.bin", _O_RDWR | _O_CREAT | _O_BINARY, _S_IWRITE);
+        capnp::writeMessageToFd((int)fd, message);
+        _close(fd);
+    }
+
     //NewEnt::run_tests();
+
+#if 0
+    {
+        ta_schema_register();
+        foo dat{};
+        ta_schema_print(stdout, TYP_FOO, &dat, 0, 0);
+        //ta_schema_print_json(stdout, TYP_FOO, &dat, 0, 0);
+    }
+#endif
 
     PerfTimer t{ "InitCommon" };
 
@@ -745,17 +785,17 @@ void Process(PackStream &stream, T &v)
         stream.process(&v, sizeof(v), 1, stream.file);
     } else if (stream.type == PACK_TYPE_TEXT) {
         if (stream.mode == PACK_MODE_WRITE) {
-            if      constexpr (std::is_same_v<T, char    >) fprintf(stream.file, "c   %c\n", v);
-            else if constexpr (std::is_same_v<T, int8_t  >) fprintf(stream.file, "i8  %" PRId8  "\n", v);
-            else if constexpr (std::is_same_v<T, int16_t >) fprintf(stream.file, "i16 %" PRId16 "\n", v);
-            else if constexpr (std::is_same_v<T, int32_t >) fprintf(stream.file, "i32 %" PRId32 "\n", v);
-            else if constexpr (std::is_same_v<T, int64_t >) fprintf(stream.file, "i64 %" PRId64 "\n", v);
-            else if constexpr (std::is_same_v<T, uint8_t >) fprintf(stream.file, "u8  %" PRIu8  "\n", v);
-            else if constexpr (std::is_same_v<T, uint16_t>) fprintf(stream.file, "u16 %" PRIu16 "\n", v);
-            else if constexpr (std::is_same_v<T, uint32_t>) fprintf(stream.file, "u32 %" PRIu32 "\n", v);
-            else if constexpr (std::is_same_v<T, uint64_t>) fprintf(stream.file, "u64 %" PRIu64 "\n" , v);
-            else if constexpr (std::is_same_v<T, float   >) fprintf(stream.file, "f   %f\n", v);
-            else if constexpr (std::is_same_v<T, double  >) fprintf(stream.file, "d   %f\n", v);
+            if      constexpr (std::is_same_v<T, char    >) fprintf(stream.file, "%c", v);
+            else if constexpr (std::is_same_v<T, int8_t  >) fprintf(stream.file, "%" PRId8 , v);
+            else if constexpr (std::is_same_v<T, int16_t >) fprintf(stream.file, "%" PRId16, v);
+            else if constexpr (std::is_same_v<T, int32_t >) fprintf(stream.file, "%" PRId32, v);
+            else if constexpr (std::is_same_v<T, int64_t >) fprintf(stream.file, "%" PRId64, v);
+            else if constexpr (std::is_same_v<T, uint8_t >) fprintf(stream.file, "%" PRIu8 , v);
+            else if constexpr (std::is_same_v<T, uint16_t>) fprintf(stream.file, "%" PRIu16, v);
+            else if constexpr (std::is_same_v<T, uint32_t>) fprintf(stream.file, "%" PRIu32, v);
+            else if constexpr (std::is_same_v<T, uint64_t>) fprintf(stream.file, "%" PRIu64, v);
+            else if constexpr (std::is_same_v<T, float   >) fprintf(stream.file, "%f", v);
+            else if constexpr (std::is_same_v<T, double  >) fprintf(stream.file, "%f", v);
             else fprintf(stream.file, "? %s\n", typeid(T).name());
         } else {
             // text mode read not implemented
@@ -892,16 +932,6 @@ void Process(PackStream &stream, GfxAnim &gfx_anim, int index)
         stream.pack->gfx_anim_by_id[gfx_anim.id] = index;
     }
 }
-void Process(PackStream &stream, TileMat &tile_mat, int index)
-{
-    PROC(tile_mat.id);
-    PROC(tile_mat.footstep_sound);
-
-    if (stream.mode == PACK_MODE_READ) {
-        stream.pack->tile_mat_by_id[tile_mat.id] = index;
-        stream.pack->tile_mat_by_name[tile_mat.name] = index;
-    }
-}
 void Process(PackStream &stream, Sprite &sprite, int index) {
     PROC(sprite.id);
     PROC(sprite.name);
@@ -913,6 +943,16 @@ void Process(PackStream &stream, Sprite &sprite, int index) {
     if (stream.mode == PACK_MODE_READ) {
         stream.pack->sprite_by_id[sprite.id] = index;
         stream.pack->sprite_by_name[sprite.name] = index;
+    }
+}
+void Process(PackStream &stream, TileMat &tile_mat, int index)
+{
+    PROC(tile_mat.id);
+    PROC(tile_mat.footstep_sound);
+
+    if (stream.mode == PACK_MODE_READ) {
+        stream.pack->tile_mat_by_id[tile_mat.id] = index;
+        stream.pack->tile_mat_by_name[tile_mat.name] = index;
     }
 }
 void Process(PackStream &stream, TileDef &tile_def, int index) {
@@ -1516,14 +1556,8 @@ void UpdateTileDefAnimations(double dt)
     }
 }
 
-#define ENUM_STR_GENERATOR(type, enumDef, enumGen) \
-const char *type##Str(type id) {               \
-    switch (id) {                              \
-        enumDef(enumGen)                       \
-        default: return "<unknown>";           \
-    }                                          \
-}
-ENUM_STR_GENERATOR(DataType,      DATA_TYPES,     ENUM_GEN_CASE_RETURN_DESC);
-ENUM_STR_GENERATOR(EntityType,    ENTITY_TYPES,   ENUM_GEN_CASE_RETURN_STR);
-ENUM_STR_GENERATOR(EntitySpecies, ENTITY_SPECIES, ENUM_GEN_CASE_RETURN_STR);
+ENUM_STR_CONVERTER(DataType,      DATA_TYPES,     ENUM_VD_CASE_RETURN_DESC);
+ENUM_STR_CONVERTER(EntityType,    ENTITY_TYPES,   ENUM_V_CASE_RETURN_VSTR);
+ENUM_STR_CONVERTER(EntitySpecies, ENTITY_SPECIES, ENUM_V_CASE_RETURN_VSTR);
+ENUM_STR_CONVERTER(SchemaType,    SCHEMA_TYPES,   ENUM_V_CASE_RETURN_VSTR);
 #undef ENUM_STR_GENERATOR

@@ -49,7 +49,7 @@ struct DrawCmdQueue : public std::priority_queue<DrawCmd> {
     gen(DAT_TYP_ENTITY,    "ENTITY  ")
 
 enum DataType : uint8_t {
-    DATA_TYPES(ENUM_GEN_VALUE_DESC)
+    DATA_TYPES(ENUM_VD_VALUE)
     DAT_TYP_COUNT
 };
 
@@ -353,6 +353,11 @@ private:
 
     bool NeedsFill(uint32_t x, uint32_t y, uint32_t old_tile_id);
     void Scan(uint32_t lx, uint32_t rx, uint32_t y, uint32_t old_tile_id, std::stack<Coord> &stack);
+};
+
+struct foo {
+    Vector3 dat{ 1, 2, 3 };
+    SfxFile sfx{ "sfx_id", "sfx.wav", 1, 0.05f, 8 };
 };
 
 ////////////////////////////////////////////////////////////////////////////

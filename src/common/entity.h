@@ -12,7 +12,7 @@ gen(ENTITY_ITEM)          \
 gen(ENTITY_PROJECTILE)
 
 enum EntityType : uint8_t {
-    ENTITY_TYPES(ENUM_GEN_VALUE)
+    ENTITY_TYPES(ENUM_V_VALUE)
 };
 
 #define ENTITY_SPECIES(gen)   \
@@ -23,7 +23,7 @@ gen(ENTITY_SPEC_ITM_NORMAL)   \
 gen(ENTITY_SPEC_PRJ_FIREBALL)
 
 enum EntitySpecies : uint8_t {
-    ENTITY_SPECIES(ENUM_GEN_VALUE)
+    ENTITY_SPECIES(ENUM_V_VALUE)
 };
 
 struct EntityProto {

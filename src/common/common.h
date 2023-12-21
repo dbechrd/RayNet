@@ -61,15 +61,27 @@
 //#define CLAMP(x, min, max) (MIN(MAX((x), (min)), (max)))
 #define CLAMP(x, min, max) (((x) < (min)) ? (min) : (((x) > (max)) ? (max) : (x)))
 #define ARRAY_SIZE(arr) (sizeof(arr)/sizeof(arr[0]))
+#define FIELD_SIZEOF(type, field) (sizeof(((type *)0)->field))
+#define FIELD_SIZEOF_ARRAY(type, field) (sizeof(*(((type *)0)->field)))
+#define OFFSETOF(type, field) ((size_t)&(((type *)0)->field))
 #define STR(x) #x
 #define CSTR(x) (x), (sizeof(x) - 1)
 #define CSTRLEN(x) (x), strlen(x)
 #define CSTRS(x) (x).data(), (x).size()
 #define STRSTR(x) STR(x)
-#define ENUM_GEN_VALUE(e) e,
-#define ENUM_GEN_VALUE_DESC(e, d) e,
-#define ENUM_GEN_CASE_RETURN_STR(e) case e: return #e;
-#define ENUM_GEN_CASE_RETURN_DESC(e, d) case e: return d;
+
+#define ENUM_V_VALUE(v) v,
+#define ENUM_VD_VALUE(v, d) v,
+#define ENUM_V_CASE_RETURN_VSTR(v) case v: return #v;
+#define ENUM_VD_CASE_RETURN_VSTR(v) case v: return #v;
+#define ENUM_VD_CASE_RETURN_DESC(v, d) case v: return d;
+#define ENUM_STR_CONVERTER(type, enumDef, enumGen) \
+    const char *type##Str(type id) {               \
+        switch (id) {                              \
+            enumDef(enumGen)                       \
+            default: return "<unknown>";           \
+        }                                          \
+    }
 
 // Custom colors
 

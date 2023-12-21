@@ -138,8 +138,6 @@ gfx_anims = [
     { name = "gfx_anim_obj_portal"       , sound_effect = "null"        , frmrate = 60, frmcount = 3, frmdelay = 6, frames = ["gfx_frame_obj_portal_0", "gfx_frame_obj_portal_1", "gfx_frame_obj_portal_2"] },
     { name = "gfx_anim_obj_sign"         , sound_effect = "null"        , frmrate = 60, frmcount = 1, frmdelay = 0, frames = ["gfx_frame_obj_sign"] },
 ]
-
-
 item_defs = [
     { name = "item_missing"       , type = "weapon", weapon_class = "sword", damage = 0, toughness = 0  },
     { name = "item_sword_wood"    , type = "weapon", weapon_class = "sword", damage = 1, toughness = 10 },
