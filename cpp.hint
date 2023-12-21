@@ -2,3 +2,5 @@
 // such as names of functions and macros.
 // For more information see https://go.microsoft.com/fwlink/?linkid=865984
 #define ENUM_STR_GENERATOR(type, enumDef) const char *type##Str(type id) { switch (id) { enumDef(ENUM_GEN_CASE_RETURN_STR) default: return "<unknown>"; } }
+#define HAQ_SCHEMA(type, name, body)
+#define HAQ_SCHEMA

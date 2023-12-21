@@ -103,6 +103,10 @@ struct UI {
     void Space(Vector2 space);
     UIState Text(const char *text, size_t textLen);
     UIState Text(const char *text, size_t textLen, Color fgColor, Color bgColor = BLANK);
+
+    UIState TextT(uint32_t value);
+    UIState TextT(const std::string &value);
+
     UIState Label(const char *text, size_t textLen, int width);
     UIState Image(const Texture &texture, Rectangle srcRect = {});
     UIState Button(const char *text, size_t textLen);

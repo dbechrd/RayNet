@@ -355,10 +355,55 @@ private:
     void Scan(uint32_t lx, uint32_t rx, uint32_t y, uint32_t old_tile_id, std::stack<Coord> &stack);
 };
 
+// ECS test
 struct foo {
     Vector3 dat{ 1, 2, 3 };
     SfxFile sfx{ "sfx_id", "sfx.wav", 1, 0.05f, 8 };
 };
+
+enum haq_type {
+    HAQ_TYPE_INT,
+    HAQ_TYPE_STR
+};
+
+struct haq_type_info {
+    std::string type;
+    std::string name;
+    size_t offset;
+    size_t size;
+    std::vector<haq_type_info> fields;
+};
+
+#define HAQ_COMMA ,
+
+#define HAQ_C_TYPE(c_type, c_type_name, c_body) \
+    c_type c_type_name c_body;
+
+#define HAQ_C_FIELD(c_parent_type, c_type, c_name, c_init) \
+    c_type c_name c_init;
+
+#define HAQ_C_TYPE_INFO(c_type, c_type_name, c_fields) \
+    haq_type_info c_type_name##_schema { #c_type, #c_type_name, 0, sizeof(c_type_name), c_fields };
+
+#define HAQ_C_FIELD_INFO(c_parent_type, c_type, c_name, c_init) \
+    { #c_type, #c_name, OFFSETOF(c_parent_type, c_name), sizeof(c_type), {} },
+
+#define HQT_GFX_FILE(TYPE, FIELD) \
+TYPE(struct, hqt_gfx_file, { \
+    FIELD(hqt_gfx_file, uint32_t   , id,   {}) \
+    FIELD(hqt_gfx_file, std::string, name, {}) \
+    FIELD(hqt_gfx_file, std::string, path, {}) \
+})
+
+HQT_GFX_FILE(HAQ_C_TYPE, HAQ_C_FIELD)
+HQT_GFX_FILE(HAQ_C_TYPE_INFO, HAQ_C_FIELD_INFO)
+
+//HAQ_SCHEMA(
+//    struct, bar, {
+//        HAQ_FIELD(Vector3, dat, { 1 HAQ_COMMA 2 HAQ_COMMA 3 });
+//        HAQ_FIELD(SfxFile, sfx, { "sfx_id" HAQ_COMMA "sfx.wav" HAQ_COMMA 1 HAQ_COMMA 0.05f HAQ_COMMA 8 });
+//    }
+//)
 
 ////////////////////////////////////////////////////////////////////////////
 

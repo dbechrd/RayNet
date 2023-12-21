@@ -14,9 +14,6 @@
 
 #include <io.h>
 #include <fcntl.h>
-//#include <iomanip>
-//#include <sstream>
-//#include <type_traits>
 
 struct GameState {
     bool freye_introduced;
@@ -627,13 +624,38 @@ void CompressFile(const char *srcFileName, const char *dstFileName)
 
 Err LoadResources(Pack &pack);
 
+void haq_print(const haq_type_info &ti, int level = 0)
+{
+    printf("%*s%s %s", level * 2, "", ti.type.c_str(), ti.name.c_str());
+    if (ti.fields.size()) {
+        printf(" {\n");
+        for (const auto &ti : ti.fields) {
+            haq_print(ti, level + 1);
+            printf("%*s", level * 2, "");
+        }
+        printf("}");
+    }
+    printf(";\n");
+}
+
+void haq_test(void)
+{
+    haq_print(hqt_gfx_file_schema);
+}
+
 Err Init(void)
 {
+    haq_test();
+    printf("");
+
+#if 0
+    // TODO: Investigate POD plugin
+    // https://github.com/nickolasrossi/podgen/tree/master
     {
         capnp::MallocMessageBuilder message;
 
-        meta::ResourceLibrary::Builder resourceLibrary = message.initRoot<meta::ResourceLibrary>();
-        capnp::List<meta::Resource>::Builder resources = resourceLibrary.initResources(2);
+        meta::ResourceLibrary::Builder library = message.initRoot<meta::ResourceLibrary>();
+        capnp::List<meta::Resource>::Builder resources = library.initResources(2);
 
         meta::Resource::Builder gfx_missing = resources[0];
         gfx_missing.setId(0);
@@ -645,12 +667,27 @@ Err Init(void)
         gfx_dlg_npatch.setName("gfx_dlg_npatch");
         gfx_dlg_npatch.setPath("resources/graphics/npatch.png");
 
-        int fd = _open("capnp/resource_library.bin", _O_RDWR | _O_CREAT | _O_BINARY, _S_IWRITE);
+        int fd = _open("capnp/resource_library.bin", _O_RDWR | _O_CREAT | _O_BINARY);
         capnp::writeMessageToFd((int)fd, message);
         _close(fd);
     }
 
-    //NewEnt::run_tests();
+    {
+        int fd = _open("capnp/resource_library.bin", _O_RDWR | _O_BINARY);
+        capnp::StreamFdMessageReader reader(fd);
+
+        auto library = reader.getRoot<meta::ResourceLibrary>();
+        for (auto resource : library.getResources()) {
+            printf("resource name: %s\n", resource.getName().cStr());
+        }
+
+        _close(fd);
+    }
+#endif
+
+#if 0
+    NewEnt::run_tests();
+#endif
 
 #if 0
     {

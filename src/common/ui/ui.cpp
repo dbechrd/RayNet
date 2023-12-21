@@ -256,6 +256,17 @@ UIState UI::Text(const char *text, size_t textLen, Color fgColor, Color bgColor)
     return state;
 }
 
+UIState UI::TextT(uint32_t value)
+{
+    const char *text = TextFormat("%u", value);
+    return Text(CSTRLEN(text));
+}
+
+UIState UI::TextT(const std::string &value)
+{
+    return Text(value.data(), value.size());
+}
+
 UIState UI::Label(const char *text, size_t textLen, int width)
 {
     PushWidth(width);

@@ -1654,7 +1654,7 @@ void Editor::DrawUI_PackFiles(UI &uiActionBar, double now)
         };
 
         uiActionBar.PushWidth(34);
-        for (int i = 1; i < DAT_TYP_COUNT; i++) {
+        for (int i = 0; i < DAT_TYP_COUNT; i++) {
             DatTypeFilter &filter = datTypeFilter[i];
             if (uiActionBar.Button(CSTRLEN(filter.text ? filter.text : "???"), filter.enabled, DARKGRAY, filter.color).pressed) {
                 if (io.KeyDown(KEY_LEFT_SHIFT)) {
@@ -1666,7 +1666,7 @@ void Editor::DrawUI_PackFiles(UI &uiActionBar, double now)
                     filter.enabled = true;
                 }
             }
-            if ((i && i % 7 == 0) || i == DAT_TYP_COUNT - 1) {
+            if ((i % 7 == 7 - 1) || i == DAT_TYP_COUNT - 1) {
                 uiActionBar.Newline();
             }
         }
@@ -1776,10 +1776,27 @@ void Editor::DrawUI_PackFiles(UI &uiActionBar, double now)
                 switch (entry.dtype) {
                     case DAT_TYP_GFX_FILE:
                     {
+                        static hqt_gfx_file gfx_file{ 42, "gfx_test", "test.png" };
+#if 1
+
+#define HAQ_C_TYPE_UI(c_type, c_type_name, c_body) \
+    c_body
+
+#define HAQ_C_FIELD_UI(c_parent_type, c_type, c_name, c_init) \
+    uiActionBar.Label(CSTR(#c_name), detailsLabelWidth); \
+    uiActionBar.TextT(gfx_file.c_name); \
+    uiActionBar.Newline();
+
+                        HQT_GFX_FILE(HAQ_C_TYPE_UI, HAQ_C_FIELD_UI);
+
+#undef HAQ_C_TYPE_UI
+#undef HAQ_C_FIELD_UI
+#else
                         GfxFile &gfxFile = pack.gfx_files[entry.index];
                         uiActionBar.Label(CSTR("Path"), detailsLabelWidth);
                         uiActionBar.Text(CSTRS(gfxFile.path));
                         uiActionBar.Newline();
+#endif
                         break;
                     }
                     case DAT_TYP_MUS_FILE:
