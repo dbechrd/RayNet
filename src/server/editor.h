@@ -11,10 +11,8 @@ enum EditMode {
     EditMode_Tiles,
     EditMode_Wang,
     EditMode_Paths,
-    EditMode_Warps,
     EditMode_Dialog,
     EditMode_Entities,
-    EditMode_SfxFiles,
     EditMode_PackFiles,
     EditMode_Debug,
     EditMode_Count
@@ -108,7 +106,6 @@ private:
     void DrawGroundOverlay_Tiles(Camera2D &camera, double now);
     void DrawGroundOverlay_Wang(Camera2D &camera, double now);
     void DrawGroundOverlay_Paths(Camera2D &camera, double now);
-    void DrawGroundOverlay_Warps(Camera2D &camera, double now);
 
     // Entity overlays (above entities)
     void DrawEntityOverlay_Collision(Camera2D &camera, double now);
@@ -121,10 +118,8 @@ private:
     void DrawUI_WangTile(double now);
     void DrawUI_Wang(UI &uiActionBar, double now);
     void DrawUI_PathActions(UI &uiActionBar, double now);
-    void DrawUI_WarpActions(UI &uiActionBar, double now);
     void DrawUI_DialogActions(UI &uiActionBar, double now);
     void DrawUI_EntityActions(UI &uiActionBar, double now);
-    void DrawUI_SfxFiles(UI &uiActionBar, double now);
     void DrawUI_PackFiles(UI &uiActionBar, double now);
     void DrawUI_Debug(UI &uiActionBar, double now);
 };

@@ -30,6 +30,7 @@
 #include <vector>
 
 #include "error.h"
+#include "haq.h"
 #include "strings.h"
 #include "ring_buffer.h"
 #include "ui/stb_textedit_config.h"

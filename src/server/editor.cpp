@@ -17,10 +17,8 @@ const char *EditModeStr(EditMode mode)
         case EditMode_Tiles:     return "Tiles";
         case EditMode_Wang:      return "Wang";
         case EditMode_Paths:     return "Paths";
-        case EditMode_Warps:     return "Warps";
         case EditMode_Dialog:    return "Dialog";
         case EditMode_Entities:  return "Entities";
-        case EditMode_SfxFiles:  return "Sfx";
         case EditMode_PackFiles: return "Pack";
         case EditMode_Debug:     return "Debug";
         default: return "<null>";
@@ -93,10 +91,6 @@ void Editor::DrawGroundOverlays(Camera2D &camera, double now)
                 DrawGroundOverlay_Paths(camera, now);
                 break;
             }
-            case EditMode_Warps: {
-                DrawGroundOverlay_Warps(camera, now);
-                break;
-            }
             case EditMode_Entities: {
                 break;
             }
@@ -147,7 +141,7 @@ void Editor::DrawGroundOverlay_Paths(Camera2D &camera, double now)
 
     // Draw path edges
     auto &map = packs[1].FindTilemap(map_id);
-    for (uint32_t aiPathId = 0; aiPathId < map.paths.size(); aiPathId++) {
+    for (uint32_t aiPathId = 1; aiPathId <= map.paths.size(); aiPathId++) {
         AiPath *aiPath = map.GetPath(aiPathId);
         if (!aiPath) {
             continue;
@@ -169,7 +163,7 @@ void Editor::DrawGroundOverlay_Paths(Camera2D &camera, double now)
 
     // Draw path nodes
     const float pathRectRadius = 5;
-    for (uint32_t aiPathId = 0; aiPathId < map.paths.size(); aiPathId++) {
+    for (uint32_t aiPathId = 1; aiPathId <= map.paths.size(); aiPathId++) {
         AiPath *aiPath = map.GetPath(aiPathId);
         if (!aiPath) {
             continue;
@@ -246,17 +240,6 @@ void Editor::DrawGroundOverlay_Paths(Camera2D &camera, double now)
         io.PopScope();
     }
 }
-void Editor::DrawGroundOverlay_Warps(Camera2D &camera, double now)
-{
-    // TODO: Warps are now on obj tile layer
-#if 0
-    for (const Entity &entity : packs[0].entities) {
-        if (entity.type == ENTITY_SPEC_OBJ_WARP) {
-            DrawRectangleRec(entity.warp_collider, Fade(SKYBLUE, 0.7f));
-        }
-    }
-#endif
-}
 
 void Editor::DrawEntityOverlays(Camera2D &camera, double now)
 {
@@ -292,9 +275,6 @@ void Editor::DrawEntityOverlays(Camera2D &camera, double now)
                 break;
             }
             case EditMode_Paths: {
-                break;
-            }
-            case EditMode_Warps: {
                 break;
             }
             case EditMode_Entities: {
@@ -631,20 +611,12 @@ UIState Editor::DrawUI_ActionBar(Vector2 position, double now)
             DrawUI_PathActions(uiActionBar, now);
             break;
         }
-        case EditMode_Warps: {
-            DrawUI_WarpActions(uiActionBar, now);
-            break;
-        }
         case EditMode_Dialog: {
             DrawUI_DialogActions(uiActionBar, now);
             break;
         }
         case EditMode_Entities: {
             DrawUI_EntityActions(uiActionBar, now);
-            break;
-        }
-        case EditMode_SfxFiles: {
-            DrawUI_SfxFiles(uiActionBar, now);
             break;
         }
         case EditMode_PackFiles: {
@@ -717,8 +689,10 @@ void Editor::DrawUI_TileActions(UI &uiActionBar, double now)
     }
 
     uiActionBar.Text(CSTR("Size"));
-    uiActionBar.TextboxFloat(txtWidth, width, 100.0f);
-    uiActionBar.TextboxFloat(txtHeight, height, 100.0f);
+    uiActionBar.PushWidth(100);
+    uiActionBar.Textbox(txtWidth, width);
+    uiActionBar.Textbox(txtHeight, height);
+    uiActionBar.PopStyle();
     if (uiActionBar.Button(CSTR("Resize!")).pressed) {
         uint32_t newWidth = (uint32_t)width;
         uint32_t newHeight = (uint32_t)height;
@@ -1230,111 +1204,6 @@ void Editor::DrawUI_PathActions(UI &uiActionBar, double now)
         state.pathNodes.cursor.dragPathNodeIndex
     )));
 }
-void Editor::DrawUI_WarpActions(UI &uiActionBar, double now)
-{
-    //if (uiActionBar.Button(CSTR("Delete all warps"), MAROON).pressed) {
-    //    map.warps.clear();
-    //}
-    //uiActionBar.Newline();
-
-    if (uiActionBar.Button(CSTR("Add"), DARKGREEN).pressed) {
-        //Tilemap &map = packs[0].
-        //map.warps.push_back({});
-    }
-    uiActionBar.Newline();
-
-    UIStyle searchStyle = uiActionBar.GetStyle();
-    searchStyle.size.x = 400;
-    searchStyle.pad = UIPad(8, 2);
-    searchStyle.margin = UIMargin(0, 0, 0, 6);
-    uiActionBar.PushStyle(searchStyle);
-
-    static STB_TexteditState txtSearch{};
-    static std::string filter{};
-    uiActionBar.Textbox(txtSearch, filter);
-    uiActionBar.Newline();
-
-    //for (AspectWarp &warp : packs[0].warp) {
-    //    //if (!warp.id) {
-    //    //    continue;
-    //    //}
-    //
-    //    Color bgColor = warp.id == state.sfxFiles.selectedSfx ? SKYBLUE : BLUE;
-    //    const char *idStr = sfxFile.path.c_str();
-    //    if (!StrFilter(idStr, filter.c_str())) {
-    //        continue;
-    //    }
-    //
-    //    if (uiActionBar.Text(idStr, WHITE, bgColor).down) {
-    //        state.sfxFiles.selectedSfx = sfxFile.id;
-    //    }
-    //    uiActionBar.Newline();
-    //}
-
-    uiActionBar.Text(CSTR("TODO: Warps as tile objs"));
-#if 0
-    // TODO: Warps are on tile obj layer now, not entities
-    for (Entity &entity : packs[0].entities) {
-        if (entity.spec != ENTITY_SPEC_OBJ_WARP) {
-            continue;
-        }
-
-        uiActionBar.Text(CSTR("collider"));
-        uiActionBar.Newline();
-
-        uiActionBar.PushWidth(80);
-
-        uiActionBar.Text(CSTR("x"));
-        uiActionBar.Text(CSTR("y"));
-        uiActionBar.Text(CSTR("width"));
-        uiActionBar.Text(CSTR("height"));
-        uiActionBar.Newline();
-
-        static STB_TexteditState txtColliderX{};
-        uiActionBar.TextboxFloat(txtColliderX, entity.warp_collider.x);
-        static STB_TexteditState txtColliderY{};
-        uiActionBar.TextboxFloat(txtColliderY, entity.warp_collider.y);
-        static STB_TexteditState txtColliderW{};
-        uiActionBar.TextboxFloat(txtColliderW, entity.warp_collider.width);
-        static STB_TexteditState txtColliderH{};
-        uiActionBar.TextboxFloat(txtColliderH, entity.warp_collider.height);
-        uiActionBar.Newline();
-
-        uiActionBar.Text(CSTR("destX"));
-        uiActionBar.Text(CSTR("destY"));
-        uiActionBar.Newline();
-
-        static STB_TexteditState txtDestX{};
-        uiActionBar.TextboxFloat(txtDestX, entity.warp_dest_pos.x);
-        static STB_TexteditState txtDestY{};
-        uiActionBar.TextboxFloat(txtDestY, entity.warp_dest_pos.y);
-        uiActionBar.Newline();
-
-        uiActionBar.PopStyle();
-
-        uiActionBar.Text(CSTR("destMap"));
-        uiActionBar.Newline();
-        static STB_TexteditState txtDestMap{};
-        std::string dest_map = "dead feature";
-        uiActionBar.Textbox(txtDestMap, dest_map); //entity.warp_dest_map);
-        uiActionBar.Newline();
-
-        uiActionBar.Text(CSTR("templateMap"));
-        uiActionBar.Newline();
-        static STB_TexteditState txtTemplateMap{};
-        std::string template_map = "dead feature";
-        uiActionBar.Textbox(txtTemplateMap, template_map); //entity.warp_template_map);
-        uiActionBar.Newline();
-
-        uiActionBar.Text(CSTR("templateTileset"));
-        uiActionBar.Newline();
-        static STB_TexteditState txtTemplateTileset{};
-        uiActionBar.Textbox(txtTemplateTileset, entity.warp_template_tileset);
-        uiActionBar.Newline();
-    }
-#endif
-    uiActionBar.PopStyle();
-}
 void Editor::DrawUI_DialogActions(UI &uiActionBar, double now)
 {
 #if 0
@@ -1385,7 +1254,7 @@ void Editor::DrawUI_DialogActions(UI &uiActionBar, double now)
                 uiActionBar.Text(TextFormat("option %d", i));
                 uiActionBar.Newline();
                 float id = dialog.option_ids[i];
-                uiActionBar.TextboxFloat(txtOptionId[i], id, 0, "%.f");
+                uiActionBar.Textbox(txtOptionId[i], id, 0, "%.f");
                 dialog.option_ids[i] = (DialogId)CLAMP(id, 0, packs[0].dialogs.size() - 1);
                 uiActionBar.Newline();
             }
@@ -1462,11 +1331,15 @@ void Editor::DrawUI_EntityActions(UI &uiActionBar, double now)
             uiActionBar.Label(CSTR("position"), labelWidth);
             uiActionBar.PushBgColor({ 127, 0, 0, 255 }, UI_CtrlTypeTextbox);
             static STB_TexteditState txtPosX{};
-            uiActionBar.TextboxFloat(txtPosX, entity->position.x, 80);
+            uiActionBar.PushWidth(80);
+            uiActionBar.Textbox(txtPosX, entity->position.x);
+            uiActionBar.PopStyle();
             uiActionBar.PopStyle();
             uiActionBar.PushBgColor({ 0, 127, 0, 255 }, UI_CtrlTypeTextbox);
             static STB_TexteditState txtPosY{};
-            uiActionBar.TextboxFloat(txtPosY, entity->position.y, 80);
+            uiActionBar.PushWidth(80);
+            uiActionBar.Textbox(txtPosY, entity->position.y);
+            uiActionBar.PopStyle();
             uiActionBar.PopStyle();
             uiActionBar.Newline();
 
@@ -1481,7 +1354,9 @@ void Editor::DrawUI_EntityActions(UI &uiActionBar, double now)
             // Collision
             uiActionBar.Label(CSTR("radius"), labelWidth);
             static STB_TexteditState txtRadius{};
-            uiActionBar.TextboxFloat(txtRadius, entity->radius, 80);
+            uiActionBar.PushWidth(80);
+            uiActionBar.Textbox(txtRadius, entity->radius);
+            uiActionBar.PopStyle();
             uiActionBar.Newline();
 
             uiActionBar.Label(CSTR("colliding"), labelWidth);
@@ -1504,90 +1379,48 @@ void Editor::DrawUI_EntityActions(UI &uiActionBar, double now)
             // Life
             uiActionBar.Label(CSTR("health"), labelWidth);
             static STB_TexteditState txtHealth{};
-            uiActionBar.TextboxFloat(txtHealth, entity->hp, 80);
+            uiActionBar.PushWidth(80);
+            uiActionBar.Textbox(txtHealth, entity->hp);
+            uiActionBar.PopStyle();
             uiActionBar.Text(CSTR("/"));
             static STB_TexteditState txtMaxHealth{};
-            uiActionBar.TextboxFloat(txtMaxHealth, entity->hp_max, 80);
+            uiActionBar.PushWidth(80);
+            uiActionBar.Textbox(txtMaxHealth, entity->hp_max);
+            uiActionBar.PopStyle();
             uiActionBar.Newline();
 
             ////////////////////////////////////////////////////////////////////////
             // Physics
             uiActionBar.Label(CSTR("drag"), labelWidth);
             static STB_TexteditState txtDrag{};
-            uiActionBar.TextboxFloat(txtDrag, entity->drag, 80);
+            uiActionBar.PushWidth(80);
+            uiActionBar.Textbox(txtDrag, entity->drag);
+            uiActionBar.PopStyle();
             uiActionBar.Newline();
 
             uiActionBar.Label(CSTR("speed"), labelWidth);
             static STB_TexteditState txtSpeed{};
-            uiActionBar.TextboxFloat(txtSpeed, entity->speed, 80);
+            uiActionBar.PushWidth(80);
+            uiActionBar.Textbox(txtSpeed, entity->speed);
+            uiActionBar.PopStyle();
             uiActionBar.Newline();
 
             uiActionBar.Label(CSTR("velocity"), labelWidth);
             uiActionBar.PushBgColor({ 127, 0, 0, 255 }, UI_CtrlTypeTextbox);
             static STB_TexteditState txtVelX{};
-            uiActionBar.TextboxFloat(txtVelX, entity->velocity.x, 80);
+            uiActionBar.PushWidth(80);
+            uiActionBar.Textbox(txtVelX, entity->velocity.x);
+            uiActionBar.PopStyle();
             uiActionBar.PopStyle();
             uiActionBar.PushBgColor({ 0, 127, 0, 255 }, UI_CtrlTypeTextbox);
             static STB_TexteditState txtVelY{};
-            uiActionBar.TextboxFloat(txtVelY, entity->velocity.y, 80);
+            uiActionBar.PushWidth(80);
+            uiActionBar.Textbox(txtVelY, entity->velocity.y);
+            uiActionBar.PopStyle();
             uiActionBar.PopStyle();
             uiActionBar.Newline();
         } else {
             state.entities.selectedId = 0;
-        }
-    }
-}
-void Editor::DrawUI_SfxFiles(UI &uiActionBar, double now)
-{
-    UIStyle searchStyle = uiActionBar.GetStyle();
-    searchStyle.size.x = 400;
-    searchStyle.pad = UIPad(8, 2);
-    searchStyle.margin = UIMargin(0, 0, 0, 6);
-    uiActionBar.PushStyle(searchStyle);
-
-    static STB_TexteditState txtSearch{};
-    static std::string filter{ "*" };
-    uiActionBar.Textbox(txtSearch, filter);
-    uiActionBar.Newline();
-
-    for (SfxFile &sfxFile : packs[0].sfx_files) {
-        if (sfxFile.id.empty()) {
-            continue;
-        }
-
-        Color bgColor = sfxFile.id == state.sfxFiles.selectedSfx ? SKYBLUE : BLUE_DESAT;
-        const char *idStr = sfxFile.path.c_str();
-        if (!StrFilter(idStr, filter.c_str())) {
-            continue;
-        }
-
-        if (uiActionBar.Text(CSTRLEN(idStr), WHITE, bgColor).down) {
-            state.sfxFiles.selectedSfx = sfxFile.id;
-        }
-        uiActionBar.Newline();
-    }
-
-    uiActionBar.PopStyle();
-
-    if (!state.sfxFiles.selectedSfx.empty()) {
-        const int labelWidth = 100;
-        SfxFile &sfx_file = packs[0].FindSoundVariant(state.sfxFiles.selectedSfx);
-        if (!sfx_file.id.empty()) {
-            uiActionBar.Label(CSTR("id"), labelWidth);
-            uiActionBar.Text(CSTRLEN(TextFormat("%d", sfx_file.id)));
-            uiActionBar.Newline();
-
-            uiActionBar.Label(CSTR("path"), labelWidth);
-            static STB_TexteditState txtPath{};
-            uiActionBar.Textbox(txtPath, sfx_file.path);
-            uiActionBar.Newline();
-
-            uiActionBar.Label(CSTR("pitch variance"), labelWidth);
-            static STB_TexteditState txtPitchVariance{};
-            uiActionBar.TextboxFloat(txtPitchVariance, sfx_file.pitch_variance);
-            uiActionBar.Newline();
-        } else {
-            state.sfxFiles.selectedSfx.clear();
         }
     }
 }
@@ -1758,7 +1591,6 @@ void Editor::DrawUI_PackFiles(UI &uiActionBar, double now)
 
             const char *text = TextFormat("[%s] %s", selected ? "-" : "+", desc);
             if (uiActionBar.Text(CSTRLEN(text), WHITE, ColorBrightness(filter.color, -0.2f)).pressed) {
-                printf("pressed\n");
                 if (!selected) {
                     newSelectedOffset = entry.offset;
                 } else {
@@ -1770,64 +1602,84 @@ void Editor::DrawUI_PackFiles(UI &uiActionBar, double now)
             uiActionBar.PopStyle();
             uiActionBar.Newline();
 
-            int detailsLabelWidth = 80;
-
             if (selected) {
+                #define HAQ_UI_TYPE(c_type, c_type_name, c_body, userdata) \
+                    c_body
+
+                //#define HAQ_UI_FIELD(c_type, c_name, c_init, flags, userdata) \
+                //    if constexpr ((flags) & HAQ_SERIALIZE) { \
+                //        uiActionBar.Label(CSTR(#c_name), labelWidth); \
+                //        if constexpr ((flags) & HAQ_EDIT) { \
+                //            static STB_TexteditState txt_##c_name{}; \
+                //            const float textboxWidth = 400 - 16 - labelWidth; \
+                //            if constexpr (std::is_same_v<c_type, std::string>) { \
+                //                uiActionBar.PushWidth(textboxWidth); \
+                //                static STB_TexteditState txt_##c_name{}; \
+                //                uiActionBar.Textbox(txt_##c_name, (std::string &)userdata.c_name);  /* aithgne@twitch recommended this BRILLIANT cast hack */ \
+                //                uiActionBar.PopStyle(); \
+                //            } else if (std::is_same_v<c_type, float>) { \
+                //                uiActionBar.PushWidth(textboxWidth); \
+                //                static STB_TexteditState txt_##c_name{}; \
+                //                const char *floatFmt = "%f"; \
+                //                float floatInc = 1.0f; \
+                //                if constexpr ((flags) & HAQ_EDIT_FLOAT_TENTH) { \
+                //                    floatFmt = "%.1f"; \
+                //                    floatInc = 0.1f; \
+                //                } else if ((flags) & HAQ_EDIT_FLOAT_HUNDRETH) { \
+                //                    floatFmt = "%.2f"; \
+                //                    floatInc = 0.01f; \
+                //                } \
+                //                uiActionBar.Textbox(txt_##c_name, (float &)userdata.c_name, floatFmt, floatInc); \
+                //                uiActionBar.PopStyle(); \
+                //            } else if (std::is_same_v<c_type, int>) { \
+                //                uiActionBar.PushWidth(textboxWidth); \
+                //                static STB_TexteditState txt_##c_name{}; \
+                //                uiActionBar.Textbox(txt_##c_name, (int &)userdata.c_name); \
+                //                uiActionBar.PopStyle(); \
+                //            } else { \
+                //                uiActionBar.Label(CSTR("IDK HOW TO EDIT THIS MAN!"), textboxWidth); \
+                //            } \
+                //        } else { \
+                //            uiActionBar.Text(userdata.c_name); \
+                //        } \
+                //        uiActionBar.Newline(); \
+                //    }
+
+                #define HAQ_UI_FIELD(c_type, c_name, c_init, flags, userdata) \
+                    if constexpr ((flags) & HAQ_SERIALIZE) { \
+                        uiActionBar.Label(CSTR(#c_name), labelWidth); \
+                        if constexpr ((flags) & HAQ_EDIT) { \
+                            static STB_TexteditState txt_##c_name{}; \
+                            const float textboxWidth = 400 - 16 - labelWidth; \
+                            uiActionBar.PushWidth(textboxWidth); \
+                            uiActionBar.TextboxHAQ(txt_##c_name, userdata.c_name, flags); \
+                            uiActionBar.PopStyle(); \
+                        } else { \
+                            uiActionBar.Text(userdata.c_name); \
+                        } \
+                        uiActionBar.Newline(); \
+                    }
+
+                #define HAQ_UI(hqt, userdata) \
+                    hqt(HAQ_UI_TYPE, HAQ_UI_FIELD, HAQ_IGNORE, userdata);
+
                 switch (entry.dtype) {
                     case DAT_TYP_GFX_FILE:
                     {
-                        static hqt_gfx_file gfx_file{ 42, "gfx_test", "test.png" };
-#if 1
-
-#define HAQ_C_TYPE_UI(c_type, c_type_name, c_body) \
-    c_body
-
-#define HAQ_C_FIELD_UI(c_parent_type, c_type, c_name, c_init) \
-    uiActionBar.Label(CSTR(#c_name), detailsLabelWidth); \
-    uiActionBar.TextT(gfx_file.c_name); \
-    uiActionBar.Newline();
-
-                        HQT_GFX_FILE(HAQ_C_TYPE_UI, HAQ_C_FIELD_UI);
-
-#undef HAQ_C_TYPE_UI
-#undef HAQ_C_FIELD_UI
-#else
                         GfxFile &gfxFile = pack.gfx_files[entry.index];
-                        uiActionBar.Label(CSTR("Path"), detailsLabelWidth);
-                        uiActionBar.Text(CSTRS(gfxFile.path));
-                        uiActionBar.Newline();
-#endif
+                        HAQ_UI(HQT_GFX_FILE, gfxFile);
                         break;
                     }
                     case DAT_TYP_MUS_FILE:
                     {
                         MusFile &musFile = pack.mus_files[entry.index];
-                        uiActionBar.Label(CSTR("Path"), detailsLabelWidth);
-                        uiActionBar.Text(CSTRS(musFile.path));
-                        uiActionBar.Newline();
+                        HAQ_UI(HQT_MUS_FILE, musFile);
                         break;
                     }
                     case DAT_TYP_SFX_FILE:
                     {
-                        static int labelWidth = 100;
-                        const float textboxWidth = 400 - 16 - labelWidth;
-
                         SfxFile &sfxFile = pack.sfx_files[entry.index];
-
-                        int newLabelWidth = 0;
-                        UIState uiPath = uiActionBar.Label(CSTR("path"), labelWidth);
-                        newLabelWidth = MAX(newLabelWidth, uiPath.contentRect.width);
-                        static STB_TexteditState txtPath{};
-                        uiActionBar.PushWidth(textboxWidth);
-                        uiActionBar.Textbox(txtPath, sfxFile.path);
-                        uiActionBar.PopStyle();
-                        uiActionBar.Newline();
-
-                        UIState uiPitch = uiActionBar.Label(CSTR("pitch variance"), labelWidth);
-                        newLabelWidth = MAX(newLabelWidth, uiPitch.contentRect.width);
-                        static STB_TexteditState txtPitchVariance{};
-                        uiActionBar.TextboxFloat(txtPitchVariance, sfxFile.pitch_variance, textboxWidth, "%.2f", 0.01f);
-                        uiActionBar.Newline();
+                        HAQ_UI(HQT_SFX_FILE, sfxFile);
 
                         if (!IsSoundPlaying(sfxFile.id)) {
                             if (uiActionBar.Button(CSTR("Play"), ColorBrightness(DARKGREEN, -0.3f)).pressed) {
@@ -1838,45 +1690,53 @@ void Editor::DrawUI_PackFiles(UI &uiActionBar, double now)
                                 StopSound(sfxFile.id);
                             }
                         }
-
                         uiActionBar.Newline();
 
-                        labelWidth = newLabelWidth;
                         break;
                     }
                     case DAT_TYP_GFX_FRAME:
                     {
+                        const float textboxWidth = 40;
+
                         GfxFrame &gfxFrame = pack.gfx_frames[entry.index];
-                        //uiActionBar.Label(CSTR("rect"), detailsLabelWidth);
+                        //uiActionBar.Label(CSTR("rect"), labelWidth);
                         //uiActionBar.Text(TextFormat("%hu", gfxFrame.x));
                         //uiActionBar.Text(TextFormat("%hu", gfxFrame.y));
                         //uiActionBar.Text(TextFormat("%hu", gfxFrame.w));
                         //uiActionBar.Text(TextFormat("%hu", gfxFrame.h));
 
-                        uiActionBar.Label(CSTR("rect"), detailsLabelWidth);
+                        uiActionBar.Label(CSTR("rect"), labelWidth);
 
                         uiActionBar.PushBgColor({ 127, 0, 0, 255 }, UI_CtrlTypeTextbox);
                         static STB_TexteditState txtX{};
                         float x = (float)gfxFrame.x;
-                        uiActionBar.TextboxFloat(txtX, x, 40, "%.f");
+                        uiActionBar.PushWidth(textboxWidth);
+                        uiActionBar.Textbox(txtX, x, "%.f");
+                        uiActionBar.PopStyle();
                         gfxFrame.x = CLAMP(x, 0, UINT16_MAX);
                         uiActionBar.PopStyle();
 
                         uiActionBar.PushBgColor({ 0, 127, 0, 255 }, UI_CtrlTypeTextbox);
                         static STB_TexteditState txtY{};
                         float y = (float)gfxFrame.y;
-                        uiActionBar.TextboxFloat(txtY, y, 40, "%.f");
+                        uiActionBar.PushWidth(textboxWidth);
+                        uiActionBar.Textbox(txtY, y, "%.f");
+                        uiActionBar.PopStyle();
                         gfxFrame.y = CLAMP(y, 0, UINT16_MAX);
                         uiActionBar.PopStyle();
 
                         static STB_TexteditState txtW{};
                         float w = (float)gfxFrame.w;
-                        uiActionBar.TextboxFloat(txtW, w, 40, "%.f");
+                        uiActionBar.PushWidth(textboxWidth);
+                        uiActionBar.Textbox(txtW, w, "%.f");
+                        uiActionBar.PopStyle();
                         gfxFrame.w = CLAMP(w, 0, UINT16_MAX);
 
                         static STB_TexteditState txtH{};
                         float h = (float)gfxFrame.h;
-                        uiActionBar.TextboxFloat(txtH, h, 40, "%.f");
+                        uiActionBar.PushWidth(textboxWidth);
+                        uiActionBar.Textbox(txtH, h, "%.f");
+                        uiActionBar.PopStyle();
                         gfxFrame.h = CLAMP(h, 0, UINT16_MAX);
                         uiActionBar.Newline();
                         break;
@@ -1884,23 +1744,23 @@ void Editor::DrawUI_PackFiles(UI &uiActionBar, double now)
                     case DAT_TYP_GFX_ANIM:
                     {
                         GfxAnim &gfxAnim = pack.gfx_anims[entry.index];
-                        uiActionBar.Label(CSTR("id"), detailsLabelWidth);
+                        uiActionBar.Label(CSTR("id"), labelWidth);
                         uiActionBar.Text(CSTRS(gfxAnim.id));
                         uiActionBar.Newline();
 
-                        uiActionBar.Label(CSTR("sound"), detailsLabelWidth);
+                        uiActionBar.Label(CSTR("sound"), labelWidth);
                         uiActionBar.Text(CSTRS(gfxAnim.sound));
                         uiActionBar.Newline();
 
-                        uiActionBar.Label(CSTR("frame_rate"), detailsLabelWidth);
+                        uiActionBar.Label(CSTR("frame_rate"), labelWidth);
                         uiActionBar.Text(CSTRLEN(TextFormat("%u", gfxAnim.frame_rate)));
                         uiActionBar.Newline();
 
-                        uiActionBar.Label(CSTR("frame_delay"), detailsLabelWidth);
+                        uiActionBar.Label(CSTR("frame_delay"), labelWidth);
                         uiActionBar.Text(CSTRLEN(TextFormat("%u", gfxAnim.frame_delay)));
                         uiActionBar.Newline();
 
-                        uiActionBar.Label(CSTR("frames"), detailsLabelWidth);
+                        uiActionBar.Label(CSTR("frames"), labelWidth);
                         uiActionBar.Newline();
 
                         for (int i = 0; i < gfxAnim.frame_count; i++) {
@@ -1960,7 +1820,7 @@ void Editor::DrawUI_PackFiles(UI &uiActionBar, double now)
                         uiActionBar.Text(CSTRS(tile_def.name));
                         uiActionBar.Newline();
 
-                        uiActionBar.Label(CSTR("material_id"), detailsLabelWidth);
+                        uiActionBar.Label(CSTR("material_id"), labelWidth);
                         uiActionBar.Text(CSTRLEN(TextFormat("%u", tile_def.material_id)));
                         uiActionBar.Newline();
 
@@ -1976,7 +1836,7 @@ void Editor::DrawUI_PackFiles(UI &uiActionBar, double now)
                         uiActionBar.Text(CSTRS(tile_mat.name));
                         uiActionBar.Newline();
 
-                        uiActionBar.Label(CSTR("footstep"), detailsLabelWidth);
+                        uiActionBar.Label(CSTR("footstep"), labelWidth);
                         uiActionBar.Text(CSTRS(tile_mat.footstep_sound));
                         uiActionBar.Newline();
 
@@ -1996,6 +1856,10 @@ void Editor::DrawUI_PackFiles(UI &uiActionBar, double now)
                         break;
                     }
                 }
+
+                #undef HAQ_UI_TYPE
+                #undef HAQ_UI_FIELD
+                #undef HAQ_UI
             }
         }
 

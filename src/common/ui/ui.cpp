@@ -256,21 +256,36 @@ UIState UI::Text(const char *text, size_t textLen, Color fgColor, Color bgColor)
     return state;
 }
 
-UIState UI::TextT(uint32_t value)
+UIState UI::Text(uint32_t value)
 {
     const char *text = TextFormat("%u", value);
     return Text(CSTRLEN(text));
 }
 
-UIState UI::TextT(const std::string &value)
+UIState UI::Text(const std::string &text)
 {
-    return Text(value.data(), value.size());
+    return Text(text.data(), text.size());
+}
+
+template <typename T>
+UIState UI::Text(T value)
+{
+    const char *text = TextFormat("<%s>", typeid(T).name());
+    return Text(CSTRLEN(text));
 }
 
 UIState UI::Label(const char *text, size_t textLen, int width)
 {
     PushWidth(width);
     UIState state = Text(text, textLen);
+    PopStyle();
+    return state;
+}
+
+UIState UI::Label(const std::string &text, int width)
+{
+    PushWidth(width);
+    UIState state = Text(text.data(), text.size());
     PopStyle();
     return state;
 }
@@ -915,7 +930,7 @@ void AdjustFloat(std::string &str, void *userData, bool &keyHandled)
     }
 }
 
-UIState UI::TextboxFloat(STB_TexteditState &stbState, float &value, float width, const char *fmt, float increment)
+UIState UI::Textbox(STB_TexteditState &stbState, float &value, const char *fmt, float increment)
 {
 #if 0
     const char *valueCstr = TextFormat("%.2f", value);
@@ -952,10 +967,8 @@ UIState UI::TextboxFloat(STB_TexteditState &stbState, float &value, float width,
 
     const char *valueCstr = TextFormat(fmt, value);
     std::string valueStr{valueCstr};
-    if (width) PushWidth(width);
     TextboxFloatCallbackData data{ fmt, &value, increment };
     UIState state = Textbox(stbState, valueStr, true, AdjustFloat, 0, (void *)&data);
-    if (width) PopStyle();
     char *end = 0;
     float newValue = strtof(valueStr.c_str(), &end);
     if (*end != '\0') {
@@ -966,10 +979,42 @@ UIState UI::TextboxFloat(STB_TexteditState &stbState, float &value, float width,
 #endif
 }
 
+UIState UI::Textbox(STB_TexteditState &stbState, int &value)
+{
+    float valueFloat = (float)value;
+    UIState state = Textbox(stbState, valueFloat, "%.f");
+    value = CLAMP(valueFloat, 0, INT32_MAX);
+    return state;
+}
+
 void LimitStringLength(std::string &str, void *userData)
 {
     size_t maxLength = (size_t)userData;
     if (str.size() > maxLength) {
         str.resize(maxLength, 0);
+    }
+}
+
+template <typename T>
+void UI::TextboxHAQ(STB_TexteditState &stbState, T &value, int flags)
+{
+    if constexpr (std::is_same_v<T, float>) {
+        const char* floatFmt = "%f";
+        float floatInc = 1.0f;
+        if (flags & HAQ_EDIT_FLOAT_TENTH) {
+            floatFmt = "%.1f";
+            floatInc = 0.1f;
+        } else if (flags & HAQ_EDIT_FLOAT_HUNDRETH) {
+            floatFmt = "%.2f";
+            floatInc = 0.01f;
+        }
+        Textbox(stbState, value, floatFmt, floatInc);
+    } else if (
+        std::is_same_v<T, std::string> ||
+        std::is_same_v<T, int>
+    ) {
+        Textbox(stbState, value);
+    } else {
+        Label(CSTR("IDK HOW TO EDIT THIS MAN!"));
     }
 }

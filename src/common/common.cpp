@@ -625,6 +625,7 @@ void dlb_CommonTests(void)
 #include "entity_db.cpp"
 #include "error.cpp"
 #include "file_utils.cpp"
+#include "haq.cpp"
 #include "histogram.cpp"
 #include "io.cpp"
 #include "meta/resource_library.capnp.c++"

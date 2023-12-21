@@ -624,31 +624,14 @@ void CompressFile(const char *srcFileName, const char *dstFileName)
 
 Err LoadResources(Pack &pack);
 
-void haq_print(const haq_type_info &ti, int level = 0)
-{
-    printf("%*s%s %s", level * 2, "", ti.type.c_str(), ti.name.c_str());
-    if (ti.fields.size()) {
-        printf(" {\n");
-        for (const auto &ti : ti.fields) {
-            haq_print(ti, level + 1);
-            printf("%*s", level * 2, "");
-        }
-        printf("}");
-    }
-    printf(";\n");
-}
-
-void haq_test(void)
-{
-    haq_print(hqt_gfx_file_schema);
-}
-
 Err Init(void)
 {
-    haq_test();
+#if HAQ_ENABLE_SCHEMA
+    haq_print(hqt_gfx_file_schema);
     printf("");
+#endif
 
-#if 0
+#if 1
     // TODO: Investigate POD plugin
     // https://github.com/nickolasrossi/podgen/tree/master
     {
@@ -810,7 +793,7 @@ void Free(void)
 #endif
 }
 
-#define PROC(v) Process(stream, v);
+#define PROC(v) Process(stream, v)
 
 template<class T>
 void Process(PackStream &stream, T &v)
@@ -894,11 +877,19 @@ void Process(PackStream &stream, DatBuffer &buffer)
     }
 }
 
+#define HAQ_IO_TYPE(c_type, c_type_name, c_body, userdata) \
+    c_body
+
+#define HAQ_IO_FIELD(c_type, c_name, c_init, flags, userdata) \
+    if constexpr ((flags) & HAQ_SERIALIZE) { PROC(userdata.c_name); }
+
+#define HAQ_IO(hqt, userdata) \
+    hqt(HAQ_IO_TYPE, HAQ_IO_FIELD, HAQ_IGNORE, userdata);
+
 void Process(PackStream &stream, GfxFile &gfx_file, int index)
 {
-    PROC(gfx_file.id);
-    PROC(gfx_file.path);
-    PROC(gfx_file.data_buffer);
+    HAQ_IO(HQT_GFX_FILE, gfx_file);
+
     if (stream.mode == PACK_MODE_READ && !gfx_file.data_buffer.length && !gfx_file.path.empty()) {
         //ReadFileIntoDataBuffer(gfx_file.path.c_str(), gfx_file.data_buffer);
     }
@@ -909,9 +900,8 @@ void Process(PackStream &stream, GfxFile &gfx_file, int index)
 }
 void Process(PackStream &stream, MusFile &mus_file, int index)
 {
-    PROC(mus_file.id);
-    PROC(mus_file.path);
-    PROC(mus_file.data_buffer);
+    HAQ_IO(HQT_MUS_FILE, mus_file);
+
     if (stream.mode == PACK_MODE_READ && !mus_file.data_buffer.length && !mus_file.path.empty()) {
         // TODO(dlb): Music is streaming, don't read whole file into memory
         //ReadFileIntoDataBuffer(mus_file.path.c_str(), mus_file.data_buffer);
@@ -923,12 +913,7 @@ void Process(PackStream &stream, MusFile &mus_file, int index)
 }
 void Process(PackStream &stream, SfxFile &sfx_file, int index)
 {
-    PROC(sfx_file.id);
-    PROC(sfx_file.path);
-    PROC(sfx_file.data_buffer);
-    PROC(sfx_file.variations);
-    PROC(sfx_file.pitch_variance);
-    PROC(sfx_file.max_instances);
+    HAQ_IO(HQT_SFX_FILE, sfx_file);
 
     if (stream.mode == PACK_MODE_READ && !sfx_file.data_buffer.length && !sfx_file.path.empty()) {
         ReadFileIntoDataBuffer(sfx_file.path.c_str(), sfx_file.data_buffer);

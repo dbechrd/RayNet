@@ -95,12 +95,14 @@ enum GfxFileId : uint16_t {
 };
 #endif
 
+#if 0
+
 struct GfxFile {
     static const DataType dtype = DAT_TYP_GFX_FILE;
     std::string id          {};
     std::string path        {};
     DatBuffer   data_buffer {};
-    ::Texture   texture     {};
+    Texture     texture     {};
 };
 
 struct MusFile {
@@ -124,6 +126,55 @@ struct SfxFile {
     ::Sound              sound          {};
     std::vector<::Sound> instances      {};  // "SoundAlias" in raylib, shares buffer, replaces PlaySoundMulti API
 };
+
+#else
+
+enum HAQ_FLAGS {
+    HAQ_NONE                = 0b0000,
+    HAQ_SERIALIZE           = 0b0001,
+    HAQ_EDIT                = 0b0010,
+    HAQ_EDIT_FLOAT_TENTH    = 0b0100,
+    HAQ_EDIT_FLOAT_HUNDRETH = 0b1000,
+};
+
+#define HQT_GFX_FILE(TYPE, FIELD, OTHER, userdata) \
+TYPE(struct, GfxFile, { \
+    OTHER(static const DataType dtype = DAT_TYP_GFX_FILE;) \
+    FIELD(std::string, id         , {}, HAQ_SERIALIZE           , userdata) \
+    FIELD(std::string, path       , {}, HAQ_SERIALIZE | HAQ_EDIT, userdata) \
+    FIELD(DatBuffer  , data_buffer, {}, HAQ_SERIALIZE           , userdata) \
+    FIELD(Texture    , texture    , {}, HAQ_NONE                , userdata) \
+}, userdata)
+
+HAQ_C(HQT_GFX_FILE, 0);
+
+#define HQT_MUS_FILE(TYPE, FIELD, OTHER, userdata) \
+TYPE(struct, MusFile, { \
+    OTHER(static const DataType dtype = DAT_TYP_MUS_FILE;) \
+    FIELD(std::string, id         , {}, HAQ_SERIALIZE           , userdata) \
+    FIELD(std::string, path       , {}, HAQ_SERIALIZE | HAQ_EDIT, userdata) \
+    FIELD(DatBuffer  , data_buffer, {}, HAQ_SERIALIZE           , userdata) \
+    FIELD(Music      , music      , {}, HAQ_NONE                , userdata) \
+}, userdata)
+
+HAQ_C(HQT_MUS_FILE, 0);
+
+#define HQT_SFX_FILE(TYPE, FIELD, OTHER, userdata) \
+TYPE(struct, SfxFile, { \
+    OTHER(static const DataType dtype = DAT_TYP_SFX_FILE;) \
+    FIELD(std::string       , id            , {}, HAQ_SERIALIZE                                     , userdata) \
+    FIELD(std::string       , path          , {}, HAQ_SERIALIZE | HAQ_EDIT                          , userdata) \
+    FIELD(int               , variations    , {}, HAQ_SERIALIZE /*| HAQ_EDIT*/                      , userdata) \
+    FIELD(float             , pitch_variance, {}, HAQ_SERIALIZE | HAQ_EDIT | HAQ_EDIT_FLOAT_HUNDRETH, userdata) \
+    FIELD(int               , max_instances , {}, HAQ_SERIALIZE /*| HAQ_EDIT*/                      , userdata) \
+    FIELD(DatBuffer         , data_buffer   , {}, HAQ_SERIALIZE                                     , userdata) \
+    FIELD(Sound             , sound         , {}, HAQ_NONE                                          , userdata) \
+    FIELD(std::vector<Sound>, instances     , {}, HAQ_NONE                                          , userdata) \
+}, userdata)
+
+HAQ_C(HQT_SFX_FILE, 0);
+
+#endif
 
 struct GfxFrame {
     static const DataType dtype = DAT_TYP_GFX_FRAME;
@@ -360,50 +411,6 @@ struct foo {
     Vector3 dat{ 1, 2, 3 };
     SfxFile sfx{ "sfx_id", "sfx.wav", 1, 0.05f, 8 };
 };
-
-enum haq_type {
-    HAQ_TYPE_INT,
-    HAQ_TYPE_STR
-};
-
-struct haq_type_info {
-    std::string type;
-    std::string name;
-    size_t offset;
-    size_t size;
-    std::vector<haq_type_info> fields;
-};
-
-#define HAQ_COMMA ,
-
-#define HAQ_C_TYPE(c_type, c_type_name, c_body) \
-    c_type c_type_name c_body;
-
-#define HAQ_C_FIELD(c_parent_type, c_type, c_name, c_init) \
-    c_type c_name c_init;
-
-#define HAQ_C_TYPE_INFO(c_type, c_type_name, c_fields) \
-    haq_type_info c_type_name##_schema { #c_type, #c_type_name, 0, sizeof(c_type_name), c_fields };
-
-#define HAQ_C_FIELD_INFO(c_parent_type, c_type, c_name, c_init) \
-    { #c_type, #c_name, OFFSETOF(c_parent_type, c_name), sizeof(c_type), {} },
-
-#define HQT_GFX_FILE(TYPE, FIELD) \
-TYPE(struct, hqt_gfx_file, { \
-    FIELD(hqt_gfx_file, uint32_t   , id,   {}) \
-    FIELD(hqt_gfx_file, std::string, name, {}) \
-    FIELD(hqt_gfx_file, std::string, path, {}) \
-})
-
-HQT_GFX_FILE(HAQ_C_TYPE, HAQ_C_FIELD)
-HQT_GFX_FILE(HAQ_C_TYPE_INFO, HAQ_C_FIELD_INFO)
-
-//HAQ_SCHEMA(
-//    struct, bar, {
-//        HAQ_FIELD(Vector3, dat, { 1 HAQ_COMMA 2 HAQ_COMMA 3 });
-//        HAQ_FIELD(SfxFile, sfx, { "sfx_id" HAQ_COMMA "sfx.wav" HAQ_COMMA 1 HAQ_COMMA 0.05f HAQ_COMMA 8 });
-//    }
-//)
 
 ////////////////////////////////////////////////////////////////////////////
 

@@ -58,6 +58,7 @@
     <OutDir>bin/</OutDir>
     <IntDir>obj/$(ProjectName)/</IntDir>
     <TargetName>$(ProjectName)_dbg</TargetName>
+    <EnableMicrosoftCodeAnalysis>false</EnableMicrosoftCodeAnalysis>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <OutDir>bin/</OutDir>

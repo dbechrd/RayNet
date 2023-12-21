@@ -103,11 +103,11 @@ struct UI {
     void Space(Vector2 space);
     UIState Text(const char *text, size_t textLen);
     UIState Text(const char *text, size_t textLen, Color fgColor, Color bgColor = BLANK);
-
-    UIState TextT(uint32_t value);
-    UIState TextT(const std::string &value);
-
+    UIState Text(uint32_t value);
+    UIState Text(const std::string &text);
+    template <typename T> UIState Text(T value);
     UIState Label(const char *text, size_t textLen, int width);
+    UIState Label(const std::string &text, int width);
     UIState Image(const Texture &texture, Rectangle srcRect = {});
     UIState Button(const char *text, size_t textLen);
     UIState Button(const char *text, size_t textLen, Color bgColor);
@@ -115,8 +115,14 @@ struct UI {
 
     typedef void (*KeyPreCallback)(std::string &str, void *userData, bool &keyHandled);
     typedef void (*KeyPostCallback)(std::string &str, void *userData);
+
     UIState Textbox(STB_TexteditState &state, std::string &text, bool singleline = true, KeyPreCallback preCallback = 0, KeyPostCallback postCallback = 0, void *userData = 0);
-    UIState TextboxFloat(STB_TexteditState &stbState, float &value, float width = 0, const char *fmt = "%.2f", float increment = 1);
+    UIState Textbox(STB_TexteditState &stbState, float &value, const char *fmt = "%.f", float increment = 1);
+    UIState Textbox(STB_TexteditState &stbState, int &value);
+
+    template <typename T>
+    void TextboxHAQ(STB_TexteditState &stbState, T &value, int flags);
+
 
     inline Vector2 CursorScreen(void) {
         return Vector2Add(position, cursor);
