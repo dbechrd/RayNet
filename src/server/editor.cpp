@@ -1617,7 +1617,7 @@ void Editor::DrawUI_PackFiles(UI &uiActionBar, double now)
                 //                static STB_TexteditState txt_##c_name{}; \
                 //                uiActionBar.Textbox(txt_##c_name, (std::string &)userdata.c_name);  /* aithgne@twitch recommended this BRILLIANT cast hack */ \
                 //                uiActionBar.PopStyle(); \
-                //            } else if (std::is_same_v<c_type, float>) { \
+                //            } else if constexpr (std::is_same_v<c_type, float>) { \
                 //                uiActionBar.PushWidth(textboxWidth); \
                 //                static STB_TexteditState txt_##c_name{}; \
                 //                const char *floatFmt = "%f"; \
@@ -1631,7 +1631,7 @@ void Editor::DrawUI_PackFiles(UI &uiActionBar, double now)
                 //                } \
                 //                uiActionBar.Textbox(txt_##c_name, (float &)userdata.c_name, floatFmt, floatInc); \
                 //                uiActionBar.PopStyle(); \
-                //            } else if (std::is_same_v<c_type, int>) { \
+                //            } else if constexpr (std::is_same_v<c_type, int>) { \
                 //                uiActionBar.PushWidth(textboxWidth); \
                 //                static STB_TexteditState txt_##c_name{}; \
                 //                uiActionBar.Textbox(txt_##c_name, (int &)userdata.c_name); \
@@ -1650,7 +1650,7 @@ void Editor::DrawUI_PackFiles(UI &uiActionBar, double now)
                         uiActionBar.Label(CSTR(#c_name), labelWidth); \
                         if constexpr ((flags) & HAQ_EDIT) { \
                             static STB_TexteditState txt_##c_name{}; \
-                            const float textboxWidth = 400 - 16 - labelWidth; \
+                            const float textboxWidth = 400 - 24 - labelWidth; \
                             uiActionBar.PushWidth(textboxWidth); \
                             uiActionBar.TextboxHAQ(txt_##c_name, userdata.c_name, flags); \
                             uiActionBar.PopStyle(); \
@@ -1696,15 +1696,12 @@ void Editor::DrawUI_PackFiles(UI &uiActionBar, double now)
                     }
                     case DAT_TYP_GFX_FRAME:
                     {
-                        const float textboxWidth = 40;
+                        const float labelWidth = 40;
 
                         GfxFrame &gfxFrame = pack.gfx_frames[entry.index];
-                        //uiActionBar.Label(CSTR("rect"), labelWidth);
-                        //uiActionBar.Text(TextFormat("%hu", gfxFrame.x));
-                        //uiActionBar.Text(TextFormat("%hu", gfxFrame.y));
-                        //uiActionBar.Text(TextFormat("%hu", gfxFrame.w));
-                        //uiActionBar.Text(TextFormat("%hu", gfxFrame.h));
+                        HAQ_UI(HQT_GFX_FRAME, gfxFrame);
 
+#if 0
                         uiActionBar.Label(CSTR("rect"), labelWidth);
 
                         uiActionBar.PushBgColor({ 127, 0, 0, 255 }, UI_CtrlTypeTextbox);
@@ -1739,6 +1736,7 @@ void Editor::DrawUI_PackFiles(UI &uiActionBar, double now)
                         uiActionBar.PopStyle();
                         gfxFrame.h = CLAMP(h, 0, UINT16_MAX);
                         uiActionBar.Newline();
+#endif
                         break;
                     }
                     case DAT_TYP_GFX_ANIM:
@@ -1815,7 +1813,6 @@ void Editor::DrawUI_PackFiles(UI &uiActionBar, double now)
                     {
                         TileDef &tile_def = pack.tile_defs[entry.index];
 
-                        const float labelWidth = 20.0f;
                         uiActionBar.Label(CSTR("name"), labelWidth);
                         uiActionBar.Text(CSTRS(tile_def.name));
                         uiActionBar.Newline();
@@ -1831,7 +1828,6 @@ void Editor::DrawUI_PackFiles(UI &uiActionBar, double now)
                     {
                         TileMat &tile_mat = pack.tile_mats[entry.index];
 
-                        const float labelWidth = 20.0f;
                         uiActionBar.Label(CSTR("name"), labelWidth);
                         uiActionBar.Text(CSTRS(tile_mat.name));
                         uiActionBar.Newline();

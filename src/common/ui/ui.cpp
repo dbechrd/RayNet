@@ -979,14 +979,6 @@ UIState UI::Textbox(STB_TexteditState &stbState, float &value, const char *fmt, 
 #endif
 }
 
-UIState UI::Textbox(STB_TexteditState &stbState, int &value)
-{
-    float valueFloat = (float)value;
-    UIState state = Textbox(stbState, valueFloat, "%.f");
-    value = CLAMP(valueFloat, 0, INT32_MAX);
-    return state;
-}
-
 void LimitStringLength(std::string &str, void *userData)
 {
     size_t maxLength = (size_t)userData;
@@ -998,7 +990,18 @@ void LimitStringLength(std::string &str, void *userData)
 template <typename T>
 void UI::TextboxHAQ(STB_TexteditState &stbState, T &value, int flags)
 {
-    if constexpr (std::is_same_v<T, float>) {
+    bool popStyle = false;
+    if (flags & HAQ_EDIT_TEXTBOX_STYLE_X) {
+        PushBgColor({ 127, 0, 0, 255 }, UI_CtrlTypeTextbox);
+    } else if (flags & HAQ_EDIT_TEXTBOX_STYLE_Y) {
+        PushBgColor({ 0, 127, 0, 255 }, UI_CtrlTypeTextbox);
+    } else if (flags & HAQ_EDIT_TEXTBOX_STYLE_Z) {
+        PushBgColor({ 0, 0, 127, 255 }, UI_CtrlTypeTextbox);
+    }
+
+    if constexpr (std::is_same_v<T, std::string>) {
+        Textbox(stbState, value);
+    } else if constexpr (std::is_same_v<T, float>) {
         const char* floatFmt = "%f";
         float floatInc = 1.0f;
         if (flags & HAQ_EDIT_FLOAT_TENTH) {
@@ -1009,12 +1012,16 @@ void UI::TextboxHAQ(STB_TexteditState &stbState, T &value, int flags)
             floatInc = 0.01f;
         }
         Textbox(stbState, value, floatFmt, floatInc);
-    } else if (
-        std::is_same_v<T, std::string> ||
-        std::is_same_v<T, int>
+    } else if constexpr (
+        std::is_same_v<T, uint16_t> ||
+        std::is_same_v<T, int32_t>
     ) {
-        Textbox(stbState, value);
+        float valueFloat = (float)value;
+        Textbox(stbState, valueFloat, "%.f");
+        value = CLAMP(valueFloat, std::numeric_limits<T>::min(), std::numeric_limits<T>::max());
     } else {
         Label(CSTR("IDK HOW TO EDIT THIS MAN!"));
     }
+
+    if (popStyle) PopStyle();
 }

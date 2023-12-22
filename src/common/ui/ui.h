@@ -118,7 +118,6 @@ struct UI {
 
     UIState Textbox(STB_TexteditState &state, std::string &text, bool singleline = true, KeyPreCallback preCallback = 0, KeyPostCallback postCallback = 0, void *userData = 0);
     UIState Textbox(STB_TexteditState &stbState, float &value, const char *fmt = "%.f", float increment = 1);
-    UIState Textbox(STB_TexteditState &stbState, int &value);
 
     template <typename T>
     void TextboxHAQ(STB_TexteditState &stbState, T &value, int flags);

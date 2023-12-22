@@ -127,14 +127,27 @@ struct SfxFile {
     std::vector<::Sound> instances      {};  // "SoundAlias" in raylib, shares buffer, replaces PlaySoundMulti API
 };
 
+struct GfxFrame {
+    static const DataType dtype = DAT_TYP_GFX_FRAME;
+    std::string id  {};
+    std::string gfx {};  // TODO: StringId
+    uint16_t    x   {};
+    uint16_t    y   {};
+    uint16_t    w   {};
+    uint16_t    h   {};
+};
+
 #else
 
 enum HAQ_FLAGS {
-    HAQ_NONE                = 0b0000,
-    HAQ_SERIALIZE           = 0b0001,
-    HAQ_EDIT                = 0b0010,
-    HAQ_EDIT_FLOAT_TENTH    = 0b0100,
-    HAQ_EDIT_FLOAT_HUNDRETH = 0b1000,
+    HAQ_NONE                 = 0b00000000,  // no flags set
+    HAQ_SERIALIZE            = 0b00000001,  // serialize field to pack file
+    HAQ_EDIT                 = 0b00000010,  // allow field to be edited in editor (if type is supported)
+    HAQ_EDIT_FLOAT_TENTH     = 0b00000100,  // set format to %.1f and increment to 0.1f
+    HAQ_EDIT_FLOAT_HUNDRETH  = 0b00001000,  // set format to %.2f and increment to 0.01f
+    HAQ_EDIT_TEXTBOX_STYLE_X = 0b00010000,  // set textbox background color to red
+    HAQ_EDIT_TEXTBOX_STYLE_Y = 0b00100000,  // set textbox background color to green
+    HAQ_EDIT_TEXTBOX_STYLE_Z = 0b01000000,  // set textbox background color to blue
 };
 
 #define HQT_GFX_FILE(TYPE, FIELD, OTHER, userdata) \
@@ -176,15 +189,18 @@ HAQ_C(HQT_SFX_FILE, 0);
 
 #endif
 
-struct GfxFrame {
-    static const DataType dtype = DAT_TYP_GFX_FRAME;
-    std::string id  {};
-    std::string gfx {};  // TODO: StringId
-    uint16_t    x   {};
-    uint16_t    y   {};
-    uint16_t    w   {};
-    uint16_t    h   {};
-};
+#define HQT_GFX_FRAME(TYPE, FIELD, OTHER, userdata) \
+TYPE(struct, GfxFrame, { \
+    OTHER(static const DataType dtype = DAT_TYP_GFX_FRAME;) \
+    FIELD(std::string, id , {}, HAQ_SERIALIZE                                      , userdata) \
+    FIELD(std::string, gfx, {}, HAQ_SERIALIZE | HAQ_EDIT                           , userdata) \
+    FIELD(uint16_t   , x  , {}, HAQ_SERIALIZE | HAQ_EDIT | HAQ_EDIT_TEXTBOX_STYLE_X, userdata) \
+    FIELD(uint16_t   , y  , {}, HAQ_SERIALIZE | HAQ_EDIT | HAQ_EDIT_TEXTBOX_STYLE_Y, userdata) \
+    FIELD(uint16_t   , w  , {}, HAQ_SERIALIZE | HAQ_EDIT                           , userdata) \
+    FIELD(uint16_t   , h  , {}, HAQ_SERIALIZE | HAQ_EDIT                           , userdata) \
+}, userdata)
+
+HAQ_C(HQT_GFX_FRAME, 0);
 
 struct GfxAnim {
     static const DataType dtype = DAT_TYP_GFX_ANIM;

@@ -970,6 +970,7 @@ void Process(PackStream &stream, Sprite &sprite, int index) {
 void Process(PackStream &stream, TileMat &tile_mat, int index)
 {
     PROC(tile_mat.id);
+    PROC(tile_mat.name);
     PROC(tile_mat.footstep_sound);
 
     if (stream.mode == PACK_MODE_READ) {
