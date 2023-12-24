@@ -278,7 +278,7 @@ namespace NewEnt {
 
         Entity *GetEntity(uint32_t id)
         {
-            assert("!finding entity by id not yet implemented, need map");
+            assert(!"finding entity by id not yet implemented, need map");
             return 0;
         }
 

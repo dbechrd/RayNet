@@ -947,7 +947,7 @@ void Editor::DrawUI_Tilesheet(UI &uiActionBar, double now)
                     }
                 }
             } else {
-                assert("!wut da heck, how you select a tile that's not in the map at all?");
+                assert(!"wut da heck, how you select a tile that's not in the map at all?");
             }
         }
     }

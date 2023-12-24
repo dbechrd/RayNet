@@ -777,6 +777,9 @@ Err Init(void)
 
         packAssets.path = "pack/assets.txt";
         ERR_RETURN(SavePack(packAssets, PACK_TYPE_TEXT));
+
+        Pack packAssetsTxt{ "pack/assets.txt" };
+        ERR_RETURN(LoadPack(packAssetsTxt, PACK_TYPE_TEXT));
     }
 #endif
 
@@ -849,10 +852,26 @@ void Process(PackStream &stream, T &v)
             else if constexpr (std::is_same_v<T, uint64_t>) fprintf(stream.file, " %" PRIu64, v);
             else if constexpr (std::is_same_v<T, float   >) fprintf(stream.file, " %f", v);
             else if constexpr (std::is_same_v<T, double  >) fprintf(stream.file, " %f", v);
-            else fprintf(stream.file, " <%s>\n", typeid(T).name());
+            else if constexpr (std::is_enum_v<T>)           fprintf(stream.file, " %d", v);
+            else assert(!"unhandled type"); //fprintf(stream.file, " <%s>\n", typeid(T).name());
         } else {
-            // text mode read not implemented
-            assert("nope");
+            if      constexpr (std::is_same_v<T, char    >) fscanf(stream.file, " %c", &v);
+            else if constexpr (std::is_same_v<T, int8_t  >) fscanf(stream.file, " %" PRId8 , &v);
+            else if constexpr (std::is_same_v<T, int16_t >) fscanf(stream.file, " %" PRId16, &v);
+            else if constexpr (std::is_same_v<T, int32_t >) fscanf(stream.file, " %" PRId32, &v);
+            else if constexpr (std::is_same_v<T, int64_t >) fscanf(stream.file, " %" PRId64, &v);
+            else if constexpr (std::is_same_v<T, uint8_t >) fscanf(stream.file, " %" PRIu8 , &v);
+            else if constexpr (std::is_same_v<T, uint16_t>) fscanf(stream.file, " %" PRIu16, &v);
+            else if constexpr (std::is_same_v<T, uint32_t>) fscanf(stream.file, " %" PRIu32, &v);
+            else if constexpr (std::is_same_v<T, uint64_t>) fscanf(stream.file, " %" PRIu64, &v);
+            else if constexpr (std::is_same_v<T, float   >) fscanf(stream.file, " %f", &v);
+            else if constexpr (std::is_same_v<T, double  >) fscanf(stream.file, " %lf", &v);
+            else if constexpr (std::is_enum_v<T>) {
+                int val = -1;
+                fscanf(stream.file, " %d", &val);
+                v = (T)val;  // note(dlb): might be out of range, but idk how to detect that. C++ sucks.
+            }
+            else assert(!"unhandled type"); //fprintf(stream.file, " <%s>\n", typeid(T).name());
         }
     }
 
@@ -867,8 +886,14 @@ void Process(PackStream &stream, std::string &str)
         if (stream.mode == PACK_MODE_WRITE) {
             fprintf(stream.file, " \"%s\"", str.c_str());
         } else {
-            // text mode read not implemented
-            assert("nope");
+            char buf[1024]{};
+            fscanf(stream.file, " \"%1023[^\"]", buf);
+            char end_quote{};
+            fscanf(stream.file, "%c", &end_quote);
+            if (end_quote != '"') {
+                assert(!"string too long, not supported");
+            }
+            str = buf;
         }
     } else {
         PROC(strLen);
@@ -883,12 +908,13 @@ void Process(PackStream &stream, std::vector<T> &vec)
 {
     assert(vec.size() < UINT16_MAX);
     uint16_t len = (uint16_t)vec.size();
+#if 0
     if (stream.type == PACK_TYPE_TEXT) {
         if (stream.mode == PACK_MODE_WRITE) {
             fprintf(stream.file, " <vec (len=%zu)>", vec.size());
         } else {
             // text mode read not implemented
-            assert("nope");
+            assert(!"nope");
         }
     } else {
         PROC(len);
@@ -897,6 +923,13 @@ void Process(PackStream &stream, std::vector<T> &vec)
             PROC(vec[i]);
         }
     }
+#else
+    PROC(len);
+    vec.resize(len);
+    for (int i = 0; i < len; i++) {
+        PROC(vec[i]);
+    }
+#endif
 }
 void Process(PackStream &stream, Vector2 &vec)
 {
@@ -930,10 +963,6 @@ void Process(PackStream &stream, DatBuffer &buffer)
     }
 }
 
-#define HAQ_IO_PROC_TYPE_NAME(c_type, c_type_name, c_body, userdata) \
-    std::string type_name(#c_type_name); \
-    PROC(type_name);
-
 #define HAQ_IO_TYPE(c_type, c_type_name, c_body, userdata) \
     c_body
 
@@ -943,20 +972,7 @@ void Process(PackStream &stream, DatBuffer &buffer)
     }
 
 #define HAQ_IO(hqt, userdata) \
-    hqt(HAQ_IO_PROC_TYPE_NAME, HAQ_IGNORE, HAQ_IGNORE, userdata); \
-    hqt(HAQ_IO_TYPE, HAQ_IO_FIELD, HAQ_IGNORE, userdata); \
-    DoTextModeNewline(stream)
-
-void DoTextModeNewline(PackStream &stream)
-{
-    if (stream.type == PACK_TYPE_TEXT) {
-        char newline = '\n';
-        PROC(newline);
-        if (newline != '\n') {
-            assert("!uh-oh, text mode read failed expected newline at line whatever");
-        }
-    }
-}
+    hqt(HAQ_IO_TYPE, HAQ_IO_FIELD, HAQ_IGNORE, userdata);
 
 void Process(PackStream &stream, GfxFile &gfx_file)
 {
@@ -981,18 +997,18 @@ void Process(PackStream &stream, GfxAnim &gfx_anim)
 void Process(PackStream &stream, Sprite &sprite) {
     PROC(sprite.id);
     PROC(sprite.name);
-    assert(ARRAY_SIZE(sprite.anims) == 8); // if this changes, version must increment
-    for (int i = 0; i < 8; i++) {
-        PROC(sprite.anims[i]);
+    assert(sprite.anims.size() < UINT8_MAX);
+    uint8_t len = (uint8_t)sprite.anims.size();
+    PROC(len);
+    for (auto &anim : sprite.anims) {
+        PROC(anim);
     }
-    DoTextModeNewline(stream);
 }
 void Process(PackStream &stream, TileMat &tile_mat)
 {
     PROC(tile_mat.id);
     PROC(tile_mat.name);
     PROC(tile_mat.footstep_sound);
-    DoTextModeNewline(stream);
 }
 void Process(PackStream &stream, TileDef &tile_def) {
     PROC(tile_def.id);
@@ -1001,9 +1017,7 @@ void Process(PackStream &stream, TileDef &tile_def) {
     PROC(tile_def.material_id);
     PROC(tile_def.flags);
     PROC(tile_def.auto_tile_mask);
-    DoTextModeNewline(stream);
 }
-
 void Process(PackStream &stream, Entity &entity)
 {
     bool alive = entity.id && !entity.despawned_at && entity.type;
@@ -1014,8 +1028,8 @@ void Process(PackStream &stream, Entity &entity)
 
     //// Entity ////
     PROC(entity.id);
-    PROC((uint8_t &)entity.type);
-    PROC((uint8_t &)entity.spec);
+    PROC(entity.type);
+    PROC(entity.spec);
     PROC(entity.name);
     PROC(entity.caused_by);
     PROC(entity.spawned_at);
@@ -1059,7 +1073,7 @@ void Process(PackStream &stream, Entity &entity)
     //PROC(entity.velocity);
 
     PROC(entity.sprite_id);
-    PROC((uint8_t &)entity.direction);
+    PROC(entity.direction);
     //PROC(entity.anim_frame);
     //PROC(entity.anim_accum);
 
@@ -1196,6 +1210,77 @@ void Process(PackStream &stream, Tilemap &tile_map)
     assert(sentinel == Tilemap::SENTINEL);
 }
 
+template <typename T>
+void AddToIndex(Pack &pack, T &dat, size_t index)
+{
+    const auto &by_id = pack.dat_by_id[T::dtype];
+    pack.dat_by_id[T::dtype][dat.id] = index;
+
+    const auto &by_name = pack.dat_by_name[T::dtype];
+    pack.dat_by_name[T::dtype][dat.name] = index;
+}
+
+template <typename T>
+void WriteArrayBin(PackStream &stream, std::vector<T> &vec)
+{
+    for (T &entry : vec) {
+        stream.pack->toc.entries.push_back(PackTocEntry(entry.dtype, ftell(stream.file)));
+        PROC(entry);
+    }
+}
+
+template <typename T>
+void ReadEntryBin(PackStream &stream, size_t index)
+{
+    auto &vec = *(std::vector<T> *)stream.pack->GetPool(T::dtype);
+    auto &dat = vec[index];
+    PROC(dat);
+
+    if (stream.mode == PACK_MODE_READ) {
+        AddToIndex(*stream.pack, dat, index);
+    }
+}
+
+template <typename T>
+void WriteArrayTxt(PackStream &stream, std::vector<T> &vec)
+{
+    char newline = '\n';
+    for (T &entry : vec) {
+        DataType dtype = entry.dtype;
+        PROC(dtype);
+        PROC(entry);
+        PROC(newline);
+    }
+}
+
+void IgnoreCommentsTxt(FILE *f)
+{
+    char next = fgetc(f);
+    while (isspace(next)) {
+        next = fgetc(f);
+    }
+    while (next == '#') {
+        while (next != '\n') {
+            next = fgetc(f);
+        }
+        next = fgetc(f);
+    }
+    fseek(f, ftell(f) - 1, SEEK_SET);
+}
+
+template <typename T>
+void ReadEntryTxt(PackStream &stream)
+{
+    auto &vec = *(std::vector<T> *)stream.pack->GetPool(T::dtype);
+    size_t index = vec.size();
+    auto &dat = vec.emplace_back();
+    PROC(dat);
+
+    if (stream.mode == PACK_MODE_READ) {
+        AddToIndex(*stream.pack, dat, index);
+    }
+}
+
 Err Process(PackStream &stream)
 {
     static const int MAGIC = 0x9291BBDB;
@@ -1227,145 +1312,133 @@ Err Process(PackStream &stream)
         PROC(pack.toc_offset);
     }
 
-    if (stream.type == PACK_TYPE_TEXT) {
-        fputc('\n', stream.file);
-    }
-
     if (stream.mode == PACK_MODE_WRITE) {
-        #define WRITE_ARRAY(arr) \
-            for (int i = 0; i < arr.size(); i++) { \
-                auto &entry = arr[i]; \
-                pack.toc.entries.push_back(PackTocEntry(entry.dtype, ftell(stream.file))); \
-                PROC(entry); \
-            }
-
-        WRITE_ARRAY(pack.gfx_files);
-        WRITE_ARRAY(pack.mus_files);
-        WRITE_ARRAY(pack.sfx_files);
-        WRITE_ARRAY(pack.gfx_frames);
-        WRITE_ARRAY(pack.gfx_anims);
-        WRITE_ARRAY(pack.tile_mats);
-        WRITE_ARRAY(pack.sprites);
-        WRITE_ARRAY(pack.tile_defs);
-        WRITE_ARRAY(pack.tile_maps);
-        WRITE_ARRAY(pack.entities);
-
         if (stream.type == PACK_TYPE_BINARY) {
+            WriteArrayBin(stream, pack.gfx_files);
+            WriteArrayBin(stream, pack.mus_files);
+            WriteArrayBin(stream, pack.sfx_files);
+            WriteArrayBin(stream, pack.gfx_frames);
+            WriteArrayBin(stream, pack.gfx_anims);
+            WriteArrayBin(stream, pack.tile_mats);
+            WriteArrayBin(stream, pack.sprites);
+            WriteArrayBin(stream, pack.tile_defs);
+            WriteArrayBin(stream, pack.tile_maps);
+            WriteArrayBin(stream, pack.entities);
+
             int tocOffset = ftell(stream.file);
             uint32_t entryCount = (uint32_t)pack.toc.entries.size();
             PROC(entryCount);
             for (PackTocEntry &tocEntry : pack.toc.entries) {
-                PROC((uint8_t &)tocEntry.dtype);
+                PROC(tocEntry.dtype);
                 PROC(tocEntry.offset);
             }
 
             fseek(stream.file, tocOffsetPos, SEEK_SET);
             PROC(tocOffset);
+        } else {
+            fprintf(stream.file, "\n");
+
+            #define HAQ_TXT_DOC_COMMENT_TYPE(c_type, c_type_name, c_body, userdata) \
+                fprintf(stream.file, "\n# %s ", #c_type_name); \
+                c_body
+
+            #define HAQ_TXT_DOC_COMMENT_FIELD(c_type, c_name, c_init, flags, userdata) \
+                if ((flags) & HAQ_SERIALIZE) { \
+                    fprintf(stream.file, "%s ", #c_name); \
+                }
+
+            #define HAQ_TXT_DOC_COMMENT(hqt) \
+                hqt(HAQ_TXT_DOC_COMMENT_TYPE, HAQ_TXT_DOC_COMMENT_FIELD, HAQ_IGNORE, 0); \
+                fprintf(stream.file, "\n");
+
+            HAQ_TXT_DOC_COMMENT(HQT_GFX_FILE);
+            WriteArrayTxt(stream, pack.gfx_files);
+            HAQ_TXT_DOC_COMMENT(HQT_MUS_FILE);
+            WriteArrayTxt(stream, pack.mus_files);
+            HAQ_TXT_DOC_COMMENT(HQT_SFX_FILE);
+            WriteArrayTxt(stream, pack.sfx_files);
+            HAQ_TXT_DOC_COMMENT(HQT_GFX_FRAME);
+            WriteArrayTxt(stream, pack.gfx_frames);
+            HAQ_TXT_DOC_COMMENT(HQT_GFX_ANIM);
+            WriteArrayTxt(stream, pack.gfx_anims);
+            WriteArrayTxt(stream, pack.tile_mats);
+            WriteArrayTxt(stream, pack.sprites);
+            WriteArrayTxt(stream, pack.tile_defs);
+            WriteArrayTxt(stream, pack.tile_maps);
+            WriteArrayTxt(stream, pack.entities);
+
+            #undef HAQ_TXT_DOC_COMMENT_TYPE
+            #undef HAQ_TXT_DOC_COMMENT_FIELD
+            #undef HAQ_TXT_DOC_COMMENT
+
+            fprintf(stream.file, "\n# EOF marker\n%d", -1);
         }
     } else {
-        fseek(stream.file, pack.toc_offset, SEEK_SET);
-        uint32_t entryCount = 0;
-        PROC(entryCount);
-        pack.toc.entries.resize(entryCount);
+        if (stream.type == PACK_TYPE_BINARY) {
+            fseek(stream.file, pack.toc_offset, SEEK_SET);
+            uint32_t entryCount = 0;
+            PROC(entryCount);
+            pack.toc.entries.resize(entryCount);
 
-        size_t typeCounts[DAT_TYP_COUNT]{};
-        for (PackTocEntry &tocEntry : pack.toc.entries) {
-            PROC((uint8_t &)tocEntry.dtype);
-            PROC(tocEntry.offset);
-            typeCounts[tocEntry.dtype]++;
-        }
-
-        pack.gfx_files .resize(typeCounts[DAT_TYP_GFX_FILE]);
-        pack.mus_files .resize(typeCounts[DAT_TYP_MUS_FILE]);
-        pack.sfx_files .resize(typeCounts[DAT_TYP_SFX_FILE]);
-        pack.gfx_frames.resize(typeCounts[DAT_TYP_GFX_FRAME]);
-        pack.gfx_anims .resize(typeCounts[DAT_TYP_GFX_ANIM]);
-        pack.tile_mats .resize(typeCounts[DAT_TYP_TILE_MAT]);
-        pack.sprites   .resize(typeCounts[DAT_TYP_SPRITE]);
-        pack.tile_defs .resize(typeCounts[DAT_TYP_TILE_DEF]);
-        pack.tile_maps .resize(typeCounts[DAT_TYP_TILE_MAP]);
-        pack.entities  .resize(typeCounts[DAT_TYP_ENTITY]);
-
-        size_t typeNextIndex[DAT_TYP_COUNT]{};
-
-        for (PackTocEntry &tocEntry : pack.toc.entries) {
-            fseek(stream.file, tocEntry.offset, SEEK_SET);
-            size_t index = typeNextIndex[tocEntry.dtype];
-            tocEntry.index = index;
-
-            // TODO(dlb): HOW THE FUCK DO I DE-DUPE THIS HIDEOUS CODE!? UGHHHHHHHHHHHHHH
-            switch (tocEntry.dtype) {
-                case DAT_TYP_GFX_FILE: {
-                    auto &dat = pack.gfx_files[index];
-                    Process(stream, dat);
-                    pack.dat_by_id[tocEntry.dtype][dat.id] = index;
-                    pack.dat_by_name[tocEntry.dtype][dat.name] = index;
-                    break;
-                } case DAT_TYP_MUS_FILE: {
-                    auto &dat = pack.mus_files[index];
-                    Process(stream, dat);
-                    pack.dat_by_id[tocEntry.dtype][dat.id] = index;
-                    pack.dat_by_name[tocEntry.dtype][dat.name] = index;
-                    break;
-                } case DAT_TYP_SFX_FILE: {
-                    auto &dat = pack.sfx_files[index];
-                    Process(stream, dat);
-                    pack.dat_by_id[tocEntry.dtype][dat.id] = index;
-                    pack.dat_by_name[tocEntry.dtype][dat.name] = index;
-#if 0
-                    SfxFile &sfx_file = pack.sfx_files[index];
-                    auto &sfx_variants = stream.pack->sfx_variants_by_id[sfx_file.id];
-                    sfx_variants.push_back(index);
-#endif
-                    break;
-                } case DAT_TYP_GFX_FRAME: {
-                    auto &dat = pack.gfx_frames[index];
-                    Process(stream, dat);
-                    pack.dat_by_id[tocEntry.dtype][dat.id] = index;
-                    pack.dat_by_name[tocEntry.dtype][dat.name] = index;
-                    break;
-                } case DAT_TYP_GFX_ANIM: {
-                    auto &dat = pack.gfx_anims[index];
-                    Process(stream, dat);
-                    pack.dat_by_id[tocEntry.dtype][dat.id] = index;
-                    pack.dat_by_name[tocEntry.dtype][dat.name] = index;
-                    break;
-                } case DAT_TYP_SPRITE: {
-                    auto &dat = pack.sprites[index];
-                    Process(stream, dat);
-                    pack.dat_by_id[tocEntry.dtype][dat.id] = index;
-                    pack.dat_by_name[tocEntry.dtype][dat.name] = index;
-                    break;
-                } case DAT_TYP_TILE_DEF: {
-                    auto &dat = pack.tile_defs[index];
-                    Process(stream, dat);
-                    pack.dat_by_id[tocEntry.dtype][dat.id] = index;
-                    pack.dat_by_name[tocEntry.dtype][dat.name] = index;
-                    break;
-                } case DAT_TYP_TILE_MAT: {
-                    auto &dat = pack.tile_mats[index];
-                    Process(stream, dat);
-                    pack.dat_by_id[tocEntry.dtype][dat.id] = index;
-                    pack.dat_by_name[tocEntry.dtype][dat.name] = index;
-                    break;
-                } case DAT_TYP_TILE_MAP: {
-                    auto &dat = pack.tile_maps[index];
-                    Process(stream, dat);
-                    pack.dat_by_id[tocEntry.dtype][dat.id] = index;
-                    pack.dat_by_name[tocEntry.dtype][dat.name] = index;
-                    break;
-                } case DAT_TYP_ENTITY: {
-                    auto &dat = pack.entities[index];
-                    Process(stream, dat);
-                    pack.dat_by_id[tocEntry.dtype][dat.id] = index;
-                    pack.dat_by_name[tocEntry.dtype][dat.name] = index;
-                    break;
-                }
+            size_t typeCounts[DAT_TYP_COUNT]{};
+            for (PackTocEntry &tocEntry : pack.toc.entries) {
+                PROC(tocEntry.dtype);
+                PROC(tocEntry.offset);
+                typeCounts[tocEntry.dtype]++;
             }
 
-            typeNextIndex[tocEntry.dtype]++;
-        }
+            pack.gfx_files .resize(typeCounts[DAT_TYP_GFX_FILE]);
+            pack.mus_files .resize(typeCounts[DAT_TYP_MUS_FILE]);
+            pack.sfx_files .resize(typeCounts[DAT_TYP_SFX_FILE]);
+            pack.gfx_frames.resize(typeCounts[DAT_TYP_GFX_FRAME]);
+            pack.gfx_anims .resize(typeCounts[DAT_TYP_GFX_ANIM]);
+            pack.tile_mats .resize(typeCounts[DAT_TYP_TILE_MAT]);
+            pack.sprites   .resize(typeCounts[DAT_TYP_SPRITE]);
+            pack.tile_defs .resize(typeCounts[DAT_TYP_TILE_DEF]);
+            pack.tile_maps .resize(typeCounts[DAT_TYP_TILE_MAP]);
+            pack.entities  .resize(typeCounts[DAT_TYP_ENTITY]);
 
+            size_t typeNextIndex[DAT_TYP_COUNT]{};
+
+            for (PackTocEntry &tocEntry : pack.toc.entries) {
+                fseek(stream.file, tocEntry.offset, SEEK_SET);
+                size_t index = typeNextIndex[tocEntry.dtype];
+                tocEntry.index = index;
+                switch (tocEntry.dtype) {
+                    case DAT_TYP_GFX_FILE:  ReadEntryBin<GfxFile> (stream, index); break;
+                    case DAT_TYP_MUS_FILE:  ReadEntryBin<MusFile> (stream, index); break;
+                    case DAT_TYP_SFX_FILE:  ReadEntryBin<SfxFile> (stream, index); break;
+                    case DAT_TYP_GFX_FRAME: ReadEntryBin<GfxFrame>(stream, index); break;
+                    case DAT_TYP_GFX_ANIM:  ReadEntryBin<GfxAnim> (stream, index); break;
+                    case DAT_TYP_SPRITE:    ReadEntryBin<Sprite>  (stream, index); break;
+                    case DAT_TYP_TILE_DEF:  ReadEntryBin<TileDef> (stream, index); break;
+                    case DAT_TYP_TILE_MAT:  ReadEntryBin<TileMat> (stream, index); break;
+                    case DAT_TYP_TILE_MAP:  ReadEntryBin<Tilemap> (stream, index); break;
+                    case DAT_TYP_ENTITY:    ReadEntryBin<Entity>  (stream, index); break;
+                }
+                typeNextIndex[tocEntry.dtype]++;
+            }
+        } else {
+            while (!feof(stream.file)) {
+                int dtype = DAT_TYP_INVALID;
+                IgnoreCommentsTxt(stream.file);
+                PROC(dtype);
+                switch (dtype) {
+                    case DAT_TYP_GFX_FILE:  ReadEntryTxt<GfxFile> (stream); break;
+                    case DAT_TYP_MUS_FILE:  ReadEntryTxt<MusFile> (stream); break;
+                    case DAT_TYP_SFX_FILE:  ReadEntryTxt<SfxFile> (stream); break;
+                    case DAT_TYP_GFX_FRAME: ReadEntryTxt<GfxFrame>(stream); break;
+                    case DAT_TYP_GFX_ANIM:  ReadEntryTxt<GfxAnim> (stream); break;
+                    case DAT_TYP_SPRITE:    ReadEntryTxt<Sprite>  (stream); break;
+                    case DAT_TYP_TILE_DEF:  ReadEntryTxt<TileDef> (stream); break;
+                    case DAT_TYP_TILE_MAT:  ReadEntryTxt<TileMat> (stream); break;
+                    case DAT_TYP_TILE_MAP:  ReadEntryTxt<Tilemap> (stream); break;
+                    case DAT_TYP_ENTITY:    ReadEntryTxt<Entity>  (stream); break;
+                    case -1: break;
+                    default: assert(!"uh-oh");
+                }
+            }
+        }
         // Maybe I care about this one day.. prolly not
         //ReadFileIntoDataBuffer(gfx_file.path.c_str(), gfx_file.data_buffer);
     }

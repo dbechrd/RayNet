@@ -38,19 +38,18 @@ struct DrawCmdQueue : public std::priority_queue<DrawCmd> {
     gen(DAT_TYP_GFX_FILE,  "GFXFILE ") \
     gen(DAT_TYP_MUS_FILE,  "MUSFILE ") \
     gen(DAT_TYP_SFX_FILE,  "SFXFILE ") \
-                                        \
     gen(DAT_TYP_GFX_FRAME, "GFXFRAME") \
     gen(DAT_TYP_GFX_ANIM,  "GFXANIM ") \
     gen(DAT_TYP_SPRITE,    "SPRITE  ") \
     gen(DAT_TYP_TILE_DEF,  "TILEDEF ") \
     gen(DAT_TYP_TILE_MAT,  "TILEMAT ") \
-                                        \
     gen(DAT_TYP_TILE_MAP,  "TILEMAP ") \
     gen(DAT_TYP_ENTITY,    "ENTITY  ")
 
 enum DataType : uint8_t {
     DATA_TYPES(ENUM_VD_VALUE)
-    DAT_TYP_COUNT
+    DAT_TYP_COUNT,
+    DAT_TYP_INVALID
 };
 
 //enum DataFlag : uint32_t {
@@ -277,7 +276,7 @@ struct Sprite {
     static const DataType dtype = DAT_TYP_SPRITE;
     uint32_t    id       {};
     std::string name     {};
-    std::string anims[8] {};  // for each direction
+    std::array<std::string, 8> anims{};  // for each direction
 };
 
 typedef uint32_t TileDefFlags;
