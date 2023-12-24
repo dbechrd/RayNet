@@ -1665,7 +1665,6 @@ void Editor::DrawUI_PackFiles(UI &uiActionBar, double now)
                     {
                         GfxAnim &gfxAnim = pack.gfx_anims[entry.index];
                         HAQ_UI(HQT_GFX_ANIM, gfxAnim);
-
 #if 0
                         uiActionBar.Label(CSTR("id"), labelWidth);
                         uiActionBar.Text(CSTRS(gfxAnim.id));
@@ -1691,9 +1690,11 @@ void Editor::DrawUI_PackFiles(UI &uiActionBar, double now)
                     }
                     case DAT_TYP_SPRITE:
                     {
+                        const float labelWidth = 40.0f;
                         Sprite &sprite = pack.sprites[entry.index];
-
-                        const float labelWidth = 20.0f;
+#if 1
+                        HAQ_UI(HQT_SPRITE, sprite);
+#else
                         uiActionBar.Label(CSTR("name"), labelWidth);
                         uiActionBar.Text(CSTRS(sprite.name));
                         uiActionBar.Newline();
@@ -1729,36 +1730,19 @@ void Editor::DrawUI_PackFiles(UI &uiActionBar, double now)
                         uiActionBar.Label(CSTR("NW"), labelWidth);
                         uiActionBar.Text(CSTRS(sprite.anims[DIR_NW]));
                         uiActionBar.Newline();
+#endif
                         break;
                     }
                     case DAT_TYP_TILE_DEF:
                     {
                         TileDef &tile_def = pack.tile_defs[entry.index];
-
-                        uiActionBar.Label(CSTR("name"), labelWidth);
-                        uiActionBar.Text(CSTRS(tile_def.name));
-                        uiActionBar.Newline();
-
-                        uiActionBar.Label(CSTR("material_id"), labelWidth);
-                        uiActionBar.Text(CSTRLEN(TextFormat("%u", tile_def.material_id)));
-                        uiActionBar.Newline();
-
-                        uiActionBar.Newline();
+                        HAQ_UI(HQT_TILE_DEF, tile_def);
                         break;
                     }
                     case DAT_TYP_TILE_MAT:
                     {
                         TileMat &tile_mat = pack.tile_mats[entry.index];
-
-                        uiActionBar.Label(CSTR("name"), labelWidth);
-                        uiActionBar.Text(CSTRS(tile_mat.name));
-                        uiActionBar.Newline();
-
-                        uiActionBar.Label(CSTR("footstep"), labelWidth);
-                        uiActionBar.Text(CSTRS(tile_mat.footstep_sound));
-                        uiActionBar.Newline();
-
-                        uiActionBar.Newline();
+                        HAQ_UI(HQT_TILE_MAT, tile_mat);
                         break;
                     }
                     case DAT_TYP_TILE_MAP:

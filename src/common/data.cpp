@@ -725,21 +725,22 @@ Err Init(void)
     shdPixelFixer                     = LoadShader("resources/shader/pixelfixer.vs", "resources/shader/pixelfixer.fs");
     shdPixelFixerScreenSizeUniformLoc = GetShaderLocation(shdPixelFixer, "screenSize");
 
-#if 0
+#if 1
     const char *fontName = "C:/Windows/Fonts/consolab.ttf";
     if (!FileExists(fontName)) {
         fontName = "resources/font/KarminaBold.otf";
     }
 #else
-    const char *fontName = "resources/font/KarminaBold.otf";
+    //const char *fontName = "resources/font/KarminaBold.otf";
     //const char *fontName = "resources/font/PixelOperator-Bold.ttf";
     //const char *fontName = "resources/font/PixelOperatorMono-Bold.ttf";
+    const char *fontName = "resources/font/FiraMono-Medium.ttf";
 #endif
 
-    fntTiny = dlb_LoadFontEx(fontName, 14, 0, 0, FONT_DEFAULT);
+    fntTiny = dlb_LoadFontEx(fontName, 12, 0, 0, FONT_DEFAULT);
     ERR_RETURN_EX(fntTiny.baseSize, RN_RAYLIB_ERROR);
 
-    fntSmall = dlb_LoadFontEx(fontName, 18, 0, 0, FONT_DEFAULT);
+    fntSmall = dlb_LoadFontEx(fontName, 15, 0, 0, FONT_DEFAULT);
     ERR_RETURN_EX(fntSmall.baseSize, RN_RAYLIB_ERROR);
 
     fntMedium = dlb_LoadFontEx(fontName, 20, 0, 0, FONT_DEFAULT);
@@ -903,33 +904,27 @@ void Process(PackStream &stream, std::string &str)
         }
     }
 }
+template <typename T, size_t S>
+void Process(PackStream &stream, std::array<T, S> &arr)
+{
+    assert(arr.size() < UINT16_MAX);
+    uint16_t len = (uint16_t)arr.size();
+    PROC(len);
+    assert(len == S);
+    for (int i = 0; i < len; i++) {
+        PROC(arr[i]);
+    }
+}
 template <typename T>
 void Process(PackStream &stream, std::vector<T> &vec)
 {
     assert(vec.size() < UINT16_MAX);
     uint16_t len = (uint16_t)vec.size();
-#if 0
-    if (stream.type == PACK_TYPE_TEXT) {
-        if (stream.mode == PACK_MODE_WRITE) {
-            fprintf(stream.file, " <vec (len=%zu)>", vec.size());
-        } else {
-            // text mode read not implemented
-            assert(!"nope");
-        }
-    } else {
-        PROC(len);
-        vec.resize(len);
-        for (int i = 0; i < len; i++) {
-            PROC(vec[i]);
-        }
-    }
-#else
     PROC(len);
     vec.resize(len);
     for (int i = 0; i < len; i++) {
         PROC(vec[i]);
     }
-#endif
 }
 void Process(PackStream &stream, Vector2 &vec)
 {
@@ -994,113 +989,17 @@ void Process(PackStream &stream, GfxAnim &gfx_anim)
 {
     HAQ_IO(HQT_GFX_ANIM, gfx_anim);
 }
-void Process(PackStream &stream, Sprite &sprite) {
-    PROC(sprite.id);
-    PROC(sprite.name);
-    assert(sprite.anims.size() < UINT8_MAX);
-    uint8_t len = (uint8_t)sprite.anims.size();
-    PROC(len);
-    for (auto &anim : sprite.anims) {
-        PROC(anim);
-    }
+void Process(PackStream &stream, Sprite &sprite)
+{
+    HAQ_IO(HQT_SPRITE, sprite);
+}
+void Process(PackStream &stream, TileDef &tile_def)
+{
+    HAQ_IO(HQT_TILE_DEF, tile_def);
 }
 void Process(PackStream &stream, TileMat &tile_mat)
 {
-    PROC(tile_mat.id);
-    PROC(tile_mat.name);
-    PROC(tile_mat.footstep_sound);
-}
-void Process(PackStream &stream, TileDef &tile_def) {
-    PROC(tile_def.id);
-    PROC(tile_def.name);
-    PROC(tile_def.anim);
-    PROC(tile_def.material_id);
-    PROC(tile_def.flags);
-    PROC(tile_def.auto_tile_mask);
-}
-void Process(PackStream &stream, Entity &entity)
-{
-    bool alive = entity.id && !entity.despawned_at && entity.type;
-    PROC(alive);
-    if (!alive) {
-        return;
-    }
-
-    //// Entity ////
-    PROC(entity.id);
-    PROC(entity.type);
-    PROC(entity.spec);
-    PROC(entity.name);
-    PROC(entity.caused_by);
-    PROC(entity.spawned_at);
-    //PROC(entity.despawned_at);
-
-    PROC(entity.map_id);
-    PROC(entity.position);
-
-    PROC(entity.ambient_fx);
-    PROC(entity.ambient_fx_delay_min);
-    PROC(entity.ambient_fx_delay_max);
-
-    PROC(entity.radius);
-    //PROC(entity.colliding);
-    //PROC(entity.on_warp);
-
-    //PROC(entity.last_attacked_at);
-    //PROC(entity.attack_cooldown);
-
-    PROC(entity.dialog_root_key);
-    //PROC(entity.dialog_spawned_at);
-    //PROC(entity.dialog_id);
-    //PROC(entity.dialog_title);
-    //PROC(entity.dialog_message);
-
-    PROC(entity.hp_max);
-    PROC(entity.hp);
-    //PROC(entity.hp_smooth);
-
-    PROC(entity.path_id);
-    if (entity.path_id) {
-        PROC(entity.path_node_last_reached);
-        PROC(entity.path_node_target);
-        //PROC(entity.path_node_arrived_at);
-    }
-
-    PROC(entity.drag);
-    PROC(entity.speed);
-
-    //PROC(entity.force_accum);
-    //PROC(entity.velocity);
-
-    PROC(entity.sprite_id);
-    PROC(entity.direction);
-    //PROC(entity.anim_frame);
-    //PROC(entity.anim_accum);
-
-    PROC(entity.warp_collider);
-    PROC(entity.warp_dest_pos);
-
-    PROC(entity.warp_dest_map);
-    PROC(entity.warp_template_map);
-    PROC(entity.warp_template_tileset);
-
-    //---------------------------------------
-    //Vector2 TL{ 1632, 404 };
-    //Vector2 BR{ 1696, 416 };
-    //Vector2 size = Vector2Subtract(BR, TL);
-    //Rectangle warpRect{};
-    //warpRect.x = TL.x;
-    //warpRect.y = TL.y;
-    //warpRect.width = size.x;
-    //warpRect.height = size.y;
-
-    //warp.collider = warpRect;
-    //// Bottom center of warp (assume maps line up and are same size for now)
-    //warp.destPos.x = BR.x - size.x / 2;
-    //warp.destPos.y = BR.y;
-    //warp.templateMap = "maps/cave.dat";
-    //warp.templateTileset = "resources/wang/tileset2x2.png";
-    //---------------------------------------
+    HAQ_IO(HQT_TILE_MAT, tile_mat);
 }
 void Process(PackStream &stream, Tilemap &tile_map)
 {
@@ -1208,6 +1107,90 @@ void Process(PackStream &stream, Tilemap &tile_map)
 
     PROC(sentinel);
     assert(sentinel == Tilemap::SENTINEL);
+}
+void Process(PackStream &stream, Entity &entity)
+{
+    bool alive = entity.id && !entity.despawned_at && entity.type;
+    PROC(alive);
+    if (!alive) {
+        return;
+    }
+
+    //// Entity ////
+    PROC(entity.id);
+    PROC(entity.type);
+    PROC(entity.spec);
+    PROC(entity.name);
+    PROC(entity.caused_by);
+    PROC(entity.spawned_at);
+    //PROC(entity.despawned_at);
+
+    PROC(entity.map_id);
+    PROC(entity.position);
+
+    PROC(entity.ambient_fx);
+    PROC(entity.ambient_fx_delay_min);
+    PROC(entity.ambient_fx_delay_max);
+
+    PROC(entity.radius);
+    //PROC(entity.colliding);
+    //PROC(entity.on_warp);
+
+    //PROC(entity.last_attacked_at);
+    //PROC(entity.attack_cooldown);
+
+    PROC(entity.dialog_root_key);
+    //PROC(entity.dialog_spawned_at);
+    //PROC(entity.dialog_id);
+    //PROC(entity.dialog_title);
+    //PROC(entity.dialog_message);
+
+    PROC(entity.hp_max);
+    PROC(entity.hp);
+    //PROC(entity.hp_smooth);
+
+    PROC(entity.path_id);
+    if (entity.path_id) {
+        PROC(entity.path_node_last_reached);
+        PROC(entity.path_node_target);
+        //PROC(entity.path_node_arrived_at);
+    }
+
+    PROC(entity.drag);
+    PROC(entity.speed);
+
+    //PROC(entity.force_accum);
+    //PROC(entity.velocity);
+
+    PROC(entity.sprite_id);
+    PROC(entity.direction);
+    //PROC(entity.anim_frame);
+    //PROC(entity.anim_accum);
+
+    PROC(entity.warp_collider);
+    PROC(entity.warp_dest_pos);
+
+    PROC(entity.warp_dest_map);
+    PROC(entity.warp_template_map);
+    PROC(entity.warp_template_tileset);
+
+    //---------------------------------------
+    //Vector2 TL{ 1632, 404 };
+    //Vector2 BR{ 1696, 416 };
+    //Vector2 size = Vector2Subtract(BR, TL);
+    //Rectangle warpRect{};
+    //warpRect.x = TL.x;
+    //warpRect.y = TL.y;
+    //warpRect.width = size.x;
+    //warpRect.height = size.y;
+
+    //warp.collider = warpRect;
+    //// Bottom center of warp (assume maps line up and are same size for now)
+    //warp.destPos.x = BR.x - size.x / 2;
+    //warp.destPos.y = BR.y;
+    //warp.templateMap = "maps/cave.dat";
+    //warp.templateTileset = "resources/wang/tileset2x2.png";
+    //---------------------------------------
 }
 
 template <typename T>
@@ -1319,9 +1302,9 @@ Err Process(PackStream &stream)
             WriteArrayBin(stream, pack.sfx_files);
             WriteArrayBin(stream, pack.gfx_frames);
             WriteArrayBin(stream, pack.gfx_anims);
-            WriteArrayBin(stream, pack.tile_mats);
             WriteArrayBin(stream, pack.sprites);
             WriteArrayBin(stream, pack.tile_defs);
+            WriteArrayBin(stream, pack.tile_mats);
             WriteArrayBin(stream, pack.tile_maps);
             WriteArrayBin(stream, pack.entities);
 
@@ -1361,9 +1344,10 @@ Err Process(PackStream &stream)
             WriteArrayTxt(stream, pack.gfx_frames);
             HAQ_TXT_DOC_COMMENT(HQT_GFX_ANIM);
             WriteArrayTxt(stream, pack.gfx_anims);
-            WriteArrayTxt(stream, pack.tile_mats);
             WriteArrayTxt(stream, pack.sprites);
             WriteArrayTxt(stream, pack.tile_defs);
+            HAQ_TXT_DOC_COMMENT(HQT_TILE_MAT);
+            WriteArrayTxt(stream, pack.tile_mats);
             WriteArrayTxt(stream, pack.tile_maps);
             WriteArrayTxt(stream, pack.entities);
 
@@ -1392,9 +1376,9 @@ Err Process(PackStream &stream)
             pack.sfx_files .resize(typeCounts[DAT_TYP_SFX_FILE]);
             pack.gfx_frames.resize(typeCounts[DAT_TYP_GFX_FRAME]);
             pack.gfx_anims .resize(typeCounts[DAT_TYP_GFX_ANIM]);
-            pack.tile_mats .resize(typeCounts[DAT_TYP_TILE_MAT]);
             pack.sprites   .resize(typeCounts[DAT_TYP_SPRITE]);
             pack.tile_defs .resize(typeCounts[DAT_TYP_TILE_DEF]);
+            pack.tile_mats .resize(typeCounts[DAT_TYP_TILE_MAT]);
             pack.tile_maps .resize(typeCounts[DAT_TYP_TILE_MAP]);
             pack.entities  .resize(typeCounts[DAT_TYP_ENTITY]);
 

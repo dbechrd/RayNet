@@ -74,88 +74,16 @@ struct DatBuffer {
     uint8_t *bytes;
 };
 
-#if 0
-#define GFX_FILE_IDS(gen)    \
-gen(GFX_FILE_NONE)           \
-gen(GFX_FILE_DLG_NPATCH)     \
-gen(GFX_FILE_CHR_MAGE)       \
-gen(GFX_FILE_NPC_LILY)       \
-gen(GFX_FILE_NPC_FREYE)      \
-gen(GFX_FILE_NPC_NESSA)      \
-gen(GFX_FILE_NPC_ELANE)      \
-gen(GFX_FILE_NPC_CHICKEN)    \
-gen(GFX_FILE_OBJ_CAMPFIRE)   \
-gen(GFX_FILE_PRJ_FIREBALL)   \
-gen(GFX_FILE_TIL_OVERWORLD)  \
-gen(GFX_FILE_TIL_AUTO_GRASS)
-
-enum GfxFileId : uint16_t {
-    GFX_FILE_IDS(ENUM_GEN_VALUE)
-};
-#endif
-
-#if 0
-
-struct GfxFile {
-    static const DataType dtype = DAT_TYP_GFX_FILE;
-    std::string id          {};
-    std::string path        {};
-    DatBuffer   data_buffer {};
-    Texture     texture     {};
+struct GfxAnimState {
+    uint8_t frame {};  // current frame index
+    double  accum {};  // time since last update
 };
 
-struct MusFile {
-    static const DataType dtype = DAT_TYP_MUS_FILE;
-    std::string id          {};
-    std::string path        {};
-    DatBuffer   data_buffer {};
-    ::Music     music       {};
+typedef uint32_t TileDefFlags;
+enum {
+    TILEDEF_FLAG_SOLID  = 0x01,
+    TILEDEF_FLAG_LIQUID = 0x02,
 };
-
-struct SfxFile {
-    static const DataType dtype = DAT_TYP_SFX_FILE;
-    std::string          id             {};
-    std::string          path           {};
-    int                  variations     {};  // how many version of the file to look for with "_00" suffix
-    float                pitch_variance {};
-    int                  max_instances  {};  // how many can be played at the same time
-    DatBuffer            data_buffer    {};
-
-    // Runtime data
-    ::Sound              sound          {};
-    std::vector<::Sound> instances      {};  // "SoundAlias" in raylib, shares buffer, replaces PlaySoundMulti API
-};
-
-struct GfxFrame {
-    static const DataType dtype = DAT_TYP_GFX_FRAME;
-    std::string id  {};
-    std::string gfx {};  // TODO: StringId
-    uint16_t    x   {};
-    uint16_t    y   {};
-    uint16_t    w   {};
-    uint16_t    h   {};
-};
-
-struct GfxAnim {
-    static const DataType dtype = DAT_TYP_GFX_ANIM;
-    std::string              id          {};
-    std::string              sound       {};
-    uint8_t                  frame_rate  {};
-    uint8_t                  frame_count {};
-    uint8_t                  frame_delay {};
-    std::vector<std::string> frames      {};
-
-    bool soundPlayed{};
-
-    const std::string &GetFrame(size_t index) const {
-        if (index < frames.size()) {
-            return frames[index];
-        }
-        return rnStringCatalog.Find(rnStringNull);
-    }
-};
-
-#else
 
 enum HAQ_FLAGS {
     HAQ_NONE                 = 0b00000000,  // no flags set
@@ -246,59 +174,43 @@ TYPE(struct, GfxAnim, {                                                         
 
 HAQ_C(HQT_GFX_ANIM, 0);
 
-#endif
+#define HQT_SPRITE(TYPE, FIELD, OTHER, userdata)                                              \
+TYPE(struct, Sprite, {                                                                        \
+    OTHER(static const DataType dtype = DAT_TYP_SPRITE;)                                      \
+    FIELD(uint32_t                           , id   , {}, HAQ_SERIALIZE           , userdata) \
+    FIELD(std::string                        , name , {}, HAQ_SERIALIZE | HAQ_EDIT, userdata) \
+    FIELD(std::array<std::string HAQ_COMMA 8>, anims, {}, HAQ_SERIALIZE | HAQ_EDIT, userdata) \
+}, userdata)
 
-struct GfxAnimState {
-    uint8_t frame {};  // current frame index
-    double  accum {};  // time since last update
-};
+HAQ_C(HQT_SPRITE, 0);
 
-struct TileMat {
-    static const DataType dtype = DAT_TYP_TILE_MAT;
-    uint32_t    id             {};
-    std::string name           {};
-    std::string footstep_sound {};
-};
+#define HQT_TILE_DEF(TYPE, FIELD, OTHER, userdata)                              \
+TYPE(struct, TileDef, {                                                         \
+    OTHER(static const DataType dtype = DAT_TYP_TILE_DEF;)                      \
+    FIELD(uint32_t    , id            , {}, HAQ_SERIALIZE           , userdata) \
+    FIELD(std::string , name          , {}, HAQ_SERIALIZE | HAQ_EDIT, userdata) \
+    FIELD(std::string , anim          , {}, HAQ_SERIALIZE | HAQ_EDIT, userdata) \
+    FIELD(uint32_t    , material_id   , {}, HAQ_SERIALIZE | HAQ_EDIT, userdata) \
+    FIELD(TileDefFlags, flags         , {}, HAQ_SERIALIZE | HAQ_EDIT, userdata) \
+    FIELD(uint8_t     , auto_tile_mask, {}, HAQ_SERIALIZE | HAQ_EDIT, userdata) \
+    OTHER(                                                                      \
+        /* color for minimap/wang tile editor (top left pixel of tile) */       \
+        Color        color      {};                                             \
+        GfxAnimState anim_state {};                                             \
+    )                                                                           \
+}, userdata)
 
-//apparition
-//phantom
-//shade
-//shadow
-//soul
-//specter
-//spook
-//sprite
-//umbra
-//sylph
-//vision
-//wraith
-struct Sprite {
-    static const DataType dtype = DAT_TYP_SPRITE;
-    uint32_t    id       {};
-    std::string name     {};
-    std::array<std::string, 8> anims{};  // for each direction
-};
+HAQ_C(HQT_TILE_DEF, 0);
 
-typedef uint32_t TileDefFlags;
-enum {
-    TILEDEF_FLAG_SOLID  = 0x01,
-    TILEDEF_FLAG_LIQUID = 0x02,
-};
+#define HQT_TILE_MAT(TYPE, FIELD, OTHER, userdata)                             \
+TYPE(struct, TileMat, {                                                        \
+    OTHER(static const DataType dtype = DAT_TYP_TILE_MAT;)                     \
+    FIELD(uint32_t   , id            , {}, HAQ_SERIALIZE           , userdata) \
+    FIELD(std::string, name          , {}, HAQ_SERIALIZE | HAQ_EDIT, userdata) \
+    FIELD(std::string, footstep_sound, {}, HAQ_SERIALIZE | HAQ_EDIT, userdata) \
+}, userdata)
 
-struct TileDef {
-    static const DataType dtype = DAT_TYP_TILE_DEF;
-    uint32_t     id             {};
-    std::string  name           {};
-    std::string  anim           {};
-    uint32_t     material_id    {};
-    TileDefFlags flags          {};
-    uint8_t      auto_tile_mask {};  // not used atm, but this is where it would go once tiledefs are moved to tilesets
-
-    //------------------------
-    // Not serialized
-    Color        color      {};  // color for minimap/wang tile editor (top left pixel of tile)
-    GfxAnimState anim_state {};
-};
+HAQ_C(HQT_TILE_MAT, 0);
 
 ////////////////////////////////////////////////////////////////////////////
 
@@ -487,7 +399,6 @@ struct Pack {
     std::vector<GfxFile>  gfx_files  {};
     std::vector<MusFile>  mus_files  {};
     std::vector<SfxFile>  sfx_files  {};
-
     std::vector<GfxFrame> gfx_frames {};
     std::vector<GfxAnim>  gfx_anims  {};
     std::vector<Sprite>   sprites    {};
@@ -508,9 +419,19 @@ struct Pack {
     // - pets
     // - fauna
     // - monsters
+    //   - apparition
+    //   - phantom
+    //   - shade
+    //   - shadow
+    //   - soul
+    //   - specter
+    //   - umbra
+    //   - sylph
+    //   - vision
+    //   - wraith
     // - particles? maybe?
-    std::vector<Entity> entities{};
     std::vector<Tilemap> tile_maps{};
+    std::vector<Entity> entities{};
 
     std::unordered_map<uint32_t, size_t> dat_by_id[DAT_TYP_COUNT]{};
     std::unordered_map<std::string, size_t> dat_by_name[DAT_TYP_COUNT]{};
