@@ -2,7 +2,7 @@
 
 #define HAQ_COMMA ,
 
-#define HAQ_IGNORE(x)
+#define HAQ_IGNORE(...)
 
 #define HAQ_C_TYPE(c_type, c_type_name, c_body, userdata) \
     c_type c_type_name c_body;

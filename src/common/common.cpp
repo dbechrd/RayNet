@@ -425,7 +425,7 @@ void dlb_DrawTexturePro(Texture2D texture, Rectangle source, Rectangle dest, Vec
 
 void dlb_DrawNPatch(Rectangle rec)
 {
-    const GfxFile &gfx_file = packs[0].FindGraphic("gfx_dlg_npatch");
+    const GfxFile &gfx_file = packs[0].FindByName<GfxFile>("gfx_dlg_npatch");
     NPatchInfo nPatch{};
     nPatch.source = { 0, 0, (float)gfx_file.texture.width, (float)gfx_file.texture.height };
     nPatch.left   = 16;
@@ -628,7 +628,7 @@ void dlb_CommonTests(void)
 #include "haq.cpp"
 #include "histogram.cpp"
 #include "io.cpp"
-#include "meta/resource_library.capnp.c++"
+//#include "meta/resource_library.capnp.c++"
 #include "net/net.cpp"
 #include "perf_timer.cpp"
 #include "schema.cpp"

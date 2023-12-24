@@ -91,7 +91,7 @@ Err Play(GameServer &server)
     Camera2D camera{};
     camera.zoom = 1;
 
-    Tilemap &level_001 = packs[1].FindTilemapByName(MAP_OVERWORLD);
+    Tilemap &level_001 = packs[1].FindByName<Tilemap>(MAP_OVERWORLD);
     Editor editor{ level_001.id };
     editor.Init();
 
@@ -168,7 +168,7 @@ Err Play(GameServer &server)
         BeginDrawing();
             ClearBackground(BLUE_DESAT);
             BeginMode2D(camera);
-                auto &editor_map = packs[1].FindTilemap(editor.map_id);
+                auto &editor_map = packs[1].FindById<Tilemap>(editor.map_id);
 
                 DrawCmdQueue sortedDraws{};
 

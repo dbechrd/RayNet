@@ -76,7 +76,7 @@ struct DatBuffer {
 };
 
 #if 0
-#define GFX_FILE_IDS(gen)        \
+#define GFX_FILE_IDS(gen)    \
 gen(GFX_FILE_NONE)           \
 gen(GFX_FILE_DLG_NPATCH)     \
 gen(GFX_FILE_CHR_MAGE)       \
@@ -137,71 +137,6 @@ struct GfxFrame {
     uint16_t    h   {};
 };
 
-#else
-
-enum HAQ_FLAGS {
-    HAQ_NONE                 = 0b00000000,  // no flags set
-    HAQ_SERIALIZE            = 0b00000001,  // serialize field to pack file
-    HAQ_EDIT                 = 0b00000010,  // allow field to be edited in editor (if type is supported)
-    HAQ_EDIT_FLOAT_TENTH     = 0b00000100,  // set format to %.1f and increment to 0.1f
-    HAQ_EDIT_FLOAT_HUNDRETH  = 0b00001000,  // set format to %.2f and increment to 0.01f
-    HAQ_EDIT_TEXTBOX_STYLE_X = 0b00010000,  // set textbox background color to red
-    HAQ_EDIT_TEXTBOX_STYLE_Y = 0b00100000,  // set textbox background color to green
-    HAQ_EDIT_TEXTBOX_STYLE_Z = 0b01000000,  // set textbox background color to blue
-};
-
-#define HQT_GFX_FILE(TYPE, FIELD, OTHER, userdata) \
-TYPE(struct, GfxFile, { \
-    OTHER(static const DataType dtype = DAT_TYP_GFX_FILE;) \
-    FIELD(std::string, id         , {}, HAQ_SERIALIZE           , userdata) \
-    FIELD(std::string, path       , {}, HAQ_SERIALIZE | HAQ_EDIT, userdata) \
-    FIELD(DatBuffer  , data_buffer, {}, HAQ_SERIALIZE           , userdata) \
-    FIELD(Texture    , texture    , {}, HAQ_NONE                , userdata) \
-}, userdata)
-
-HAQ_C(HQT_GFX_FILE, 0);
-
-#define HQT_MUS_FILE(TYPE, FIELD, OTHER, userdata) \
-TYPE(struct, MusFile, { \
-    OTHER(static const DataType dtype = DAT_TYP_MUS_FILE;) \
-    FIELD(std::string, id         , {}, HAQ_SERIALIZE           , userdata) \
-    FIELD(std::string, path       , {}, HAQ_SERIALIZE | HAQ_EDIT, userdata) \
-    FIELD(DatBuffer  , data_buffer, {}, HAQ_SERIALIZE           , userdata) \
-    FIELD(Music      , music      , {}, HAQ_NONE                , userdata) \
-}, userdata)
-
-HAQ_C(HQT_MUS_FILE, 0);
-
-#define HQT_SFX_FILE(TYPE, FIELD, OTHER, userdata) \
-TYPE(struct, SfxFile, { \
-    OTHER(static const DataType dtype = DAT_TYP_SFX_FILE;) \
-    FIELD(std::string       , id            , {}, HAQ_SERIALIZE                                     , userdata) \
-    FIELD(std::string       , path          , {}, HAQ_SERIALIZE | HAQ_EDIT                          , userdata) \
-    FIELD(int               , variations    , {}, HAQ_SERIALIZE /*| HAQ_EDIT*/                      , userdata) \
-    FIELD(float             , pitch_variance, {}, HAQ_SERIALIZE | HAQ_EDIT | HAQ_EDIT_FLOAT_HUNDRETH, userdata) \
-    FIELD(int               , max_instances , {}, HAQ_SERIALIZE /*| HAQ_EDIT*/                      , userdata) \
-    FIELD(DatBuffer         , data_buffer   , {}, HAQ_SERIALIZE                                     , userdata) \
-    FIELD(Sound             , sound         , {}, HAQ_NONE                                          , userdata) \
-    FIELD(std::vector<Sound>, instances     , {}, HAQ_NONE                                          , userdata) \
-}, userdata)
-
-HAQ_C(HQT_SFX_FILE, 0);
-
-#endif
-
-#define HQT_GFX_FRAME(TYPE, FIELD, OTHER, userdata) \
-TYPE(struct, GfxFrame, { \
-    OTHER(static const DataType dtype = DAT_TYP_GFX_FRAME;) \
-    FIELD(std::string, id , {}, HAQ_SERIALIZE                                      , userdata) \
-    FIELD(std::string, gfx, {}, HAQ_SERIALIZE | HAQ_EDIT                           , userdata) \
-    FIELD(uint16_t   , x  , {}, HAQ_SERIALIZE | HAQ_EDIT | HAQ_EDIT_TEXTBOX_STYLE_X, userdata) \
-    FIELD(uint16_t   , y  , {}, HAQ_SERIALIZE | HAQ_EDIT | HAQ_EDIT_TEXTBOX_STYLE_Y, userdata) \
-    FIELD(uint16_t   , w  , {}, HAQ_SERIALIZE | HAQ_EDIT                           , userdata) \
-    FIELD(uint16_t   , h  , {}, HAQ_SERIALIZE | HAQ_EDIT                           , userdata) \
-}, userdata)
-
-HAQ_C(HQT_GFX_FRAME, 0);
-
 struct GfxAnim {
     static const DataType dtype = DAT_TYP_GFX_ANIM;
     std::string              id          {};
@@ -220,6 +155,99 @@ struct GfxAnim {
         return rnStringCatalog.Find(rnStringNull);
     }
 };
+
+#else
+
+enum HAQ_FLAGS {
+    HAQ_NONE                 = 0b00000000,  // no flags set
+    HAQ_SERIALIZE            = 0b00000001,  // serialize field to pack file
+    HAQ_EDIT                 = 0b00000010,  // allow field to be edited in editor (if type is supported)
+    HAQ_EDIT_FLOAT_TENTH     = 0b00000100,  // set format to %.1f and increment to 0.1f
+    HAQ_EDIT_FLOAT_HUNDRETH  = 0b00001000,  // set format to %.2f and increment to 0.01f
+    HAQ_EDIT_TEXTBOX_STYLE_X = 0b00010000,  // set textbox background color to red
+    HAQ_EDIT_TEXTBOX_STYLE_Y = 0b00100000,  // set textbox background color to green
+    HAQ_EDIT_TEXTBOX_STYLE_Z = 0b01000000,  // set textbox background color to blue
+};
+
+#define HQT_GFX_FILE(TYPE, FIELD, OTHER, userdata) \
+TYPE(struct, GfxFile, { \
+    OTHER(static const DataType dtype = DAT_TYP_GFX_FILE;) \
+    FIELD(uint32_t   , id         , {}, HAQ_SERIALIZE           , userdata) \
+    FIELD(std::string, name       , {}, HAQ_SERIALIZE | HAQ_EDIT, userdata) \
+    FIELD(std::string, path       , {}, HAQ_SERIALIZE | HAQ_EDIT, userdata) \
+    FIELD(DatBuffer  , data_buffer, {}, HAQ_SERIALIZE           , userdata) \
+    FIELD(Texture    , texture    , {}, HAQ_NONE                , userdata) \
+}, userdata)
+
+HAQ_C(HQT_GFX_FILE, 0);
+
+#define HQT_MUS_FILE(TYPE, FIELD, OTHER, userdata) \
+TYPE(struct, MusFile, { \
+    OTHER(static const DataType dtype = DAT_TYP_MUS_FILE;) \
+    FIELD(uint32_t   , id         , {}, HAQ_SERIALIZE           , userdata) \
+    FIELD(std::string, name       , {}, HAQ_SERIALIZE | HAQ_EDIT, userdata) \
+    FIELD(std::string, path       , {}, HAQ_SERIALIZE | HAQ_EDIT, userdata) \
+    FIELD(DatBuffer  , data_buffer, {}, HAQ_SERIALIZE           , userdata) \
+    FIELD(Music      , music      , {}, HAQ_NONE                , userdata) \
+}, userdata)
+
+HAQ_C(HQT_MUS_FILE, 0);
+
+#define HQT_SFX_FILE(TYPE, FIELD, OTHER, userdata) \
+TYPE(struct, SfxFile, { \
+    OTHER(static const DataType dtype = DAT_TYP_SFX_FILE;) \
+    FIELD(uint32_t          , id            , {}, HAQ_SERIALIZE                                     , userdata) \
+    FIELD(std::string       , name          , {}, HAQ_SERIALIZE | HAQ_EDIT                          , userdata) \
+    FIELD(std::string       , path          , {}, HAQ_SERIALIZE | HAQ_EDIT                          , userdata) \
+    FIELD(int               , variations    , {}, HAQ_SERIALIZE /*| HAQ_EDIT*/                      , userdata) \
+    FIELD(float             , pitch_variance, {}, HAQ_SERIALIZE | HAQ_EDIT | HAQ_EDIT_FLOAT_HUNDRETH, userdata) \
+    FIELD(int               , max_instances , {}, HAQ_SERIALIZE /*| HAQ_EDIT*/                      , userdata) \
+    FIELD(DatBuffer         , data_buffer   , {}, HAQ_SERIALIZE                                     , userdata) \
+    FIELD(Sound             , sound         , {}, HAQ_NONE                                          , userdata) \
+    FIELD(std::vector<Sound>, instances     , {}, HAQ_NONE                                          , userdata) \
+}, userdata)
+
+HAQ_C(HQT_SFX_FILE, 0);
+
+#define HQT_GFX_FRAME(TYPE, FIELD, OTHER, userdata) \
+TYPE(struct, GfxFrame, { \
+    OTHER(static const DataType dtype = DAT_TYP_GFX_FRAME;) \
+    FIELD(uint32_t   , id  , {}, HAQ_SERIALIZE                                      , userdata) \
+    FIELD(std::string, name, {}, HAQ_SERIALIZE | HAQ_EDIT                           , userdata) \
+    FIELD(std::string, gfx , {}, HAQ_SERIALIZE | HAQ_EDIT                           , userdata) \
+    FIELD(uint16_t   , x   , {}, HAQ_SERIALIZE | HAQ_EDIT | HAQ_EDIT_TEXTBOX_STYLE_X, userdata) \
+    FIELD(uint16_t   , y   , {}, HAQ_SERIALIZE | HAQ_EDIT | HAQ_EDIT_TEXTBOX_STYLE_Y, userdata) \
+    FIELD(uint16_t   , w   , {}, HAQ_SERIALIZE | HAQ_EDIT                           , userdata) \
+    FIELD(uint16_t   , h   , {}, HAQ_SERIALIZE | HAQ_EDIT                           , userdata) \
+}, userdata)
+
+HAQ_C(HQT_GFX_FRAME, 0);
+
+#define HQT_GFX_ANIM(TYPE, FIELD, OTHER, userdata)                                       \
+TYPE(struct, GfxAnim, {                                                                  \
+    OTHER(static const DataType dtype = DAT_TYP_GFX_ANIM;)                               \
+    FIELD(uint32_t                , id         , {}, HAQ_SERIALIZE           , userdata) \
+    FIELD(std::string             , name       , {}, HAQ_SERIALIZE | HAQ_EDIT, userdata) \
+    FIELD(std::string             , sound      , {}, HAQ_SERIALIZE | HAQ_EDIT, userdata) \
+    FIELD(uint8_t                 , frame_rate , {}, HAQ_SERIALIZE | HAQ_EDIT, userdata) \
+    FIELD(uint8_t                 , frame_count, {}, HAQ_SERIALIZE | HAQ_EDIT, userdata) \
+    FIELD(uint8_t                 , frame_delay, {}, HAQ_SERIALIZE | HAQ_EDIT, userdata) \
+    FIELD(std::vector<std::string>, frames     , {}, HAQ_SERIALIZE | HAQ_EDIT, userdata) \
+    OTHER(                                                                               \
+        bool soundPlayed{};                                                              \
+                                                                                         \
+        const std::string &GetFrame(size_t index) const {                                \
+            if (index < frames.size()) {                                                 \
+                return frames[index];                                                    \
+            }                                                                            \
+            return rnStringCatalog.Find(rnStringNull);                                   \
+        }                                                                                \
+    )                                                                                    \
+}, userdata)
+
+HAQ_C(HQT_GFX_ANIM, 0);
+
+#endif
 
 struct GfxAnimState {
     uint8_t frame {};  // current frame index
@@ -425,7 +453,7 @@ private:
 // ECS test
 struct foo {
     Vector3 dat{ 1, 2, 3 };
-    SfxFile sfx{ "sfx_id", "sfx.wav", 1, 0.05f, 8 };
+    SfxFile sfx{ 3, "sfx_id", "sfx.wav", 1, 0.05f, 8 };
 };
 
 ////////////////////////////////////////////////////////////////////////////
@@ -463,9 +491,9 @@ struct Pack {
 
     std::vector<GfxFrame> gfx_frames {};
     std::vector<GfxAnim>  gfx_anims  {};
-    std::vector<TileMat>  tile_mats  {};
     std::vector<Sprite>   sprites    {};
     std::vector<TileDef>  tile_defs  {};
+    std::vector<TileMat>  tile_mats  {};
 
     // static entities? (objects?)
     // - doors
@@ -485,190 +513,57 @@ struct Pack {
     std::vector<Entity> entities{};
     std::vector<Tilemap> tile_maps{};
 
-    std::unordered_map<std::string, size_t> gfx_file_by_id{};
-    std::unordered_map<std::string, size_t> mus_file_by_id{};
-    std::unordered_map<std::string, std::vector<size_t>> sfx_file_by_id{};  // vector holds variants
+    std::unordered_map<uint32_t, size_t> dat_by_id[DAT_TYP_COUNT]{};
+    std::unordered_map<std::string, size_t> dat_by_name[DAT_TYP_COUNT]{};
 
-    std::unordered_map<std::string, size_t> gfx_frame_by_id{};
-    std::unordered_map<std::string, size_t> gfx_anim_by_id{};
-    std::unordered_map<uint32_t, size_t>    tile_mat_by_id{};
-    std::unordered_map<std::string, size_t> tile_mat_by_name{};
-    std::unordered_map<std::string, size_t> object_by_id{};
-    std::unordered_map<uint32_t, size_t>    sprite_by_id{};
-    std::unordered_map<std::string, size_t> sprite_by_name{};
-    std::unordered_map<uint32_t, size_t>    tile_def_by_id{};
-    std::unordered_map<std::string, size_t> tile_def_by_name{};
-    std::unordered_map<uint32_t, size_t>    tile_map_by_id{};
-    std::unordered_map<std::string, size_t> tile_map_by_name{};
+    // TODO: Use a linked list, or something else that doesn't require a map of vectors when most vectors would be empty
+    std::unordered_map<uint32_t, std::vector<size_t>> sfx_variants_by_id{};  // vector holds variants
 
     PackToc toc {};
 
     Pack(const std::string &path) : path(path) {}
 
-    GfxFile &FindGraphic(const std::string &id) {
-        const auto &entry = gfx_file_by_id.find(id);
-        if (entry != gfx_file_by_id.end()) {
-            return gfx_files[entry->second];
-        } else {
-            //TraceLog(LOG_WARNING, "Missing graphic file: %s", id.c_str());
-            return gfx_files[0];
+    void *GetPool(DataType dtype)
+    {
+        switch (dtype) {
+            case DAT_TYP_GFX_FILE : return (void *)&gfx_files;
+            case DAT_TYP_MUS_FILE : return (void *)&mus_files;
+            case DAT_TYP_SFX_FILE : return (void *)&sfx_files;
+            case DAT_TYP_GFX_FRAME: return (void *)&gfx_frames;
+            case DAT_TYP_GFX_ANIM : return (void *)&gfx_anims;
+            case DAT_TYP_SPRITE   : return (void *)&sprites;
+            case DAT_TYP_TILE_DEF : return (void *)&tile_defs;
+            case DAT_TYP_TILE_MAT : return (void *)&tile_mats;
+            case DAT_TYP_TILE_MAP : return (void *)&tile_maps;
+            case DAT_TYP_ENTITY   : return (void *)&entities;
+            default: assert(!"that ain't a valid dtype, bruv"); return 0;
         }
     }
 
-    MusFile &FindMusic(const std::string &id) {
-        const auto &entry = mus_file_by_id.find(id);
-        if (entry != mus_file_by_id.end()) {
-            return mus_files[entry->second];
+    template <typename T>
+    T &FindById(uint32_t id) {
+        auto &vec = *(std::vector<T> *)GetPool(T::dtype);
+        const auto &map = dat_by_id[T::dtype];
+        const auto &entry = map.find(id);
+        if (entry != map.end()) {
+            return vec[entry->second];
         } else {
-            //TraceLog(LOG_WARNING, "Missing music: %s", id.c_str());
-            return mus_files[0];
+            //TraceLog(LOG_WARNING, "Could not find resource of type %s by id '%u'.", DataTypeStr(T::dtype), id);
+            return vec[0];
         }
     }
 
-    SfxFile &FindSoundVariant(const std::string &id) {
-        const auto &entry = sfx_file_by_id.find(id);
-        if (entry != sfx_file_by_id.end()) {
-            const auto &variants = entry->second;
-            assert(!variants.empty());
-
-            size_t sfx_idx;
-            if (variants.size() > 1) {
-                const size_t variant_idx = (size_t)GetRandomValue(0, variants.size() - 1);
-                sfx_idx = variants[variant_idx];
-            } else {
-                sfx_idx = variants[0];
-            }
-
-            return sfx_files[sfx_idx];
+    template <typename T>
+    T &FindByName(const std::string &name) {
+        const DataType dtype = T::dtype;
+        auto &vec = *(std::vector<T> *)GetPool(T::dtype);
+        const auto &map = dat_by_name[dtype];
+        const auto &entry = map.find(name);
+        if (entry != map.end()) {
+            return vec[entry->second];
         } else {
-            if (id != "null") {
-                TraceLog(LOG_WARNING, "Missing sound: %s", id.c_str());
-            }
-            return sfx_files[0];
-        }
-    }
-
-    GfxFrame &FindGraphicFrame(const std::string &id) {
-        const auto &entry = gfx_frame_by_id.find(id);
-        if (entry != gfx_frame_by_id.end()) {
-            return gfx_frames[entry->second];
-        } else {
-            if (id != "null") {
-                TraceLog(LOG_WARNING, "Missing graphic frame: %s", id.c_str());
-            }
-            return gfx_frames[0];
-        }
-    }
-
-    GfxAnim &FindGraphicAnim(const std::string &id) {
-        const auto &entry = gfx_anim_by_id.find(id);
-        if (entry != gfx_anim_by_id.end()) {
-            return gfx_anims[entry->second];
-        } else {
-            if (id != "null") {
-                TraceLog(LOG_WARNING, "Missing graphic animation: %s", id.c_str());
-            }
-            return gfx_anims[0];
-        }
-    }
-
-    TileMat &FindTileMatById(uint32_t id) {
-        const auto &entry = tile_mat_by_id.find(id);
-        if (entry != tile_mat_by_id.end()) {
-            return tile_mats[entry->second];
-        } else {
-            if (id) {
-                TraceLog(LOG_WARNING, "Missing tile material: %u", id);
-            }
-            return tile_mats[0];
-        }
-    }
-
-    TileMat &FindTileMatByName(const std::string &name) {
-        const auto &entry = tile_mat_by_name.find(name);
-        if (entry != tile_mat_by_name.end()) {
-            return tile_mats[entry->second];
-        } else {
-            if (name != "null") {
-                TraceLog(LOG_WARNING, "Missing tile material: %s", name.c_str());
-            }
-            return tile_mats[0];
-        }
-    }
-
-    Sprite &FindSprite(uint32_t id) {
-        const auto &entry = sprite_by_id.find(id);
-        if (entry != sprite_by_id.end()) {
-            return sprites[entry->second];
-        } else {
-            if (id) {
-                TraceLog(LOG_WARNING, "Missing sprite: %u", id);
-            }
-            return sprites[0];
-        }
-    }
-
-    Sprite &FindSpriteByName(const std::string &name) {
-        const auto &entry = sprite_by_name.find(name);
-        if (entry != sprite_by_name.end()) {
-            return sprites[entry->second];
-        } else {
-            if (name != "null") {
-                TraceLog(LOG_WARNING, "Missing sprite by name: %s", name.c_str());
-            }
-            return sprites[0];
-        }
-    }
-
-    TileDef &FindTileDefById(uint32_t id) {
-        const auto &entry = tile_def_by_id.find(id);
-        if (entry != tile_def_by_id.end()) {
-            return tile_defs[entry->second];
-        } else {
-            TraceLog(LOG_WARNING, "Missing tile definition by id: %u", id);
-            return tile_defs[0];
-        }
-    }
-
-    TileDef &FindTileDefByName(const std::string &name) {
-        const auto &entry = tile_def_by_name.find(name);
-        if (entry != tile_def_by_name.end()) {
-            return tile_defs[entry->second];
-        } else {
-            if (name != "null") {
-                TraceLog(LOG_WARNING, "Missing tile definition by name: %s", name.c_str());
-            }
-            return tile_defs[0];
-        }
-    }
-
-    Tilemap &FindTilemap(uint32_t id) {
-        const auto &entry = tile_map_by_id.find(id);
-        if (entry != tile_map_by_id.end()) {
-            return tile_maps[entry->second];
-        } else {
-            TraceLog(LOG_WARNING, "Missing tile map: %u", id);
-            return tile_maps[0];
-        }
-    }
-
-    Tilemap &FindTilemapByName(const std::string &name) {
-        const auto &entry = tile_map_by_name.find(name);
-        if (entry != tile_map_by_name.end()) {
-            return tile_maps[entry->second];
-        } else {
-            TraceLog(LOG_WARNING, "Missing tile map: %s", name.c_str());
-            return tile_maps[0];
-        }
-    }
-
-    size_t FindTilemapIndex(uint32_t id) {
-        const auto &entry = tile_map_by_id.find(id);
-        if (entry != tile_map_by_id.end()) {
-            return entry->second;
-        } else {
-            TraceLog(LOG_WARNING, "Missing tile map: %u", id);
-            return 0;
+            //TraceLog(LOG_WARNING, "Could not find resource of type %s by name '%s'.", DataTypeStr(T::dtype), name.c_str());
+            return vec[0];
         }
     }
 };

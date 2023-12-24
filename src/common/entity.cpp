@@ -49,11 +49,11 @@ Vector2 Entity::Position2D(void)
 
 const GfxFrame &Entity::GetSpriteFrame() const
 {
-    const Sprite &sprite = packs[0].FindSprite(sprite_id);
-    const std::string &anim_id = sprite.anims[direction];
-    const GfxAnim &anim = packs[0].FindGraphicAnim(anim_id);
-    const std::string &frame_id = anim.GetFrame(anim_state.frame);
-    const GfxFrame &frame = packs[0].FindGraphicFrame(frame_id);
+    const Sprite &sprite = packs[0].FindById<Sprite>(sprite_id);
+    const std::string &anim_name = sprite.anims[direction];
+    const GfxAnim &anim = packs[0].FindByName<GfxAnim>(anim_name);
+    const std::string &frame_name = anim.GetFrame(anim_state.frame);
+    const GfxFrame &frame = packs[0].FindByName<GfxFrame>(frame_name);
     return frame;
 }
 Rectangle Entity::GetSpriteRect() const

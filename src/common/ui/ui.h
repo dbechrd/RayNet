@@ -122,7 +122,6 @@ struct UI {
     template <typename T>
     void TextboxHAQ(STB_TexteditState &stbState, T &value, int flags);
 
-
     inline Vector2 CursorScreen(void) {
         return Vector2Add(position, cursor);
     }

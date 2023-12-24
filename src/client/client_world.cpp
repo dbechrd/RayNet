@@ -34,7 +34,7 @@ Tilemap *ClientWorld::LocalPlayerMap(void)
 }
 Tilemap *ClientWorld::FindOrLoadMap(uint32_t map_id)
 {
-    Tilemap &map = packs[1].FindTilemap(map_id);
+    Tilemap &map = packs[1].FindById<Tilemap>(map_id);
     return &map;
 }
 
@@ -518,7 +518,7 @@ void ClientWorld::DrawHoveredObjectIndicator(GameClient &client, Tilemap &map)
         map.AtTry_Obj(client.controller.tile_x, client.controller.tile_y, object_id);
         if (object_id) {
             const GfxFrame &gfx_frame = map.GetTileGfxFrame(object_id);
-            const GfxFile &gfx_file = packs[0].FindGraphic(gfx_frame.gfx);
+            const GfxFile &gfx_file = packs[0].FindByName<GfxFile>(gfx_frame.gfx);
             const Rectangle texRect{ (float)gfx_frame.x, (float)gfx_frame.y, (float)gfx_frame.w, (float)gfx_frame.h };
 
             Vector2 texAspect{ 1.0f, 1.0f };

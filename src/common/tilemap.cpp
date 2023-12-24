@@ -169,9 +169,9 @@ TileDef &Tilemap::GetTileDef(uint32_t tile_id)
 const GfxFrame &Tilemap::GetTileGfxFrame(uint32_t tile_id)
 {
     const TileDef &tile_def = GetTileDef(tile_id);
-    const GfxAnim &gfx_anim = packs[0].FindGraphicAnim(tile_def.anim);
+    const GfxAnim &gfx_anim = packs[0].FindByName<GfxAnim>(tile_def.anim);
     const std::string &gfx_frame_id = gfx_anim.GetFrame(tile_def.anim_state.frame);
-    const GfxFrame &gfx_frame = packs[0].FindGraphicFrame(gfx_frame_id);
+    const GfxFrame &gfx_frame = packs[0].FindByName<GfxFrame>(gfx_frame_id);
     return gfx_frame;
 }
 Rectangle Tilemap::TileDefRect(uint32_t tile_id)
@@ -384,7 +384,7 @@ void Tilemap::DrawTile(uint32_t tile_id, Vector2 position, DrawCmdQueue *sortedD
 {
     // TODO: Yikes.. that's a lot of lookups in a tight loop. Memoize some pointers or something man.
     const GfxFrame &gfx_frame = GetTileGfxFrame(tile_id);
-    const GfxFile &gfx_file = packs[0].FindGraphic(gfx_frame.gfx);
+    const GfxFile &gfx_file = packs[0].FindByName<GfxFile>(gfx_frame.gfx);
     const Rectangle texRect{ (float)gfx_frame.x, (float)gfx_frame.y, (float)gfx_frame.w, (float)gfx_frame.h };
 
     if (sortedDraws) {
