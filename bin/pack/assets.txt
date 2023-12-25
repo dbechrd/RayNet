@@ -1,0 +1,318 @@
+ -1835942949 4
+
+# GfxFile id name path
+0 0 "gfx_missing" "resources/graphics/missing.png"
+0 1 "gfx_dlg_npatch" "resources/graphics/npatch.png"
+0 2 "gfx_chr_mage" "resources/graphics/mage.png"
+0 3 "gfx_npc_lily" "resources/graphics/lily.png"
+0 4 "gfx_npc_freye" "resources/graphics/freye.png"
+0 5 "gfx_npc_nessa" "resources/graphics/nessa.png"
+0 6 "gfx_npc_elane" "resources/graphics/elane.png"
+0 7 "gfx_npc_chicken" "resources/graphics/chicken.png"
+0 8 "gfx_obj_campfire" "resources/graphics/campfire.png"
+0 9 "gfx_prj_fireball" "resources/graphics/fireball.png"
+0 10 "gfx_til_overworld" "resources/graphics/tiles64tm.png"
+0 11 "gfx_til_auto_grass" "resources/graphics/autotile_3x3_min.png"
+
+# MusFile id name path
+1 0 "mus_bathroom" "resources/music/copyright/O9s5lzHl6W8.wav"
+1 1 "mus_ambient_outdoors" "resources/music/copyright/345470__philip_goddard__branscombe-landslip-birds-and-sea-echoes-ese-from-cave-track.ogg"
+1 2 "mus_ambient_cave" "resources/music/copyright/69391__zixem__cave_amb.wav"
+
+# SfxFile id name path variations pitch_variance max_instances
+2 0 "sfx_missing" "resources/sound/mic_test.wav"                          1 10  0.00
+2 1 "sfx_soft_tick" "resources/sound/soft_tick.wav"                       1 5  0.03
+2 2 "sfx_campfire" "resources/sound/campfire.wav"                         1 1  0.00
+2 3 "sfx_footstep_grass" "resources/sound/footstep_grass.wav"             1 1  0.00
+2 4 "sfx_footstep_stone" "resources/sound/footstep_stone.wav"             1 1  0.00
+2 5 "sfx_footstep_water" "resources/sound/footstep_water.wav"             1 1  0.00
+2 6 "sfx_footstep_wood" "resources/sound/footstep_wood.wav"               1 1  0.00
+2 7 "sfx_fireball" "resources/sound/copyright/fireball.wav"               1 5  0.10
+2 8 "sfx_chicken_squawk" "resources/sound/copyright/chicken_squawk.wav"   1 10  0.05
+2 9 "sfx_chicken_cluck" "resources/sound/copyright/chicken_cluck.wav"     5 10  0.05
+
+# GfxFrame id name gfx x y w h
+3 0 "gfx_frame_missing" "gfx_missing" 0 0 32 32
+3 1 "gfx_frame_chr_mage_e_0" "gfx_chr_mage" 0 0 64 128
+3 2 "gfx_frame_chr_mage_w_0" "gfx_chr_mage" 64 0 64 128
+3 3 "gfx_frame_npc_lily_e_0" "gfx_npc_lily" 0 0 64 128
+3 4 "gfx_frame_npc_lily_w_0" "gfx_npc_lily" 64 0 64 128
+3 5 "gfx_frame_npc_freye_e_0" "gfx_npc_freye" 0 0 64 128
+3 6 "gfx_frame_npc_freye_w_0" "gfx_npc_freye" 64 0 64 128
+3 7 "gfx_frame_npc_nessa_e_0" "gfx_npc_nessa" 0 0 64 128
+3 8 "gfx_frame_npc_nessa_w_0" "gfx_npc_nessa" 64 0 64 128
+3 9 "gfx_frame_npc_elane_e_0" "gfx_npc_elane" 0 0 64 128
+3 10 "gfx_frame_npc_elane_w_0" "gfx_npc_elane" 64 0 64 128
+3 11 "gfx_frame_npc_chicken_e_0" "gfx_npc_chicken" 0 0 64 64
+3 12 "gfx_frame_npc_chicken_w_0" "gfx_npc_chicken" 64 0 64 64
+3 13 "gfx_frame_obj_campfire_0" "gfx_obj_campfire" 0 0 256 256
+3 14 "gfx_frame_obj_campfire_1" "gfx_obj_campfire" 256 0 256 256
+3 15 "gfx_frame_obj_campfire_2" "gfx_obj_campfire" 512 0 256 256
+3 16 "gfx_frame_obj_campfire_3" "gfx_obj_campfire" 768 0 256 256
+3 17 "gfx_frame_obj_campfire_4" "gfx_obj_campfire" 1024 0 256 256
+3 18 "gfx_frame_obj_campfire_5" "gfx_obj_campfire" 1280 0 256 256
+3 19 "gfx_frame_obj_campfire_6" "gfx_obj_campfire" 1536 0 256 256
+3 20 "gfx_frame_obj_campfire_7" "gfx_obj_campfire" 1792 0 256 256
+3 21 "gfx_frame_prj_fireball_0" "gfx_prj_fireball" 0 0 16 16
+3 22 "gfx_frame_til_void" "gfx_til_overworld" 0 0 64 64
+3 23 "gfx_frame_til_stone_path" "gfx_til_overworld" 64 0 64 64
+3 24 "gfx_frame_til_water_dark_0" "gfx_til_overworld" 128 0 64 64
+3 25 "gfx_frame_til_water_dark_1" "gfx_til_overworld" 192 0 64 64
+3 26 "gfx_frame_til_water_dark_2" "gfx_til_overworld" 256 0 64 64
+3 27 "null" "gfx_til_overworld" 320 0 64 64
+3 28 "null" "gfx_til_overworld" 384 0 64 64
+3 29 "null" "gfx_til_overworld" 448 0 64 64
+3 30 "gfx_frame_til_grass_weeds_0" "gfx_til_overworld" 0 64 64 64
+3 31 "gfx_frame_til_grass_weeds_1" "gfx_til_overworld" 64 64 64 64
+3 32 "gfx_frame_til_grass_flowers_0" "gfx_til_overworld" 128 64 64 64
+3 33 "gfx_frame_til_grass_flowers_1" "gfx_til_overworld" 192 64 64 64
+3 34 "null" "gfx_til_overworld" 256 64 64 64
+3 35 "null" "gfx_til_overworld" 320 64 64 64
+3 36 "null" "gfx_til_overworld" 384 64 64 64
+3 37 "null" "gfx_til_overworld" 448 64 64 64
+3 38 "gfx_frame_til_stone_wall_tl" "gfx_til_overworld" 0 128 64 64
+3 39 "gfx_frame_til_stone_wall_tc" "gfx_til_overworld" 64 128 64 64
+3 40 "gfx_frame_til_stone_wall_tr" "gfx_til_overworld" 128 128 64 64
+3 41 "gfx_frame_obj_bush" "gfx_til_overworld" 192 128 64 64
+3 42 "null" "gfx_til_overworld" 256 128 64 64
+3 43 "gfx_frame_obj_portal_0" "gfx_til_overworld" 320 128 64 128
+3 44 "gfx_frame_obj_portal_1" "gfx_til_overworld" 384 128 64 128
+3 45 "gfx_frame_obj_portal_2" "gfx_til_overworld" 448 128 64 128
+3 46 "gfx_frame_til_stone_wall_cl" "gfx_til_overworld" 0 192 64 64
+3 47 "gfx_frame_til_stone_wall_cc" "gfx_til_overworld" 64 192 64 64
+3 48 "gfx_frame_til_stone_wall_cr" "gfx_til_overworld" 128 192 64 64
+3 49 "gfx_frame_obj_sign" "gfx_til_overworld" 192 192 64 64
+3 50 "gfx_frame_obj_chest_closed" "gfx_til_overworld" 256 192 64 64
+3 51 "null" "gfx_til_overworld" 320 192 64 64
+3 52 "null" "gfx_til_overworld" 384 192 64 64
+3 53 "null" "gfx_til_overworld" 448 192 64 64
+3 54 "gfx_frame_til_stone_wall_bl" "gfx_til_overworld" 0 256 64 64
+3 55 "gfx_frame_til_stone_wall_bc" "gfx_til_overworld" 64 256 64 64
+3 56 "gfx_frame_til_stone_wall_br" "gfx_til_overworld" 128 256 64 64
+3 57 "gfx_frame_itm_poop" "gfx_til_overworld" 192 256 64 64
+3 58 "null" "gfx_til_overworld" 256 256 64 64
+3 59 "null" "gfx_til_overworld" 320 256 64 64
+3 60 "null" "gfx_til_overworld" 384 256 64 64
+3 61 "null" "gfx_til_overworld" 448 256 64 64
+3 62 "gfx_frame_obj_lever_unpowered" "gfx_til_overworld" 0 320 64 64
+3 63 "gfx_frame_obj_lever_powered_0" "gfx_til_overworld" 64 320 64 64
+3 64 "gfx_frame_obj_lever_powered_1" "gfx_til_overworld" 128 320 64 64
+3 65 "null" "gfx_til_overworld" 192 320 64 64
+3 66 "null" "gfx_til_overworld" 256 320 64 64
+3 67 "null" "gfx_til_overworld" 320 320 64 64
+3 68 "null" "gfx_til_overworld" 384 320 64 64
+3 69 "null" "gfx_til_overworld" 448 320 64 64
+
+# GfxAnim id name sound frame_count frame_delay frames
+4 0 "gfx_anim_missing" "null" 0 0
+ 1
+ "gfx_frame_missing"
+4 1 "gfx_anim_chr_mage_e" "null" 0 0
+ 1
+ "gfx_frame_chr_mage_e_0"
+4 2 "gfx_anim_chr_mage_w" "null" 0 0
+ 1
+ "gfx_frame_chr_mage_w_0"
+4 3 "gfx_anim_npc_lily_e" "null" 0 0
+ 1
+ "gfx_frame_npc_lily_e_0"
+4 4 "gfx_anim_npc_lily_w" "null" 0 0
+ 1
+ "gfx_frame_npc_lily_w_0"
+4 5 "gfx_anim_npc_freye_e" "null" 0 0
+ 1
+ "gfx_frame_npc_freye_e_0"
+4 6 "gfx_anim_npc_freye_w" "null" 0 0
+ 1
+ "gfx_frame_npc_freye_w_0"
+4 7 "gfx_anim_npc_nessa_e" "null" 0 0
+ 1
+ "gfx_frame_npc_nessa_e_0"
+4 8 "gfx_anim_npc_nessa_w" "null" 0 0
+ 1
+ "gfx_frame_npc_nessa_w_0"
+4 9 "gfx_anim_npc_elane_e" "null" 0 0
+ 1
+ "gfx_frame_npc_elane_e_0"
+4 10 "gfx_anim_npc_elane_w" "null" 0 0
+ 1
+ "gfx_frame_npc_elane_w_0"
+4 11 "gfx_anim_npc_chicken_e" "null" 0 0
+ 1
+ "gfx_frame_npc_chicken_e_0"
+4 12 "gfx_anim_npc_chicken_w" "null" 0 0
+ 1
+ "gfx_frame_npc_chicken_w_0"
+4 13 "gfx_anim_obj_campfire" "sfx_campfire" 0 4
+ 8
+ "gfx_frame_obj_campfire_0"
+ "gfx_frame_obj_campfire_1"
+ "gfx_frame_obj_campfire_2"
+ "gfx_frame_obj_campfire_3"
+ "gfx_frame_obj_campfire_4"
+ "gfx_frame_obj_campfire_5"
+ "gfx_frame_obj_campfire_6"
+ "gfx_frame_obj_campfire_7"
+4 14 "gfx_anim_prj_fireball" "sfx_fireball" 0 0
+ 1
+ "gfx_frame_prj_fireball_0"
+4 15 "gfx_anim_til_void" "null" 0 0
+ 1
+ "gfx_frame_til_void"
+4 16 "gfx_anim_til_stone_path" "null" 0 0
+ 1
+ "gfx_frame_til_stone_path"
+4 17 "gfx_anim_til_water_dark" "null" 0 30
+ 4
+ "gfx_frame_til_water_dark_0"
+ "gfx_frame_til_water_dark_1"
+ "gfx_frame_til_water_dark_2"
+ "gfx_frame_til_water_dark_1"
+4 18 "gfx_anim_til_grass_weeds" "null" 0 20
+ 2
+ "gfx_frame_til_grass_weeds_0"
+ "gfx_frame_til_grass_weeds_1"
+4 19 "gfx_anim_til_grass_flowers" "null" 0 30
+ 2
+ "gfx_frame_til_grass_flowers_0"
+ "gfx_frame_til_grass_flowers_1"
+4 20 "gfx_anim_til_stone_wall_tl" "null" 0 0
+ 1
+ "gfx_frame_til_stone_wall_tl"
+4 21 "gfx_anim_til_stone_wall_tc" "null" 0 0
+ 1
+ "gfx_frame_til_stone_wall_tc"
+4 22 "gfx_anim_til_stone_wall_tr" "null" 0 0
+ 1
+ "gfx_frame_til_stone_wall_tr"
+4 23 "gfx_anim_til_stone_wall_cl" "null" 0 0
+ 1
+ "gfx_frame_til_stone_wall_cl"
+4 24 "gfx_anim_til_stone_wall_cc" "null" 0 0
+ 1
+ "gfx_frame_til_stone_wall_cc"
+4 25 "gfx_anim_til_stone_wall_cr" "null" 0 0
+ 1
+ "gfx_frame_til_stone_wall_cr"
+4 26 "gfx_anim_til_stone_wall_bl" "null" 0 0
+ 1
+ "gfx_frame_til_stone_wall_bl"
+4 27 "gfx_anim_til_stone_wall_bc" "null" 0 0
+ 1
+ "gfx_frame_til_stone_wall_bc"
+4 28 "gfx_anim_til_stone_wall_br" "null" 0 0
+ 1
+ "gfx_frame_til_stone_wall_br"
+4 29 "gfx_anim_itm_poop" "null" 0 0
+ 1
+ "gfx_frame_itm_poop"
+4 30 "gfx_anim_obj_bush" "null" 0 0
+ 1
+ "gfx_frame_obj_bush"
+4 31 "gfx_anim_obj_chest_closed" "null" 0 0
+ 1
+ "gfx_frame_obj_chest_closed"
+4 32 "gfx_anim_obj_portal" "null" 0 6
+ 3
+ "gfx_frame_obj_portal_0"
+ "gfx_frame_obj_portal_1"
+ "gfx_frame_obj_portal_2"
+4 33 "gfx_anim_obj_sign" "null" 0 0
+ 1
+ "gfx_frame_obj_sign"
+4 34 "gfx_anim_obj_lever_unpowered" "null" 0 0
+ 1
+ "gfx_frame_obj_lever_unpowered"
+4 35 "gfx_anim_obj_lever_powered" "null" 0 15
+ 4
+ "gfx_frame_obj_lever_powered_0"
+ "gfx_frame_obj_lever_powered_0"
+ "gfx_frame_obj_lever_powered_0"
+ "gfx_frame_obj_lever_powered_1"
+
+# Sprite id name anims
+5 0 "sprite_missing" 8 "null" "null" "null" "null" "null" "null" "null" "null"
+5 1 "sprite_chr_mage" 8 "null" "gfx_anim_chr_mage_e" "null" "gfx_anim_chr_mage_w" "null" "null" "null" "null"
+5 2 "sprite_npc_lily" 8 "null" "gfx_anim_npc_lily_e" "null" "gfx_anim_npc_lily_w" "null" "null" "null" "null"
+5 3 "sprite_npc_freye" 8 "null" "gfx_anim_npc_freye_e" "null" "gfx_anim_npc_freye_w" "null" "null" "null" "null"
+5 4 "sprite_npc_nessa" 8 "null" "gfx_anim_npc_nessa_e" "null" "gfx_anim_npc_nessa_w" "null" "null" "null" "null"
+5 5 "sprite_npc_elane" 8 "null" "gfx_anim_npc_elane_e" "null" "gfx_anim_npc_elane_w" "null" "null" "null" "null"
+5 6 "sprite_npc_chicken" 8 "null" "gfx_anim_npc_chicken_e" "null" "gfx_anim_npc_chicken_w" "null" "null" "null" "null"
+5 7 "sprite_obj_campfire" 8 "gfx_anim_obj_campfire" "null" "null" "null" "null" "null" "null" "null"
+5 8 "sprite_prj_fireball" 8 "gfx_anim_prj_fireball" "null" "null" "null" "null" "null" "null" "null"
+5 9 "sprite_itm_poop" 8 "gfx_anim_itm_poop" "null" "null" "null" "null" "null" "null" "null"
+
+# TileDef id name anim material_id flags auto_tile_mask
+6 0 "til_missing" "gfx_anim_missing" 0 0 0
+6 1 "til_void" "gfx_anim_til_void" 1 1 0
+6 2 "til_stone_path" "gfx_anim_til_stone_path" 2 0 0
+6 3 "til_water_dark" "gfx_anim_til_water_dark" 3 2 0
+6 4 "til_grass_weeds" "gfx_anim_til_grass_weeds" 4 0 0
+6 5 "til_grass_flowers" "gfx_anim_til_grass_flowers" 4 0 0
+6 6 "til_stone_wall_tl" "gfx_anim_til_stone_wall_tl" 2 1 0
+6 7 "til_stone_wall_tc" "gfx_anim_til_stone_wall_tc" 2 1 0
+6 8 "til_stone_wall_tr" "gfx_anim_til_stone_wall_tr" 2 1 0
+6 9 "til_stone_wall_cl" "gfx_anim_til_stone_wall_cl" 2 1 0
+6 10 "til_stone_wall_cc" "gfx_anim_til_stone_wall_cc" 2 1 0
+6 11 "til_stone_wall_cr" "gfx_anim_til_stone_wall_cr" 2 1 0
+6 12 "til_stone_wall_bl" "gfx_anim_til_stone_wall_bl" 2 1 0
+6 13 "til_stone_wall_bc" "gfx_anim_til_stone_wall_bc" 2 1 0
+6 14 "til_stone_wall_br" "gfx_anim_til_stone_wall_br" 2 1 0
+6 15 "obj_bush" "gfx_anim_obj_bush" 4 1 0
+6 16 "obj_chest_basic" "gfx_anim_obj_chest_closed" 5 1 0
+6 17 "obj_portal" "gfx_anim_obj_portal" 1 0 0
+6 18 "obj_sign" "gfx_anim_obj_sign" 5 0 0
+6 19 "obj_lever_unpowered" "gfx_anim_obj_lever_unpowered" 2 0 0
+6 20 "obj_lever_powered" "gfx_anim_obj_lever_powered" 2 0 0
+
+# TileMat id name footstep_sound
+7 0 "mat_missing" "null"
+7 1 "mat_void" "null"
+7 2 "mat_stone" "sfx_footstep_stone"
+7 3 "mat_water" "sfx_footstep_water"
+7 4 "mat_grass" "sfx_footstep_grass"
+7 5 "mat_wood" "sfx_footstep_wood"
+
+# Tilemap version id name width height title bg_music tiles objects object_data path_nodes paths
+8 8 1 "map_overworld" 64 64 "Sisters' Encampment" "mus_ambient_outdoors"
+ 4096 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 2 2 2 2 2 2 2 2 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 2 2 2 2 2 2 2 2 2 2 2 2 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 5 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 4 4 4 4 4 4 4 4 4 4 4 4 4 4 5 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 3 3 3 3 3 3 3 3 3 3 3 3 3 3 2 2 2 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 5 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 2 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 4 4 4 4 4 4 4 4 4 4 4 4 4 4 5 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 3 3 3 3 3 3 3 3 3 3 3 3 4 5 4 4 4 3 3 3 3 3 3 3 3 3 4 4 4 6 7 7 7 8 4 4 4 4 4 5 5 4 4 4 4 5 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 3 3 3 3 3 3 3 3 3 4 5 4 4 4 4 4 4 4 5 4 3 3 3 3 3 3 4 4 4 9 9 10 11 11 4 4 4 4 4 4 4 4 4 4 4 4 4 4 5 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 3 3 3 3 3 3 3 3 2 2 4 4 4 4 4 4 4 4 4 4 4 3 3 3 3 3 3 4 4 12 13 13 13 14 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 2 2 2 3 3 3 3 3 3 3 3 2 2 2 2 4 4 4 4 4 4 4 4 4 5 3 3 3 3 3 3 4 4 4 4 2 4 4 4 4 4 4 6 7 8 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 2 2 3 3 3 3 3 3 3 3 3 3 2 2 4 4 4 4 4 4 4 4 4 4 4 4 4 3 3 3 3 3 4 4 4 4 2 4 4 4 4 4 4 9 1 11 4 5 5 4 4 4 4 4 4 4 4 4 4 4 4 4 4 2 2 3 3 3 3 3 3 3 3 3 3 3 4 4 4 4 5 4 4 4 4 4 4 4 2 2 5 3 3 3 3 3 4 4 4 2 2 2 4 15 4 4 4 12 2 14 5 4 5 4 4 4 4 4 4 4 4 4 4 4 4 4 2 2 3 3 3 3 3 3 3 3 3 3 3 3 2 4 5 4 4 4 4 4 4 4 4 4 4 2 2 2 2 2 2 2 2 2 4 2 2 2 4 4 4 4 4 4 2 2 5 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 2 3 3 3 3 3 3 3 3 3 3 3 3 3 3 2 4 4 4 4 4 5 4 4 5 4 4 4 10 10 10 10 10 10 4 2 2 2 2 4 4 4 4 4 4 2 2 2 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 2 2 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 2 2 2 2 2 4 4 4 4 2 2 2 3 3 3 3 3 3 4 4 2 4 2 4 4 4 2 2 2 2 2 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 2 2 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 2 2 2 2 3 3 3 3 3 3 3 3 3 4 4 4 2 2 4 4 2 2 2 2 2 4 4 4 4 4 4 4 5 4 4 4 4 4 4 4 4 4 2 2 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 4 4 2 2 4 2 2 2 2 2 2 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 2 2 3 3 3 3 3 3 3 3 3 3 3 4 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 4 2 2 2 4 2 2 2 2 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 2 2 3 3 3 3 3 3 3 3 3 3 3 4 4 4 4 4 4 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 4 4 2 2 2 2 2 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 2 2 3 3 3 3 3 3 3 3 3 3 4 2 4 4 4 2 4 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 4 2 2 2 2 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 2 3 3 3 3 3 3 3 3 3 3 3 2 4 4 4 4 4 4 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 4 2 2 2 2 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 3 3 3 3 3 3 3 3 3 3 3 3 4 4 4 4 4 4 4 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 4 2 4 2 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 3 3 3 3 3 3 3 3 3 3 3 3 3 4 4 2 4 4 4 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 4 4 2 2 2 4 4 4 4 4 4 4 4 4 4 4 4 5 4 5 4 4 4 4 4 4 4 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 4 4 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 4 4 2 2 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 5 5 4 4 4 4 4 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 4 4 4 2 2 4 4 4 4 4 4 4 4 4 4 4 4 4 5 4 4 5 4 4 4 4 4 4 4 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 4 4 4 2 2 2 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 5 4 4 4 4 4 4 4 4 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 4 4 4 4 4 2 2 2 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 4 4 3 3 4 4 4 4 4 4 4 4 4 2 4 4 4 4 4 4 4 4 4 5 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 3 3 3 3 3 3 3 3 3 3 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 2 2 2 4 4 4 4 4 4 4 4 4 5 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 2 2 2 2 4 4 4 4 4 4 4 5 5 5 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 2 4 2 4 4 4 4 4 4 4 4 5 5 5 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 2 2 2 2 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 2 2 4 2 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 5 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 2 2 2 2 2 2 4 4 4 4 4 4 2 2 2 2 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 2 2 2 2 2 4 4 4 4 2 4 4 4 4 4 4 2 2 2 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 2 6 7 8 2 4 4 6 8 2 4 4 4 4 4 4 2 2 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 5 4 4 4 4 4 4 4 4 4 4 4 4 4 4 6 7 8 4 4 4 4 4 4 2 12 11 14 2 4 4 12 14 2 4 4 4 4 4 4 2 2 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 5 4 4 4 4 4 4 4 4 4 4 4 4 4 4 9 10 11 4 4 4 4 4 4 2 2 2 2 2 2 2 2 2 2 4 4 4 4 4 4 2 2 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 5 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 6 9 10 11 8 4 4 4 4 4 4 4 2 4 4 4 4 4 4 2 4 4 4 4 4 4 2 2 4 4 4 4 4 4 4 4 4 4 4 4 4 4 5 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 12 13 13 13 14 4 4 4 4 4 4 4 2 4 4 6 7 8 4 2 4 4 4 4 4 4 2 2 4 4 4 4 4 4 4 4 4 4 4 4 4 4 5 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 2 2 2 4 4 4 6 7 8 4 4 2 4 4 12 11 14 4 2 4 6 11 4 4 4 2 2 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 4 4 4 4 4 4 4 4 4 4 4 5 4 5 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 2 2 2 5 5 5 5 5 5 5 5 3 3 3 2 3 3 3 5 5 5 5 5 5 5 2 2 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 2 2 2 5 5 5 5 5 5 5 5 5 3 2 2 2 3 5 5 5 5 5 5 5 5 2 2 4 4 4 4 4 4 4 4 4 4 4 4 5 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 2 2 2 13 13 13 13 13 13 13 13 13 2 2 2 2 2 13 13 13 13 13 13 13 13 2 2 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 5 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 5 5 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 5 4 5 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 2 2 2 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 2 2 2 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 2 2 2 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 5 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 5 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 5 4 4 4 4 4 4 4 5 5 5 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 5 5 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4
+ 4096 15 0 0 15 0 0 15 15 15 15 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 15 15 15 15 0 15 0 0 15 15 15 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 15 0 15 0 15 15 15 15 15 15 0 15 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 15 15 15 15 15 15 15 15 0 15 15 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 15 0 15 15 15 15 15 15 0 0 0 15 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 15 15 15 15 15 0 15 15 0 0 0 15 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 15 0 15 0 15 15 0 0 0 15 15 15 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 15 0 15 0 15 15 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 15 15 15 15 15 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 15 15 15 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 15 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 15 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 17 0 0 0 0 0 0 0 0 0 0 0 0 15 15 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+ 1
+ 51 12 "warp" 2 2 7 0
+ 20
+ 1312.00 2464.00 0.00 0.00
+ 1424.00 2480.00 0.00 0.00
+ 1424.00 2720.00 0.00 0.00
+ 880.00 2720.00 0.00 0.00
+ 800.00 2640.00 0.00 3.00
+ 800.00 3024.00 0.00 0.00
+ 1488.00 3024.00 0.00 0.00
+ 1536.00 2960.00 0.00 0.00
+ 1728.00 2960.00 0.00 0.00
+ 1776.00 3024.00 0.00 0.00
+ 2320.00 3024.00 0.00 0.00
+ 2320.00 2752.00 0.00 0.00
+ 2048.00 2704.00 0.00 1.00
+ 1888.00 2704.00 0.00 0.00
+ 1888.00 2464.00 0.00 0.00
+ 1488.00 2464.00 0.00 0.00
+ 1440.00 2448.00 0.00 2.00
+ 1568.00 2448.00 0.00 0.00
+ 1568.00 2272.00 0.00 0.00
+ 1312.00 2272.00 0.00 0.00
+ 1
+ 0 20
+8 8 2 "map_cave" 16 16 "Echo Cave" "mus_ambient_cave"
+ 256 2 2 2 2 2 2 2 2 3 3 2 2 2 2 2 2 2 2 2 2 2 2 2 2 3 3 7 2 2 2 2 2 2 2 2 7 7 7 2 2 2 3 3 7 2 2 2 2 2 2 7 3 3 3 7 2 2 2 3 3 2 2 2 2 2 2 3 3 3 3 3 2 2 2 3 3 2 2 2 2 2 2 2 2 3 3 3 2 2 2 3 3 7 2 2 2 2 2 2 2 2 3 3 2 2 2 3 3 3 2 2 2 2 2 2 2 2 3 3 2 2 2 3 3 3 2 2 2 7 2 2 2 2 3 3 2 2 2 2 2 2 2 2 2 3 7 7 7 7 3 3 2 2 2 7 7 7 2 2 2 3 3 3 3 3 3 2 2 2 2 3 3 3 2 2 2 2 2 2 2 2 2 2 2 2 2 3 3 3 2 2 2 2 2 2 2 2 2 2 2 2 2 3 3 2 2 2 2 2 2 2 2 2 2 2 2 2 2 3 3 2 2 2 2 2 2 2 2 2 2 2 2 2 2 3 3 2 2 2 2 2 2 2 2 2 2 2 2 2 2 3 3 2 2 2 2
+ 256 19 0 18 0 0 0 16 0 0 0 0 0 0 0 0 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 18 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 0 0 17 0 0 0 0 0 0 0 0 0 0 0 0 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1
+ 5
+ 0 0 "lever" 0 19 20
+ 6 0 "lootable" 1
+ 2 0 "sign" "I have heard that the" "[Sorcerer's Stone](# ""A blue, glowing magical stone"")" "is somewhere nearby" "this place. -Sign Painter"
+ 0 2 "sign" "Kings of Leon" "Sex on Fire" "but you're in a" "bathroom at a party"
+ 2 7 "warp" 1 51 12 0
+ 0
+ 0
+
+# EOF marker
+-1

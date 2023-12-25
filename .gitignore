@@ -2,7 +2,7 @@
 
 bin/maps/*.bak
 bin/*.exe
-bin/pack/
+bin/pack/*.dat
 bin/resources/music/copyright/
 bin/resources/unused/
 _unused/
