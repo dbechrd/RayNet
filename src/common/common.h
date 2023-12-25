@@ -125,9 +125,9 @@
 //#define CL_PORT                 30000
 #define CL_BANDWIDTH_SMOOTHING_FACTOR   0.5f
 #define CL_SAMPLE_INPUT_DT              SV_TICK_DT //(1.0/120.0)
-#define CL_SEND_INPUT_COUNT             8  //32
+#define CL_SEND_INPUT_COUNT             64
 #define CL_SEND_INPUT_DT                SV_TICK_DT //(1.0/120.0)
-#define CL_SNAPSHOT_COUNT               8
+#define CL_SNAPSHOT_COUNT               2
 #define CL_RENDER_DISTANCE              1
 #define CL_CAMERA_LERP                  0
 #define CL_CLIENT_SIDE_PREDICT          1
