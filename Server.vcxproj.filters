@@ -2,7 +2,6 @@
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
     <ClCompile Include="src\server\server.cpp" />
-    <ClCompile Include="src\common\md.c" />
     <ClCompile Include="include\tinyfiledialogs.c" />
   </ItemGroup>
   <ItemGroup>

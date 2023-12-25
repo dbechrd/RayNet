@@ -138,9 +138,9 @@ struct SfxFile {
     FIELD(uint32_t                       , id            , {}, HAQ_SERIALIZE                                     , userdata) \
     FIELD(std::string                    , name          , {}, HAQ_SERIALIZE | HAQ_EDIT                          , userdata) \
     FIELD(std::string                    , path          , {}, HAQ_SERIALIZE | HAQ_EDIT                          , userdata) \
-    FIELD(int                            , variations    , {}, HAQ_SERIALIZE /*| HAQ_EDIT*/                      , userdata) \
-    FIELD(float                          , pitch_variance, {}, HAQ_SERIALIZE | HAQ_EDIT | HAQ_EDIT_FLOAT_HUNDRETH, userdata) \
-    FIELD(int                            , max_instances , {}, HAQ_SERIALIZE /*| HAQ_EDIT*/                      , userdata)
+    FIELD(uint8_t                        , variations    , {}, HAQ_SERIALIZE | HAQ_EDIT                          , userdata) \
+    FIELD(uint8_t                        , max_instances , {}, HAQ_SERIALIZE | HAQ_EDIT                          , userdata) \
+    FIELD(float                          , pitch_variance, {}, HAQ_SERIALIZE | HAQ_EDIT | HAQ_EDIT_FLOAT_HUNDRETH, userdata)
     HQT_SFX_FILE_FIELDS(HAQ_C_FIELD, 0);
 
     std::vector<SfxVariant> variants{};
@@ -369,12 +369,6 @@ private:
     void Scan(uint32_t lx, uint32_t rx, uint32_t y, uint32_t old_tile_id, std::stack<Coord> &stack);
 };
 
-// ECS test
-struct foo {
-    Vector3 dat{ 1, 2, 3 };
-    SfxFile sfx{ 3, "sfx_id", "sfx.wav", 1, 0.05f, 8 };
-};
-
 ////////////////////////////////////////////////////////////////////////////
 
 struct PackTocEntry {
@@ -530,7 +524,7 @@ Err Init(void);
 void Free(void);
 
 Err SavePack(Pack &pack, PackStreamType type);
-Err LoadPack(Pack &pack, PackStreamType type);
+Err LoadPack(Pack &pack, PackStreamType type, bool loadResources = true);
 void UnloadPack(Pack &pack);
 
 void PlaySound(const std::string &id, float pitchVariance = 0.0f);

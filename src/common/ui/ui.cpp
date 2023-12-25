@@ -271,7 +271,10 @@ template <typename T>
 UIState UI::Text(T value)
 {
     const char *text = TextFormat("<%s>", typeid(T).name());
-    return Text(CSTRLEN(text));
+    PushFgColor(Fade(LIGHTGRAY, 0.5f));
+    UIState result = Text(CSTRLEN(text));
+    PopStyle();
+    return result;
 }
 
 UIState UI::Label(const char *text, size_t textLen, int width)
@@ -1013,14 +1016,20 @@ void UI::TextboxHAQ(STB_TexteditState &stbState, T &value, int flags)
         }
         Textbox(stbState, value, floatFmt, floatInc);
     } else if constexpr (
+        std::is_same_v<T, uint8_t > ||
         std::is_same_v<T, uint16_t> ||
-        std::is_same_v<T, int32_t>
+        std::is_same_v<T, uint32_t> ||
+        std::is_same_v<T, int8_t  > ||
+        std::is_same_v<T, int16_t > ||
+        std::is_same_v<T, int32_t >
     ) {
         float valueFloat = (float)value;
         Textbox(stbState, valueFloat, "%.f");
         value = CLAMP(valueFloat, std::numeric_limits<T>::min(), std::numeric_limits<T>::max());
     } else {
+        PushFgColor(RED);
         Label(CSTR("IDK HOW TO EDIT THIS MAN!"));
+        PopStyle();
     }
 
     if (popStyle) PopStyle();

@@ -24,7 +24,7 @@ void GameServer::OnClientJoin(int clientIdx)
 
     Entity *player = SpawnEntity(ENTITY_PLAYER);
     if (player) {
-        Tilemap &level_001 = packs[1].FindByName<Tilemap>(MAP_OVERWORLD);
+        Tilemap &level_001 = packs[0].FindByName<Tilemap>(MAP_OVERWORLD);
 
         ServerPlayer &sv_player = players[clientIdx];
         sv_player.needsClockSync = true;
@@ -275,7 +275,7 @@ Tilemap *GameServer::FindOrLoadMap(uint32_t map_id)
 {
 #if 1
     // TODO: Go back to assuming it's not already loaded once we figure out packs
-    Tilemap &map = packs[1].FindById<Tilemap>(map_id);
+    Tilemap &map = packs[0].FindById<Tilemap>(map_id);
     if (map.id) {
         return &map;
     } else {
@@ -318,7 +318,7 @@ Tilemap *GameServer::FindOrLoadMap(uint32_t map_id)
 Tilemap *GameServer::FindMap(uint32_t map_id)
 {
     // TODO: Remove this alias and call * directly?
-    auto &tile_map = packs[1].FindById<Tilemap>(map_id);
+    auto &tile_map = packs[0].FindById<Tilemap>(map_id);
     return &tile_map;
 }
 
@@ -405,7 +405,7 @@ void GameServer::WarpEntity(Entity &entity, uint32_t dest_map_id, Vector3 dest_p
         entity.last_moved_at = now;
 
         if (entity.type == ENTITY_PLAYER) {
-            Tilemap &map = packs[1].FindById<Tilemap>(entity.map_id);
+            Tilemap &map = packs[0].FindById<Tilemap>(entity.map_id);
             if (map.title.size()) {
                 int clientIdx = 0;
                 ServerPlayer *player = FindServerPlayer(entity.id, &clientIdx);
@@ -782,13 +782,13 @@ void GameServer::Tick(void)
     TickPlayers();
 
     // TODO: Only do this when the map loads or changes.
-    for (Tilemap &map : packs[1].tile_maps) {
+    for (Tilemap &map : packs[0].tile_maps) {
         map.UpdateEdges();
     }
 
     // HACK: Only spawn NPCs in map 1, whatever map that may be (hopefully it's Level_001)
-    Tilemap &map_overworld = packs[1].FindByName<Tilemap>(MAP_OVERWORLD);
-    Tilemap &map_cave = packs[1].FindByName<Tilemap>(MAP_CAVE);
+    Tilemap &map_overworld = packs[0].FindByName<Tilemap>(MAP_OVERWORLD);
+    Tilemap &map_cave = packs[0].FindByName<Tilemap>(MAP_CAVE);
     TickSpawnTownNPCs(map_overworld.id);
     TickSpawnCaveNPCs(map_cave.id);
 
@@ -1208,7 +1208,7 @@ void GameServer::ProcessMsg(int clientIdx, Msg_C_TileInteract &msg)
             );
             SendEntitySay(clientIdx, player.entityId, 0, "Sign", signText);
         } else if (obj_data->type == "warp") {
-            Tilemap &map = packs[1].FindById<Tilemap>(obj_data->warp_map_id);
+            Tilemap &map = packs[0].FindById<Tilemap>(obj_data->warp_map_id);
             const char *warpInfo = TextFormat("%s (%u, %u)",
                 map.name.c_str(),
                 obj_data->warp_dest_x,

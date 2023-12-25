@@ -12,7 +12,6 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="include\tinyfiledialogs.c" />
-    <ClCompile Include="src\common\md.c" />
     <ClCompile Include="src\server\server.cpp" />
   </ItemGroup>
   <ItemGroup>

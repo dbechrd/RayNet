@@ -64,7 +64,7 @@ void Editor::DrawGroundOverlays(Camera2D &camera, double now)
 {
     io.PushScope(IO::IO_EditorGroundOverlay);
 
-    auto &map = packs[1].FindById<Tilemap>(map_id);
+    auto &map = packs[0].FindById<Tilemap>(map_id);
 
     // Draw tile collision layer
     if (state.showColliders) {
@@ -110,7 +110,7 @@ void Editor::DrawGroundOverlay_Tiles(Camera2D &camera, double now)
 
         uint32_t &cursorTile = state.tiles.cursor.tile_id;
         uint32_t hoveredTile{};
-        auto &map = packs[1].FindById<Tilemap>(map_id);
+        auto &map = packs[0].FindById<Tilemap>(map_id);
 
         Tilemap::Coord coord{};
         bool validCoord = map.WorldToTileIndex(cursorWorldPos.x, cursorWorldPos.y, coord);
@@ -140,7 +140,7 @@ void Editor::DrawGroundOverlay_Paths(Camera2D &camera, double now)
     const Vector2 cursorWorldPos = GetScreenToWorld2D({ (float)GetMouseX(), (float)GetMouseY() }, camera);
 
     // Draw path edges
-    auto &map = packs[1].FindById<Tilemap>(map_id);
+    auto &map = packs[0].FindById<Tilemap>(map_id);
     for (uint32_t aiPathId = 1; aiPathId <= map.paths.size(); aiPathId++) {
         AiPath *aiPath = map.GetPath(aiPathId);
         if (!aiPath) {
@@ -246,7 +246,7 @@ void Editor::DrawEntityOverlays(Camera2D &camera, double now)
     io.PushScope(IO::IO_EditorEntityOverlay);
 
     Entity *selectedEntity = entityDb->FindEntity(state.entities.selectedId);
-    auto &map = packs[1].FindById<Tilemap>(map_id);
+    auto &map = packs[0].FindById<Tilemap>(map_id);
     if (selectedEntity && selectedEntity->map_id == map.id) {
         const char *text = TextFormat("[selected]");
         Vector2 tc = GetWorldToScreen2D(selectedEntity->TopCenter(), camera);
@@ -288,7 +288,7 @@ void Editor::DrawEntityOverlays(Camera2D &camera, double now)
 }
 void Editor::DrawEntityOverlay_Collision(Camera2D &camera, double now)
 {
-    auto &map = packs[1].FindById<Tilemap>(map_id);
+    auto &map = packs[0].FindById<Tilemap>(map_id);
     for (Entity &entity : entityDb->entities) {
         if (entity.map_id != map.id) {
             continue;
@@ -458,7 +458,7 @@ UIState Editor::DrawUI_ActionBar(Vector2 position, double now)
     static std::string openRequest;
     static std::string saveAsRequest;
 
-    auto &map = packs[1].FindById<Tilemap>(map_id);
+    auto &map = packs[0].FindById<Tilemap>(map_id);
 
 #if 0
     UIState openButton = uiActionBar.Button(CSTR("Open"));
@@ -491,11 +491,11 @@ UIState Editor::DrawUI_ActionBar(Vector2 position, double now)
 #endif
     UIState saveButton = uiActionBar.Button(CSTR("Save"));
     if (saveButton.released) {
-        std::string filename = "resources/map/" + map.name + ".mdesk";
-        Err err = SaveTilemap(filename, map);
+        std::string path = packs[0].path;
+        Err err = SavePack(packs[0], PACK_TYPE_TEXT);
         if (err) {
-            std::thread errorThread([filename, err]{
-                const char *msg = TextFormat("Failed to save file %s. %s\n", filename.c_str(), ErrStr(err));
+            std::thread errorThread([path, err]{
+                const char *msg = TextFormat("Failed to save file %s. %s\n", path.c_str(), ErrStr(err));
                 tinyfd_messageBox("Error", msg, "ok", "error", 1);
             });
             errorThread.detach();
@@ -517,7 +517,10 @@ UIState Editor::DrawUI_ActionBar(Vector2 position, double now)
         saveAsThread.detach();
     }
     if (saveAsRequest.size()) {
-        Err err = SaveTilemap(saveAsRequest, map);
+        std::string orig_path = packs[0].path;
+        packs[0].path = saveAsRequest;
+        Err err = SavePack(packs[0], PACK_TYPE_TEXT);
+        packs[0].path = orig_path;
         if (err) {
             std::thread errorThread([err]{
                 const char *msg = TextFormat("Failed to save file %s. %s\n", saveAsRequest.c_str(), ErrStr(err));
@@ -530,15 +533,16 @@ UIState Editor::DrawUI_ActionBar(Vector2 position, double now)
 
     UIState reloadButton = uiActionBar.Button(CSTR("Reload"));
     if (reloadButton.released) {
-        std::string filename = "resources/map/" + map.name + ".mdesk";
-        Pack reload_pack{ "reload_pack.mem" };
-        MetaParser::ParseIntoPack(reload_pack, filename.c_str());
+#if 0
+        // TODO: Probably want to be able to just reload the map, not *everything* right? Hmm..
+        Pack reload_pack{ "packs/assets.dat" };
+        LoadPack(reload_pack, PACK_TYPE_BINARY);
 
         // HACK(dlb): What the hell is size() == 2?
         Err err = RN_BAD_FILE_READ;
         if (reload_pack.tile_maps.size() == 2) {
-            Tilemap &old_map = packs[1].FindById<Tilemap>(map.id);
-            if (&old_map != &packs[1].tile_maps[0]) {
+            Tilemap &old_map = packs[0].FindById<Tilemap>(map.id);
+            if (&old_map != &packs[0].tile_maps[0]) {
                 old_map = reload_pack.tile_maps[1];
                 err = RN_SUCCESS;
             }
@@ -552,6 +556,7 @@ UIState Editor::DrawUI_ActionBar(Vector2 position, double now)
             });
             errorThread.detach();
         }
+#endif
     }
     uiActionBar.Newline();
 
@@ -635,7 +640,7 @@ UIState Editor::DrawUI_ActionBar(Vector2 position, double now)
 }
 void Editor::DrawUI_MapActions(UI &uiActionBar, double now)
 {
-    for (const Tilemap &map : packs[1].tile_maps) {
+    for (const Tilemap &map : packs[0].tile_maps) {
         if (uiActionBar.Button(CSTRLEN(TextFormat("%s", map.name.c_str()))).pressed) {
             map_id = map.id;
         }
@@ -677,7 +682,7 @@ void Editor::DrawUI_TileActions(UI &uiActionBar, double now)
     uiActionBar.Newline();
 #endif
 
-    auto &map = packs[1].FindById<Tilemap>(map_id);
+    auto &map = packs[0].FindById<Tilemap>(map_id);
 
     static float width = 0;
     static float height = 0;
@@ -758,7 +763,7 @@ void Editor::DrawUI_Tilesheet(UI &uiActionBar, double now)
 {
     // TODO(dlb): Support multi-select (big rectangle?), and figure out where this lives
 
-    auto &map = packs[1].FindById<Tilemap>(map_id);
+    auto &map = packs[0].FindById<Tilemap>(map_id);
     auto &tile_defs = packs[0].tile_defs;
 
     int tiles_x = 6;
@@ -1046,7 +1051,7 @@ void Editor::DrawUI_Wang(UI &uiActionBar, double now)
 
     uiActionBar.PopStyle();
 
-    auto &map = packs[1].FindById<Tilemap>(map_id);
+    auto &map = packs[0].FindById<Tilemap>(map_id);
 
     if (uiActionBar.Button(CSTR("Re-generate Map")).pressed) {
         wangTileset.GenerateMap(map.width, map.height, wangMap);
@@ -1062,7 +1067,7 @@ void Editor::DrawUI_Wang(UI &uiActionBar, double now)
 void Editor::DrawUI_WangTile(double now)
 {
     WangTileset &wangTileset = state.wang.wangTileset;
-    auto &map = packs[1].FindById<Tilemap>(map_id);
+    auto &map = packs[0].FindById<Tilemap>(map_id);
     auto &tile_defs = packs[0].tile_defs;
 
     Rectangle wangBg{ 434, 4, 560, 560 };
@@ -1270,7 +1275,7 @@ void Editor::DrawUI_DialogActions(UI &uiActionBar, double now)
 }
 void Editor::DrawUI_EntityActions(UI &uiActionBar, double now)
 {
-    auto &map = packs[1].FindById<Tilemap>(map_id);
+    auto &map = packs[0].FindById<Tilemap>(map_id);
     if (uiActionBar.Button(CSTR("Despawn all"), ColorBrightness(MAROON, -0.3f)).pressed) {
         for (const Entity &entity : entityDb->entities) {
             if (entity.type == ENTITY_PLAYER || entity.map_id != map.id) {

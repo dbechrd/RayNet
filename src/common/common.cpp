@@ -628,7 +628,6 @@ void dlb_CommonTests(void)
 #include "haq.cpp"
 #include "histogram.cpp"
 #include "io.cpp"
-//#include "meta/resource_library.capnp.c++"
 #include "net/net.cpp"
 #include "perf_timer.cpp"
 #include "strings.cpp"

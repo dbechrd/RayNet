@@ -34,7 +34,7 @@ Tilemap *ClientWorld::LocalPlayerMap(void)
 }
 Tilemap *ClientWorld::FindOrLoadMap(uint32_t map_id)
 {
-    Tilemap &map = packs[1].FindById<Tilemap>(map_id);
+    Tilemap &map = packs[0].FindById<Tilemap>(map_id);
     return &map;
 }
 
