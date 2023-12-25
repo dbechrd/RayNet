@@ -373,6 +373,7 @@ void BeginScrollPanel(UI &ui, ScrollPanel &scrollPanel, float width)
         if (mouseWheel) {
             scrollPanel.scrollAccel += fabsf(mouseWheel);
             float impulse = 4 * scrollPanel.scrollAccel;
+            impulse *= impulse;
             if (mouseWheel < 0) impulse *= -1;
             scrollVelocity += impulse;
             //printf("wheel: %f, target: %f\n", mouseWheel, scrollOffsetTarget);
@@ -383,7 +384,7 @@ void BeginScrollPanel(UI &ui, ScrollPanel &scrollPanel, float width)
 
     if (scrollVelocity) {
         scrollOffsetTarget -= scrollVelocity;
-        scrollVelocity *= 0.95f;
+        scrollVelocity *= 0.8f;
     }
 
     scrollOffsetTarget = CLAMP(scrollOffsetTarget, 0, scrollPanel.scrollOffsetMax);
@@ -559,9 +560,10 @@ UIState Editor::DrawUI_ActionBar(Vector2 position, double now)
         system("explorer maps");
     }
     uiActionBar.Text(CSTRLEN(TextFormat("(v%d)", map.version)));
+
+    uiActionBar.Space({ 0, 8 });
     uiActionBar.Newline();
 
-    uiActionBar.Text(CSTR("Show:"));
     UIState showCollidersButton = uiActionBar.Button(CSTR("Collision"), state.showColliders, GRAY, MAROON);
     if (showCollidersButton.released) {
         state.showColliders = !state.showColliders;
@@ -579,6 +581,7 @@ UIState Editor::DrawUI_ActionBar(Vector2 position, double now)
         state.showEntityIds = !state.showEntityIds;
     }
 
+    uiActionBar.Space({ 0, 8 });
     uiActionBar.Newline();
 
     for (int i = 0; i < EditMode_Count; i++) {
@@ -589,9 +592,8 @@ UIState Editor::DrawUI_ActionBar(Vector2 position, double now)
             uiActionBar.Newline();
         }
     }
-    uiActionBar.Newline();
 
-    uiActionBar.Text(CSTR("--------------------------------------"), LIGHTGRAY);
+    uiActionBar.Space({ 0, 8 });
     uiActionBar.Newline();
 
     switch (mode) {
@@ -1603,9 +1605,6 @@ void Editor::DrawUI_PackFiles(UI &uiActionBar, double now)
             uiActionBar.Newline();
 
             if (selected) {
-                #define HAQ_UI_TYPE(c_type, c_type_name, c_body, parent) \
-                    c_body
-
                 #define HAQ_UI_FIELD(c_type, c_name, c_init, flags, parent) \
                     if constexpr ((flags) & HAQ_SERIALIZE) { \
                         uiActionBar.Label(CSTR(#c_name), labelWidth); \
@@ -1622,33 +1621,33 @@ void Editor::DrawUI_PackFiles(UI &uiActionBar, double now)
                     }
 
                 #define HAQ_UI(hqt, parent) \
-                    hqt(HAQ_UI_TYPE, HAQ_UI_FIELD, HAQ_IGNORE, parent)
+                    hqt(HAQ_UI_FIELD, parent)
 
                 switch (entry.dtype) {
                     case DAT_TYP_GFX_FILE:
                     {
-                        GfxFile &gfxFile = pack.gfx_files[entry.index];
-                        HAQ_UI(HQT_GFX_FILE, gfxFile);
+                        GfxFile &gfx_file = pack.gfx_files[entry.index];
+                        HAQ_UI(HQT_GFX_FILE_FIELDS, gfx_file);
                         break;
                     }
                     case DAT_TYP_MUS_FILE:
                     {
-                        MusFile &musFile = pack.mus_files[entry.index];
-                        HAQ_UI(HQT_MUS_FILE, musFile);
+                        MusFile &mus_file = pack.mus_files[entry.index];
+                        HAQ_UI(HQT_MUS_FILE_FIELDS, mus_file);
                         break;
                     }
                     case DAT_TYP_SFX_FILE:
                     {
-                        SfxFile &sfxFile = pack.sfx_files[entry.index];
-                        HAQ_UI(HQT_SFX_FILE, sfxFile);
+                        SfxFile &sfx_file = pack.sfx_files[entry.index];
+                        HAQ_UI(HQT_SFX_FILE_FIELDS, sfx_file);
 
-                        if (!IsSoundPlaying(sfxFile.name)) {
+                        if (!IsSoundPlaying(sfx_file.name)) {
                             if (uiActionBar.Button(CSTR("Play"), ColorBrightness(DARKGREEN, -0.3f)).pressed) {
-                                PlaySound(sfxFile.name, 0);
+                                PlaySound(sfx_file.name, 0);
                             }
                         } else {
                             if (uiActionBar.Button(CSTR("Stop"), ColorBrightness(MAROON, -0.3f)).pressed) {
-                                StopSound(sfxFile.name);
+                                StopSound(sfx_file.name);
                             }
                         }
                         uiActionBar.Newline();
@@ -1657,14 +1656,14 @@ void Editor::DrawUI_PackFiles(UI &uiActionBar, double now)
                     case DAT_TYP_GFX_FRAME:
                     {
                         const float labelWidth = 40;
-                        GfxFrame &gfxFrame = pack.gfx_frames[entry.index];
-                        HAQ_UI(HQT_GFX_FRAME, gfxFrame);
+                        GfxFrame &gfx_frame = pack.gfx_frames[entry.index];
+                        HAQ_UI(HQT_GFX_FRAME_FIELDS, gfx_frame);
                         break;
                     }
                     case DAT_TYP_GFX_ANIM:
                     {
-                        GfxAnim &gfxAnim = pack.gfx_anims[entry.index];
-                        HAQ_UI(HQT_GFX_ANIM, gfxAnim);
+                        GfxAnim &gfx_anim = pack.gfx_anims[entry.index];
+                        HAQ_UI(HQT_GFX_ANIM_FIELDS, gfx_anim);
 #if 0
                         uiActionBar.Label(CSTR("id"), labelWidth);
                         uiActionBar.Text(CSTRS(gfxAnim.id));
@@ -1693,7 +1692,7 @@ void Editor::DrawUI_PackFiles(UI &uiActionBar, double now)
                         const float labelWidth = 40.0f;
                         Sprite &sprite = pack.sprites[entry.index];
 #if 1
-                        HAQ_UI(HQT_SPRITE, sprite);
+                        HAQ_UI(HQT_SPRITE_FIELDS, sprite);
 #else
                         uiActionBar.Label(CSTR("name"), labelWidth);
                         uiActionBar.Text(CSTRS(sprite.name));
@@ -1736,19 +1735,19 @@ void Editor::DrawUI_PackFiles(UI &uiActionBar, double now)
                     case DAT_TYP_TILE_DEF:
                     {
                         TileDef &tile_def = pack.tile_defs[entry.index];
-                        HAQ_UI(HQT_TILE_DEF, tile_def);
+                        HAQ_UI(HQT_TILE_DEF_FIELDS, tile_def);
                         break;
                     }
                     case DAT_TYP_TILE_MAT:
                     {
                         TileMat &tile_mat = pack.tile_mats[entry.index];
-                        HAQ_UI(HQT_TILE_MAT, tile_mat);
+                        HAQ_UI(HQT_TILE_MAT_FIELDS, tile_mat);
                         break;
                     }
                     case DAT_TYP_TILE_MAP:
                     {
-                        uiActionBar.Text(CSTR("TODO"));
-                        uiActionBar.Newline();
+                        Tilemap &tile_map = pack.tile_maps[entry.index];
+                        HAQ_UI(HQT_TILE_MAP_FIELDS, tile_map);
                         break;
                     }
                     case DAT_TYP_ENTITY:

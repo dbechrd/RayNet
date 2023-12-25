@@ -211,7 +211,7 @@ int main(int argc, char *argv[])
         if (client->yj_client->IsConnected()) {
             Tilemap *map = client->world->LocalPlayerMap();
             if (map) {
-                const MusFile &mus_file = packs[0].FindByName<MusFile>(map->background_music);
+                const MusFile &mus_file = packs[0].FindByName<MusFile>(map->bg_music);
                 if (!IsMusicStreamPlaying(mus_file.music)) {
                     PlayMusicStream(mus_file.music);
                 }

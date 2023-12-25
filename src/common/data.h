@@ -68,11 +68,16 @@ enum Direction : uint8_t {
     DIR_NW
 };
 
+#if 0
 struct DatBuffer {
     bool filename;  // if true, the buffer contains a filename not the file data
     size_t length;
     uint8_t *bytes;
 };
+
+void ReadFileIntoDataBuffer(const std::string &filename, DatBuffer &datBuffer);
+void FreeDataBuffer(DatBuffer &datBuffer);
+#endif
 
 struct GfxAnimState {
     uint8_t frame {};  // current frame index
@@ -96,121 +101,125 @@ enum HAQ_FLAGS {
     HAQ_EDIT_TEXTBOX_STYLE_Z = 0b01000000,  // set textbox background color to blue
 };
 
-#define HQT_GFX_FILE(TYPE, FIELD, OTHER, userdata) \
-TYPE(struct, GfxFile, { \
-    OTHER(static const DataType dtype = DAT_TYP_GFX_FILE;) \
+struct GfxFile {
+    static const DataType dtype = DAT_TYP_GFX_FILE;
+
+#define HQT_GFX_FILE_FIELDS(FIELD, userdata) \
     FIELD(uint32_t   , id         , {}, HAQ_SERIALIZE           , userdata) \
     FIELD(std::string, name       , {}, HAQ_SERIALIZE | HAQ_EDIT, userdata) \
-    FIELD(std::string, path       , {}, HAQ_SERIALIZE | HAQ_EDIT, userdata) \
-    FIELD(DatBuffer  , data_buffer, {}, HAQ_SERIALIZE           , userdata) \
-    FIELD(Texture    , texture    , {}, HAQ_NONE                , userdata) \
-}, userdata)
+    FIELD(std::string, path       , {}, HAQ_SERIALIZE | HAQ_EDIT, userdata)
+    HQT_GFX_FILE_FIELDS(HAQ_C_FIELD, 0);
 
-HAQ_C(HQT_GFX_FILE, 0);
+    Texture texture{};
+};
 
-#define HQT_MUS_FILE(TYPE, FIELD, OTHER, userdata) \
-TYPE(struct, MusFile, { \
-    OTHER(static const DataType dtype = DAT_TYP_MUS_FILE;) \
+struct MusFile {
+    static const DataType dtype = DAT_TYP_MUS_FILE;
+
+#define HQT_MUS_FILE_FIELDS(FIELD, userdata) \
     FIELD(uint32_t   , id         , {}, HAQ_SERIALIZE           , userdata) \
     FIELD(std::string, name       , {}, HAQ_SERIALIZE | HAQ_EDIT, userdata) \
-    FIELD(std::string, path       , {}, HAQ_SERIALIZE | HAQ_EDIT, userdata) \
-    FIELD(DatBuffer  , data_buffer, {}, HAQ_SERIALIZE           , userdata) \
-    FIELD(Music      , music      , {}, HAQ_NONE                , userdata) \
-}, userdata)
+    FIELD(std::string, path       , {}, HAQ_SERIALIZE | HAQ_EDIT, userdata)
+    HQT_MUS_FILE_FIELDS(HAQ_C_FIELD, 0);
 
-HAQ_C(HQT_MUS_FILE, 0);
+    Music music {};
+};
 
-#define HQT_SFX_FILE(TYPE, FIELD, OTHER, userdata) \
-TYPE(struct, SfxFile, { \
-    OTHER(static const DataType dtype = DAT_TYP_SFX_FILE;) \
-    FIELD(uint32_t          , id            , {}, HAQ_SERIALIZE                                     , userdata) \
-    FIELD(std::string       , name          , {}, HAQ_SERIALIZE | HAQ_EDIT                          , userdata) \
-    FIELD(std::string       , path          , {}, HAQ_SERIALIZE | HAQ_EDIT                          , userdata) \
-    FIELD(int               , variations    , {}, HAQ_SERIALIZE /*| HAQ_EDIT*/                      , userdata) \
-    FIELD(float             , pitch_variance, {}, HAQ_SERIALIZE | HAQ_EDIT | HAQ_EDIT_FLOAT_HUNDRETH, userdata) \
-    FIELD(int               , max_instances , {}, HAQ_SERIALIZE /*| HAQ_EDIT*/                      , userdata) \
-    FIELD(DatBuffer         , data_buffer   , {}, HAQ_SERIALIZE                                     , userdata) \
-    FIELD(Sound             , sound         , {}, HAQ_NONE                                          , userdata) \
-    FIELD(std::vector<Sound>, instances     , {}, HAQ_NONE                                          , userdata) \
-}, userdata)
+struct SfxVariant {
+    std::string        path      {};
+    Sound              sound     {};
+    std::vector<Sound> instances {};
+};
 
-HAQ_C(HQT_SFX_FILE, 0);
+struct SfxFile {
+    static const DataType dtype = DAT_TYP_SFX_FILE;
 
-#define HQT_GFX_FRAME(TYPE, FIELD, OTHER, userdata) \
-TYPE(struct, GfxFrame, { \
-    OTHER(static const DataType dtype = DAT_TYP_GFX_FRAME;) \
+#define HQT_SFX_FILE_FIELDS(FIELD, userdata) \
+    FIELD(uint32_t                       , id            , {}, HAQ_SERIALIZE                                     , userdata) \
+    FIELD(std::string                    , name          , {}, HAQ_SERIALIZE | HAQ_EDIT                          , userdata) \
+    FIELD(std::string                    , path          , {}, HAQ_SERIALIZE | HAQ_EDIT                          , userdata) \
+    FIELD(int                            , variations    , {}, HAQ_SERIALIZE /*| HAQ_EDIT*/                      , userdata) \
+    FIELD(float                          , pitch_variance, {}, HAQ_SERIALIZE | HAQ_EDIT | HAQ_EDIT_FLOAT_HUNDRETH, userdata) \
+    FIELD(int                            , max_instances , {}, HAQ_SERIALIZE /*| HAQ_EDIT*/                      , userdata)
+    HQT_SFX_FILE_FIELDS(HAQ_C_FIELD, 0);
+
+    std::vector<SfxVariant> variants{};
+};
+
+struct GfxFrame {
+    static const DataType dtype = DAT_TYP_GFX_FRAME;
+
+#define HQT_GFX_FRAME_FIELDS(FIELD, userdata) \
     FIELD(uint32_t   , id  , {}, HAQ_SERIALIZE                                      , userdata) \
     FIELD(std::string, name, {}, HAQ_SERIALIZE | HAQ_EDIT                           , userdata) \
     FIELD(std::string, gfx , {}, HAQ_SERIALIZE | HAQ_EDIT                           , userdata) \
     FIELD(uint16_t   , x   , {}, HAQ_SERIALIZE | HAQ_EDIT | HAQ_EDIT_TEXTBOX_STYLE_X, userdata) \
     FIELD(uint16_t   , y   , {}, HAQ_SERIALIZE | HAQ_EDIT | HAQ_EDIT_TEXTBOX_STYLE_Y, userdata) \
     FIELD(uint16_t   , w   , {}, HAQ_SERIALIZE | HAQ_EDIT                           , userdata) \
-    FIELD(uint16_t   , h   , {}, HAQ_SERIALIZE | HAQ_EDIT                           , userdata) \
-}, userdata)
+    FIELD(uint16_t   , h   , {}, HAQ_SERIALIZE | HAQ_EDIT                           , userdata)
+    HQT_GFX_FRAME_FIELDS(HAQ_C_FIELD, 0);
+};
 
-HAQ_C(HQT_GFX_FRAME, 0);
+struct GfxAnim {
+    static const DataType dtype = DAT_TYP_GFX_ANIM;
 
-#define HQT_GFX_ANIM(TYPE, FIELD, OTHER, userdata)                                       \
-TYPE(struct, GfxAnim, {                                                                  \
-    OTHER(static const DataType dtype = DAT_TYP_GFX_ANIM;)                               \
+#define HQT_GFX_ANIM_FIELDS(FIELD, userdata) \
     FIELD(uint32_t                , id         , {}, HAQ_SERIALIZE           , userdata) \
     FIELD(std::string             , name       , {}, HAQ_SERIALIZE | HAQ_EDIT, userdata) \
     FIELD(std::string             , sound      , {}, HAQ_SERIALIZE | HAQ_EDIT, userdata) \
-    FIELD(uint8_t                 , frame_rate , {}, HAQ_SERIALIZE | HAQ_EDIT, userdata) \
     FIELD(uint8_t                 , frame_count, {}, HAQ_SERIALIZE | HAQ_EDIT, userdata) \
     FIELD(uint8_t                 , frame_delay, {}, HAQ_SERIALIZE | HAQ_EDIT, userdata) \
-    FIELD(std::vector<std::string>, frames     , {}, HAQ_SERIALIZE | HAQ_EDIT, userdata) \
-    OTHER(                                                                               \
-        bool soundPlayed{};                                                              \
-                                                                                         \
-        const std::string &GetFrame(size_t index) const {                                \
-            if (index < frames.size()) {                                                 \
-                return frames[index];                                                    \
-            }                                                                            \
-            return rnStringCatalog.Find(rnStringNull);                                   \
-        }                                                                                \
-    )                                                                                    \
-}, userdata)
+    FIELD(std::vector<std::string>, frames     , {}, HAQ_SERIALIZE | HAQ_EDIT, userdata)
+    HQT_GFX_ANIM_FIELDS(HAQ_C_FIELD, 0);
 
-HAQ_C(HQT_GFX_ANIM, 0);
+    bool soundPlayed{};
 
-#define HQT_SPRITE(TYPE, FIELD, OTHER, userdata)                                              \
-TYPE(struct, Sprite, {                                                                        \
-    OTHER(static const DataType dtype = DAT_TYP_SPRITE;)                                      \
-    FIELD(uint32_t                           , id   , {}, HAQ_SERIALIZE           , userdata) \
-    FIELD(std::string                        , name , {}, HAQ_SERIALIZE | HAQ_EDIT, userdata) \
-    FIELD(std::array<std::string HAQ_COMMA 8>, anims, {}, HAQ_SERIALIZE | HAQ_EDIT, userdata) \
-}, userdata)
+    const std::string &GetFrame(size_t index) const {
+        if (index < frames.size()) {
+            return frames[index];
+        }
+        return rnStringCatalog.Find(rnStringNull);
+    }
+};
 
-HAQ_C(HQT_SPRITE, 0);
+struct Sprite {
+    static const DataType dtype = DAT_TYP_SPRITE;
 
-#define HQT_TILE_DEF(TYPE, FIELD, OTHER, userdata)                              \
-TYPE(struct, TileDef, {                                                         \
-    OTHER(static const DataType dtype = DAT_TYP_TILE_DEF;)                      \
+    using AnimArray = std::array<std::string, 8>;
+
+#define HQT_SPRITE_FIELDS(FIELD, userdata) \
+    FIELD(uint32_t   , id   , {}, HAQ_SERIALIZE           , userdata) \
+    FIELD(std::string, name , {}, HAQ_SERIALIZE | HAQ_EDIT, userdata) \
+    FIELD(AnimArray  , anims, {}, HAQ_SERIALIZE | HAQ_EDIT, userdata)
+    HQT_SPRITE_FIELDS(HAQ_C_FIELD, 0);
+};
+
+struct TileDef {
+    static const DataType dtype = DAT_TYP_TILE_DEF;
+
+#define HQT_TILE_DEF_FIELDS(FIELD, userdata) \
     FIELD(uint32_t    , id            , {}, HAQ_SERIALIZE           , userdata) \
     FIELD(std::string , name          , {}, HAQ_SERIALIZE | HAQ_EDIT, userdata) \
     FIELD(std::string , anim          , {}, HAQ_SERIALIZE | HAQ_EDIT, userdata) \
     FIELD(uint32_t    , material_id   , {}, HAQ_SERIALIZE | HAQ_EDIT, userdata) \
     FIELD(TileDefFlags, flags         , {}, HAQ_SERIALIZE | HAQ_EDIT, userdata) \
-    FIELD(uint8_t     , auto_tile_mask, {}, HAQ_SERIALIZE | HAQ_EDIT, userdata) \
-    OTHER(                                                                      \
-        /* color for minimap/wang tile editor (top left pixel of tile) */       \
-        Color        color      {};                                             \
-        GfxAnimState anim_state {};                                             \
-    )                                                                           \
-}, userdata)
+    FIELD(uint8_t     , auto_tile_mask, {}, HAQ_SERIALIZE | HAQ_EDIT, userdata)
+    HQT_TILE_DEF_FIELDS(HAQ_C_FIELD, 0);
 
-HAQ_C(HQT_TILE_DEF, 0);
+    // color for minimap/wang tile editor (top left pixel of tile)
+    Color        color      {};
+    GfxAnimState anim_state {};
+};
 
-#define HQT_TILE_MAT(TYPE, FIELD, OTHER, userdata)                             \
-TYPE(struct, TileMat, {                                                        \
-    OTHER(static const DataType dtype = DAT_TYP_TILE_MAT;)                     \
+struct TileMat {
+    static const DataType dtype = DAT_TYP_TILE_MAT;
+
+#define HQT_TILE_MAT_FIELDS(FIELD, userdata) \
     FIELD(uint32_t   , id            , {}, HAQ_SERIALIZE           , userdata) \
     FIELD(std::string, name          , {}, HAQ_SERIALIZE | HAQ_EDIT, userdata) \
-    FIELD(std::string, footstep_sound, {}, HAQ_SERIALIZE | HAQ_EDIT, userdata) \
-}, userdata)
-
-HAQ_C(HQT_TILE_MAT, 0);
+    FIELD(std::string, footstep_sound, {}, HAQ_SERIALIZE | HAQ_EDIT, userdata)
+    HQT_TILE_MAT_FIELDS(HAQ_C_FIELD, 0);
+};
 
 ////////////////////////////////////////////////////////////////////////////
 
@@ -291,21 +300,20 @@ struct Tilemap {
     static const uint32_t VERSION = 9;
     static const uint32_t SENTINEL = 0x12345678;
 
-    uint32_t    version          {};  // version on disk
-    uint32_t    id               {};  // id of the map (for networking)
-    std::string name             {};  // name of map area
-    uint32_t    width            {};  // width of map in tiles
-    uint32_t    height           {};  // height of map in tiles
-    std::string title            {};  // display name
-    std::string background_music {};  // background music
-
-    std::vector<uint32_t>   tiles       {};
-    std::vector<uint32_t>   objects     {};
-    //std::vector<bool>       solid       {};
-    // TODO(dlb): Consider having vector<Warp>, vector<Lootable> etc. and having vector<ObjectData> be pointers/indices into those tables?
-    std::vector<ObjectData> object_data {};
-    std::vector<AiPathNode> pathNodes   {};  // 94 19 56 22 57
-    std::vector<AiPath>     paths       {};  // offset, length | 0, 3 | 3, 3
+#define HQT_TILE_MAP_FIELDS(FIELD, userdata) \
+    FIELD(uint32_t               , version    , {}, HAQ_SERIALIZE           , userdata) /* version on disk                */ \
+    FIELD(uint32_t               , id         , {}, HAQ_SERIALIZE           , userdata) /* id of the map (for networking) */ \
+    FIELD(std::string            , name       , {}, HAQ_SERIALIZE | HAQ_EDIT, userdata) /* name of map area               */ \
+    FIELD(uint32_t               , width      , {}, HAQ_SERIALIZE | HAQ_EDIT, userdata) /* width of map in tiles          */ \
+    FIELD(uint32_t               , height     , {}, HAQ_SERIALIZE | HAQ_EDIT, userdata) /* height of map in tiles         */ \
+    FIELD(std::string            , title      , {}, HAQ_SERIALIZE | HAQ_EDIT, userdata) /* display name                   */ \
+    FIELD(std::string            , bg_music   , {}, HAQ_SERIALIZE | HAQ_EDIT, userdata) /* background music               */ \
+    FIELD(std::vector<uint32_t>  , tiles      , {}, HAQ_SERIALIZE/* | HAQ_EDIT */, userdata) \
+    FIELD(std::vector<uint32_t>  , objects    , {}, HAQ_SERIALIZE/* | HAQ_EDIT */, userdata) \
+    FIELD(std::vector<ObjectData>, object_data, {}, HAQ_SERIALIZE | HAQ_EDIT     , userdata) \
+    FIELD(std::vector<AiPathNode>, path_nodes , {}, HAQ_SERIALIZE/* | HAQ_EDIT */, userdata) \
+    FIELD(std::vector<AiPath>    , paths      , {}, HAQ_SERIALIZE/* | HAQ_EDIT */, userdata)
+    HQT_TILE_MAP_FIELDS(HAQ_C_FIELD, 0);
 
     //-------------------------------
     // Not serialized
@@ -517,9 +525,6 @@ struct PackStream {
         }
     };
 };
-
-void ReadFileIntoDataBuffer(const std::string &filename, DatBuffer &datBuffer);
-void FreeDataBuffer(DatBuffer &datBuffer);
 
 Err Init(void);
 void Free(void);

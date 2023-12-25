@@ -631,7 +631,6 @@ void dlb_CommonTests(void)
 //#include "meta/resource_library.capnp.c++"
 #include "net/net.cpp"
 #include "perf_timer.cpp"
-#include "schema.cpp"
 #include "strings.cpp"
 #include "tilemap.cpp"
 #include "ui/ui.cpp"

@@ -876,7 +876,7 @@ void ClientWorld::DrawHUDMenu(void)
 
     Tilemap *map = LocalPlayerMap();
     if (map) {
-        uiHUDMenu.Text(map->background_music.c_str(), map->background_music.size());
+        uiHUDMenu.Text(map->bg_music.c_str(), map->bg_music.size());
     } else {
         uiHUDMenu.Text(CSTR("-Empty-"));
     }

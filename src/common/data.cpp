@@ -2,18 +2,9 @@
 #include "file_utils.h"
 #include "net/net.h"
 #include "perf_timer.h"
-#include "schema.h"
 
 #define MD_HIJACK_STRING_CONSTANTS 0
 #include "md.h"
-
-//#include "capnp/message.h"
-//#include "capnp/serialize.h"
-//#include "capnp/serialize-text.h"
-//#include "meta/resource_library.capnp.h"
-//
-//#include <io.h>
-//#include <fcntl.h>
 
 struct GameState {
     bool freye_introduced;
@@ -46,6 +37,8 @@ uint32_t FreyeIntroListener(uint32_t source_id, uint32_t target_id, uint32_t dia
     return final_dialog_id;
 }
 
+// TODO(dlb)[cleanup]: Data buffer stuff
+#if 0
 void ReadFileIntoDataBuffer(const std::string &filename, DatBuffer &datBuffer)
 {
     int bytes_read = 0;
@@ -59,6 +52,21 @@ void FreeDataBuffer(DatBuffer &datBuffer)
         datBuffer = {};
     }
 }
+
+void Process(PackStream &stream, DatBuffer &buffer)
+{
+    PROC(buffer.length);
+    if (buffer.length) {
+        if (!buffer.bytes) {
+            assert(stream.mode == PACK_MODE_READ);
+            buffer.bytes = (uint8_t *)MemAlloc(buffer.length);
+        }
+        for (size_t i = 0; i < buffer.length; i++) {
+            PROC(buffer.bytes[i]);
+        }
+    }
+}
+#endif
 
 Err SaveTilemap(const std::string &path, Tilemap &tilemap)
 {
@@ -82,7 +90,7 @@ Err SaveTilemap(const std::string &path, Tilemap &tilemap)
         fprintf(file, "    width: %u\n", tilemap.width);
         fprintf(file, "    height: %u\n", tilemap.height);
         fprintf(file, "    title: \"%s\"\n", tilemap.title.c_str());
-        fprintf(file, "    background_music: %s\n", tilemap.background_music.c_str());
+        fprintf(file, "    bg_music: %s\n", tilemap.bg_music.c_str());
         fprintf(file, "    ground_tiles: [");
         for (int i = 0; i < tilemap.tiles.size(); i++) {
             if (i % tilemap.width == 0) {
@@ -140,7 +148,7 @@ Err SaveTilemap(const std::string &path, Tilemap &tilemap)
 
         fprintf(file, "    path_nodes: [\n");
         fprintf(file, "        //%-6s %-6s %-6s %-4s\n", "x", "y", "z", "wait_for");
-        for (AiPathNode &path_node : tilemap.pathNodes) {
+        for (AiPathNode &path_node : tilemap.path_nodes) {
             fprintf(file, "        { %-6.f %-6.f %-6.f %-4.1f }\n",
                 path_node.pos.x,
                 path_node.pos.y,
@@ -438,21 +446,7 @@ struct MetaParser : public MetaParserBase {
                         META_INT(sfx_file.max_instances);
                     META_CHILDREN_END;
 
-                    // NOTE(dlb): This is a bit janky, probably a better way to handle sound variants tbh
-                    if (sfx_file.variations > 1) {
-                        const char *file_dir = GetDirectoryPath(sfx_file.path.c_str());
-                        const char *file_name = GetFileNameWithoutExt(sfx_file.path.c_str());
-                        const char *file_ext = GetFileExtension(sfx_file.path.c_str());
-                        for (int i = 1; i <= sfx_file.variations; i++) {
-                            // Build variant path, e.g. chicken_cluck.wav -> chicken_cluck_01.wav
-                            const char *variant_path = TextFormat("%s/%s_%02d%s", file_dir, file_name, i, file_ext);
-                            SfxFile sfx_variant = sfx_file;
-                            sfx_variant.path = variant_path;
-                            pack.sfx_files.push_back(sfx_variant);
-                        }
-                    } else {
-                        pack.sfx_files.push_back(sfx_file);
-                    }
+                    pack.sfx_files.push_back(sfx_file);
                 } else if (MD_NodeHasTag(node, MD_S8Lit("GfxFrame"), 0)) {
                     GfxFrame gfx_frame{};
 
@@ -546,8 +540,8 @@ struct MetaParser : public MetaParserBase {
                                     META_UINT32(map.height);
                                 } else if (key == "title") {
                                     META_STRING(map.title);
-                                } else if (key == "background_music") {
-                                    META_IDENT(map.background_music);
+                                } else if (key == "bg_music") {
+                                    META_IDENT(map.bg_music);
                                 } else if (key == "ground_tiles") {
                                     META_CHILDREN_LOOP_BEGIN;  // []
                                         uint32_t tile_id{};
@@ -601,7 +595,7 @@ struct MetaParser : public MetaParserBase {
                                             META_DOUBLE(path_node.waitFor);
                                         META_CHILDREN_END;
 
-                                        map.pathNodes.push_back(path_node);
+                                        map.path_nodes.push_back(path_node);
                                     META_CHILDREN_LOOP_END_NEXT;
                                 } else if (key == "paths") {
                                     META_CHILDREN_LOOP_BEGIN;  // []
@@ -638,20 +632,16 @@ struct MetaParser : public MetaParserBase {
 
 void CompressFile(const char *srcFileName, const char *dstFileName)
 {
-    DatBuffer raw{};
-    int bytesRead = 0;
-    raw.bytes = LoadFileData(srcFileName, &bytesRead);
-    raw.length = bytesRead;
+    int rawSize = 0;
+    uint8_t *rawBytes = LoadFileData(srcFileName, &rawSize);
 
-    DatBuffer compressed{};
     int compressedSize = 0;
-    compressed.bytes = CompressData(raw.bytes, raw.length, &compressedSize);
-    compressed.length = compressedSize;
+    uint8_t *compressedBytes = CompressData(rawBytes, rawSize, &compressedSize);
 
-    SaveFileData(dstFileName, compressed.bytes, compressed.length);
+    SaveFileData(dstFileName, compressedBytes, compressedSize);
 
-    MemFree(raw.bytes);
-    MemFree(compressed.bytes);
+    MemFree(rawBytes);
+    MemFree(compressedBytes);
 }
 
 Err LoadResources(Pack &pack);
@@ -664,53 +654,7 @@ Err Init(void)
 #endif
 
 #if 0
-    // TODO: Investigate POD plugin
-    // https://github.com/nickolasrossi/podgen/tree/master
-    {
-        capnp::MallocMessageBuilder message;
-
-        meta::ResourceLibrary::Builder library = message.initRoot<meta::ResourceLibrary>();
-        capnp::List<meta::Resource>::Builder resources = library.initResources(2);
-
-        meta::Resource::Builder gfx_missing = resources[0];
-        gfx_missing.setId(0);
-        gfx_missing.setName("gfx_missing");
-        gfx_missing.setPath("resources/graphics/missing.png");
-
-        meta::Resource::Builder gfx_dlg_npatch = resources[1];
-        gfx_dlg_npatch.setId(1);
-        gfx_dlg_npatch.setName("gfx_dlg_npatch");
-        gfx_dlg_npatch.setPath("resources/graphics/npatch.png");
-
-        int fd = _open("capnp/resource_library.bin", _O_RDWR | _O_CREAT | _O_BINARY);
-        capnp::writeMessageToFd((int)fd, message);
-        _close(fd);
-    }
-
-    {
-        int fd = _open("capnp/resource_library.bin", _O_RDWR | _O_BINARY);
-        capnp::StreamFdMessageReader reader(fd);
-
-        auto library = reader.getRoot<meta::ResourceLibrary>();
-        for (auto resource : library.getResources()) {
-            printf("resource name: %s\n", resource.getName().cStr());
-        }
-
-        _close(fd);
-    }
-#endif
-
-#if 0
     NewEnt::run_tests();
-#endif
-
-#if 0
-    {
-        ta_schema_register();
-        foo dat{};
-        ta_schema_print(stdout, TYP_FOO, &dat, 0, 0);
-        //ta_schema_print_json(stdout, TYP_FOO, &dat, 0, 0);
-    }
 #endif
 
     PerfTimer t{ "InitCommon" };
@@ -778,9 +722,13 @@ Err Init(void)
 
         packAssets.path = "pack/assets.txt";
         ERR_RETURN(SavePack(packAssets, PACK_TYPE_TEXT));
+        packMaps.path = "pack/maps.txt";
+        ERR_RETURN(SavePack(packMaps, PACK_TYPE_TEXT));
 
         Pack packAssetsTxt{ "pack/assets.txt" };
         ERR_RETURN(LoadPack(packAssetsTxt, PACK_TYPE_TEXT));
+        Pack packMapsTxt{ "pack/maps.txt" };
+        ERR_RETURN(LoadPack(packMapsTxt, PACK_TYPE_TEXT));
     }
 #endif
 
@@ -830,6 +778,31 @@ void Free(void)
 #endif
 }
 
+char PeekTxt(FILE *f)
+{
+    char next = fgetc(f);
+    fseek(f, ftell(f) - 1, SEEK_SET);
+    return next;
+}
+
+void ReportTxtError(FILE *f, const char *msg)
+{
+    int tell = ftell(f);
+    fseek(f, 0, SEEK_SET);
+    int line = 1;
+    int column = 1;
+    for (int i = 0; i < tell; i++) {
+        char c = fgetc(f);
+        column++;
+        if (c == '\n') {
+            line++;
+            column = 1;
+        }
+    }
+    printf("ERROR line %d column %d: %s\n", line, column, msg);
+    assert(!"nope");
+}
+
 #define PROC(v) Process(stream, v)
 
 template<class T>
@@ -851,8 +824,8 @@ void Process(PackStream &stream, T &v)
             else if constexpr (std::is_same_v<T, uint16_t>) fprintf(stream.file, " %" PRIu16, v);
             else if constexpr (std::is_same_v<T, uint32_t>) fprintf(stream.file, " %" PRIu32, v);
             else if constexpr (std::is_same_v<T, uint64_t>) fprintf(stream.file, " %" PRIu64, v);
-            else if constexpr (std::is_same_v<T, float   >) fprintf(stream.file, " %f", v);
-            else if constexpr (std::is_same_v<T, double  >) fprintf(stream.file, " %f", v);
+            else if constexpr (std::is_same_v<T, float   >) fprintf(stream.file, " %.2f", v);
+            else if constexpr (std::is_same_v<T, double  >) fprintf(stream.file, " %.2f", v);
             else if constexpr (std::is_enum_v<T>)           fprintf(stream.file, " %d", v);
             else assert(!"unhandled type"); //fprintf(stream.file, " <%s>\n", typeid(T).name());
         } else {
@@ -887,14 +860,27 @@ void Process(PackStream &stream, std::string &str)
         if (stream.mode == PACK_MODE_WRITE) {
             fprintf(stream.file, " \"%s\"", str.c_str());
         } else {
-            char buf[1024]{};
-            fscanf(stream.file, " \"%1023[^\"]", buf);
-            char end_quote{};
-            fscanf(stream.file, "%c", &end_quote);
-            if (end_quote != '"') {
-                assert(!"string too long, not supported");
-            }
-            str = buf;
+            assert(str.size() == 0);
+            do {
+                char buf[1024]{};
+                fscanf(stream.file, " \"%1023[^\"]", buf);
+
+                char end_quote{};
+                fscanf(stream.file, " %c", &end_quote);
+                if (end_quote != '"') {
+                    ReportTxtError(stream.file, "string too long, not supported");
+                    exit(-1);
+                }
+                str += buf;
+
+                char next = PeekTxt(stream.file);
+                if (next == '"') {
+                    // if next char is quote, we have a double-double-quote situation and want to keep reading
+                    str += '"';
+                    continue;
+                }
+                break;
+            } while (1);
         }
     } else {
         PROC(strLen);
@@ -920,10 +906,23 @@ void Process(PackStream &stream, std::vector<T> &vec)
 {
     assert(vec.size() < UINT16_MAX);
     uint16_t len = (uint16_t)vec.size();
+
+    int wrap_width = 1;
+    if constexpr (std::is_fundamental_v<T> || std::is_enum_v<T>) {
+        wrap_width = 16;
+    }
+
+    fprintf(stream.file, "\n");
     PROC(len);
     vec.resize(len);
+
+    if (len) fprintf(stream.file, "\n");
+
     for (int i = 0; i < len; i++) {
         PROC(vec[i]);
+        if ((i % wrap_width == (wrap_width - 1)) && i != len - 1) {
+            fprintf(stream.file, "\n");
+        }
     }
 }
 void Process(PackStream &stream, Vector2 &vec)
@@ -944,22 +943,6 @@ void Process(PackStream &stream, Rectangle &rec)
     PROC(rec.width);
     PROC(rec.height);
 }
-void Process(PackStream &stream, DatBuffer &buffer)
-{
-    PROC(buffer.length);
-    if (buffer.length) {
-        if (!buffer.bytes) {
-            assert(stream.mode == PACK_MODE_READ);
-            buffer.bytes = (uint8_t *)MemAlloc(buffer.length);
-        }
-        for (size_t i = 0; i < buffer.length; i++) {
-            PROC(buffer.bytes[i]);
-        }
-    }
-}
-
-#define HAQ_IO_TYPE(c_type, c_type_name, c_body, userdata) \
-    c_body
 
 #define HAQ_IO_FIELD(c_type, c_name, c_init, flags, userdata) \
     if constexpr ((flags) & HAQ_SERIALIZE) { \
@@ -967,146 +950,84 @@ void Process(PackStream &stream, DatBuffer &buffer)
     }
 
 #define HAQ_IO(hqt, userdata) \
-    hqt(HAQ_IO_TYPE, HAQ_IO_FIELD, HAQ_IGNORE, userdata);
+    hqt(HAQ_IO_FIELD, userdata);
 
 void Process(PackStream &stream, GfxFile &gfx_file)
 {
-    HAQ_IO(HQT_GFX_FILE, gfx_file);
+    HAQ_IO(HQT_GFX_FILE_FIELDS, gfx_file);
 }
 void Process(PackStream &stream, MusFile &mus_file)
 {
-    HAQ_IO(HQT_MUS_FILE, mus_file);
+    HAQ_IO(HQT_MUS_FILE_FIELDS, mus_file);
 }
 void Process(PackStream &stream, SfxFile &sfx_file)
 {
-    HAQ_IO(HQT_SFX_FILE, sfx_file);
+    HAQ_IO(HQT_SFX_FILE_FIELDS, sfx_file);
 }
 void Process(PackStream &stream, GfxFrame &gfx_frame)
 {
-    HAQ_IO(HQT_GFX_FRAME, gfx_frame);
+    HAQ_IO(HQT_GFX_FRAME_FIELDS, gfx_frame);
 }
 void Process(PackStream &stream, GfxAnim &gfx_anim)
 {
-    HAQ_IO(HQT_GFX_ANIM, gfx_anim);
+    HAQ_IO(HQT_GFX_ANIM_FIELDS, gfx_anim);
 }
 void Process(PackStream &stream, Sprite &sprite)
 {
-    HAQ_IO(HQT_SPRITE, sprite);
+    HAQ_IO(HQT_SPRITE_FIELDS, sprite);
 }
 void Process(PackStream &stream, TileDef &tile_def)
 {
-    HAQ_IO(HQT_TILE_DEF, tile_def);
+    HAQ_IO(HQT_TILE_DEF_FIELDS, tile_def);
 }
 void Process(PackStream &stream, TileMat &tile_mat)
 {
-    HAQ_IO(HQT_TILE_MAT, tile_mat);
+    HAQ_IO(HQT_TILE_MAT_FIELDS, tile_mat);
+}
+void Process(PackStream &stream, ObjectData &obj_data)
+{
+    PROC(obj_data.x);
+    PROC(obj_data.y);
+    PROC(obj_data.type);
+
+    if (obj_data.type == "lever") {
+        PROC(obj_data.power_level);
+        PROC(obj_data.tile_def_unpowered);
+        PROC(obj_data.tile_def_powered);
+    } else if (obj_data.type == "lootable") {
+        PROC(obj_data.loot_table_id);
+    } else if (obj_data.type == "sign") {
+        PROC(obj_data.sign_text[0]);
+        PROC(obj_data.sign_text[1]);
+        PROC(obj_data.sign_text[2]);
+        PROC(obj_data.sign_text[3]);
+    } else if (obj_data.type == "warp") {
+        PROC(obj_data.warp_map_id);
+        PROC(obj_data.warp_dest_x);
+        PROC(obj_data.warp_dest_y);
+        PROC(obj_data.warp_dest_z);
+    }
+}
+void Process(PackStream &stream, AiPathNode &aiPathNode)
+{
+    PROC(aiPathNode.pos.x);
+    PROC(aiPathNode.pos.y);
+    PROC(aiPathNode.pos.z);
+    PROC(aiPathNode.waitFor);
+}
+void Process(PackStream &stream, AiPath &aiPath)
+{
+    PROC(aiPath.pathNodeStart);
+    PROC(aiPath.pathNodeCount);
 }
 void Process(PackStream &stream, Tilemap &tile_map)
 {
-    uint32_t sentinel = 0;
-    if (stream.mode == PackStreamMode::PACK_MODE_WRITE) {
-        sentinel = Tilemap::SENTINEL;
-    }
-
     if (stream.mode == PackStreamMode::PACK_MODE_WRITE) {
         assert(tile_map.width * tile_map.height == tile_map.tiles.size());
         assert(tile_map.width * tile_map.height == tile_map.objects.size());
     }
 
-    PROC(tile_map.version);
-    PROC(tile_map.id);
-    PROC(tile_map.name);
-    PROC(tile_map.width);
-    PROC(tile_map.height);
-    PROC(tile_map.title);
-    PROC(tile_map.background_music);
-
-    PROC(sentinel);
-    assert(sentinel == Tilemap::SENTINEL);
-
-    //SetTextureWrap(texEntry.texture, TEXTURE_WRAP_CLAMP);
-
-    //if (!width || !height) {
-    //    err = RN_INVALID_SIZE; break;
-    //}
-
-    uint32_t objDataCount   = tile_map.object_data.size();
-    uint32_t pathNodeCount  = tile_map.pathNodes.size();
-    uint32_t pathCount      = tile_map.paths.size();
-
-    PROC(objDataCount);
-    PROC(pathNodeCount);
-    PROC(pathCount);
-
-    PROC(sentinel);
-    assert(sentinel == Tilemap::SENTINEL);
-
-    tile_map.tiles      .resize((size_t)tile_map.width * tile_map.height);
-    tile_map.objects    .resize((size_t)tile_map.width * tile_map.height);
-    tile_map.object_data.resize(objDataCount);
-    tile_map.pathNodes  .resize(pathNodeCount);
-    tile_map.paths      .resize(pathCount);
-
-    for (uint32_t &tile_id : tile_map.tiles) {
-        PROC(tile_id);
-    }
-
-    PROC(sentinel);
-    assert(sentinel == Tilemap::SENTINEL);
-
-    for (uint32_t &obj_id : tile_map.objects) {
-        PROC(obj_id);
-    }
-
-    PROC(sentinel);
-    assert(sentinel == Tilemap::SENTINEL);
-
-    for (ObjectData &obj_data : tile_map.object_data) {
-        PROC(obj_data.x);
-        PROC(obj_data.y);
-        PROC(obj_data.type);
-
-        if (obj_data.type == "lever") {
-            PROC(obj_data.power_level);
-            PROC(obj_data.tile_def_unpowered);
-            PROC(obj_data.tile_def_powered);
-        } else if (obj_data.type == "lootable") {
-            PROC(obj_data.loot_table_id);
-        } else if (obj_data.type == "sign") {
-            PROC(obj_data.sign_text[0]);
-            PROC(obj_data.sign_text[1]);
-            PROC(obj_data.sign_text[2]);
-            PROC(obj_data.sign_text[3]);
-        } else if (obj_data.type == "warp") {
-            PROC(obj_data.warp_map_id);
-            PROC(obj_data.warp_dest_x);
-            PROC(obj_data.warp_dest_y);
-            PROC(obj_data.warp_dest_z);
-        }
-    }
-
-    PROC(sentinel);
-    assert(sentinel == Tilemap::SENTINEL);
-
-    for (AiPathNode &aiPathNode : tile_map.pathNodes) {
-        PROC(aiPathNode.pos.x);
-        PROC(aiPathNode.pos.y);
-        if (tile_map.version >= 9) {
-            PROC(aiPathNode.pos.z);
-        }
-        PROC(aiPathNode.waitFor);
-    }
-
-    PROC(sentinel);
-    assert(sentinel == Tilemap::SENTINEL);
-
-    for (AiPath &aiPath : tile_map.paths) {
-        PROC(aiPath.pathNodeStart);
-        PROC(aiPath.pathNodeCount);
-    }
-
-    PROC(sentinel);
-    assert(sentinel == Tilemap::SENTINEL);
+    HAQ_IO(HQT_TILE_MAP_FIELDS, tile_map);
 }
 void Process(PackStream &stream, Entity &entity)
 {
@@ -1227,24 +1148,21 @@ void ReadEntryBin(PackStream &stream, size_t index)
 template <typename T>
 void WriteArrayTxt(PackStream &stream, std::vector<T> &vec)
 {
-    char newline = '\n';
     for (T &entry : vec) {
-        DataType dtype = entry.dtype;
-        PROC(dtype);
+        fprintf(stream.file, "%d", entry.dtype);
         PROC(entry);
-        PROC(newline);
+        fprintf(stream.file, "\n");
     }
 }
 
 void IgnoreCommentsTxt(FILE *f)
 {
     char next = fgetc(f);
-    while (isspace(next)) {
-        next = fgetc(f);
-    }
-    while (next == '#') {
-        while (next != '\n') {
-            next = fgetc(f);
+    while (isspace(next) || next == '#') {
+        if (next == '#') {
+            while (next != '\n') {
+                next = fgetc(f);
+            }
         }
         next = fgetc(f);
     }
@@ -1321,33 +1239,33 @@ Err Process(PackStream &stream)
         } else {
             fprintf(stream.file, "\n");
 
-            #define HAQ_TXT_DOC_COMMENT_TYPE(c_type, c_type_name, c_body, userdata) \
-                fprintf(stream.file, "\n# %s ", #c_type_name); \
-                c_body
-
             #define HAQ_TXT_DOC_COMMENT_FIELD(c_type, c_name, c_init, flags, userdata) \
                 if ((flags) & HAQ_SERIALIZE) { \
                     fprintf(stream.file, "%s ", #c_name); \
                 }
 
-            #define HAQ_TXT_DOC_COMMENT(hqt) \
-                hqt(HAQ_TXT_DOC_COMMENT_TYPE, HAQ_TXT_DOC_COMMENT_FIELD, HAQ_IGNORE, 0); \
+            #define HAQ_TXT_DOC_COMMENT(c_type_name, hqt_fields) \
+                fprintf(stream.file, "\n# %s ", #c_type_name); \
+                hqt_fields(HAQ_TXT_DOC_COMMENT_FIELD, 0); \
                 fprintf(stream.file, "\n");
 
-            HAQ_TXT_DOC_COMMENT(HQT_GFX_FILE);
+            HAQ_TXT_DOC_COMMENT(GfxFile, HQT_GFX_FILE_FIELDS);
             WriteArrayTxt(stream, pack.gfx_files);
-            HAQ_TXT_DOC_COMMENT(HQT_MUS_FILE);
+            HAQ_TXT_DOC_COMMENT(MusFile, HQT_MUS_FILE_FIELDS);
             WriteArrayTxt(stream, pack.mus_files);
-            HAQ_TXT_DOC_COMMENT(HQT_SFX_FILE);
+            HAQ_TXT_DOC_COMMENT(SfxFile, HQT_SFX_FILE_FIELDS);
             WriteArrayTxt(stream, pack.sfx_files);
-            HAQ_TXT_DOC_COMMENT(HQT_GFX_FRAME);
+            HAQ_TXT_DOC_COMMENT(GfxFrame, HQT_GFX_FRAME_FIELDS);
             WriteArrayTxt(stream, pack.gfx_frames);
-            HAQ_TXT_DOC_COMMENT(HQT_GFX_ANIM);
+            HAQ_TXT_DOC_COMMENT(GfxAnim, HQT_GFX_ANIM_FIELDS);
             WriteArrayTxt(stream, pack.gfx_anims);
+            HAQ_TXT_DOC_COMMENT(Sprite, HQT_SPRITE_FIELDS);
             WriteArrayTxt(stream, pack.sprites);
+            HAQ_TXT_DOC_COMMENT(TileDef, HQT_TILE_DEF_FIELDS);
             WriteArrayTxt(stream, pack.tile_defs);
-            HAQ_TXT_DOC_COMMENT(HQT_TILE_MAT);
+            HAQ_TXT_DOC_COMMENT(TileMat, HQT_TILE_MAT_FIELDS);
             WriteArrayTxt(stream, pack.tile_mats);
+            HAQ_TXT_DOC_COMMENT(Tilemap, HQT_TILE_MAP_FIELDS);
             WriteArrayTxt(stream, pack.tile_maps);
             WriteArrayTxt(stream, pack.entities);
 
@@ -1423,8 +1341,6 @@ Err Process(PackStream &stream)
                 }
             }
         }
-        // Maybe I care about this one day.. prolly not
-        //ReadFileIntoDataBuffer(gfx_file.path.c_str(), gfx_file.data_buffer);
     }
 
     return err;
@@ -1460,7 +1376,19 @@ Err SavePack(Pack &pack, PackStreamType type)
     }
     return err;
 }
-
+void LoadSoundVariant(SfxFile &sfx_file, const char *path)
+{
+    SfxVariant sfx_variant{};
+    sfx_variant.path = path;
+    sfx_variant.sound = LoadSound(path);
+    if (sfx_variant.sound.frameCount) {
+        sfx_variant.instances.resize(sfx_file.max_instances);
+        for (Sound &instance : sfx_variant.instances) {
+            instance = LoadSoundAlias(sfx_variant.sound);
+        }
+    }
+    sfx_file.variants.push_back(sfx_variant);
+}
 Err LoadResources(Pack &pack)
 {
     Err err = RN_SUCCESS;
@@ -1509,12 +1437,18 @@ Err LoadResources(Pack &pack)
         PerfTimer t{ "Load sounds" };
         for (SfxFile &sfx_file : pack.sfx_files) {
             if (sfx_file.path.empty()) continue;
-            sfx_file.sound = LoadSound(sfx_file.path.c_str());
-            if (sfx_file.sound.frameCount) {
-                sfx_file.instances.resize(sfx_file.max_instances);
-                for (int i = 0; i < sfx_file.max_instances; i++) {
-                    sfx_file.instances[i] = LoadSoundAlias(sfx_file.sound);
+
+            if (sfx_file.variations > 1) {
+                const char *file_dir = GetDirectoryPath(sfx_file.path.c_str());
+                const char *file_name = GetFileNameWithoutExt(sfx_file.path.c_str());
+                const char *file_ext = GetFileExtension(sfx_file.path.c_str());
+                for (int i = 1; i <= sfx_file.variations; i++) {
+                    // Build variant path, e.g. chicken_cluck.wav -> chicken_cluck_01.wav
+                    const char *variant_path = TextFormat("%s/%s_%02d%s", file_dir, file_name, i, file_ext);
+                    LoadSoundVariant(sfx_file, variant_path);
                 }
+            } else {
+                LoadSoundVariant(sfx_file, sfx_file.path.c_str());
             }
         }
     }
@@ -1559,80 +1493,69 @@ void UnloadPack(Pack &pack)
 {
     for (GfxFile &gfxFile : pack.gfx_files) {
         UnloadTexture(gfxFile.texture);
-        FreeDataBuffer(gfxFile.data_buffer);
     }
     for (MusFile &musFile : pack.mus_files) {
         UnloadMusicStream(musFile.music);
-        FreeDataBuffer(musFile.data_buffer);
     }
     for (SfxFile &sfxFile : pack.sfx_files) {
-        assert(sfxFile.instances.size() == sfxFile.max_instances);
-        for (int i = 0; i < sfxFile.max_instances; i++) {
-            UnloadSoundAlias(sfxFile.instances[i]);
+        for (SfxVariant &sfx_variant : sfxFile.variants) {
+            for (Sound &instance : sfx_variant.instances) {
+                UnloadSoundAlias(instance);
+            }
+            UnloadSound(sfx_variant.sound);
         }
-        UnloadSound(sfxFile.sound);
-        FreeDataBuffer(sfxFile.data_buffer);
     }
 }
 
-Sound PickSoundVariant(SfxFile &sfx_file) {
-#if 0
-    // TODO: Re-implement this by adding variations_instances or whatever
-    size_t sfx_idx;
+const SfxVariant &PickSoundVariant(const SfxFile &sfx_file)
+{
+    auto &variants = sfx_file.variants;
     if (variants.size() > 1) {
         const size_t variant_idx = (size_t)GetRandomValue(0, variants.size() - 1);
-        sfx_idx = variants[variant_idx];
+        return variants[variant_idx];
     } else {
-        sfx_idx = variants[0];
+        return variants[0];
     }
-#else
-    return sfx_file.sound;
-#endif
 }
 
 void PlaySound(const std::string &id, float pitchVariance)
 {
-    // TODO: FIXME
-#if 0
-    const SfxFile &sfx_file = packs[0].FindSoundVariant(id);
-    assert(sfx_file.instances.size() == sfx_file.max_instances);
+    const SfxFile &sfx_file = packs[0].FindByName<SfxFile>(id);
+    const SfxVariant &sfx_variant = PickSoundVariant(sfx_file);
+    assert(sfx_variant.instances.size() == sfx_file.max_instances);
 
     //printf("updatesprite playsound %s (multi = %d)\n", sfx_file.path.c_str(), sfx_file.multi);
-    for (int i = 0; i < sfx_file.max_instances; i++) {
-        if (!IsSoundPlaying(sfx_file.instances[i])) {
+    for (const Sound &instance : sfx_variant.instances) {
+        if (!IsSoundPlaying(instance)) {
             float variance = pitchVariance ? pitchVariance : sfx_file.pitch_variance;
-            SetSoundPitch(sfx_file.instances[i], 1.0f + GetRandomFloatVariance(variance));
-            PlaySound(sfx_file.instances[i]);
+            SetSoundPitch(instance, 1.0f + GetRandomFloatVariance(variance));
+            PlaySound(instance);
             break;
         }
     }
-#endif
 }
 bool IsSoundPlaying(const std::string &id)
 {
-    bool playing = false;
-#if 0
-    // TODO: Does this work still with SoundAlias stuff?
-    const SfxFile &sfx_file = packs[0].FindSoundVariant(id);
-    assert(sfx_file.instances.size() == sfx_file.max_instances);
+    const SfxFile &sfx_file = packs[0].FindByName<SfxFile>(id);
+    const SfxVariant &sfx_variant = PickSoundVariant(sfx_file);
+    assert(sfx_variant.instances.size() == sfx_file.max_instances);
 
-    for (int i = 0; i < sfx_file.max_instances; i++) {
-        playing = IsSoundPlaying(sfx_file.instances[i]);
+    bool playing = false;
+    for (const Sound &instance : sfx_variant.instances) {
+        playing = IsSoundPlaying(instance);
         if (playing) break;
     }
-#endif
     return playing;
 }
 void StopSound(const std::string &id)
 {
-#if 0
-    const SfxFile &sfx_file = packs[0].FindSoundVariant(id);
-    assert(sfx_file.instances.size() == sfx_file.max_instances);
+    const SfxFile &sfx_file = packs[0].FindByName<SfxFile>(id);
+    const SfxVariant &sfx_variant = PickSoundVariant(sfx_file);
+    assert(sfx_variant.instances.size() == sfx_file.max_instances);
 
-    for (int i = 0; i < sfx_file.max_instances; i++) {
-        StopSound(sfx_file.instances[i]);
+    for (const Sound &instance : sfx_variant.instances) {
+        StopSound(instance);
     }
-#endif
 }
 
 void UpdateGfxAnim(const GfxAnim &anim, double dt, GfxAnimState &anim_state)
@@ -1731,5 +1654,4 @@ void UpdateTileDefAnimations(double dt)
 ENUM_STR_CONVERTER(DataType,      DATA_TYPES,     ENUM_VD_CASE_RETURN_DESC);
 ENUM_STR_CONVERTER(EntityType,    ENTITY_TYPES,   ENUM_V_CASE_RETURN_VSTR);
 ENUM_STR_CONVERTER(EntitySpecies, ENTITY_SPECIES, ENUM_V_CASE_RETURN_VSTR);
-ENUM_STR_CONVERTER(SchemaType,    SCHEMA_TYPES,   ENUM_V_CASE_RETURN_VSTR);
 #undef ENUM_STR_GENERATOR

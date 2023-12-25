@@ -217,7 +217,7 @@ uint32_t Tilemap::GetNextPathNodeIndex(uint32_t pathId, uint32_t pathNodeIndex) 
 AiPathNode *Tilemap::GetPathNode(uint32_t pathId, uint32_t pathNodeIndex) {
     AiPath *path = GetPath(pathId);
     if (path) {
-        return &pathNodes[pathNodeIndex];
+        return &path_nodes[pathNodeIndex];
     }
     return 0;
 }
