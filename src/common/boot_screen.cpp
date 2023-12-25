@@ -28,12 +28,12 @@ void DrawBootScreenMessage(const char *msg, int dots)
 void DrawBootScreen(void)
 {
     const char *msgs[]{
-        "Dusting off the scripts",
-        "Modernizing the humor",
+        //"Dusting off the scripts",
+        //"Modernizing the humor",
         "Clearing the narrator's throat",
     };
     for (const char *msg : msgs) {
-        for (int i = 0; i <= 3; i++) {
+        for (int i = 0; i < ARRAY_SIZE(msgs); i++) {
             DrawBootScreenMessage(msg, i);
             //yojimbo_sleep(0.1);
         }
