@@ -257,10 +257,12 @@ void Process(PackStream &stream, T &v)
             }
             else assert(!"unhandled type"); //fprintf(stream.file, " <%s>\n", typeid(T).name());
         }
-    }
 
-    if (stream.mode == PACK_MODE_WRITE) {
-        fflush(stream.file);
+#if _DEBUG
+        if (stream.mode == PACK_MODE_WRITE) {
+            fflush(stream.file);
+        }
+#endif
     }
 }
 void Process(PackStream &stream, std::string &str)
@@ -295,9 +297,7 @@ void Process(PackStream &stream, std::string &str)
     } else {
         PROC(strLen);
         str.resize(strLen);
-        for (int i = 0; i < strLen; i++) {
-            PROC(str[i]);
-        }
+        stream.process(str.data(), 1, strLen, stream.file);
     }
 }
 template <typename T, size_t S>
