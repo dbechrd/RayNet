@@ -16,7 +16,7 @@ Entity *ClientWorld::LocalPlayer(void)
     Entity *localPlayer = entityDb->FindEntity(localPlayerEntityId, ENTITY_PLAYER);
     return localPlayer;
 }
-uint32_t ClientWorld::LocalPlayerMapId(void)
+uint16_t ClientWorld::LocalPlayerMapId(void)
 {
     Entity *localPlayer = LocalPlayer();
     if (localPlayer && localPlayer->map_id) {
@@ -32,7 +32,7 @@ Tilemap *ClientWorld::LocalPlayerMap(void)
     }
     return 0;
 }
-Tilemap *ClientWorld::FindOrLoadMap(uint32_t map_id)
+Tilemap *ClientWorld::FindOrLoadMap(uint16_t map_id)
 {
     Tilemap &map = packs[0].FindById<Tilemap>(map_id);
     return &map;
@@ -78,7 +78,7 @@ void ClientWorld::ApplyStateInterpolated(Entity &entity,
     entity.hp_smooth = LERP(entity.hp_smooth, entity.hp, 1.0f - powf(1.0f - 0.999f, dt));
     //entity.hp_smooth += ((entity.hp_smooth < entity.hp) ? 1 : -1) * dt * 20;
 }
-Err ClientWorld::CreateDialog(Entity &entity, uint32_t dialogId, const std::string &title, const std::string &message, double now)
+Err ClientWorld::CreateDialog(Entity &entity, uint16_t dialogId, const std::string &title, const std::string &message, double now)
 {
     entity.dialog_spawned_at = now;
     entity.dialog_id = dialogId;
@@ -181,7 +181,7 @@ void ClientWorld::UpdateLocalPlayer(GameClient &client, Entity &entity)
     histoData.cmdAccumForce = cmdAccumForce;
     UpdateLocalPlayerHisto(client, entity, histoData);
 }
-void ClientWorld::UpdateLocalGhost(GameClient &client, Entity &entity, uint32_t player_map_id)
+void ClientWorld::UpdateLocalGhost(GameClient &client, Entity &entity, uint16_t player_map_id)
 {
     // TODO(dlb): Find snapshots nearest to (GetTime() - clientTimeDeltaVsServer)
     const double renderAt = client.ServerNow() - SV_TICK_DT;
@@ -246,7 +246,7 @@ void ClientWorld::UpdateEntities(GameClient &client)
     hoveredEntityId = 0;
     hoveredEntityInRange = false;
 
-    const uint32_t player_map_id = LocalPlayerMapId();
+    const uint16_t player_map_id = LocalPlayerMapId();
 
     Entity *e_player = entityDb->FindEntity(localPlayerEntityId, ENTITY_PLAYER);
     if (!e_player) {
@@ -514,7 +514,7 @@ void ClientWorld::DrawHoveredObjectIndicator(GameClient &client, Tilemap &map)
 {
     // Object interact indicator (cursor ornament in screen space)
     if (client.controller.tile_hovered) {
-        uint32_t object_id = 0;
+        uint16_t object_id = 0;
         map.AtTry_Obj(client.controller.tile_x, client.controller.tile_y, object_id);
         if (object_id) {
             const GfxFrame &gfx_frame = map.GetTileGfxFrame(object_id);
@@ -634,7 +634,7 @@ void ClientWorld::DrawDialog(GameClient &client, Entity &entity, Vector2 bottomC
     );
 
     Vector2 nodeCursor{};
-    uint32_t nodeIdx = 0;
+    uint16_t nodeIdx = 0;
     for (DialogNode &node : msgNodes) {
         Color col = RAYWHITE;
         bool hoverable = false;

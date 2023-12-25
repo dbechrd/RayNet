@@ -52,7 +52,7 @@ enum DataType : uint8_t {
     DAT_TYP_INVALID
 };
 
-//enum DataFlag : uint32_t {
+//enum DataFlag : uint8_t {
 //    DAT_FLAG_EMBEDDED = 0x1,
 //    DAT_FLAG_EXTERNAL = 0x2,
 //};
@@ -84,7 +84,7 @@ struct GfxAnimState {
     double  accum {};  // time since last update
 };
 
-typedef uint32_t TileDefFlags;
+typedef uint8_t TileDefFlags;
 enum {
     TILEDEF_FLAG_SOLID  = 0x01,
     TILEDEF_FLAG_LIQUID = 0x02,
@@ -105,7 +105,7 @@ struct GfxFile {
     static const DataType dtype = DAT_TYP_GFX_FILE;
 
 #define HQT_GFX_FILE_FIELDS(FIELD, userdata) \
-    FIELD(uint32_t   , id         , {}, HAQ_SERIALIZE           , userdata) \
+    FIELD(uint16_t   , id         , {}, HAQ_SERIALIZE           , userdata) \
     FIELD(std::string, name       , {}, HAQ_SERIALIZE | HAQ_EDIT, userdata) \
     FIELD(std::string, path       , {}, HAQ_SERIALIZE | HAQ_EDIT, userdata)
     HQT_GFX_FILE_FIELDS(HAQ_C_FIELD, 0);
@@ -117,7 +117,7 @@ struct MusFile {
     static const DataType dtype = DAT_TYP_MUS_FILE;
 
 #define HQT_MUS_FILE_FIELDS(FIELD, userdata) \
-    FIELD(uint32_t   , id         , {}, HAQ_SERIALIZE           , userdata) \
+    FIELD(uint16_t   , id         , {}, HAQ_SERIALIZE           , userdata) \
     FIELD(std::string, name       , {}, HAQ_SERIALIZE | HAQ_EDIT, userdata) \
     FIELD(std::string, path       , {}, HAQ_SERIALIZE | HAQ_EDIT, userdata)
     HQT_MUS_FILE_FIELDS(HAQ_C_FIELD, 0);
@@ -135,7 +135,7 @@ struct SfxFile {
     static const DataType dtype = DAT_TYP_SFX_FILE;
 
 #define HQT_SFX_FILE_FIELDS(FIELD, userdata) \
-    FIELD(uint32_t                       , id            , {}, HAQ_SERIALIZE                                     , userdata) \
+    FIELD(uint16_t                       , id            , {}, HAQ_SERIALIZE                                     , userdata) \
     FIELD(std::string                    , name          , {}, HAQ_SERIALIZE | HAQ_EDIT                          , userdata) \
     FIELD(std::string                    , path          , {}, HAQ_SERIALIZE | HAQ_EDIT                          , userdata) \
     FIELD(uint8_t                        , variations    , {}, HAQ_SERIALIZE | HAQ_EDIT                          , userdata) \
@@ -150,7 +150,7 @@ struct GfxFrame {
     static const DataType dtype = DAT_TYP_GFX_FRAME;
 
 #define HQT_GFX_FRAME_FIELDS(FIELD, userdata) \
-    FIELD(uint32_t   , id  , {}, HAQ_SERIALIZE                                      , userdata) \
+    FIELD(uint16_t   , id  , {}, HAQ_SERIALIZE                                      , userdata) \
     FIELD(std::string, name, {}, HAQ_SERIALIZE | HAQ_EDIT                           , userdata) \
     FIELD(std::string, gfx , {}, HAQ_SERIALIZE | HAQ_EDIT                           , userdata) \
     FIELD(uint16_t   , x   , {}, HAQ_SERIALIZE | HAQ_EDIT | HAQ_EDIT_TEXTBOX_STYLE_X, userdata) \
@@ -164,7 +164,7 @@ struct GfxAnim {
     static const DataType dtype = DAT_TYP_GFX_ANIM;
 
 #define HQT_GFX_ANIM_FIELDS(FIELD, userdata) \
-    FIELD(uint32_t                , id         , {}, HAQ_SERIALIZE           , userdata) \
+    FIELD(uint16_t                , id         , {}, HAQ_SERIALIZE           , userdata) \
     FIELD(std::string             , name       , {}, HAQ_SERIALIZE | HAQ_EDIT, userdata) \
     FIELD(std::string             , sound      , {}, HAQ_SERIALIZE | HAQ_EDIT, userdata) \
     FIELD(uint8_t                 , frame_count, {}, HAQ_SERIALIZE | HAQ_EDIT, userdata) \
@@ -188,7 +188,7 @@ struct Sprite {
     using AnimArray = std::array<std::string, 8>;
 
 #define HQT_SPRITE_FIELDS(FIELD, userdata) \
-    FIELD(uint32_t   , id   , {}, HAQ_SERIALIZE           , userdata) \
+    FIELD(uint16_t   , id   , {}, HAQ_SERIALIZE           , userdata) \
     FIELD(std::string, name , {}, HAQ_SERIALIZE | HAQ_EDIT, userdata) \
     FIELD(AnimArray  , anims, {}, HAQ_SERIALIZE | HAQ_EDIT, userdata)
     HQT_SPRITE_FIELDS(HAQ_C_FIELD, 0);
@@ -198,10 +198,10 @@ struct TileDef {
     static const DataType dtype = DAT_TYP_TILE_DEF;
 
 #define HQT_TILE_DEF_FIELDS(FIELD, userdata) \
-    FIELD(uint32_t    , id            , {}, HAQ_SERIALIZE           , userdata) \
+    FIELD(uint16_t    , id            , {}, HAQ_SERIALIZE           , userdata) \
     FIELD(std::string , name          , {}, HAQ_SERIALIZE | HAQ_EDIT, userdata) \
     FIELD(std::string , anim          , {}, HAQ_SERIALIZE | HAQ_EDIT, userdata) \
-    FIELD(uint32_t    , material_id   , {}, HAQ_SERIALIZE | HAQ_EDIT, userdata) \
+    FIELD(uint16_t    , material_id   , {}, HAQ_SERIALIZE | HAQ_EDIT, userdata) \
     FIELD(TileDefFlags, flags         , {}, HAQ_SERIALIZE | HAQ_EDIT, userdata) \
     FIELD(uint8_t     , auto_tile_mask, {}, HAQ_SERIALIZE | HAQ_EDIT, userdata)
     HQT_TILE_DEF_FIELDS(HAQ_C_FIELD, 0);
@@ -215,7 +215,7 @@ struct TileMat {
     static const DataType dtype = DAT_TYP_TILE_MAT;
 
 #define HQT_TILE_MAT_FIELDS(FIELD, userdata) \
-    FIELD(uint32_t   , id            , {}, HAQ_SERIALIZE           , userdata) \
+    FIELD(uint16_t   , id            , {}, HAQ_SERIALIZE           , userdata) \
     FIELD(std::string, name          , {}, HAQ_SERIALIZE | HAQ_EDIT, userdata) \
     FIELD(std::string, footstep_sound, {}, HAQ_SERIALIZE | HAQ_EDIT, userdata)
     HQT_TILE_MAT_FIELDS(HAQ_C_FIELD, 0);
@@ -224,8 +224,8 @@ struct TileMat {
 ////////////////////////////////////////////////////////////////////////////
 
 struct ObjectData {
-    uint32_t x {};
-    uint32_t y {};
+    uint16_t x {};
+    uint16_t y {};
     std::string type {};
 
     // type == "decoration"
@@ -233,20 +233,20 @@ struct ObjectData {
 
     // type == "lever"
     uint8_t  power_level        {};
-    uint32_t tile_def_unpowered {};
-    uint32_t tile_def_powered   {};
+    uint16_t tile_def_unpowered {};
+    uint16_t tile_def_powered   {};
 
     // type == "lootable"
-    uint32_t loot_table_id {};
+    uint16_t loot_table_id {};
 
     // type == "sign"
     std::string sign_text[4] {};
 
     // type == "warp"
-    uint32_t warp_map_id {};
-    uint32_t warp_dest_x {};
-    uint32_t warp_dest_y {};
-    uint32_t warp_dest_z {};
+    uint16_t warp_map_id {};
+    uint16_t warp_dest_x {};
+    uint16_t warp_dest_y {};
+    uint16_t warp_dest_z {};
 };
 
 struct AiPathNode {
@@ -255,20 +255,20 @@ struct AiPathNode {
 };
 
 struct AiPath {
-    uint32_t pathNodeStart;
-    uint32_t pathNodeCount;
+    uint16_t pathNodeStart;
+    uint16_t pathNodeCount;
 };
 
 #include "entity.h"
 
 struct TileChunk {
-    uint32_t tile_ids   [SV_MAX_TILE_CHUNK_WIDTH * SV_MAX_TILE_CHUNK_WIDTH]{};  // TODO: Compress, use less bits, etc.
-    uint32_t object_ids [SV_MAX_TILE_CHUNK_WIDTH * SV_MAX_TILE_CHUNK_WIDTH]{};  // TODO: Compress, use less bits, etc.
+    uint16_t tile_ids   [SV_MAX_TILE_CHUNK_WIDTH * SV_MAX_TILE_CHUNK_WIDTH]{};  // TODO: Compress, use less bits, etc.
+    uint16_t object_ids [SV_MAX_TILE_CHUNK_WIDTH * SV_MAX_TILE_CHUNK_WIDTH]{};  // TODO: Compress, use less bits, etc.
 };
 
 struct Tilemap {
     struct Coord {
-        uint32_t x, y;
+        uint16_t x, y;
 
         bool operator==(const Coord &other) const
         {
@@ -288,6 +288,7 @@ struct Tilemap {
 
     static const DataType dtype = DAT_TYP_TILE_MAP;
     static const uint32_t MAGIC = 0xDBBB9192;
+    static const uint16_t VERSION = 9;
     // v1: the OG
     // v2: added texturePath
     // v3: added AI paths/nodes
@@ -297,19 +298,17 @@ struct Tilemap {
     // v7: tileDefCount no longer based on texture size, in case texture is moved/deleted
     // v8: add sentinel
     // v9: Vector3 path nodes
-    static const uint32_t VERSION = 9;
-    static const uint32_t SENTINEL = 0x12345678;
 
 #define HQT_TILE_MAP_FIELDS(FIELD, userdata) \
-    FIELD(uint32_t               , version    , {}, HAQ_SERIALIZE           , userdata) /* version on disk                */ \
-    FIELD(uint32_t               , id         , {}, HAQ_SERIALIZE           , userdata) /* id of the map (for networking) */ \
+    FIELD(uint16_t               , version    , {}, HAQ_SERIALIZE           , userdata) /* version on disk                */ \
+    FIELD(uint16_t               , id         , {}, HAQ_SERIALIZE           , userdata) /* id of the map (for networking) */ \
     FIELD(std::string            , name       , {}, HAQ_SERIALIZE | HAQ_EDIT, userdata) /* name of map area               */ \
-    FIELD(uint32_t               , width      , {}, HAQ_SERIALIZE | HAQ_EDIT, userdata) /* width of map in tiles          */ \
-    FIELD(uint32_t               , height     , {}, HAQ_SERIALIZE | HAQ_EDIT, userdata) /* height of map in tiles         */ \
+    FIELD(uint16_t               , width      , {}, HAQ_SERIALIZE | HAQ_EDIT, userdata) /* width of map in tiles          */ \
+    FIELD(uint16_t               , height     , {}, HAQ_SERIALIZE | HAQ_EDIT, userdata) /* height of map in tiles         */ \
     FIELD(std::string            , title      , {}, HAQ_SERIALIZE | HAQ_EDIT, userdata) /* display name                   */ \
     FIELD(std::string            , bg_music   , {}, HAQ_SERIALIZE | HAQ_EDIT, userdata) /* background music               */ \
-    FIELD(std::vector<uint32_t>  , tiles      , {}, HAQ_SERIALIZE/* | HAQ_EDIT */, userdata) \
-    FIELD(std::vector<uint32_t>  , objects    , {}, HAQ_SERIALIZE/* | HAQ_EDIT */, userdata) \
+    FIELD(std::vector<uint16_t>  , tiles      , {}, HAQ_SERIALIZE/* | HAQ_EDIT */, userdata) \
+    FIELD(std::vector<uint16_t>  , objects    , {}, HAQ_SERIALIZE/* | HAQ_EDIT */, userdata) \
     FIELD(std::vector<ObjectData>, object_data, {}, HAQ_SERIALIZE | HAQ_EDIT     , userdata) \
     FIELD(std::vector<AiPathNode>, path_nodes , {}, HAQ_SERIALIZE/* | HAQ_EDIT */, userdata) \
     FIELD(std::vector<AiPath>    , paths      , {}, HAQ_SERIALIZE/* | HAQ_EDIT */, userdata)
@@ -318,7 +317,7 @@ struct Tilemap {
     //-------------------------------
     // Not serialized
     //-------------------------------
-    //uint32_t net_id             {};  // for communicating efficiently w/ client about which map
+    //uint16_t net_id             {};  // for communicating efficiently w/ client about which map
     double      chunkLastUpdatedAt {};  // used by server to know when chunks are dirty on clients
     CoordSet    dirtyTiles         {};  // tiles that have changed since last snapshot was sent
     Edge::Array edges              {};  // collision edge list
@@ -327,36 +326,36 @@ struct Tilemap {
     // Clean this section up
     //-------------------------------
     // Tiles
-    uint32_t At(uint32_t x, uint32_t y);
-    uint32_t At_Obj(uint32_t x, uint32_t y);
-    bool AtTry(uint32_t x, uint32_t y, uint32_t &tile_id);
-    bool AtTry_Obj(uint32_t x, uint32_t y, uint32_t &obj_id);
-    bool WorldToTileIndex(uint32_t world_x, uint32_t world_y, Coord &coord);
-    bool AtWorld(uint32_t world_x, uint32_t world_y, uint32_t &tile_id);
+    uint16_t At(uint16_t x, uint16_t y);
+    uint16_t At_Obj(uint16_t x, uint16_t y);
+    bool AtTry(uint16_t x, uint16_t y, uint16_t &tile_id);
+    bool AtTry_Obj(uint16_t x, uint16_t y, uint16_t &obj_id);
+    bool WorldToTileIndex(uint16_t world_x, uint16_t world_y, Coord &coord);
+    bool AtWorld(uint16_t world_x, uint16_t world_y, uint16_t &tile_id);
     bool IsSolid(int x, int y);  // tile x,y coord, returns true if out of bounds
 
-    void Set(uint32_t x, uint32_t y, uint32_t tile_id, double now);
-    void Set_Obj(uint32_t x, uint32_t y, uint32_t object_id, double now);
+    void Set(uint16_t x, uint16_t y, uint16_t tile_id, double now);
+    void Set_Obj(uint16_t x, uint16_t y, uint16_t object_id, double now);
     void SetFromWangMap(WangMap &wangMap, double now);
-    void Fill(uint32_t x, uint32_t y, uint32_t new_tile_id, double now);
+    void Fill(uint16_t x, uint16_t y, uint16_t new_tile_id, double now);
 
-    TileDef &GetTileDef(uint32_t tile_id);
-    const GfxFrame &GetTileGfxFrame(uint32_t tile_id);
-    Rectangle TileDefRect(uint32_t tile_id);
-    Color TileDefAvgColor(uint32_t tile_id);
+    TileDef &GetTileDef(uint16_t tile_id);
+    const GfxFrame &GetTileGfxFrame(uint16_t tile_id);
+    Rectangle TileDefRect(uint16_t tile_id);
+    Color TileDefAvgColor(uint16_t tile_id);
 
     // Objects
-    ObjectData *GetObjectData(uint32_t x, uint32_t y);
+    ObjectData *GetObjectData(uint16_t x, uint16_t y);
 
-    AiPath *GetPath(uint32_t pathId);
-    uint32_t GetNextPathNodeIndex(uint32_t pathId, uint32_t pathNodeIndex);
-    AiPathNode *GetPathNode(uint32_t pathId, uint32_t pathNodeIndex);
+    AiPath *GetPath(uint16_t pathId);
+    uint16_t GetNextPathNodeIndex(uint16_t pathId, uint16_t pathNodeIndex);
+    AiPathNode *GetPathNode(uint16_t pathId, uint16_t pathNodeIndex);
 
     void UpdateEdges(void);
     void ResolveEntityCollisionsEdges(Entity &entity);
     void ResolveEntityCollisionsTriggers(Entity &entity);
 
-    void DrawTile(uint32_t tile_id, Vector2 position, DrawCmdQueue *sortedDraws);
+    void DrawTile(uint16_t tile_id, Vector2 position, DrawCmdQueue *sortedDraws);
     void Draw(Camera2D &camera, DrawCmdQueue &sortedDraws);
     void DrawColliders(Camera2D &camera);
     void DrawEdges(void);
@@ -365,8 +364,8 @@ struct Tilemap {
 private:
     void GetEdges(Edge::Array &edges);
 
-    bool NeedsFill(uint32_t x, uint32_t y, uint32_t old_tile_id);
-    void Scan(uint32_t lx, uint32_t rx, uint32_t y, uint32_t old_tile_id, std::stack<Coord> &stack);
+    bool NeedsFill(uint16_t x, uint16_t y, uint16_t old_tile_id);
+    void Scan(uint16_t lx, uint16_t rx, uint16_t y, uint16_t old_tile_id, std::stack<Coord> &stack);
 };
 
 ////////////////////////////////////////////////////////////////////////////
@@ -435,11 +434,8 @@ struct Pack {
     std::vector<Tilemap> tile_maps{};
     std::vector<Entity> entities{};
 
-    std::unordered_map<uint32_t, size_t> dat_by_id[DAT_TYP_COUNT]{};
+    std::unordered_map<uint16_t, size_t> dat_by_id[DAT_TYP_COUNT]{};
     std::unordered_map<std::string, size_t> dat_by_name[DAT_TYP_COUNT]{};
-
-    // TODO: Use a linked list, or something else that doesn't require a map of vectors when most vectors would be empty
-    std::unordered_map<uint32_t, std::vector<size_t>> sfx_variants_by_id{};  // vector holds variants
 
     PackToc toc {};
 
@@ -463,7 +459,7 @@ struct Pack {
     }
 
     template <typename T>
-    T &FindById(uint32_t id) {
+    T &FindById(uint16_t id) {
         auto &vec = *(std::vector<T> *)GetPool(T::dtype);
         const auto &map = dat_by_id[T::dtype];
         const auto &entry = map.find(id);

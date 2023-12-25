@@ -108,8 +108,8 @@ void Editor::DrawGroundOverlay_Tiles(Camera2D &camera, double now)
         const bool editorPickTile = io.MouseButtonDown(MOUSE_BUTTON_MIDDLE);
         const bool editorFillTile = io.KeyPressed(KEY_F);
 
-        uint32_t &cursorTile = state.tiles.cursor.tile_id;
-        uint32_t hoveredTile{};
+        uint16_t &cursorTile = state.tiles.cursor.tile_id;
+        uint16_t hoveredTile{};
         auto &map = packs[0].FindById<Tilemap>(map_id);
 
         Tilemap::Coord coord{};
@@ -141,14 +141,14 @@ void Editor::DrawGroundOverlay_Paths(Camera2D &camera, double now)
 
     // Draw path edges
     auto &map = packs[0].FindById<Tilemap>(map_id);
-    for (uint32_t aiPathId = 1; aiPathId <= map.paths.size(); aiPathId++) {
+    for (uint16_t aiPathId = 1; aiPathId <= map.paths.size(); aiPathId++) {
         AiPath *aiPath = map.GetPath(aiPathId);
         if (!aiPath) {
             continue;
         }
 
-        for (uint32_t aiPathNodeIndex = aiPath->pathNodeStart; aiPathNodeIndex < aiPath->pathNodeStart + aiPath->pathNodeCount; aiPathNodeIndex++) {
-            uint32_t aiPathNodeNextIndex = map.GetNextPathNodeIndex(aiPathId, aiPathNodeIndex);
+        for (uint16_t aiPathNodeIndex = aiPath->pathNodeStart; aiPathNodeIndex < aiPath->pathNodeStart + aiPath->pathNodeCount; aiPathNodeIndex++) {
+            uint16_t aiPathNodeNextIndex = map.GetNextPathNodeIndex(aiPathId, aiPathNodeIndex);
             AiPathNode *aiPathNode = map.GetPathNode(aiPathId, aiPathNodeIndex);
             AiPathNode *aiPathNodeNext = map.GetPathNode(aiPathId, aiPathNodeNextIndex);
             assert(aiPathNode);
@@ -163,13 +163,13 @@ void Editor::DrawGroundOverlay_Paths(Camera2D &camera, double now)
 
     // Draw path nodes
     const float pathRectRadius = 5;
-    for (uint32_t aiPathId = 1; aiPathId <= map.paths.size(); aiPathId++) {
+    for (uint16_t aiPathId = 1; aiPathId <= map.paths.size(); aiPathId++) {
         AiPath *aiPath = map.GetPath(aiPathId);
         if (!aiPath) {
             continue;
         }
 
-        for (uint32_t aiPathNodeIndex = aiPath->pathNodeStart; aiPathNodeIndex < aiPath->pathNodeStart + aiPath->pathNodeCount; aiPathNodeIndex++) {
+        for (uint16_t aiPathNodeIndex = aiPath->pathNodeStart; aiPathNodeIndex < aiPath->pathNodeStart + aiPath->pathNodeCount; aiPathNodeIndex++) {
             AiPathNode *aiPathNode = map.GetPathNode(aiPathId, aiPathNodeIndex);
             assert(aiPathNode);
 
@@ -701,15 +701,15 @@ void Editor::DrawUI_TileActions(UI &uiActionBar, double now)
     uiActionBar.Textbox(txtHeight, height);
     uiActionBar.PopStyle();
     if (uiActionBar.Button(CSTR("Resize!")).pressed) {
-        uint32_t newWidth = (uint32_t)width;
-        uint32_t newHeight = (uint32_t)height;
+        uint16_t newWidth = (uint16_t)width;
+        uint16_t newHeight = (uint16_t)height;
 
-        std::vector<uint32_t> tilesNew{};
-        std::vector<uint32_t> objectsNew{};
+        std::vector<uint16_t> tilesNew{};
+        std::vector<uint16_t> objectsNew{};
         tilesNew.resize(newWidth * newHeight);
         objectsNew.resize(newWidth * newHeight);
-        for (uint32_t y = 0; y < map.height && y < newHeight; y++) {
-            for (uint32_t x = 0; x < map.width && x < newWidth; x++) {
+        for (uint16_t y = 0; y < map.height && y < newHeight; y++) {
+            for (uint16_t x = 0; x < map.width && x < newWidth; x++) {
                 tilesNew[y * newWidth + x] = map.tiles[y * map.width + x];
                 objectsNew[y * newWidth + x] = map.objects[y * map.width + x];
             }
@@ -725,8 +725,8 @@ void Editor::DrawUI_TileActions(UI &uiActionBar, double now)
         map.tiles = tilesNew;
         map.objects = objectsNew;
         map.object_data = objDataNew;
-        map.width = (uint32_t)newWidth;
-        map.height = (uint32_t)newHeight;
+        map.width = (uint16_t)newWidth;
+        map.height = (uint16_t)newHeight;
     }
     uiActionBar.Newline();
 
@@ -1073,7 +1073,7 @@ void Editor::DrawUI_WangTile(double now)
     Rectangle wangBg{ 434, 4, 560, 560 };
 
     if (state.wang.hTex >= 0 || state.wang.vTex >= 0) {
-        const uint32_t selectedTile = state.tiles.cursor.tile_id;
+        const uint16_t selectedTile = state.tiles.cursor.tile_id;
         static double lastUpdatedAt = 0;
         static double lastChangedAt = 0;
         const double updateDelay = 0.02;

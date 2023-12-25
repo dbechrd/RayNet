@@ -98,7 +98,7 @@ Err Init(void)
 
     rnStringCatalog.Init();
 
-    // LoadPack SDF required shader (we use default vertex shader)
+    // Load SDF required shader (we use default vertex shader)
     shdSdfText = LoadShader(0, "resources/shader/sdf.fs");
 
     shdPixelFixer                     = LoadShader("resources/shader/pixelfixer.vs", "resources/shader/pixelfixer.fs");

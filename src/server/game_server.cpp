@@ -271,7 +271,7 @@ void GameServer::Stop(void)
     delete entityDb;
 }
 
-Tilemap *GameServer::FindOrLoadMap(uint32_t map_id)
+Tilemap *GameServer::FindOrLoadMap(uint16_t map_id)
 {
 #if 1
     // TODO: Go back to assuming it's not already loaded once we figure out packs
@@ -315,7 +315,7 @@ Tilemap *GameServer::FindOrLoadMap(uint32_t map_id)
     }
 #endif
 }
-Tilemap *GameServer::FindMap(uint32_t map_id)
+Tilemap *GameServer::FindMap(uint16_t map_id)
 {
     // TODO: Remove this alias and call * directly?
     auto &tile_map = packs[0].FindById<Tilemap>(map_id);
@@ -328,7 +328,7 @@ Entity *GameServer::SpawnEntity(EntityType type)
     Entity *entity = entityDb->SpawnEntity(entityId, type, now);
     return entity;
 }
-Entity *GameServer::SpawnEntityProto(uint32_t map_id, Vector3 position, EntityProto &proto)
+Entity *GameServer::SpawnEntityProto(uint16_t map_id, Vector3 position, EntityProto &proto)
 {
     assert(proto.type);
 
@@ -363,7 +363,7 @@ Entity *GameServer::SpawnEntityProto(uint32_t map_id, Vector3 position, EntityPr
 
     return entity;
 }
-Entity *GameServer::SpawnProjectile(uint32_t map_id, Vector3 position, Vector2 direction, Vector3 initial_velocity)
+Entity *GameServer::SpawnProjectile(uint16_t map_id, Vector3 position, Vector2 direction, Vector3 initial_velocity)
 {
     Entity *projectile = SpawnEntity(ENTITY_PROJECTILE);
     if (!projectile) return 0;
@@ -394,7 +394,7 @@ Entity *GameServer::SpawnProjectile(uint32_t map_id, Vector3 position, Vector2 d
     BroadcastEntitySpawn(projectile->id);
     return projectile;
 }
-void GameServer::WarpEntity(Entity &entity, uint32_t dest_map_id, Vector3 dest_pos)
+void GameServer::WarpEntity(Entity &entity, uint16_t dest_map_id, Vector3 dest_pos)
 {
     Tilemap *dest_map = FindOrLoadMap(dest_map_id);
     if (dest_map) {
@@ -522,7 +522,7 @@ void GameServer::TickPlayers(void)
         }
     }
 }
-void GameServer::TickSpawnTownNPCs(uint32_t map_id)
+void GameServer::TickSpawnTownNPCs(uint16_t map_id)
 {
     static EntityProto *townfolk[]{
         &protoDb.npc_lily,
@@ -584,7 +584,7 @@ void GameServer::TickSpawnTownNPCs(uint32_t map_id)
         }
     }
 }
-void GameServer::TickSpawnCaveNPCs(uint32_t map_id)
+void GameServer::TickSpawnCaveNPCs(uint16_t map_id)
 {
     for (int i = 0; i < ARRAY_SIZE(eid_bots); i++) {
         Entity *entity = entityDb->FindEntity(eid_bots[i], ENTITY_NPC);
@@ -918,7 +918,7 @@ void GameServer::BroadcastEntityDespawn(uint32_t entityId)
         SendEntityDespawn(clientIdx, entityId);
     }
 }
-void GameServer::SendEntitySay(int clientIdx, uint32_t entityId, uint32_t dialogId, const std::string &title, const std::string &message)
+void GameServer::SendEntitySay(int clientIdx, uint32_t entityId, uint16_t dialogId, const std::string &title, const std::string &message)
 {
     // TODO: Send only if the client is nearby, or the message is a global event
     Entity *entity = entityDb->FindEntity(entityId);
@@ -949,7 +949,7 @@ void GameServer::BroadcastEntitySay(uint32_t entityId, const std::string &title,
     }
 }
 
-void GameServer::SendTileChunk(int clientIdx, Tilemap &map, uint32_t x, uint32_t y)
+void GameServer::SendTileChunk(int clientIdx, Tilemap &map, uint16_t x, uint16_t y)
 {
     if (yj_server->CanSendMessage(clientIdx, CHANNEL_R_TILE_EVENT)) {
         Msg_S_TileChunk *msg = (Msg_S_TileChunk *)yj_server->CreateMessage(clientIdx, MSG_S_TILE_CHUNK);
@@ -962,9 +962,9 @@ void GameServer::SendTileChunk(int clientIdx, Tilemap &map, uint32_t x, uint32_t
             msg->w = MIN(map.width, SV_MAX_TILE_CHUNK_WIDTH);
             msg->h = MIN(map.height, SV_MAX_TILE_CHUNK_WIDTH);
 
-            for (uint32_t ty = y; ty < msg->h; ty++) {
-                for (uint32_t tx = x; tx < msg->w; tx++) {
-                    const uint32_t index = ty * msg->w + tx;
+            for (uint16_t ty = y; ty < msg->h; ty++) {
+                for (uint16_t tx = x; tx < msg->w; tx++) {
+                    const uint16_t index = ty * msg->w + tx;
                     map.AtTry(tx, ty, chunk->tile_ids[index]);
                     map.AtTry_Obj(tx, ty, chunk->object_ids[index]);
                 }
@@ -975,7 +975,7 @@ void GameServer::SendTileChunk(int clientIdx, Tilemap &map, uint32_t x, uint32_t
         }
     }
 }
-void GameServer::BroadcastTileChunk(Tilemap &map, uint32_t x, uint32_t y)
+void GameServer::BroadcastTileChunk(Tilemap &map, uint16_t x, uint16_t y)
 {
     for (int clientIdx = 0; clientIdx < SV_MAX_PLAYERS; clientIdx++) {
         if (!yj_server->IsClientConnected(clientIdx)) {
@@ -985,7 +985,7 @@ void GameServer::BroadcastTileChunk(Tilemap &map, uint32_t x, uint32_t y)
         SendTileChunk(clientIdx, map, x, y);
     }
 }
-void GameServer::SendTileUpdate(int clientIdx, Tilemap &map, uint32_t x, uint32_t y)
+void GameServer::SendTileUpdate(int clientIdx, Tilemap &map, uint16_t x, uint16_t y)
 {
     if (yj_server->CanSendMessage(clientIdx, CHANNEL_R_TILE_EVENT)) {
         Msg_S_TileUpdate *msg = (Msg_S_TileUpdate *)yj_server->CreateMessage(clientIdx, MSG_S_TILE_UPDATE);
@@ -993,8 +993,8 @@ void GameServer::SendTileUpdate(int clientIdx, Tilemap &map, uint32_t x, uint32_
             msg->map_id = map.id;
             msg->x = x;
             msg->y = y;
-            uint32_t tile_id{};
-            uint32_t object_id{};
+            uint16_t tile_id{};
+            uint16_t object_id{};
             map.AtTry(x, y, tile_id);
             map.AtTry_Obj(x, y, object_id);
             msg->tile_id = (uint16_t)tile_id;
@@ -1003,7 +1003,7 @@ void GameServer::SendTileUpdate(int clientIdx, Tilemap &map, uint32_t x, uint32_
         }
     }
 }
-void GameServer::BroadcastTileUpdate(Tilemap &map, uint32_t x, uint32_t y)
+void GameServer::BroadcastTileUpdate(Tilemap &map, uint16_t x, uint16_t y)
 {
     for (int clientIdx = 0; clientIdx < SV_MAX_PLAYERS; clientIdx++) {
         if (!yj_server->IsClientConnected(clientIdx)) {
@@ -1027,13 +1027,13 @@ void GameServer::SendTitleShow(int clientIdx, const std::string &text)
 void GameServer::RequestDialog(int clientIdx, Entity &entity, Dialog &dialog)
 {
     // Overridable by listeners
-    uint32_t dialog_id = dialog.id;
+    uint16_t dialog_id = dialog.id;
     const std::string_view *msg = &dialog.msg;
 
     DialogListener listener = dialog_library.FindListenerByKey(dialog.key);
     if (listener) {
         ServerPlayer &player = players[clientIdx];
-        uint32_t redirect_id = listener(player.entityId, entity.id, dialog.id);
+        uint16_t redirect_id = listener(player.entityId, entity.id, dialog.id);
         if (redirect_id != dialog_id) {
             Dialog *redirect_dialog = dialog_library.FindById(redirect_id);
             if (redirect_dialog) {
@@ -1177,14 +1177,14 @@ void GameServer::ProcessMsg(int clientIdx, Msg_C_TileInteract &msg)
         return;
     }
 
-    uint32_t tile_id{};
+    uint16_t tile_id{};
     if (!map->AtTry(msg.x, msg.y, tile_id)) {
         // Tile at x/y is not a valid tile type.. hmm.. is it void?
         assert(!"not a valid tile");
         return;
     }
 
-    //uint32_t object_id = map->At_Obj(msg.x, msg.y);
+    //uint16_t object_id = map->At_Obj(msg.x, msg.y);
     ObjectData *obj_data = map->GetObjectData(msg.x, msg.y);
 
     if (msg.primary == false && obj_data) {

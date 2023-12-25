@@ -70,7 +70,7 @@
       <LanguageStandard>stdcpp20</LanguageStandard>
       <AdditionalIncludeDirectories>include</AdditionalIncludeDirectories>
       <StringPooling>true</StringPooling>
-      <DebugInformationFormat>OldStyle</DebugInformationFormat>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
       <LanguageStandard_C>stdc11</LanguageStandard_C>
       <DisableSpecificWarnings>26451</DisableSpecificWarnings>
     </ClCompile>

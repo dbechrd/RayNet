@@ -18,8 +18,8 @@ struct Controller {
 
     // not synced, just tracked client-side
     bool tile_hovered{};
-    uint32_t tile_x{};
-    uint32_t tile_y{};
+    uint16_t tile_x{};
+    uint16_t tile_y{};
 };
 
 struct Spinner {
@@ -212,7 +212,7 @@ struct ClientWorld {
     Camera2D camera{};
 
     uint32_t last_target_id{};
-    uint32_t last_target_map_id{};
+    uint16_t last_target_map_id{};
     float zoomTarget{};
 
     double warpFadeInStartedAt{};
@@ -232,13 +232,13 @@ struct ClientWorld {
     ClientWorld(void);
 
     Entity *LocalPlayer(void);
-    uint32_t LocalPlayerMapId(void);
+    uint16_t LocalPlayerMapId(void);
     Tilemap *LocalPlayerMap(void);
-    Tilemap *FindOrLoadMap(uint32_t map_id);
+    Tilemap *FindOrLoadMap(uint16_t map_id);
 
     void ApplySpawnEvent(const Msg_S_EntitySpawn &entitySpawn);
     void ApplyStateInterpolated(Entity &entity, const GhostSnapshot &a, const GhostSnapshot &b, float alpha, float dt);
-    Err CreateDialog(Entity &entity, uint32_t dialogId, const std::string &title, const std::string &message, double now);
+    Err CreateDialog(Entity &entity, uint16_t dialogId, const std::string &title, const std::string &message, double now);
 
     void Update(GameClient &client);
     void Draw(GameClient &client);
@@ -253,7 +253,7 @@ private:
     void UpdateMap(Tilemap &map);
     void UpdateLocalPlayerHisto(GameClient &client, Entity &entity, HistoData &histoData);
     void UpdateLocalPlayer(GameClient &client, Entity &entity);
-    void UpdateLocalGhost(GameClient &client, Entity &entity, uint32_t player_map_id);
+    void UpdateLocalGhost(GameClient &client, Entity &entity, uint16_t player_map_id);
     void UpdateEntities(GameClient &client);
     void UpdateCamera(GameClient &client);
     void UpdateHUDSpinner(void);

@@ -256,9 +256,27 @@ UIState UI::Text(const char *text, size_t textLen, Color fgColor, Color bgColor)
     return state;
 }
 
+UIState UI::Text(uint8_t value)
+{
+    const char *text = TextFormat("%" PRIu8, value);
+    return Text(CSTRLEN(text));
+}
+
+UIState UI::Text(uint16_t value)
+{
+    const char *text = TextFormat("%" PRIu16, value);
+    return Text(CSTRLEN(text));
+}
+
 UIState UI::Text(uint32_t value)
 {
-    const char *text = TextFormat("%u", value);
+    const char *text = TextFormat("%" PRIu32, value);
+    return Text(CSTRLEN(text));
+}
+
+UIState UI::Text(uint64_t value)
+{
+    const char *text = TextFormat("%" PRIu64, value);
     return Text(CSTRLEN(text));
 }
 

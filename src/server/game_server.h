@@ -111,19 +111,19 @@ struct GameServer {
     void Stop(void);
 
 private:
-    Tilemap *FindOrLoadMap(uint32_t map_id);
-    Tilemap *FindMap(uint32_t map_id);
+    Tilemap *FindOrLoadMap(uint16_t map_id);
+    Tilemap *FindMap(uint16_t map_id);
 
     Entity *SpawnEntity(EntityType type);
-    Entity *SpawnEntityProto(uint32_t map_id, Vector3 position, EntityProto &proto);
-    Entity *SpawnProjectile(uint32_t map_id, Vector3 position, Vector2 direction, Vector3 initial_velocity);
-    void WarpEntity(Entity &entity, uint32_t dest_map_id, Vector3 dest_pos);
+    Entity *SpawnEntityProto(uint16_t map_id, Vector3 position, EntityProto &proto);
+    Entity *SpawnProjectile(uint16_t map_id, Vector3 position, Vector2 direction, Vector3 initial_velocity);
+    void WarpEntity(Entity &entity, uint16_t dest_map_id, Vector3 dest_pos);
     void DespawnEntity(uint32_t entityId);
     void DestroyDespawnedEntities(void);
 
     void TickPlayers(void);
-    void TickSpawnTownNPCs(uint32_t map_id);
-    void TickSpawnCaveNPCs(uint32_t map_id);
+    void TickSpawnTownNPCs(uint16_t map_id);
+    void TickSpawnCaveNPCs(uint16_t map_id);
     void TickEntityNPC(Entity &entity, double dt, double now);
     void TickEntityPlayer(Entity &entity, double dt, double now);
     void TickEntityProjectile(Entity &entity, double dt, double now);
@@ -137,14 +137,14 @@ private:
     void SendEntityDespawn(int clientIdx, uint32_t entityId);
     void BroadcastEntityDespawn(uint32_t entityId);
 
-    void SendEntitySay(int clientIdx, uint32_t entityId, uint32_t dialogId, const std::string &title, const std::string &message);
+    void SendEntitySay(int clientIdx, uint32_t entityId, uint16_t dialogId, const std::string &title, const std::string &message);
     void BroadcastEntitySay(uint32_t entityId, const std::string &title, const std::string &message);
 
-    void SendTileChunk(int clientIdx, Tilemap &map, uint32_t x, uint32_t y);
-    void BroadcastTileChunk(Tilemap &map, uint32_t x, uint32_t y);
+    void SendTileChunk(int clientIdx, Tilemap &map, uint16_t x, uint16_t y);
+    void BroadcastTileChunk(Tilemap &map, uint16_t x, uint16_t y);
 
-    void SendTileUpdate(int clientIdx, Tilemap &map, uint32_t x, uint32_t y);
-    void BroadcastTileUpdate(Tilemap &map, uint32_t x, uint32_t y);
+    void SendTileUpdate(int clientIdx, Tilemap &map, uint16_t x, uint16_t y);
+    void BroadcastTileUpdate(Tilemap &map, uint16_t x, uint16_t y);
 
     void SendTitleShow(int clientIdx, const std::string &text);
 

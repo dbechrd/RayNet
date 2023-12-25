@@ -2,6 +2,9 @@
 #include "../common.h"
 #include "../input_command.h"
 
+#define serialize_uint8( stream, value ) serialize_bits( stream, value, 8 );
+#define serialize_uint16( stream, value ) serialize_bits( stream, value, 16 );
+
 enum ChannelType {
     CHANNEL_U_INPUT_COMMANDS,
     CHANNEL_U_ENTITY_SNAPSHOT,
@@ -51,14 +54,14 @@ struct Msg_C_EntityInteract : public yojimbo::Message
 struct Msg_C_EntityInteractDialogOption : public yojimbo::Message
 {
     uint32_t entity_id{};
-    uint32_t dialog_id{};
-    uint32_t option_id{};
+    uint16_t dialog_id{};
+    uint16_t option_id{};
 
     template <typename Stream> bool Serialize(Stream &stream)
     {
         serialize_uint32(stream, entity_id);
-        serialize_uint32(stream, dialog_id);
-        serialize_uint32(stream, option_id);
+        serialize_uint16(stream, dialog_id);
+        serialize_uint16(stream, option_id);
         return true;
     }
 
@@ -90,17 +93,17 @@ struct Msg_C_InputCommands : public yojimbo::Message
 
 struct Msg_C_TileInteract : public yojimbo::Message
 {
-    uint32_t map_id  {};
-    uint32_t x       {};
-    uint32_t y       {};
+    uint16_t map_id  {};
+    uint16_t x       {};
+    uint16_t y       {};
     bool     primary {};  // true = primary, false = secondary
 
     template <typename Stream> bool Serialize(Stream &stream)
     {
-        serialize_uint32(stream, map_id);
+        serialize_uint16(stream, map_id);
+        serialize_uint16(stream, x);
+        serialize_uint16(stream, y);
         serialize_bool(stream, primary);
-        serialize_uint32(stream, x);
-        serialize_uint32(stream, y);
         return true;
     }
 
@@ -138,7 +141,7 @@ struct Msg_S_EntityDespawn : public yojimbo::Message
 struct Msg_S_EntitySay : public yojimbo::Message
 {
     uint32_t entity_id{};
-    uint32_t dialog_id{};
+    uint16_t dialog_id{};
     char title[SV_MAX_ENTITY_SAY_TITLE_LEN + 1]{};
     char message[SV_MAX_ENTITY_SAY_MSG_LEN + 1]{};
 
@@ -151,7 +154,7 @@ struct Msg_S_EntitySay : public yojimbo::Message
     template <typename Stream> bool Serialize(Stream &stream)
     {
         serialize_uint32(stream, entity_id);
-        serialize_uint32(stream, dialog_id);
+        serialize_uint16(stream, dialog_id);
         serialize_string(stream, title, sizeof(title));
         serialize_string(stream, message, sizeof(message));
 
@@ -183,7 +186,7 @@ struct Msg_S_EntitySnapshot : public yojimbo::Message
     uint32_t      entity_id  {};
     EntityType    type       {};  // doesn't change, but needed for switch statements in deserializer
     EntitySpecies spec       {};
-    uint32_t      map_id     {};
+    uint16_t      map_id     {};
     Vector3       position   {};
     bool          on_warp_cooldown {};
 
@@ -207,9 +210,9 @@ struct Msg_S_EntitySnapshot : public yojimbo::Message
 
         // Entity
         serialize_uint32(stream, entity_id);
-        serialize_uint32(stream, (uint32_t &)type);
-        serialize_uint32(stream, (uint32_t &)spec);
-        serialize_uint32(stream, map_id);
+        serialize_uint8(stream, (uint8_t &)type);
+        serialize_uint8(stream, (uint8_t &)spec);
+        serialize_uint16(stream, map_id);
         serialize_float(stream, position.x);
         serialize_float(stream, position.y);
         serialize_float(stream, position.z);
@@ -247,7 +250,7 @@ struct Msg_S_EntitySpawn : public yojimbo::Message
     EntityType    type        {};
     EntitySpecies spec        {};
     char          name        [SV_MAX_ENTITY_NAME_LEN + 1]{};
-    uint32_t      map_id      {};
+    uint16_t      map_id      {};
     Vector3       position    {};
     // Collision
     float         radius      {};
@@ -259,7 +262,7 @@ struct Msg_S_EntitySpawn : public yojimbo::Message
     float         speed       {};
     Vector3       velocity    {};
     // Sprite
-    uint32_t      sprite_id   {};
+    uint16_t      sprite_id   {};
 
     // Only sent to the player who owns this player entity.
     uint32_t      last_processed_input_cmd {};
@@ -270,10 +273,10 @@ struct Msg_S_EntitySpawn : public yojimbo::Message
 
         // Entity
         serialize_uint32(stream, entity_id);
-        serialize_uint32(stream, (uint32_t&)type);
-        serialize_uint32(stream, (uint32_t&)spec);
+        serialize_uint8(stream, (uint8_t&)type);
+        serialize_uint8(stream, (uint8_t&)spec);
         serialize_string(stream, name, sizeof(name));
-        serialize_uint32(stream, map_id);
+        serialize_uint16(stream, map_id);
         serialize_float(stream, position.x);
         serialize_float(stream, position.y);
         serialize_float(stream, position.z);
@@ -310,19 +313,19 @@ struct Msg_S_EntitySpawn : public yojimbo::Message
 
 struct Msg_S_TileChunk : public yojimbo::BlockMessage
 {
-    uint32_t map_id {};
-    uint32_t x      {};
-    uint32_t y      {};
-    uint32_t w      {};
-    uint32_t h      {};
+    uint16_t map_id {};
+    uint16_t x      {};
+    uint16_t y      {};
+    uint16_t w      {};
+    uint16_t h      {};
 
     template <typename Stream> bool Serialize(Stream &stream)
     {
-        serialize_uint32(stream, map_id);
-        serialize_uint32(stream, x);
-        serialize_uint32(stream, y);
-        serialize_uint32(stream, w);
-        serialize_uint32(stream, h);
+        serialize_uint16(stream, map_id);
+        serialize_uint16(stream, x);
+        serialize_uint16(stream, y);
+        serialize_uint16(stream, w);
+        serialize_uint16(stream, h);
         return true;
     }
 
@@ -331,19 +334,19 @@ struct Msg_S_TileChunk : public yojimbo::BlockMessage
 
 struct Msg_S_TileUpdate : public yojimbo::Message
 {
-    uint32_t map_id    {};
-    uint32_t x         {};
-    uint32_t y         {};
-    uint32_t tile_id   {};
-    uint32_t object_id {};
+    uint16_t map_id    {};
+    uint16_t x         {};
+    uint16_t y         {};
+    uint16_t tile_id   {};
+    uint16_t object_id {};
 
     template <typename Stream> bool Serialize(Stream &stream)
     {
-        serialize_uint32(stream, map_id);
-        serialize_uint32(stream, x);
-        serialize_uint32(stream, y);
-        serialize_uint32(stream, tile_id);
-        serialize_uint32(stream, object_id);
+        serialize_uint16(stream, map_id);
+        serialize_uint16(stream, x);
+        serialize_uint16(stream, y);
+        serialize_uint16(stream, tile_id);
+        serialize_uint16(stream, object_id);
         return true;
     }
 

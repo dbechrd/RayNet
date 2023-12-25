@@ -29,7 +29,7 @@ struct EditModeTiles {
     TileEditMode tileEditMode;
 
     struct {
-        uint32_t tile_id;
+        uint16_t tile_id;
     } cursor;
 };
 
@@ -46,13 +46,13 @@ struct EditModePathNodes {
         Vector2 dragStartPosition;
 
         // NOTE: Make this a tagged union if we want to drag other stuff too
-        uint32_t dragPathId;
-        uint32_t dragPathNodeIndex;
+        uint16_t dragPathId;
+        uint16_t dragPathNodeIndex;
     } cursor;
 };
 
 struct EditModeDialog {
-    uint32_t dialogId{};
+    uint16_t dialogId{};
 };
 
 struct EditModeEntities {
@@ -92,9 +92,9 @@ struct Editor {
     bool          active   {};
     EditMode      mode     {};
     EditModeState state    {};
-    uint32_t      map_id   {};
+    uint16_t      map_id   {};
 
-    Editor(uint32_t map_id) : map_id(map_id) {}
+    Editor(uint16_t map_id) : map_id(map_id) {}
     Err Init(void);
     void HandleInput(Camera2D &camera);
     void DrawGroundOverlays(Camera2D &camera, double now);
