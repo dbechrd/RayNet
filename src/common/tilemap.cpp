@@ -222,8 +222,53 @@ AiPathNode *Tilemap::GetPathNode(uint16_t pathId, uint16_t pathNodeIndex) {
     return 0;
 }
 
-void Tilemap::GetEdges(Edge::Array &edges)
+bool IsActivePowerSource(ObjectData &obj)
 {
+    // TODO: Make object flags or something more efficient
+    return obj.power_level && obj.type == "lever";
+}
+
+bool IsPowerLoad(ObjectData &obj)
+{
+    return obj.type == "door";
+}
+
+void Tilemap::UpdatePower(double now)
+{
+    std::unordered_set<uint8_t> active_power_channels{};
+
+    for (auto &obj : object_data) {
+        if (IsActivePowerSource(obj)) {
+            active_power_channels.insert(obj.power_channel);
+        }
+    }
+
+    for (auto &obj : object_data) {
+        const int powered = (int)active_power_channels.contains(obj.power_channel);
+        if (obj.power_level != powered) {
+            if (IsPowerLoad(obj)) {
+                obj.power_level = powered;
+            }
+        }
+
+        uint16_t old_tile_id = At_Obj(obj.x, obj.y);
+        uint16_t new_tile_id = obj.tile_def;
+        if (obj.power_level) {
+            new_tile_id = obj.tile_def_powered;
+        }
+
+        if (new_tile_id != old_tile_id) {
+            Set_Obj(obj.x, obj.y, new_tile_id, now);
+            printf("%hu %hu %s = %d\n", obj.x, obj.y, obj.type.c_str(), obj.power_level);
+        }
+    }
+}
+
+void Tilemap::UpdateEdges(Edge::Array &edges)
+{
+    //PerfTimer t{ "UpdateEdges" };
+    edges.clear();
+
     // Clockwise winding, Edge Normal = (-y, x)
 
     int topStartIdx = -1;
@@ -284,13 +329,17 @@ void Tilemap::GetEdges(Edge::Array &edges)
         }
     }
 }
-void Tilemap::UpdateEdges(void)
+void Tilemap::Update(double now, bool simulate)
 {
-    //PerfTimer t{ "UpdateEdges" };
-    edges.clear();
+    //Tilemap *map = LocalPlayerMap();
+    //map->UpdateAnimations(client.frameDt);
+
+    if (simulate) {
+        UpdatePower(now);
+    }
 
     // TODO: Only run this when the edge list is dirty
-    GetEdges(edges);
+    UpdateEdges(edges);
 }
 
 void Tilemap::ResolveEntityCollisionsEdges(Entity &entity)

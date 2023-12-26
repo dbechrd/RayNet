@@ -45,8 +45,7 @@ void GameServer::OnClientJoin(int clientIdx)
         player->sprite_id = packs[0].FindByName<Sprite>("sprite_chr_mage").id;
         //projectile->direction = DIR_E;  // what's it do if it defaults to North?
 
-        TileChunkRecord mainMap{};
-        sv_player.chunkList.push(mainMap);
+        sv_player.needsChunkSync = true;
 
         BroadcastEntitySpawn(player->id);
         SendTitleShow(clientIdx, level_001.title);
@@ -405,6 +404,11 @@ void GameServer::WarpEntity(Entity &entity, uint16_t dest_map_id, Vector3 dest_p
         entity.last_moved_at = now;
 
         if (entity.type == ENTITY_PLAYER) {
+            ServerPlayer *s_player = FindServerPlayer(entity.id);
+            if (s_player) {
+                s_player->needsChunkSync = true;
+            }
+
             Tilemap &map = packs[0].FindById<Tilemap>(entity.map_id);
             if (map.title.size()) {
                 int clientIdx = 0;
@@ -783,7 +787,7 @@ void GameServer::Tick(void)
 
     // TODO: Only do this when the map loads or changes.
     for (Tilemap &map : packs[0].tile_maps) {
-        map.UpdateEdges();
+        map.Update(now, true);
     }
 
     // HACK: Only spawn NPCs in map 1, whatever map that may be (hopefully it's Level_001)
@@ -1190,13 +1194,15 @@ void GameServer::ProcessMsg(int clientIdx, Msg_C_TileInteract &msg)
     if (msg.primary == false && obj_data) {
         if (obj_data->type == "lever") {
             if (obj_data->power_level) {
-                map->Set_Obj(msg.x, msg.y, obj_data->tile_def_unpowered, now);
                 obj_data->power_level = 0;
+                map->Set_Obj(msg.x, msg.y, obj_data->tile_def, now);
+                printf("lever off\n");
             } else {
-                map->Set_Obj(msg.x, msg.y, obj_data->tile_def_powered, now);
                 obj_data->power_level = 1;
+                map->Set_Obj(msg.x, msg.y, obj_data->tile_def_powered, now);
+                printf("lever on\n");
             }
-            BroadcastTileUpdate(*map, msg.x, msg.y);
+            //BroadcastTileUpdate(*map, msg.x, msg.y);  // dirty should handle this
         } else if (obj_data->type == "lootable") {
             SendEntitySay(clientIdx, player.entityId, 0, "Chest", TextFormat("loot_table_id: %u", obj_data->loot_table_id));
         } else if (obj_data->type == "sign") {
@@ -1303,24 +1309,30 @@ void GameServer::SendClientSnapshots(void)
             continue;
         }
 
+        const bool fullSnapshot = serverPlayer.joinedAt == now;
+
+        if (fullSnapshot || serverPlayer.needsChunkSync) {
 #if 0
-        // TODO: Send a full chunk resync only when it makes sense (first login, change maps, changes > N, etc.)
-        for (int tileChunkIdx = 0; tileChunkIdx < serverPlayer.chunkList.size(); tileChunkIdx++) {
-            TileChunkRecord &chunkRec = serverPlayer.chunkList[tileChunkIdx];
-            if (chunkRec.lastSentAt < map->chunkLastUpdatedAt) {
-                SendTileChunk(clientIdx, *map, chunkRec.coord.x, chunkRec.coord.y);
-                chunkRec.lastSentAt = now;
-                printf("[game_server] sending chunk to client\n");
+            // TODO: Send a full chunk resync only when it makes sense (first login, change maps, changes > N, etc.)
+            for (int tileChunkIdx = 0; tileChunkIdx < serverPlayer.chunkList.size(); tileChunkIdx++) {
+                TileChunkRecord &chunkRec = serverPlayer.chunkList[tileChunkIdx];
+                if (chunkRec.lastSentAt < map->chunkLastUpdatedAt) {
+                    SendTileChunk(clientIdx, *map, chunkRec.coord.x, chunkRec.coord.y);
+                    chunkRec.lastSentAt = now;
+                    printf("[game_server] sending chunk to client\n");
+                }
             }
-        }
+#else
+            SendTileChunk(clientIdx, *map, 0, 0);
+            serverPlayer.needsChunkSync = false;
 #endif
+        }
 
         for (const Tilemap::Coord &coord : map->dirtyTiles) {
             SendTileUpdate(clientIdx, *map, coord.x, coord.y);
         }
 
         // TODO: Send only the world state that's relevant to this particular client
-        const bool fullSnapshot = serverPlayer.joinedAt == now;
         for (Entity &entity : entityDb->entities) {
             if (!entity.id || !entity.type || entity.despawned_at) {
                 continue;

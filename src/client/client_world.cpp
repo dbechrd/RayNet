@@ -87,13 +87,6 @@ Err ClientWorld::CreateDialog(Entity &entity, uint16_t dialogId, const std::stri
     return RN_SUCCESS;
 }
 
-void ClientWorld::UpdateMap(Tilemap &map)
-{
-    // TODO(cleanup): What else is there to update now?
-    //Tilemap *map = LocalPlayerMap();
-    //map->UpdateAnimations(client.frameDt);
-    map.UpdateEdges();
-}
 void ClientWorld::UpdateLocalPlayerHisto(GameClient &client, Entity &entity, HistoData &histoData)
 {
     if (Histogram::paused) {
@@ -370,7 +363,7 @@ void ClientWorld::Update(GameClient &client)
     UpdateTileDefAnimations(client.frameDt);
     Tilemap *map = LocalPlayerMap();
     if (map) {
-        UpdateMap(*map);
+        map->Update(client.now, false);
     } else {
         assert(!"should this ever happen?");
     }

@@ -32,6 +32,7 @@
 //    - Use std::variant. No. Fuck that.
 
 struct TileChunkRecord {
+    uint16_t map_id{};
     Tilemap::Coord coord{};
     double lastSentAt{};  // when we last sent this chunk to the client
 };
@@ -44,6 +45,7 @@ struct ServerPlayer {
     uint32_t lastInputSeq   {};  // sequence number of last input command we processed
     RingBuffer<InputCmd, CL_SEND_INPUT_COUNT> inputQueue{};
     // TODO(dlb): Also send tile chunks whenever a client enters the render distance of it
+    bool     needsChunkSync {};
     RingBuffer<TileChunkRecord, CL_RENDER_DISTANCE*CL_RENDER_DISTANCE> chunkList{};
 };
 

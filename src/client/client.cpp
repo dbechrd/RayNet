@@ -159,6 +159,16 @@ int main(int argc, char *argv[])
         printf("Failed to load common resources\n");
     }
 
+    // HACK: Fix this..
+    for (Tilemap &map : packs[0].tile_maps) {
+        for (auto &tile : map.tiles) {
+            tile = 0;
+        }
+        for (auto &obj : map.objects) {
+            obj = 0;
+        }
+    }
+
     Image icon = LoadImage("../res/client.png");
     SetWindowIcon(icon);
     UnloadImage(icon);

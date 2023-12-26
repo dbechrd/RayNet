@@ -227,13 +227,14 @@ struct ObjectData {
     uint16_t x {};
     uint16_t y {};
     std::string type {};
+    uint16_t tile_def {};
 
     // type == "decoration"
     // no extra fields atm
 
-    // type == "lever"
+    // type == ["lever", "door"]
     uint8_t  power_level        {};
-    uint16_t tile_def_unpowered {};
+    uint8_t  power_channel      {};
     uint16_t tile_def_powered   {};
 
     // type == "lootable"
@@ -351,7 +352,8 @@ struct Tilemap {
     uint16_t GetNextPathNodeIndex(uint16_t pathId, uint16_t pathNodeIndex);
     AiPathNode *GetPathNode(uint16_t pathId, uint16_t pathNodeIndex);
 
-    void UpdateEdges(void);
+    void Update(double now, bool simulate);
+
     void ResolveEntityCollisionsEdges(Entity &entity);
     void ResolveEntityCollisionsTriggers(Entity &entity);
 
@@ -362,7 +364,8 @@ struct Tilemap {
     void DrawTileIds(Camera2D &camera);
 
 private:
-    void GetEdges(Edge::Array &edges);
+    void UpdatePower(double now);
+    void UpdateEdges(Edge::Array &edges);
 
     bool NeedsFill(uint16_t x, uint16_t y, uint16_t old_tile_id);
     void Scan(uint16_t lx, uint16_t rx, uint16_t y, uint16_t old_tile_id, std::stack<Coord> &stack);

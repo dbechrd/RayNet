@@ -403,10 +403,15 @@ void Process(PackStream &stream, ObjectData &obj_data)
     PROC(obj_data.x);
     PROC(obj_data.y);
     PROC(obj_data.type);
+    PROC(obj_data.tile_def);
 
     if (obj_data.type == "lever") {
         PROC(obj_data.power_level);
-        PROC(obj_data.tile_def_unpowered);
+        PROC(obj_data.power_channel);
+        PROC(obj_data.tile_def_powered);
+    } else if (obj_data.type == "door") {
+        PROC(obj_data.power_level);
+        PROC(obj_data.power_channel);
         PROC(obj_data.tile_def_powered);
     } else if (obj_data.type == "lootable") {
         PROC(obj_data.loot_table_id);
@@ -754,7 +759,7 @@ Err Process(PackStream &stream)
                     case DAT_TYP_TILE_MAP:  ReadEntryTxt<Tilemap> (stream); break;
                     case DAT_TYP_ENTITY:    ReadEntryTxt<Entity>  (stream); break;
                     case -1: break;
-                    default: assert(!"uh-oh");
+                    default: ReportTxtError(stream.file, "Expected valid data type"); assert(!"asdf");
                 }
             }
         }
