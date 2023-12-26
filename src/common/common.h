@@ -48,7 +48,7 @@
 
 #define PATH_LEN_MAX 1024
 #define MAP_OVERWORLD  "map_overworld"
-#define MAP_CAVE  "map_cave"
+#define MAP_CAVE       "map_cave"
 
 // Developer macros
 

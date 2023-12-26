@@ -425,10 +425,7 @@ void Process(PackStream &stream, ObjectData &obj_data)
     } else if (obj_data.type == "lootable") {
         PROC(obj_data.loot_table_id);
     } else if (obj_data.type == "sign") {
-        PROC(obj_data.sign_text[0]);
-        PROC(obj_data.sign_text[1]);
-        PROC(obj_data.sign_text[2]);
-        PROC(obj_data.sign_text[3]);
+        PROC(obj_data.sign_text);
     } else if (obj_data.type == "warp") {
         PROC(obj_data.warp_map_id);
         PROC(obj_data.warp_dest_x);

@@ -684,18 +684,18 @@ void Editor::DrawUI_TileActions(UI &uiActionBar, double now)
     static float width = 0;
     static float height = 0;
 
-    static STB_TexteditState txtWidth{};
-    static STB_TexteditState txtHeight{};
+    const uint32_t ctrlid_width = __COUNTER__;
+    const uint32_t ctrlid_height = __COUNTER__;
 
-    if (!UI::IsActiveEditor(txtWidth) && !UI::IsActiveEditor(txtHeight)) {
+    if (!UI::IsActiveEditor(ctrlid_width) && !UI::IsActiveEditor(ctrlid_height)) {
         width = map.width;
         height = map.height;
     }
 
     uiActionBar.Text(CSTR("Size"));
     uiActionBar.PushWidth(100);
-    uiActionBar.Textbox(txtWidth, width);
-    uiActionBar.Textbox(txtHeight, height);
+    uiActionBar.Textbox(ctrlid_width, width);
+    uiActionBar.Textbox(ctrlid_height, height);
     uiActionBar.PopStyle();
     if (uiActionBar.Button(CSTR("Resize!")).pressed) {
         uint16_t newWidth = (uint16_t)width;
@@ -1292,9 +1292,8 @@ void Editor::DrawUI_EntityActions(UI &uiActionBar, double now)
     searchStyle.margin = UIMargin(0, 0, 0, 6);
     uiActionBar.PushStyle(searchStyle);
 
-    static STB_TexteditState txtSearch{};
     static std::string filter{ "*" };
-    uiActionBar.Textbox(txtSearch, filter);
+    uiActionBar.Textbox(__COUNTER__, filter);
     uiActionBar.Newline();
 
     for (uint32_t i = 0; i < SV_MAX_ENTITIES; i++) {
@@ -1334,15 +1333,14 @@ void Editor::DrawUI_EntityActions(UI &uiActionBar, double now)
 
             uiActionBar.Label(CSTR("position"), labelWidth);
             uiActionBar.PushBgColor({ 127, 0, 0, 255 }, UI_CtrlTypeTextbox);
-            static STB_TexteditState txtPosX{};
             uiActionBar.PushWidth(80);
-            uiActionBar.Textbox(txtPosX, entity->position.x);
+            uiActionBar.Textbox(__COUNTER__, entity->position.x);
             uiActionBar.PopStyle();
             uiActionBar.PopStyle();
+
             uiActionBar.PushBgColor({ 0, 127, 0, 255 }, UI_CtrlTypeTextbox);
-            static STB_TexteditState txtPosY{};
             uiActionBar.PushWidth(80);
-            uiActionBar.Textbox(txtPosY, entity->position.y);
+            uiActionBar.Textbox(__COUNTER__, entity->position.y);
             uiActionBar.PopStyle();
             uiActionBar.PopStyle();
             uiActionBar.Newline();
@@ -1357,9 +1355,8 @@ void Editor::DrawUI_EntityActions(UI &uiActionBar, double now)
             ////////////////////////////////////////////////////////////////////////
             // Collision
             uiActionBar.Label(CSTR("radius"), labelWidth);
-            static STB_TexteditState txtRadius{};
             uiActionBar.PushWidth(80);
-            uiActionBar.Textbox(txtRadius, entity->radius);
+            uiActionBar.Textbox(__COUNTER__, entity->radius);
             uiActionBar.PopStyle();
             uiActionBar.Newline();
 
@@ -1382,44 +1379,40 @@ void Editor::DrawUI_EntityActions(UI &uiActionBar, double now)
             ////////////////////////////////////////////////////////////////////////
             // Life
             uiActionBar.Label(CSTR("health"), labelWidth);
-            static STB_TexteditState txtHealth{};
             uiActionBar.PushWidth(80);
-            uiActionBar.Textbox(txtHealth, entity->hp);
+            uiActionBar.Textbox(__COUNTER__, entity->hp);
             uiActionBar.PopStyle();
+
             uiActionBar.Text(CSTR("/"));
-            static STB_TexteditState txtMaxHealth{};
+
             uiActionBar.PushWidth(80);
-            uiActionBar.Textbox(txtMaxHealth, entity->hp_max);
+            uiActionBar.Textbox(__COUNTER__, entity->hp_max);
             uiActionBar.PopStyle();
             uiActionBar.Newline();
 
             ////////////////////////////////////////////////////////////////////////
             // Physics
             uiActionBar.Label(CSTR("drag"), labelWidth);
-            static STB_TexteditState txtDrag{};
             uiActionBar.PushWidth(80);
-            uiActionBar.Textbox(txtDrag, entity->drag);
+            uiActionBar.Textbox(__COUNTER__, entity->drag);
             uiActionBar.PopStyle();
             uiActionBar.Newline();
 
             uiActionBar.Label(CSTR("speed"), labelWidth);
-            static STB_TexteditState txtSpeed{};
             uiActionBar.PushWidth(80);
-            uiActionBar.Textbox(txtSpeed, entity->speed);
+            uiActionBar.Textbox(__COUNTER__, entity->speed);
             uiActionBar.PopStyle();
             uiActionBar.Newline();
 
             uiActionBar.Label(CSTR("velocity"), labelWidth);
             uiActionBar.PushBgColor({ 127, 0, 0, 255 }, UI_CtrlTypeTextbox);
-            static STB_TexteditState txtVelX{};
             uiActionBar.PushWidth(80);
-            uiActionBar.Textbox(txtVelX, entity->velocity.x);
+            uiActionBar.Textbox(__COUNTER__, entity->velocity.x);
             uiActionBar.PopStyle();
             uiActionBar.PopStyle();
             uiActionBar.PushBgColor({ 0, 127, 0, 255 }, UI_CtrlTypeTextbox);
-            static STB_TexteditState txtVelY{};
             uiActionBar.PushWidth(80);
-            uiActionBar.Textbox(txtVelY, entity->velocity.y);
+            uiActionBar.Textbox(__COUNTER__, entity->velocity.y);
             uiActionBar.PopStyle();
             uiActionBar.PopStyle();
             uiActionBar.Newline();
@@ -1436,9 +1429,8 @@ void Editor::DrawUI_PackFiles(UI &uiActionBar, double now)
     searchStyle.margin = UIMargin(0, 0, 0, 6);
     uiActionBar.PushStyle(searchStyle);
 
-    static STB_TexteditState txtSearch{};
     static std::string filter{ "*" };
-    uiActionBar.Textbox(txtSearch, filter);
+    uiActionBar.Textbox(__COUNTER__, filter);
     uiActionBar.Newline();
 
     for (Pack &pack : packs) {
@@ -1608,19 +1600,7 @@ void Editor::DrawUI_PackFiles(UI &uiActionBar, double now)
 
             if (selected) {
                 #define HAQ_UI_FIELD(c_type, c_name, c_init, flags, parent) \
-                    if constexpr ((flags) & HAQ_SERIALIZE) { \
-                        uiActionBar.Label(CSTR(#c_name), labelWidth); \
-                        if constexpr ((flags) & HAQ_EDIT) { \
-                            static STB_TexteditState txt_##c_name{}; \
-                            const float textboxWidth = 400 - 24 - labelWidth; \
-                            uiActionBar.PushWidth(textboxWidth); \
-                            uiActionBar.TextboxHAQ(txt_##c_name, parent.c_name, flags); \
-                            uiActionBar.PopStyle(); \
-                        } else { \
-                            uiActionBar.Text(parent.c_name); \
-                        } \
-                        uiActionBar.Newline(); \
-                    }
+                    uiActionBar.HAQField(__COUNTER__, #c_name, parent.c_name, (flags), labelWidth);
 
                 #define HAQ_UI(hqt, parent) \
                     hqt(HAQ_UI_FIELD, parent)

@@ -1213,13 +1213,7 @@ void GameServer::ProcessMsg(int clientIdx, Msg_C_TileInteract &msg)
         } else if (obj_data->type == "lootable") {
             SendEntitySay(clientIdx, player.entityId, 0, "Chest", TextFormat("loot_table_id: %u", obj_data->loot_table_id));
         } else if (obj_data->type == "sign") {
-            const char *signText = TextFormat("%s\n%s\n%s\n%s",
-                obj_data->sign_text[0].c_str(),
-                obj_data->sign_text[1].c_str(),
-                obj_data->sign_text[2].c_str(),
-                obj_data->sign_text[3].c_str()
-            );
-            SendEntitySay(clientIdx, player.entityId, 0, "Sign", signText);
+            SendEntitySay(clientIdx, player.entityId, 0, "Sign", obj_data->sign_text.c_str());
         } else if (obj_data->type == "warp") {
             Tilemap &map = packs[0].FindById<Tilemap>(obj_data->warp_map_id);
             const char *warpInfo = TextFormat("%s (%u, %u)",

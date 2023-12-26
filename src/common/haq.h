@@ -7,7 +7,7 @@
 //#define HAQ_C_TYPE(c_type, c_type_name, c_body, userdata) \
 //    c_type c_type_name c_body;
 
-#define HAQ_C_FIELD(c_type, c_name, c_init, flags, userdata) \
+#define HAQ_C_FIELD(c_type, c_name, c_init, ...) \
     c_type c_name c_init;
 
 //#define HAQ_C_OTHER(x) x

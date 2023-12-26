@@ -825,7 +825,6 @@ void ClientWorld::DrawHUDSignEditor(void)
         UIState uiState{};
         uiState.hover = dlb_CheckCollisionPointRec(GetMousePosition(), uiSignedEditorRect);
 
-        static STB_TexteditState txtEditSign{};
         static std::string signText{};
 
         UIPad margin = uiSignEditorStyle.margin;
@@ -835,7 +834,7 @@ void ClientWorld::DrawHUDSignEditor(void)
         uiSignEditor.PushWidth(uiSignEditorSize.x); // - (uiSignEditorStyle.margin.left + uiSignEditorStyle.margin.right));
         uiSignEditor.PushBgColor(Fade(PINK, 0.2f), UI_CtrlTypeTextbox);
         //uiSignEditor.PushBgColor(BLANK, UI_CtrlTypeTextbox);
-        uiSignEditor.Textbox(txtEditSign, signText, false, 0, LimitStringLength, (void *)128);
+        uiSignEditor.Textbox(__COUNTER__, signText, false, 0, LimitStringLength, (void *)128);
         uiSignEditor.Newline();
         uiSignEditor.PopStyle();
         uiSignEditor.PopStyle();

@@ -71,6 +71,7 @@ struct UIStyle {
     Font *font{ &fntSmall };
     bool buttonPressed{};
     UIStyle_TextAlignH alignH{ TextAlign_Left };
+    int indent{ 0 };
 };
 
 struct UIState {
@@ -83,7 +84,7 @@ struct UIState {
 };
 
 struct UI {
-    static bool IsActiveEditor(STB_TexteditState &state);
+    static bool IsActiveEditor(uint32_t ctrlid);
     static bool UnfocusActiveEditor(void);
 
     UI(Vector2 position, UIStyle style);
@@ -96,6 +97,7 @@ struct UI {
     void PushBgColor(Color color, UI_CtrlType ctrlType);
     void PushFgColor(Color color);
     void PushFont(Font &font);
+    void PushIndent(int indent = 1);
     const UIStyle &GetStyle(void);
     void PopStyle(void);
 
@@ -119,11 +121,11 @@ struct UI {
     typedef void (*KeyPreCallback)(std::string &str, void *userData, bool &keyHandled);
     typedef void (*KeyPostCallback)(std::string &str, void *userData);
 
-    UIState Textbox(STB_TexteditState &state, std::string &text, bool singleline = true, KeyPreCallback preCallback = 0, KeyPostCallback postCallback = 0, void *userData = 0);
-    UIState Textbox(STB_TexteditState &stbState, float &value, const char *fmt = "%.f", float increment = 1);
+    UIState Textbox(uint32_t ctrlid, std::string &text, bool singleline = true, KeyPreCallback preCallback = 0, KeyPostCallback postCallback = 0, void *userData = 0);
+    UIState Textbox(uint32_t ctrlid, float &value, const char *fmt = "%.f", float increment = 1);
 
     template <typename T>
-    void TextboxHAQ(STB_TexteditState &stbState, T &value, int flags);
+    void HAQField(uint32_t ctrlid, const std::string &name, T &value, int flags, int labelWidth);
 
     inline Vector2 CursorScreen(void) {
         return Vector2Add(position, cursor);
@@ -138,13 +140,13 @@ private:
     Vector2 cursor{};   // where to draw next element
     Vector2 lineSize{}; // total size of current row of UI elements
     std::stack<UIStyle> styleStack{};
-    static STB_TexteditState *prevActiveEditor;
-    static STB_TexteditState *activeEditor;
+    static uint32_t prevActiveEditor;
+    static uint32_t activeEditor;
 
     static bool tabToNextEditor;  // for tab
     static bool tabHandledThisFrame;  // to de-dupe
-    static STB_TexteditState *lastDrawnEditor;  // for shift-tab (1 frame delay)
-    static STB_TexteditState *tabToPrevEditor;  // for shift-tab (1 frame delay)
+    static uint32_t lastDrawnEditor;  // for shift-tab (1 frame delay)
+    static uint32_t tabToPrevEditor;  // for shift-tab (1 frame delay)
 
     struct HoverHash {
         Vector2 position{};
@@ -160,6 +162,14 @@ private:
     UIState CalcState(Rectangle &ctrlRect, HoverHash &prevHoverHash);
     void UpdateAudio(const UIState &uiState);
     void UpdateCursor(const UIStyle &style, Rectangle &ctrlRect);
+
+    template <typename T>
+    void HAQFieldValue(uint32_t ctrlid, const std::string &name, T &value, int flags, int labelWidth);
+    void HAQFieldValue(uint32_t ctrlid, const std::string &name, ObjectData &obj, int flags, int labelWidth);
+    template <typename T>
+    void HAQFieldValue(uint32_t ctrlid, const std::string &name, std::vector<T> &vec, int flags, int labelWidth);
+    template <typename T>
+    void HAQFieldEditor(uint32_t ctrlid, const std::string &name, T &value, int flags, int labelWidth);
 };
 
 extern void LimitStringLength(std::string &str, void *userData);

@@ -2,17 +2,17 @@
 #include "../collision.h"
 #include "../common.h"
 
-STB_TexteditState *UI::prevActiveEditor{};
-STB_TexteditState *UI::activeEditor{};
+uint32_t UI::prevActiveEditor{};
+uint32_t UI::activeEditor{};
 
 bool UI::tabToNextEditor{};
 bool UI::tabHandledThisFrame{};
-STB_TexteditState *UI::lastDrawnEditor{};
-STB_TexteditState *UI::tabToPrevEditor{};
+uint32_t UI::lastDrawnEditor{};
+uint32_t UI::tabToPrevEditor{};
 
-bool UI::IsActiveEditor(STB_TexteditState &state)
+bool UI::IsActiveEditor(uint32_t ctrlid)
 {
-    return &state == activeEditor;
+    return ctrlid == activeEditor;
 }
 
 bool UI::UnfocusActiveEditor(void)
@@ -90,6 +90,13 @@ void UI::PushFont(Font &font)
 {
     UIStyle style = GetStyle();
     style.font = &font;
+    PushStyle(style);
+}
+
+void UI::PushIndent(int indent)
+{
+    UIStyle style = GetStyle();
+    style.indent += indent;
     PushStyle(style);
 }
 
@@ -182,6 +189,9 @@ void UI::Newline(void)
     cursor.x = 0;
     cursor.y += lineSize.y;
     lineSize = {};
+
+    UIStyle style = GetStyle();
+    Space({ (float)style.indent * style.font->baseSize, 0 });
 }
 
 void UI::Space(Vector2 space)
@@ -531,9 +541,10 @@ bool RN_stb_is_space(char ch)
 #define STB_TEXTEDIT_IMPLEMENTATION
 #include "stb_textedit.h"
 
-UIState UI::Textbox(STB_TexteditState &stbState, std::string &text, bool singleline,
-                    KeyPreCallback preCallback, KeyPostCallback postCallback, void *userData)
+UIState UI::Textbox(uint32_t ctrlid, std::string &text, bool singleline, KeyPreCallback preCallback, KeyPostCallback postCallback, void *userData)
 {
+    static STB_TexteditState stbState{};
+
     const Vector2 textOffset{ 8, 2 };
     const UIStyle &style = GetStyle();
     StbString str{ style.font, text };
@@ -571,15 +582,15 @@ UIState UI::Textbox(STB_TexteditState &stbState, std::string &text, bool singlel
     //--------------------------------------------------------------------------
     static HoverHash prevHoverHash{};
     UIState state = CalcState(ctrlRect, prevHoverHash);
-    if (state.pressed || tabToNextEditor || &stbState == tabToPrevEditor) {
+    if (state.pressed || tabToNextEditor || tabToPrevEditor == ctrlid) {
         prevActiveEditor = activeEditor;
-        activeEditor = &stbState;
+        activeEditor = ctrlid;
         tabToNextEditor = false;
         tabToPrevEditor = 0;
     }
 
-    const bool wasActive = prevActiveEditor == &stbState;
-    const bool isActive = activeEditor == &stbState;
+    const bool wasActive = prevActiveEditor == ctrlid;
+    const bool isActive = activeEditor == ctrlid;
     const bool newlyActive = isActive && (!stbState.initialized || !wasActive);
 
     if (isActive) {
@@ -925,7 +936,7 @@ UIState UI::Textbox(STB_TexteditState &stbState, std::string &text, bool singlel
     // TODO: Render undo state just for fun?
 #endif
 
-    lastDrawnEditor = &stbState;
+    lastDrawnEditor = ctrlid;
     return state;
 }
 
@@ -951,7 +962,7 @@ void AdjustFloat(std::string &str, void *userData, bool &keyHandled)
     }
 }
 
-UIState UI::Textbox(STB_TexteditState &stbState, float &value, const char *fmt, float increment)
+UIState UI::Textbox(uint32_t ctrlid, float &value, const char *fmt, float increment)
 {
 #if 0
     const char *valueCstr = TextFormat("%.2f", value);
@@ -989,7 +1000,7 @@ UIState UI::Textbox(STB_TexteditState &stbState, float &value, const char *fmt, 
     const char *valueCstr = TextFormat(fmt, value);
     std::string valueStr{valueCstr};
     TextboxFloatCallbackData data{ fmt, &value, increment };
-    UIState state = Textbox(stbState, valueStr, true, AdjustFloat, 0, (void *)&data);
+    UIState state = Textbox(ctrlid, valueStr, true, AdjustFloat, 0, (void *)&data);
     char *end = 0;
     float newValue = strtof(valueStr.c_str(), &end);
     if (*end != '\0') {
@@ -1009,19 +1020,74 @@ void LimitStringLength(std::string &str, void *userData)
 }
 
 template <typename T>
-void UI::TextboxHAQ(STB_TexteditState &stbState, T &value, int flags)
+void UI::HAQFieldValue(uint32_t ctrlid, const std::string &name, T &value, int flags, int labelWidth)
 {
-    bool popStyle = false;
+    PushFgColor(RED);
+    Label(CSTR("No UI Renderer"));
+    PopStyle();
+}
+
+void UI::HAQFieldValue(uint32_t ctrlid, const std::string &name, ObjectData &obj, int flags, int labelWidth)
+{
+#define HAQ_UI_FIELD(c_type, c_name, c_init, flags, userdata, condition) \
+    { \
+        if (condition) { \
+            size_t hash{}; \
+            hash_combine(hash, __COUNTER__, name); \
+            HAQField(hash, #c_name, userdata.c_name, (flags), labelWidth); \
+        } \
+    }
+
+#define HAQ_UI(hqt, userdata) \
+    hqt(HAQ_UI_FIELD, userdata)
+
+    HAQ_UI(HQT_OBJECT_DATA_FIELDS, obj);
+
+#undef HAQ_UI_FIELD
+#undef HAQ_UI
+}
+
+template <typename T>
+void UI::HAQFieldValue(uint32_t ctrlid, const std::string &name, std::vector<T> &vec, int flags, int labelWidth)
+{
+    const size_t count = vec.size();
+    if (!count) return;
+
+    PushIndent();
+    Newline();
+
+    for (int i = 0; i < count; i++) {
+        std::string name_i = TextFormat("%s[%d]", name.c_str(), i);
+        size_t hash{};
+        hash_combine(hash, __COUNTER__, name_i);
+        HAQField(hash, name_i, vec[i], flags, labelWidth);
+    }
+
+    PopStyle();
+}
+
+template <typename T>
+void UI::HAQFieldEditor(uint32_t ctrlid, const std::string &name, T &value, int flags, int labelWidth)
+{
+    int popStyle = 0;
+
+    const float textboxWidth = 400 - 24 - labelWidth;
+    PushWidth(textboxWidth);
+    popStyle++;
+
     if (flags & HAQ_EDIT_TEXTBOX_STYLE_X) {
         PushBgColor({ 127, 0, 0, 255 }, UI_CtrlTypeTextbox);
+        popStyle++;
     } else if (flags & HAQ_EDIT_TEXTBOX_STYLE_Y) {
         PushBgColor({ 0, 127, 0, 255 }, UI_CtrlTypeTextbox);
+        popStyle++;
     } else if (flags & HAQ_EDIT_TEXTBOX_STYLE_Z) {
         PushBgColor({ 0, 0, 127, 255 }, UI_CtrlTypeTextbox);
+        popStyle++;
     }
 
     if constexpr (std::is_same_v<T, std::string>) {
-        Textbox(stbState, value);
+        Textbox(ctrlid, value);
     } else if constexpr (std::is_same_v<T, float>) {
         const char* floatFmt = "%f";
         float floatInc = 1.0f;
@@ -1032,7 +1098,7 @@ void UI::TextboxHAQ(STB_TexteditState &stbState, T &value, int flags)
             floatFmt = "%.2f";
             floatInc = 0.01f;
         }
-        Textbox(stbState, value, floatFmt, floatInc);
+        Textbox(ctrlid, value, floatFmt, floatInc);
     } else if constexpr (
         std::is_same_v<T, uint8_t > ||
         std::is_same_v<T, uint16_t> ||
@@ -1040,15 +1106,36 @@ void UI::TextboxHAQ(STB_TexteditState &stbState, T &value, int flags)
         std::is_same_v<T, int8_t  > ||
         std::is_same_v<T, int16_t > ||
         std::is_same_v<T, int32_t >
-    ) {
+        ) {
         float valueFloat = (float)value;
-        Textbox(stbState, valueFloat, "%.f");
+        Textbox(ctrlid, valueFloat, "%.f");
         value = CLAMP(valueFloat, std::numeric_limits<T>::min(), std::numeric_limits<T>::max());
     } else {
-        PushFgColor(RED);
-        Label(CSTR("IDK HOW TO EDIT THIS MAN!"));
-        PopStyle();
+        Newline();
+        HAQFieldValue(ctrlid, name, value, flags, labelWidth);
     }
 
-    if (popStyle) PopStyle();
+    while (popStyle--) PopStyle();
+}
+
+template <typename T>
+void UI::HAQField(uint32_t ctrlid, const std::string &name, T &value, int flags, int labelWidth)
+{
+    if (!((flags) & HAQ_SERIALIZE)) {
+        return;
+    }
+
+    if (name.size()) {
+        Label(name, labelWidth);
+    } else {
+        Space({ (float)labelWidth, 0 });
+    }
+
+    if ((flags) & HAQ_EDIT) {
+        HAQFieldEditor(ctrlid, name, value, flags, labelWidth);
+    } else {
+        Text(value);
+    }
+
+    Newline();
 }

@@ -163,8 +163,10 @@ void Tilemap::Fill(uint16_t x, uint16_t y, uint16_t new_tile_id, double now)
 
 TileDef &Tilemap::GetTileDef(uint16_t tile_id)
 {
-    TileDef &tile_def = packs[0].tile_defs[tile_id]; // FindTileDefById(tile_id);
-    return tile_def;
+    if (tile_id < packs[0].tile_defs.size()) {
+         return packs[0].tile_defs[tile_id];
+    }
+    return packs[0].tile_defs[0];
 }
 const GfxFrame &Tilemap::GetTileGfxFrame(uint16_t tile_id)
 {
