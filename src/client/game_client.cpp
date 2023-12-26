@@ -174,18 +174,25 @@ void GameClient::ProcessMsg(Msg_S_TileChunk &msg)
     Tilemap *map = world->FindOrLoadMap(msg.map_id);
     if (map) {
         if (map->id = msg.map_id) {
-            if (msg.GetBlockSize() == sizeof(TileChunk)) {
-                TileChunk *chunk = (TileChunk *)msg.GetBlockData();
+            uint8_t *block = msg.GetBlockData();
+
+            int chunk_beeg_bytes{};
+            TileChunk *chunk_beeg = (TileChunk *)DecompressData(msg.GetBlockData(), msg.GetBlockSize(), &chunk_beeg_bytes);
+
+            if (chunk_beeg_bytes == sizeof(TileChunk)) {
+                static TileChunk chunk;
                 for (uint32_t ty = msg.y; ty < msg.w; ty++) {
                     for (uint32_t tx = msg.x; tx < msg.h; tx++) {
                         const uint32_t index = ty * msg.w + tx;
-                        map->Set(msg.x + tx, msg.y + ty, chunk->tile_ids[index], 0);
-                        map->Set_Obj(msg.x + tx, msg.y + ty, chunk->object_ids[index], 0);
+                        map->Set(msg.x + tx, msg.y + ty, chunk_beeg->tile_ids[index], 0);
+                        map->Set_Obj(msg.x + tx, msg.y + ty, chunk_beeg->object_ids[index], 0);
                     }
                 }
             } else {
                 printf("[game_client] msg.GetBlockSize() [%d] != sizeof(TileChunk) [%zu]\n", msg.GetBlockSize(), sizeof(TileChunk));
             }
+
+            MemFree(chunk_beeg);
         } else {
             printf("[game_client] Failed to deserialize chunk with mapId %u into map with id %u\n", msg.map_id, map->id);
         }

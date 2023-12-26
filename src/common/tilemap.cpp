@@ -434,7 +434,10 @@ void Tilemap::DrawTile(uint16_t tile_id, Vector2 position, DrawCmdQueue *sortedD
     // TODO: Yikes.. that's a lot of lookups in a tight loop. Memoize some pointers or something man.
     const GfxFrame &gfx_frame = GetTileGfxFrame(tile_id);
     const GfxFile &gfx_file = packs[0].FindByName<GfxFile>(gfx_frame.gfx);
-    const Rectangle texRect{ (float)gfx_frame.x, (float)gfx_frame.y, (float)gfx_frame.w, (float)gfx_frame.h };
+    Rectangle texRect{ (float)gfx_frame.x, (float)gfx_frame.y, (float)gfx_frame.w, (float)gfx_frame.h };
+    if (gfx_frame.h > TILE_W) {
+        position.y -= gfx_frame.h - TILE_W;
+    }
 
     if (sortedDraws) {
         DrawCmd cmd{};

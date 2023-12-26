@@ -63,12 +63,9 @@ bool EntityDB::DespawnEntity(uint32_t entity_id, double now)
     assert(entity_id);
 
     Entity *entity = FindEntity(entity_id);
-    assert(!entity->despawned_at);  // in case we change how FindEntity works
     if (entity) {
         entity->despawned_at = now;
         return true;
-    } else {
-        printf("[entity_db] Failed to despawn entity id %u. Entity id not found.\n", entity_id);
     }
     return false;
 }

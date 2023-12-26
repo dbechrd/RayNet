@@ -958,23 +958,30 @@ void GameServer::SendTileChunk(int clientIdx, Tilemap &map, uint16_t x, uint16_t
     if (yj_server->CanSendMessage(clientIdx, CHANNEL_R_TILE_EVENT)) {
         Msg_S_TileChunk *msg = (Msg_S_TileChunk *)yj_server->CreateMessage(clientIdx, MSG_S_TILE_CHUNK);
         if (msg) {
-            TileChunk *chunk = (TileChunk *)yj_server->AllocateBlock(clientIdx, sizeof(TileChunk));
-
+            static TileChunk chunk;
             msg->map_id = map.id;
             msg->x = x;
             msg->y = y;
             msg->w = MIN(map.width, SV_MAX_TILE_CHUNK_WIDTH);
             msg->h = MIN(map.height, SV_MAX_TILE_CHUNK_WIDTH);
 
+            chunk = {};
             for (uint16_t ty = y; ty < msg->h; ty++) {
                 for (uint16_t tx = x; tx < msg->w; tx++) {
                     const uint16_t index = ty * msg->w + tx;
-                    map.AtTry(tx, ty, chunk->tile_ids[index]);
-                    map.AtTry_Obj(tx, ty, chunk->object_ids[index]);
+                    map.AtTry(tx, ty, chunk.tile_ids[index]);
+                    map.AtTry_Obj(tx, ty, chunk.object_ids[index]);
                 }
             }
 
-            yj_server->AttachBlockToMessage(clientIdx, msg, (uint8_t *)chunk, sizeof(TileChunk));
+            int chunk_smol_bytes{};
+            uint8_t *chunk_smol = CompressData((uint8_t *)&chunk, sizeof(chunk), &chunk_smol_bytes);
+
+            uint8_t *block = yj_server->AllocateBlock(clientIdx, chunk_smol_bytes);
+            memcpy(block, chunk_smol, chunk_smol_bytes);
+            MemFree(chunk_smol);
+
+            yj_server->AttachBlockToMessage(clientIdx, msg, block, chunk_smol_bytes);
             yj_server->SendMessage(clientIdx, CHANNEL_R_TILE_EVENT, msg);
         }
     }
@@ -1325,6 +1332,7 @@ void GameServer::SendClientSnapshots(void)
 #else
             SendTileChunk(clientIdx, *map, 0, 0);
             serverPlayer.needsChunkSync = false;
+            printf("[game_server] sending map '%s' chunk to client\n", map->title.c_str());
 #endif
         }
 
