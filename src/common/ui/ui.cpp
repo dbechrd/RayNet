@@ -191,7 +191,11 @@ void UI::Newline(void)
     lineSize = {};
 
     UIStyle style = GetStyle();
-    Space({ (float)style.indent * style.font->baseSize, 0 });
+    float indentSize = style.indentSize;
+    if (indentSize == 0) {
+        indentSize = style.font->baseSize;
+    }
+    Space({ (float)style.indent * indentSize, 0 });
 }
 
 void UI::Space(Vector2 space)
@@ -1060,7 +1064,10 @@ void UI::HAQFieldValue(uint32_t ctrlid, const std::string &name, std::vector<T> 
         std::string name_i = TextFormat("%s[%d]", name.c_str(), i);
         size_t hash{};
         hash_combine(hash, __COUNTER__, name_i);
-        HAQField(hash, name_i, vec[i], flags, labelWidth);
+        PushFgColor(GRAY);
+        Label(name_i, labelWidth);
+        PopStyle();
+        HAQField(hash, "#" + name_i, vec[i], flags, labelWidth);
     }
 
     PopStyle();
@@ -1071,7 +1078,8 @@ void UI::HAQFieldEditor(uint32_t ctrlid, const std::string &name, T &value, int 
 {
     int popStyle = 0;
 
-    const float textboxWidth = 400 - 24 - labelWidth;
+    const UIStyle &style = GetStyle();
+    const float textboxWidth = 400 - 24 - labelWidth - style.indent * style.font->baseSize;
     PushWidth(textboxWidth);
     popStyle++;
 
@@ -1125,7 +1133,7 @@ void UI::HAQField(uint32_t ctrlid, const std::string &name, T &value, int flags,
         return;
     }
 
-    if (name.size()) {
+    if (name.size() && name[0] != '#') {
         Label(name, labelWidth);
     } else {
         Space({ (float)labelWidth, 0 });

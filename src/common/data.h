@@ -313,8 +313,8 @@ struct Tilemap {
     FIELD(std::vector<uint16_t>  , tiles      , {}, HAQ_SERIALIZE/* | HAQ_EDIT */, userdata) \
     FIELD(std::vector<uint16_t>  , objects    , {}, HAQ_SERIALIZE/* | HAQ_EDIT */, userdata) \
     FIELD(std::vector<ObjectData>, object_data, {}, HAQ_SERIALIZE | HAQ_EDIT     , userdata) \
-    FIELD(std::vector<AiPathNode>, path_nodes , {}, HAQ_SERIALIZE/* | HAQ_EDIT */, userdata) \
-    FIELD(std::vector<AiPath>    , paths      , {}, HAQ_SERIALIZE/* | HAQ_EDIT */, userdata)
+    FIELD(std::vector<AiPathNode>, path_nodes , {}, HAQ_SERIALIZE | HAQ_EDIT, userdata) \
+    FIELD(std::vector<AiPath>    , paths      , {}, HAQ_SERIALIZE | HAQ_EDIT, userdata)
     HQT_TILE_MAP_FIELDS(HAQ_C_FIELD, 0);
 
     //-------------------------------

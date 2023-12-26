@@ -72,6 +72,7 @@ struct UIStyle {
     bool buttonPressed{};
     UIStyle_TextAlignH alignH{ TextAlign_Left };
     int indent{ 0 };
+    float indentSize{ 0 };
 };
 
 struct UIState {
