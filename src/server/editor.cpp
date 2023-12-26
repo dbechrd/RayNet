@@ -491,7 +491,7 @@ UIState Editor::DrawUI_ActionBar(Vector2 position, double now)
 #endif
     UIState saveButton = uiActionBar.Button(CSTR("Save"));
     if (saveButton.released) {
-        std::string path = packs[0].path;
+        std::string path = packs[0].GetPath(PACK_TYPE_TEXT);
         Err err = SavePack(packs[0], PACK_TYPE_TEXT);
         if (err) {
             std::thread errorThread([path, err]{
@@ -504,23 +504,20 @@ UIState Editor::DrawUI_ActionBar(Vector2 position, double now)
 
     UIState saveAsButton = uiActionBar.Button(CSTR("Save As"));
     if (saveAsButton.released) {
-        std::string filename = "resources/map/" + map.name + ".mdesk";
-        std::thread saveAsThread([filename, mapFileFilter]{
+        std::string path = packs[0].GetPath(PACK_TYPE_TEXT);
+        std::thread saveAsThread([path, mapFileFilter]{
             const char *saveAsRequestBuf = tinyfd_saveFileDialog(
                 "Save File",
-                filename.c_str(),
+                path.c_str(),
                 ARRAY_SIZE(mapFileFilter),
                 mapFileFilter,
-                "RayNet Tilemap (*.mdesk)");
+                "RayNet Pack (*.dat)");
             if (saveAsRequestBuf) saveAsRequest = saveAsRequestBuf;
         });
         saveAsThread.detach();
     }
     if (saveAsRequest.size()) {
-        std::string orig_path = packs[0].path;
-        packs[0].path = saveAsRequest;
-        Err err = SavePack(packs[0], PACK_TYPE_TEXT);
-        packs[0].path = orig_path;
+        Err err = SavePack(packs[0], PACK_TYPE_TEXT, saveAsRequest);
         if (err) {
             std::thread errorThread([err]{
                 const char *msg = TextFormat("Failed to save file %s. %s\n", saveAsRequest.c_str(), ErrStr(err));
@@ -1450,7 +1447,7 @@ void Editor::DrawUI_PackFiles(UI &uiActionBar, double now)
         }
 
         Color bgColor = &pack == state.packFiles.selectedPack ? SKYBLUE : BLUE_DESAT;
-        const char *idStr = pack.path.c_str();
+        const char *idStr = pack.name.c_str();
         if (!StrFilter(idStr, filter.c_str())) {
             continue;
         }

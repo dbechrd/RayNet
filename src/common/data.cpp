@@ -135,19 +135,19 @@ Err Init(void)
     {
         PerfTimer t{ "Build pack files" };
 
-        Pack packAssets{ "pack/assets.txt" };
-        ERR_RETURN(LoadPack(packAssets, PACK_TYPE_TEXT, false));
+        Pack packAssets{ "assets" };
+        ERR_RETURN(LoadPack(packAssets, PACK_TYPE_TEXT));
         //PackDebugPrint(packAssets);
 
-        packAssets.path = "pack/assets.dat";
         ERR_RETURN(SavePack(packAssets, PACK_TYPE_BINARY));
     }
 #endif
 
-    packs.emplace_back("pack/assets.dat");
+    packs.emplace_back("assets");
 
     for (Pack &pack : packs) {
-        ERR_RETURN(LoadPack(pack, PACK_TYPE_BINARY));
+        ERR_RETURN(LoadPack(pack, PACK_TYPE_BINARY, pack.GetPath(PACK_TYPE_BINARY)));
+        ERR_RETURN(LoadResources(pack));
     }
 
 #if 0
@@ -270,7 +270,16 @@ void Process(PackStream &stream, std::string &str)
     uint16_t strLen = (uint16_t)str.size();
     if (stream.type == PACK_TYPE_TEXT) {
         if (stream.mode == PACK_MODE_WRITE) {
-            fprintf(stream.file, " \"%s\"", str.c_str());
+            fprintf(stream.file, " \"");
+            int strLen = str.size();
+            for (int i = 0; i < str.size(); i++) {
+                fputc(str[i], stream.file);
+                if (str[i] == '"') {
+                    // Double the quotes to escape them on read
+                    fputc('"', stream.file);
+                }
+            }
+            fprintf(stream.file, "\"");
         } else {
             assert(str.size() == 0);
             do {
@@ -769,9 +778,13 @@ Err Process(PackStream &stream)
 }
 #undef PROC
 
-Err SavePack(Pack &pack, PackStreamType type)
+Err SavePack(Pack &pack, PackStreamType type, std::string path)
 {
-    PerfTimer t{ TextFormat("Save pack %s", pack.path.c_str()) };
+    if (!path.size()) {
+        path = pack.GetPath(type);
+    }
+
+    PerfTimer t{ TextFormat("Save pack %s", path.c_str()) };
     Err err = RN_SUCCESS;
 #if 0
     if (FileExists(pack.path.c_str())) {
@@ -779,7 +792,7 @@ Err SavePack(Pack &pack, PackStreamType type)
         if (err) return err;
     }
 #endif
-    FILE *file = fopen(pack.path.c_str(), type == PACK_TYPE_BINARY ? "wb" : "w");
+    FILE *file = fopen(path.c_str(), type == PACK_TYPE_BINARY ? "wb" : "w");
     if (!file) {
         return RN_BAD_FILE_WRITE;
     }
@@ -877,30 +890,26 @@ Err LoadResources(Pack &pack)
 
     return err;
 }
-Err LoadPack(Pack &pack, PackStreamType type, bool loadResources)
+Err LoadPack(Pack &pack, PackStreamType type, std::string path)
 {
-    PerfTimer t{ TextFormat("Load pack %s", pack.path.c_str()) };
+    if (!path.size()) {
+        path = pack.GetPath(type);
+    }
+
+    PerfTimer t{ TextFormat("Load pack %s", path.c_str()) };
     Err err = RN_SUCCESS;
 
-    FILE *file = fopen(pack.path.c_str(), type == PACK_TYPE_BINARY ? "rb" : "r");
+    FILE *file = fopen(path.c_str(), type == PACK_TYPE_BINARY ? "rb" : "r");
     if (!file) {
         return RN_BAD_FILE_READ;
     }
 
     PackStream stream{ &pack, file, PACK_MODE_READ, type };
-    do {
-        {
-            PerfTimer t{ "Process" };
-            err = Process(stream);
-        }
-        if (err) break;
 
-        if (loadResources) {
-            PerfTimer t{ "LoadResources" };
-            err = LoadResources(*stream.pack);
-        }
-        if (err) break;
-    } while(0);
+    {
+        PerfTimer t{ "Process" };
+        err = Process(stream);
+    }
 
     if (stream.file) {
         fclose(stream.file);

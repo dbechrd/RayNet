@@ -386,9 +386,14 @@ struct PackToc {
     std::vector<PackTocEntry> entries;
 };
 
+enum PackStreamType {
+    PACK_TYPE_BINARY,
+    PACK_TYPE_TEXT
+};
+
 // Inspired by https://twitter.com/angealbertini/status/1340712669247119360
 struct Pack {
-    std::string path       {};
+    std::string name       {};
     int         magic      {};
     int         version    {};
     int         toc_offset {};
@@ -442,7 +447,13 @@ struct Pack {
 
     PackToc toc {};
 
-    Pack(const std::string &path) : path(path) {}
+    Pack(const std::string &name) : name(name) {}
+
+    std::string GetPath(PackStreamType type)
+    {
+        std::string path = "pack/" + name + (type == PACK_TYPE_BINARY ? ".dat" : ".txt");
+        return path;
+    }
 
     void *GetPool(DataType dtype)
     {
@@ -489,11 +500,6 @@ struct Pack {
     }
 };
 
-enum PackStreamType {
-    PACK_TYPE_BINARY,
-    PACK_TYPE_TEXT
-};
-
 enum PackStreamMode {
     PACK_MODE_READ,
     PACK_MODE_WRITE,
@@ -522,8 +528,8 @@ struct PackStream {
 Err Init(void);
 void Free(void);
 
-Err SavePack(Pack &pack, PackStreamType type);
-Err LoadPack(Pack &pack, PackStreamType type, bool loadResources = true);
+Err SavePack(Pack &pack, PackStreamType type, std::string path = "");
+Err LoadPack(Pack &pack, PackStreamType type, std::string path = "");
 void UnloadPack(Pack &pack);
 
 void PlaySound(const std::string &id, float pitchVariance = 0.0f);
