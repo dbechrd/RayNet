@@ -508,7 +508,7 @@ void ClientWorld::DrawHoveredObjectIndicator(GameClient &client, Tilemap &map)
     // Object interact indicator (cursor ornament in screen space)
     if (client.controller.tile_hovered) {
         uint16_t object_id = 0;
-        map.AtTry_Obj(client.controller.tile_x, client.controller.tile_y, object_id);
+        map.AtTry(TILE_LAYER_OBJECT, client.controller.tile_x, client.controller.tile_y, object_id);
         if (object_id) {
             const GfxFrame &gfx_frame = map.GetTileGfxFrame(object_id);
             const GfxFile &gfx_file = packs[0].FindByName<GfxFile>(gfx_frame.gfx);

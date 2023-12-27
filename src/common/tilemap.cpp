@@ -4,92 +4,69 @@
 #include "net/net.h"
 #include "wang.h"
 
-uint16_t Tilemap::At(uint16_t x, uint16_t y)
+uint16_t Tilemap::At(TileLayerType layer, uint16_t x, uint16_t y)
 {
     assert(x < width);
     assert(y < height);
-    return tiles[(size_t)y * width + x];
+    return layers[layer][(size_t)y * width + x];
 }
-uint16_t Tilemap::At_Obj(uint16_t x, uint16_t y)
+bool Tilemap::AtTry(TileLayerType layer, int x, int y, uint16_t &tile_id)
 {
-    assert(x < width);
-    assert(y < height);
-    return objects[(size_t)y * width + x];
-}
-bool Tilemap::AtTry(uint16_t x, uint16_t y, uint16_t &tile_id)
-{
-    if (x < width && y < height) {
-        tile_id = At(x, y);
+    if (x >= 0 && y >= 0 && x < width && y < height) {
+        tile_id = At(layer, x, y);
         return true;
     }
     return false;
 }
-bool Tilemap::AtTry_Obj(uint16_t x, uint16_t y, uint16_t &obj_id)
+bool Tilemap::WorldToTileIndex(int world_x, int world_y, Coord &coord)
 {
-    if (x < width && y < height) {
-        obj_id = At_Obj(x, y);
-        return true;
-    }
-    return false;
-}
-bool Tilemap::WorldToTileIndex(uint16_t world_x, uint16_t world_y, Coord &coord)
-{
-    if (world_x < width * TILE_W && world_y < height * TILE_W) {
+    if (world_x >= 0 && world_y >= 0 && world_x < width * TILE_W && world_y < height * TILE_W) {
         coord.x = world_x / TILE_W;
         coord.y = world_y / TILE_W;
         return true;
     }
     return false;
 }
-bool Tilemap::AtWorld(uint16_t world_x, uint16_t world_y, uint16_t &tile_id)
+bool Tilemap::AtWorld(TileLayerType layer, int world_x, int world_y, uint16_t &tile_id)
 {
     Coord coord{};
     if (WorldToTileIndex(world_x, world_y, coord)) {
-        tile_id = At(coord.x, coord.y);
+        tile_id = At(layer, coord.x, coord.y);
         return true;
     }
     return false;
 }
 bool Tilemap::IsSolid(int x, int y)
 {
-    bool solid = true;
+    for (int layer = 0; layer < TILE_LAYER_COUNT; layer++) {
+        uint16_t tile_id = 0;
+        if (!AtTry((TileLayerType)layer, x, y, tile_id)) {
+            // Out of bounds tiles are considered solid tiles
+            return true;
+        }
 
-    // Out of bounds tiles are considered solid tiles
-    if (x >= 0 && x < width && y >= 0 && y < height) {
-        const uint16_t tile_id = At(x, y);
+        // NOTE(dlb): Don't collide with void tiles above ground level (it just means there's no object)
+        if (layer > 0 && !tile_id) {
+            continue;
+        }
+
         const TileDef &tileDef = GetTileDef(tile_id);
-        solid = tileDef.flags & TILEDEF_FLAG_SOLID;
-        if (!solid) {
-            const uint8_t obj = At_Obj(x, y);
-            // NOTE(dlb): Don't collide with void objects like we do with ground tiles
-            if (obj) {
-                const TileDef &objTileDef = GetTileDef(obj);
-                solid = objTileDef.flags & TILEDEF_FLAG_SOLID;
-            }
+        if (tileDef.flags & TILEDEF_FLAG_SOLID) {
+            return true;
         }
     }
-
-    return solid;
+    return false;
 }
 
-void Tilemap::Set(uint16_t x, uint16_t y, uint16_t tile_id, double now)
+void Tilemap::Set(TileLayerType layer, uint16_t x, uint16_t y, uint16_t tile_id, double now)
 {
     assert(x < width);
     assert(y < height);
-    uint16_t &cur_tile_id = tiles[(size_t)y * width + x];
+    uint16_t &cur_tile_id = layers[layer][(size_t)y * width + x];
     if (cur_tile_id != tile_id) {
         cur_tile_id = tile_id;
-        dirtyTiles.insert({ x, y });
-        chunkLastUpdatedAt = now;
-    }
-}
-void Tilemap::Set_Obj(uint16_t x, uint16_t y, uint16_t object_id, double now)
-{
-    assert(x < width);
-    assert(y < height);
-    uint16_t &cur_object_id = objects[(size_t)y * width + x];
-    if (cur_object_id != object_id) {
-        cur_object_id = object_id;
+
+        // TODO: Don't do this on client, expensive, waste of time
         dirtyTiles.insert({ x, y });
         chunkLastUpdatedAt = now;
     }
@@ -106,23 +83,23 @@ void Tilemap::SetFromWangMap(WangMap &wangMap, double now)
         for (uint16_t x = 0; x < height; x++) {
             uint8_t tile = pixels[y * width + x];
             tile = tile < (width * height) ? tile : 0;
-            Set(x, y, tile, now);
+            Set(TILE_LAYER_GROUND, x, y, tile, now);
         }
     }
 }
-bool Tilemap::NeedsFill(uint16_t x, uint16_t y, uint16_t old_tile_id)
+bool Tilemap::NeedsFill(TileLayerType layer, uint16_t x, uint16_t y, uint16_t old_tile_id)
 {
     uint16_t tile_id{};
-    if (AtTry(x, y, tile_id)) {
+    if (AtTry(layer, x, y, tile_id)) {
         return tile_id == old_tile_id;
     }
     return false;
 }
-void Tilemap::Scan(uint16_t lx, uint16_t rx, uint16_t y, uint16_t old_tile_id, std::stack<Coord> &stack)
+void Tilemap::Scan(TileLayerType layer, uint16_t lx, uint16_t rx, uint16_t y, uint16_t old_tile_id, std::stack<Coord> &stack)
 {
     bool inSpan = false;
     for (uint16_t x = lx; x < rx; x++) {
-        if (!NeedsFill(x, y, old_tile_id)) {
+        if (!NeedsFill(layer, x, y, old_tile_id)) {
             inSpan = false;
         } else if (!inSpan) {
             stack.push({ x, y });
@@ -130,9 +107,9 @@ void Tilemap::Scan(uint16_t lx, uint16_t rx, uint16_t y, uint16_t old_tile_id, s
         }
     }
 }
-void Tilemap::Fill(uint16_t x, uint16_t y, uint16_t new_tile_id, double now)
+void Tilemap::Fill(TileLayerType layer, uint16_t x, uint16_t y, uint16_t new_tile_id, double now)
 {
-    uint16_t old_tile_id = At(x, y);
+    uint16_t old_tile_id = At(layer, x, y);
     if (old_tile_id == new_tile_id) {
         return;
     }
@@ -146,18 +123,18 @@ void Tilemap::Fill(uint16_t x, uint16_t y, uint16_t new_tile_id, double now)
 
         uint16_t lx = coord.x;
         uint16_t rx = coord.x;
-        while (lx && NeedsFill(lx - 1, coord.y, old_tile_id)) {
-            Set(lx - 1, coord.y, new_tile_id, now);
+        while (lx && NeedsFill(layer, lx - 1, coord.y, old_tile_id)) {
+            Set(layer, lx - 1, coord.y, new_tile_id, now);
             lx -= 1;
         }
-        while (NeedsFill(rx, coord.y, old_tile_id)) {
-            Set(rx, coord.y, new_tile_id, now);
+        while (NeedsFill(layer, rx, coord.y, old_tile_id)) {
+            Set(layer, rx, coord.y, new_tile_id, now);
             rx += 1;
         }
         if (coord.y) {
-            Scan(lx, rx, coord.y - 1, old_tile_id, stack);
+            Scan(layer, lx, rx, coord.y - 1, old_tile_id, stack);
         }
-        Scan(lx, rx, coord.y + 1, old_tile_id, stack);
+        Scan(layer, lx, rx, coord.y + 1, old_tile_id, stack);
     }
 }
 
@@ -253,15 +230,14 @@ void Tilemap::UpdatePower(double now)
             }
         }
 
-        uint16_t old_tile_id = At_Obj(obj.x, obj.y);
+        uint16_t old_tile_id = At(TILE_LAYER_OBJECT, obj.x, obj.y);
         uint16_t new_tile_id = obj.tile_def;
         if (obj.power_level) {
             new_tile_id = obj.tile_def_powered;
         }
 
         if (new_tile_id != old_tile_id) {
-            Set_Obj(obj.x, obj.y, new_tile_id, now);
-            printf("%hu %hu %s = %d\n", obj.x, obj.y, obj.type.c_str(), obj.power_level);
+            Set(TILE_LAYER_OBJECT, obj.x, obj.y, new_tile_id, now);
         }
     }
 }
@@ -457,28 +433,27 @@ void Tilemap::Draw(Camera2D &camera, DrawCmdQueue &sortedDraws)
     const Vector2 cursorWorld = GetScreenToWorld2D(GetMousePosition(), camera);
 
     Rectangle cameraRectWorld = GetCameraRectWorld(camera);
-    int yMin = CLAMP(floorf(cameraRectWorld.y / TILE_W), 0, height);
-    int yMax = CLAMP(ceilf((cameraRectWorld.y + cameraRectWorld.height) / TILE_W), 0, height);
-    int xMin = CLAMP(floorf(cameraRectWorld.x / TILE_W), 0, width);
-    int xMax = CLAMP(ceilf((cameraRectWorld.x + cameraRectWorld.width) / TILE_W), 0, width);
 
-    for (int y = yMin; y < yMax; y++) {
-        for (int x = xMin; x < xMax; x++) {
-            uint16_t tile_id = At(x, y);
-            DrawTile(tile_id, { (float)x * TILE_W, (float)y * TILE_W }, 0);
+    // NOTE(dlb): Give extra padding on all sides to prevent culling 2-tall objects
+    int yMin = CLAMP(-1 + floorf(cameraRectWorld.y / TILE_W), 0, height);
+    int yMax = CLAMP( 1 + ceilf((cameraRectWorld.y + cameraRectWorld.height) / TILE_W), 0, height);
+    int xMin = CLAMP(-1 + floorf(cameraRectWorld.x / TILE_W), 0, width);
+    int xMax = CLAMP( 1 + ceilf((cameraRectWorld.x + cameraRectWorld.width) / TILE_W), 0, width);
+
+    DrawCmdQueue *queue = 0;
+    for (int layer = 0; layer < TILE_LAYER_COUNT; layer++) {
+        // NOTE(dlb): We don't sort ground tiles
+        if (layer > 0) {
+            queue = &sortedDraws;
         }
-    }
 
-    // NOTE(dlb): Give obj layer an extra padding on all sides to prevent culling 2-tall things
-    yMin = CLAMP(-1 + floorf(cameraRectWorld.y / TILE_W), 0, height);
-    yMax = CLAMP( 1 + ceilf((cameraRectWorld.y + cameraRectWorld.height) / TILE_W), 0, height);
-    xMin = CLAMP(-1 + floorf(cameraRectWorld.x / TILE_W), 0, width);
-    xMax = CLAMP( 1 + ceilf((cameraRectWorld.x + cameraRectWorld.width) / TILE_W), 0, width);
-    for (int y = yMin; y < yMax; y++) {
-        for (int x = xMin; x < xMax; x++) {
-            uint16_t object_id = At_Obj(x, y);
-            if (object_id) {
-                DrawTile(object_id, { (float)x * TILE_W, (float)y * TILE_W }, &sortedDraws);
+        for (int y = yMin; y < yMax; y++) {
+            for (int x = xMin; x < xMax; x++) {
+                uint16_t tile_id = At((TileLayerType)layer, x, y);
+                // NOTE(dlb): We only draw void tiles on ground level
+                if (tile_id || layer == 0) {
+                    DrawTile(tile_id, { (float)x * TILE_W, (float)y * TILE_W }, queue);
+                }
             }
         }
     }
@@ -493,9 +468,7 @@ void Tilemap::DrawColliders(Camera2D &camera)
 
     for (int y = yMin; y < yMax; y++) {
         for (int x = xMin; x < xMax; x++) {
-            uint16_t tile_id = At(x, y);
-            const TileDef &tileDef = GetTileDef(tile_id);
-            if (tileDef.flags & TILEDEF_FLAG_SOLID) {
+            if (IsSolid(x, y)) {
                 Vector2 tilePos = { (float)x * TILE_W, (float)y * TILE_W };
                 const int pad = 1;
                 DrawRectangleLinesEx(
@@ -529,7 +502,7 @@ void Tilemap::DrawTileIds(Camera2D &camera)
     const int pad = 8;
     for (int y = yMin; y < yMax; y++) {
         for (int x = xMin; x < xMax; x++) {
-            uint16_t tile_id = At(x, y);
+            uint16_t tile_id = At(TILE_LAYER_GROUND, x, y);
             Vector2 pos = { (float)x * TILE_W + pad, (float)y * TILE_W + pad };
             DrawTextEx(fntSmall, TextFormat("%d", tile_id), pos, fntSmall.baseSize / camera.zoom, 1 / camera.zoom, WHITE);
         }

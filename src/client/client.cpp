@@ -161,11 +161,10 @@ int main(int argc, char *argv[])
 
     // HACK: Fix this..
     for (Tilemap &map : packs[0].tile_maps) {
-        for (auto &tile : map.tiles) {
-            tile = 0;
-        }
-        for (auto &obj : map.objects) {
-            obj = 0;
+        for (auto &layer : map.layers) {
+            for (auto &tile : layer) {
+                tile = 0;
+            }
         }
     }
 

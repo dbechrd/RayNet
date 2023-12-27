@@ -337,16 +337,16 @@ struct Msg_S_TileUpdate : public yojimbo::Message
     uint16_t map_id    {};
     uint16_t x         {};
     uint16_t y         {};
-    uint16_t tile_id   {};
-    uint16_t object_id {};
+    uint16_t tile_ids  [TILE_LAYER_COUNT]{};
 
     template <typename Stream> bool Serialize(Stream &stream)
     {
         serialize_uint16(stream, map_id);
         serialize_uint16(stream, x);
         serialize_uint16(stream, y);
-        serialize_uint16(stream, tile_id);
-        serialize_uint16(stream, object_id);
+        for (int layer = 0; layer < TILE_LAYER_COUNT; layer++) {
+            serialize_uint16(stream, tile_ids[layer]);
+        }
         return true;
     }
 

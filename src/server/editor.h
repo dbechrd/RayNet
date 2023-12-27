@@ -27,9 +27,9 @@ enum TileEditMode {
 
 struct EditModeTiles {
     TileEditMode tileEditMode;
-
+    TileLayerType layer;
     struct {
-        uint16_t tile_id;
+        uint16_t tile_id[TILE_LAYER_COUNT];
     } cursor;
 };
 

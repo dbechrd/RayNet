@@ -110,7 +110,8 @@ Err Init(void)
         fontName = "resources/font/KarminaBold.otf";
     }
 #else
-    const char *fontName = "resources/font/KarminaBold.otf";
+    //const char *fontName = "resources/font/KarminaBold.otf";
+    const char *fontName = "resources/font/Inconsolata-SemiBold.ttf";
     //const char *fontName = "resources/font/PixelOperator-Bold.ttf";
     //const char *fontName = "resources/font/PixelOperatorMono-Bold.ttf";
     //const char *fontName = "resources/font/FiraMono-Medium.ttf";
@@ -448,8 +449,9 @@ void Process(PackStream &stream, AiPath &aiPath)
 void Process(PackStream &stream, Tilemap &tile_map)
 {
     if (stream.mode == PackStreamMode::PACK_MODE_WRITE) {
-        assert(tile_map.width * tile_map.height == tile_map.tiles.size());
-        assert(tile_map.width * tile_map.height == tile_map.objects.size());
+        for (auto &layer : tile_map.layers) {
+            assert(layer.size() == tile_map.width * tile_map.height);
+        }
     }
 
     HAQ_IO(HQT_TILE_MAP_FIELDS, tile_map);

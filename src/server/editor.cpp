@@ -108,21 +108,22 @@ void Editor::DrawGroundOverlay_Tiles(Camera2D &camera, double now)
         const bool editorPickTile = io.MouseButtonDown(MOUSE_BUTTON_MIDDLE);
         const bool editorFillTile = io.KeyPressed(KEY_F);
 
-        uint16_t &cursorTile = state.tiles.cursor.tile_id;
+        TileLayerType layer = state.tiles.layer;
+        uint16_t &cursorTile = state.tiles.cursor.tile_id[layer];
         uint16_t hoveredTile{};
         auto &map = packs[0].FindById<Tilemap>(map_id);
 
         Tilemap::Coord coord{};
         bool validCoord = map.WorldToTileIndex(cursorWorldPos.x, cursorWorldPos.y, coord);
         if (validCoord) {
-            hoveredTile = map.At(coord.x, coord.y);
+            hoveredTile = map.At(layer, coord.x, coord.y);
 
             if (editorPlaceTile) {
-                map.Set(coord.x, coord.y, cursorTile, now);
+                map.Set(layer, coord.x, coord.y, cursorTile, now);
             } else if (editorPickTile) {
                 cursorTile = hoveredTile;
             } else if (editorFillTile) {
-                map.Fill(coord.x, coord.y, cursorTile, now);
+                map.Fill(layer, coord.x, coord.y, cursorTile, now);
             }
 
             Vector2 drawPos{ (float)coord.x * TILE_W, (float)coord.y * TILE_W };
@@ -701,14 +702,13 @@ void Editor::DrawUI_TileActions(UI &uiActionBar, double now)
         uint16_t newWidth = (uint16_t)width;
         uint16_t newHeight = (uint16_t)height;
 
-        std::vector<uint16_t> tilesNew{};
-        std::vector<uint16_t> objectsNew{};
-        tilesNew.resize(newWidth * newHeight);
-        objectsNew.resize(newWidth * newHeight);
-        for (uint16_t y = 0; y < map.height && y < newHeight; y++) {
-            for (uint16_t x = 0; x < map.width && x < newWidth; x++) {
-                tilesNew[y * newWidth + x] = map.tiles[y * map.width + x];
-                objectsNew[y * newWidth + x] = map.objects[y * map.width + x];
+        std::array<std::vector<uint16_t>, TILE_LAYER_COUNT> layersNew{};
+        for (int i = 0; i < TILE_LAYER_COUNT; i++) {
+            layersNew[i].resize(newWidth * newHeight);
+            for (uint16_t y = 0; y < map.height && y < newHeight; y++) {
+                for (uint16_t x = 0; x < map.width && x < newWidth; x++) {
+                    layersNew[i][y * newWidth + x] = map.layers[i][y * map.width + x];
+                }
             }
         }
 
@@ -719,8 +719,7 @@ void Editor::DrawUI_TileActions(UI &uiActionBar, double now)
             }
         }
 
-        map.tiles = tilesNew;
-        map.objects = objectsNew;
+        map.layers = layersNew;
         map.object_data = objDataNew;
         map.width = (uint16_t)newWidth;
         map.height = (uint16_t)newHeight;
@@ -730,20 +729,23 @@ void Editor::DrawUI_TileActions(UI &uiActionBar, double now)
     uiActionBar.Text(CSTR("Flag"));
 
     auto &tileEditMode = state.tiles.tileEditMode;
-    if (uiActionBar.Button(CSTR("Select"),
-        tileEditMode == TileEditMode_Select, GRAY, SKYBLUE).pressed)
-    {
+    if (uiActionBar.Button(CSTR("Select"), tileEditMode == TileEditMode_Select, GRAY, SKYBLUE).pressed) {
         tileEditMode = TileEditMode_Select;
     }
-    if (uiActionBar.Button(CSTR("Collision"),
-        tileEditMode == TileEditMode_Collision, GRAY, SKYBLUE).pressed)
-    {
+    if (uiActionBar.Button(CSTR("Collision"), tileEditMode == TileEditMode_Collision, GRAY, SKYBLUE).pressed) {
         tileEditMode = TileEditMode_Collision;
     }
-    if (uiActionBar.Button(CSTR("Auto-tile Mask"),
-        tileEditMode == TileEditMode_AutoTileMask, GRAY, SKYBLUE).pressed)
-    {
+    if (uiActionBar.Button(CSTR("Auto-tile Mask"), tileEditMode == TileEditMode_AutoTileMask, GRAY, SKYBLUE).pressed) {
         tileEditMode = TileEditMode_AutoTileMask;
+    }
+    uiActionBar.Newline();
+
+    uiActionBar.Text(CSTR("Layer"));
+    if (uiActionBar.Button(CSTR("Ground"), state.tiles.layer == TILE_LAYER_GROUND, GRAY, SKYBLUE).pressed) {
+        state.tiles.layer = TILE_LAYER_GROUND;
+    }
+    if (uiActionBar.Button(CSTR("Object"), state.tiles.layer == TILE_LAYER_OBJECT, GRAY, SKYBLUE).pressed) {
+        state.tiles.layer = TILE_LAYER_OBJECT;
     }
     uiActionBar.Newline();
 
@@ -911,7 +913,7 @@ void Editor::DrawUI_Tilesheet(UI &uiActionBar, double now)
             if (tileIdx >= 0 && tileIdx < tile_defs.size()) {
                 switch (state.tiles.tileEditMode) {
                     case TileEditMode_Select: {
-                        state.tiles.cursor.tile_id = tileIdx;
+                        state.tiles.cursor.tile_id[state.tiles.layer] = tileIdx;
                         break;
                     }
                     case TileEditMode_Collision:
@@ -957,9 +959,9 @@ void Editor::DrawUI_Tilesheet(UI &uiActionBar, double now)
     }
 
     // Draw highlight around currently styleSelected tiledef in draw mode
-    if (state.tiles.cursor.tile_id >= 0) {
-        int tile_x = state.tiles.cursor.tile_id % tiles_x;
-        int tile_y = state.tiles.cursor.tile_id / tiles_x;
+    if (state.tiles.cursor.tile_id[state.tiles.layer] >= 0) {
+        int tile_x = state.tiles.cursor.tile_id[state.tiles.layer] % tiles_x;
+        int tile_y = state.tiles.cursor.tile_id[state.tiles.layer] / tiles_x;
         Rectangle tileDefRectScreen{
             imgTL.x + (TILE_W * tile_x),
             imgTL.y + (TILE_W * tile_y),
@@ -1070,7 +1072,7 @@ void Editor::DrawUI_WangTile(double now)
     Rectangle wangBg{ 434, 4, 560, 560 };
 
     if (state.wang.hTex >= 0 || state.wang.vTex >= 0) {
-        const uint16_t selectedTile = state.tiles.cursor.tile_id;
+        const uint16_t selectedTile = state.tiles.cursor.tile_id[state.tiles.layer];
         static double lastUpdatedAt = 0;
         static double lastChangedAt = 0;
         const double updateDelay = 0.02;

@@ -264,9 +264,14 @@ struct AiPath {
 
 #include "entity.h"
 
+enum TileLayerType {
+    TILE_LAYER_GROUND,
+    TILE_LAYER_OBJECT,
+    TILE_LAYER_COUNT
+};
+
 struct TileChunk {
-    uint16_t tile_ids   [SV_MAX_TILE_CHUNK_WIDTH * SV_MAX_TILE_CHUNK_WIDTH]{};  // TODO: Compress, use less bits, etc.
-    uint16_t object_ids [SV_MAX_TILE_CHUNK_WIDTH * SV_MAX_TILE_CHUNK_WIDTH]{};  // TODO: Compress, use less bits, etc.
+    uint16_t layers[TILE_LAYER_COUNT][SV_MAX_TILE_CHUNK_WIDTH * SV_MAX_TILE_CHUNK_WIDTH]{};
 };
 
 struct Tilemap {
@@ -303,18 +308,17 @@ struct Tilemap {
     // v9: Vector3 path nodes
 
 #define HQT_TILE_MAP_FIELDS(FIELD, userdata) \
-    FIELD(uint16_t               , version    , {}, HAQ_SERIALIZE           , userdata) /* version on disk                */ \
-    FIELD(uint16_t               , id         , {}, HAQ_SERIALIZE           , userdata) /* id of the map (for networking) */ \
-    FIELD(std::string            , name       , {}, HAQ_SERIALIZE | HAQ_EDIT, userdata) /* name of map area               */ \
-    FIELD(uint16_t               , width      , {}, HAQ_SERIALIZE | HAQ_EDIT, userdata) /* width of map in tiles          */ \
-    FIELD(uint16_t               , height     , {}, HAQ_SERIALIZE | HAQ_EDIT, userdata) /* height of map in tiles         */ \
-    FIELD(std::string            , title      , {}, HAQ_SERIALIZE | HAQ_EDIT, userdata) /* display name                   */ \
-    FIELD(std::string            , bg_music   , {}, HAQ_SERIALIZE | HAQ_EDIT, userdata) /* background music               */ \
-    FIELD(std::vector<uint16_t>  , tiles      , {}, HAQ_SERIALIZE/* | HAQ_EDIT */, userdata) \
-    FIELD(std::vector<uint16_t>  , objects    , {}, HAQ_SERIALIZE/* | HAQ_EDIT */, userdata) \
-    FIELD(std::vector<ObjectData>, object_data, {}, HAQ_SERIALIZE | HAQ_EDIT     , userdata) \
-    FIELD(std::vector<AiPathNode>, path_nodes , {}, HAQ_SERIALIZE | HAQ_EDIT, userdata) \
-    FIELD(std::vector<AiPath>    , paths      , {}, HAQ_SERIALIZE | HAQ_EDIT, userdata)
+    FIELD(uint16_t               , version     , {}, HAQ_SERIALIZE           , userdata) /* version on disk                */ \
+    FIELD(uint16_t               , id          , {}, HAQ_SERIALIZE           , userdata) /* id of the map (for networking) */ \
+    FIELD(std::string            , name        , {}, HAQ_SERIALIZE | HAQ_EDIT, userdata) /* name of map area               */ \
+    FIELD(uint16_t               , width       , {}, HAQ_SERIALIZE | HAQ_EDIT, userdata) /* width of map in tiles          */ \
+    FIELD(uint16_t               , height      , {}, HAQ_SERIALIZE | HAQ_EDIT, userdata) /* height of map in tiles         */ \
+    FIELD(std::string            , title       , {}, HAQ_SERIALIZE | HAQ_EDIT, userdata) /* display name                   */ \
+    FIELD(std::string            , bg_music    , {}, HAQ_SERIALIZE | HAQ_EDIT, userdata) /* background music               */ \
+    FIELD(std::array<std::vector<uint16_t> HAQ_COMMA TILE_LAYER_COUNT>, layers, {}, HAQ_SERIALIZE/* | HAQ_EDIT */, userdata) \
+    FIELD(std::vector<ObjectData>, object_data , {}, HAQ_SERIALIZE | HAQ_EDIT     , userdata) \
+    FIELD(std::vector<AiPathNode>, path_nodes  , {}, HAQ_SERIALIZE | HAQ_EDIT, userdata) \
+    FIELD(std::vector<AiPath>    , paths       , {}, HAQ_SERIALIZE | HAQ_EDIT, userdata)
     HQT_TILE_MAP_FIELDS(HAQ_C_FIELD, 0);
 
     //-------------------------------
@@ -329,18 +333,15 @@ struct Tilemap {
     // Clean this section up
     //-------------------------------
     // Tiles
-    uint16_t At(uint16_t x, uint16_t y);
-    uint16_t At_Obj(uint16_t x, uint16_t y);
-    bool AtTry(uint16_t x, uint16_t y, uint16_t &tile_id);
-    bool AtTry_Obj(uint16_t x, uint16_t y, uint16_t &obj_id);
-    bool WorldToTileIndex(uint16_t world_x, uint16_t world_y, Coord &coord);
-    bool AtWorld(uint16_t world_x, uint16_t world_y, uint16_t &tile_id);
+    uint16_t At(TileLayerType layer, uint16_t x, uint16_t y);
+    bool AtTry(TileLayerType layer, int x, int y, uint16_t &tile_id);
+    bool WorldToTileIndex(int world_x, int world_y, Coord &coord);
+    bool AtWorld(TileLayerType layer, int world_x, int world_y, uint16_t &tile_id);
     bool IsSolid(int x, int y);  // tile x,y coord, returns true if out of bounds
 
-    void Set(uint16_t x, uint16_t y, uint16_t tile_id, double now);
-    void Set_Obj(uint16_t x, uint16_t y, uint16_t object_id, double now);
+    void Set(TileLayerType layer, uint16_t x, uint16_t y, uint16_t tile_id, double now);
     void SetFromWangMap(WangMap &wangMap, double now);
-    void Fill(uint16_t x, uint16_t y, uint16_t new_tile_id, double now);
+    void Fill(TileLayerType layer, uint16_t x, uint16_t y, uint16_t new_tile_id, double now);
 
     TileDef &GetTileDef(uint16_t tile_id);
     const GfxFrame &GetTileGfxFrame(uint16_t tile_id);
@@ -369,8 +370,8 @@ private:
     void UpdatePower(double now);
     void UpdateEdges(Edge::Array &edges);
 
-    bool NeedsFill(uint16_t x, uint16_t y, uint16_t old_tile_id);
-    void Scan(uint16_t lx, uint16_t rx, uint16_t y, uint16_t old_tile_id, std::stack<Coord> &stack);
+    bool NeedsFill(TileLayerType layer, uint16_t x, uint16_t y, uint16_t old_tile_id);
+    void Scan(TileLayerType layer, uint16_t lx, uint16_t rx, uint16_t y, uint16_t old_tile_id, std::stack<Coord> &stack);
 };
 
 ////////////////////////////////////////////////////////////////////////////

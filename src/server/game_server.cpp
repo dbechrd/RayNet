@@ -966,11 +966,12 @@ void GameServer::SendTileChunk(int clientIdx, Tilemap &map, uint16_t x, uint16_t
             msg->h = MIN(map.height, SV_MAX_TILE_CHUNK_WIDTH);
 
             chunk = {};
-            for (uint16_t ty = y; ty < msg->h; ty++) {
-                for (uint16_t tx = x; tx < msg->w; tx++) {
-                    const uint16_t index = ty * msg->w + tx;
-                    map.AtTry(tx, ty, chunk.tile_ids[index]);
-                    map.AtTry_Obj(tx, ty, chunk.object_ids[index]);
+            for (int layer = 0; layer < TILE_LAYER_COUNT; layer++) {
+                for (uint16_t ty = y; ty < msg->h; ty++) {
+                    for (uint16_t tx = x; tx < msg->w; tx++) {
+                        const uint16_t index = ty * msg->w + tx;
+                        map.AtTry((TileLayerType)layer, tx, ty, chunk.layers[layer][index]);
+                    }
                 }
             }
 
@@ -1004,12 +1005,9 @@ void GameServer::SendTileUpdate(int clientIdx, Tilemap &map, uint16_t x, uint16_
             msg->map_id = map.id;
             msg->x = x;
             msg->y = y;
-            uint16_t tile_id{};
-            uint16_t object_id{};
-            map.AtTry(x, y, tile_id);
-            map.AtTry_Obj(x, y, object_id);
-            msg->tile_id = (uint16_t)tile_id;
-            msg->object_id = (uint16_t)object_id;
+            for (int layer = 0; layer < TILE_LAYER_COUNT; layer++) {
+                map.AtTry((TileLayerType)layer, x, y, msg->tile_ids[layer]);
+            }
             yj_server->SendMessage(clientIdx, CHANNEL_R_TILE_EVENT, msg);
         }
     }
@@ -1189,9 +1187,8 @@ void GameServer::ProcessMsg(int clientIdx, Msg_C_TileInteract &msg)
     }
 
     uint16_t tile_id{};
-    if (!map->AtTry(msg.x, msg.y, tile_id)) {
-        // Tile at x/y is not a valid tile type.. hmm.. is it void?
-        assert(!"not a valid tile");
+    if (!map->AtTry(TILE_LAYER_GROUND, msg.x, msg.y, tile_id)) {
+        assert(!"not a valid tile coordinate");
         return;
     }
 
@@ -1202,11 +1199,11 @@ void GameServer::ProcessMsg(int clientIdx, Msg_C_TileInteract &msg)
         if (obj_data->type == "lever") {
             if (obj_data->power_level) {
                 obj_data->power_level = 0;
-                map->Set_Obj(msg.x, msg.y, obj_data->tile_def, now);
+                map->Set(TILE_LAYER_OBJECT, msg.x, msg.y, obj_data->tile_def, now);
                 printf("lever off\n");
             } else {
                 obj_data->power_level = 1;
-                map->Set_Obj(msg.x, msg.y, obj_data->tile_def_powered, now);
+                map->Set(TILE_LAYER_OBJECT, msg.x, msg.y, obj_data->tile_def_powered, now);
                 printf("lever on\n");
             }
             //BroadcastTileUpdate(*map, msg.x, msg.y);  // dirty should handle this
@@ -1237,7 +1234,7 @@ void GameServer::ProcessMsg(int clientIdx, Msg_C_TileInteract &msg)
             // TODO(perf): Make some kind of map from string -> tile_def_index in the map?
             // * OR * make the maps all have global tile def ids instead of local tile def ids
             if (new_tile_def.id) {
-                map->Set(msg.x, msg.y, new_tile_def.id, now);
+                map->Set(TILE_LAYER_GROUND, msg.x, msg.y, new_tile_def.id, now);
             }
         }
     }
