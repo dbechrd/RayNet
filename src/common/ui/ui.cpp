@@ -1126,6 +1126,18 @@ void UI::HAQFieldEditor(uint32_t ctrlid, const std::string &name, T &value, int 
     while (popStyle--) PopStyle();
 }
 
+void UI::HAQFieldEditor(uint32_t ctrlid, const std::string &name, TileDefFlags &value, int flags, int labelWidth)
+{
+    uint8_t bitflags = value;
+    if (Button(CSTR("Solid"), bitflags & TILEDEF_FLAG_SOLID, GRAY, SKYBLUE).pressed) {
+        bitflags ^= TILEDEF_FLAG_SOLID;
+    }
+    if (Button(CSTR("Liquid"), bitflags & TILEDEF_FLAG_LIQUID, GRAY, SKYBLUE).pressed) {
+        bitflags ^= TILEDEF_FLAG_LIQUID;
+    }
+    value = (TileDefFlags)bitflags;
+}
+
 template <typename T>
 void UI::HAQField(uint32_t ctrlid, const std::string &name, T &value, int flags, int labelWidth)
 {

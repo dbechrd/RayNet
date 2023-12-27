@@ -84,8 +84,7 @@ struct GfxAnimState {
     double  accum {};  // time since last update
 };
 
-typedef uint8_t TileDefFlags;
-enum {
+enum TileDefFlags {
     TILEDEF_FLAG_SOLID  = 0x01,
     TILEDEF_FLAG_LIQUID = 0x02,
 };

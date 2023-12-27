@@ -931,10 +931,12 @@ void Editor::DrawUI_Tilesheet(UI &uiActionBar, double now)
                         const int tileSegment = tileYSegment * 3 + tileXSegment;
 
                         if (state.tiles.tileEditMode == TileEditMode_Collision) {
+                            uint8_t flags = tile_defs[tileIdx].flags;
                             switch (tileSegment) {
-                                case 0: tile_defs[tileIdx].flags ^= TILEDEF_FLAG_SOLID;  break;
-                                case 1: tile_defs[tileIdx].flags ^= TILEDEF_FLAG_LIQUID; break;
+                                case 0: flags ^= TILEDEF_FLAG_SOLID;  break;
+                                case 1: flags ^= TILEDEF_FLAG_LIQUID; break;
                             }
+                            tile_defs[tileIdx].flags = (TileDefFlags)flags;
                         } else if (state.tiles.tileEditMode == TileEditMode_AutoTileMask) {
                             //printf("x: %d, y: %d, s: %d\n", tileXSegment, tileYSegment, tileSegment);
                             switch (tileSegment) {
