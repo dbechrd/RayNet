@@ -415,7 +415,7 @@ void Tilemap::ResolveEntityCollisionsTriggers(Entity &entity)
     }
 }
 
-void Tilemap::DrawTile(uint16_t tile_id, Vector2 position, DrawCmdQueue *sortedDraws)
+void Tilemap::DrawTile(uint16_t tile_id, Vector2 position, DrawCmdQueue *sortedDraws, Color color)
 {
     // TODO: Yikes.. that's a lot of lookups in a tight loop. Memoize some pointers or something man.
     const GfxFrame &gfx_frame = GetTileGfxFrame(tile_id);
@@ -430,10 +430,10 @@ void Tilemap::DrawTile(uint16_t tile_id, Vector2 position, DrawCmdQueue *sortedD
         cmd.texture = gfx_file.texture;
         cmd.rect = texRect;
         cmd.position = { position.x, position.y, 0 };
-        cmd.color = WHITE;
+        cmd.color = color;
         sortedDraws->push(cmd);
     } else {
-        dlb_DrawTextureRec(gfx_file.texture, texRect, position, WHITE);
+        dlb_DrawTextureRec(gfx_file.texture, texRect, position, color);
     }
 }
 void Tilemap::Draw(Camera2D &camera, DrawCmdQueue &sortedDraws)

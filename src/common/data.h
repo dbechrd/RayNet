@@ -296,6 +296,13 @@ struct Tilemap {
     struct Region {
         Coord tl;
         Coord br;
+
+        Coord CenterOffset(void) {
+            Coord centerOffset{};
+            centerOffset.x -= (br.x - tl.x) / 2;
+            centerOffset.y -= (br.y - tl.y) / 2;
+            return centerOffset;
+        }
     };
 
     static const DataType dtype = DAT_TYP_TILE_MAP;
@@ -365,7 +372,7 @@ struct Tilemap {
     void ResolveEntityCollisionsEdges(Entity &entity);
     void ResolveEntityCollisionsTriggers(Entity &entity);
 
-    void DrawTile(uint16_t tile_id, Vector2 position, DrawCmdQueue *sortedDraws);
+    void DrawTile(uint16_t tile_id, Vector2 position, DrawCmdQueue *sortedDraws, Color color = WHITE);
     void Draw(Camera2D &camera, DrawCmdQueue &sortedDraws);
     void DrawColliders(Camera2D &camera);
     void DrawEdges(void);

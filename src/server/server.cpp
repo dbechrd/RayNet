@@ -175,9 +175,6 @@ Err Play(GameServer &server)
                 // [World] Draw ground tiles
                 editor_map.Draw(camera, sortedDraws);
 
-                // [Editor] Overlays
-                editor.DrawGroundOverlays(camera, server.now);
-
                 for (Entity &entity : entityDb->entities) {
                     if (entity.map_id == editor_map.id) {
                         entityDb->DrawEntity(entity, sortedDraws);
@@ -186,6 +183,9 @@ Err Play(GameServer &server)
 
                 // [World] Draw sorted object tiles and entities
                 sortedDraws.Draw();
+
+                // [Editor] Overlays
+                editor.DrawGroundOverlays(camera, server.now);
 
                 // [Debug] Last collision
                 DrawRectangleLinesEx(server.lastCollisionA, 1, RED);

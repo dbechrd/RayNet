@@ -117,11 +117,15 @@ void Editor::DrawGroundOverlay_Tiles(Camera2D &camera, double now)
         if (validCoord) {
             if (editorPlaceTile) {
                 Tilemap::Region pick_region = cursor.PickRegion();
+                Tilemap::Coord region_offset = pick_region.CenterOffset();
+
                 int i = 0;
                 for (int y = pick_region.tl.y, rel_y = 0; y <= pick_region.br.y; y++, rel_y++) {
                     for (int x = pick_region.tl.x, rel_x = 0; x <= pick_region.br.x; x++, rel_x++) {
                         uint16_t tile = cursor.tile_ids[layer][i];
-                        map.SetTry(layer, coord.x + rel_x, coord.y + rel_y, tile, now);
+                        map.SetTry(layer,
+                            coord.x + rel_x + region_offset.x,
+                            coord.y + rel_y + region_offset.y, tile, now);
                         i++;
                     }
                 }
@@ -147,25 +151,51 @@ void Editor::DrawGroundOverlay_Tiles(Camera2D &camera, double now)
         }
 
         if (cursor.tile_ids[layer].size()) {
-            int i = 0;
             Tilemap::Region pick_region = cursor.PickRegion();
+
+            // Find "center" of cursor coord with respect to picked region size
+            Tilemap::Coord region_offset = pick_region.CenterOffset();
+            Tilemap::Coord selectDrawCoord = coord;
+            selectDrawCoord.x += region_offset.x;
+            selectDrawCoord.y += region_offset.y;
+
+            // Draw picked region as brush
+            int i = 0;
             for (int y = pick_region.tl.y, rel_y = 0; y <= pick_region.br.y; y++, rel_y++) {
                 for (int x = pick_region.tl.x, rel_x = 0; x <= pick_region.br.x; x++, rel_x++) {
                     uint16_t tile = cursor.tile_ids[layer][i];
-                    Vector2 drawPos{};
-                    if (editorPickTile) {
-                        drawPos.x = x;
-                        drawPos.y = y;
-                    } else {
-                        drawPos.x += coord.x + rel_x;
-                        drawPos.y += coord.y + rel_y;
+                    if (tile) {
+                        Vector2 drawPos{};
+                        if (editorPickTile) {
+                            drawPos.x = x;
+                            drawPos.y = y;
+                        } else {
+                            drawPos.x += selectDrawCoord.x + rel_x;
+                            drawPos.y += selectDrawCoord.y + rel_y;
+                        }
+                        drawPos = Vector2Scale(drawPos, TILE_W);
+                        map.DrawTile(tile, drawPos, 0, Fade(WHITE, 0.8f));
                     }
-                    drawPos = Vector2Scale(drawPos, TILE_W);
-                    map.DrawTile(tile, drawPos, 0);
-                    DrawRectangleLinesEx({ drawPos.x, drawPos.y, TILE_W, TILE_W }, 2, PINK);
                     i++;
                 }
             }
+
+            // Brush blueness overlay
+            Rectangle selectRect{
+                0,
+                0,
+                (float)(pick_region.br.x - pick_region.tl.x + 1) * TILE_W,
+                (float)(pick_region.br.y - pick_region.tl.y + 1) * TILE_W
+            };
+            if (editorPickTile) {
+                selectRect.x = pick_region.tl.x * TILE_W;
+                selectRect.y = pick_region.tl.y * TILE_W;
+            } else {
+                selectRect.x = selectDrawCoord.x * TILE_W;
+                selectRect.y = selectDrawCoord.y * TILE_W;
+            }
+            DrawRectangleRec(selectRect, Fade(SKYBLUE, 0.1f));
+            DrawRectangleLinesEx(selectRect, 2, SKYBLUE);
         }
     }
 }
