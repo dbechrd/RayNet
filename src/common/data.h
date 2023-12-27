@@ -293,6 +293,11 @@ struct Tilemap {
     };
     typedef std::unordered_set<Coord, Coord::Hasher> CoordSet;
 
+    struct Region {
+        Coord tl;
+        Coord br;
+    };
+
     static const DataType dtype = DAT_TYP_TILE_MAP;
     static const uint32_t MAGIC = 0xDBBB9192;
     static const uint16_t VERSION = 9;
@@ -339,6 +344,7 @@ struct Tilemap {
     bool IsSolid(int x, int y);  // tile x,y coord, returns true if out of bounds
 
     void Set(TileLayerType layer, uint16_t x, uint16_t y, uint16_t tile_id, double now);
+    bool SetTry(TileLayerType layer, uint16_t x, uint16_t y, uint16_t tile_id, double now);
     void SetFromWangMap(WangMap &wangMap, double now);
     void Fill(TileLayerType layer, uint16_t x, uint16_t y, uint16_t new_tile_id, double now);
 

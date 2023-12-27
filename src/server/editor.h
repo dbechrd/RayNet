@@ -29,7 +29,23 @@ struct EditModeTiles {
     TileEditMode tileEditMode;
     TileLayerType layer;
     struct {
-        uint16_t tile_id[TILE_LAYER_COUNT];
+        Tilemap::Coord pick_start{};
+        Tilemap::Coord pick_current{};
+        Tilemap::Region PickRegion(void) {
+            Tilemap::Region region{
+                {
+                    MIN(pick_start.x, pick_current.x),
+                    MIN(pick_start.y, pick_current.y)
+                },
+                {
+                    MAX(pick_start.x, pick_current.x),
+                    MAX(pick_start.y, pick_current.y)
+                }
+            };
+            return region;
+        }
+
+        std::vector<uint16_t> tile_ids[TILE_LAYER_COUNT];
     } cursor;
 };
 

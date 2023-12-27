@@ -71,6 +71,14 @@ void Tilemap::Set(TileLayerType layer, uint16_t x, uint16_t y, uint16_t tile_id,
         chunkLastUpdatedAt = now;
     }
 }
+bool Tilemap::SetTry(TileLayerType layer, uint16_t x, uint16_t y, uint16_t tile_id, double now)
+{
+    if (x >= 0 && y >= 0 && x < width && y < height) {
+        Set(layer, x, y, tile_id, now);
+        return true;
+    }
+    return false;
+}
 void Tilemap::SetFromWangMap(WangMap &wangMap, double now)
 {
     // TODO: Specify map coords to set (or chunk id) and do a bounds check here instead
