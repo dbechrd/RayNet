@@ -196,11 +196,15 @@ Err Play(GameServer &server)
             editor.DrawEntityOverlays(camera, server.now);
 
             // [Editor] Menus, action bar, etc.
-            editor.DrawUI({}, server.now);
+            editor.DrawUI(server.now);
 
             // [Debug] FPS, clock, etc.
             if (server.showF3Menu) {
-                F3Menu_Draw(server, camera);
+                Vector2 f3_pos{
+                    editor.dock_left ? GetRenderWidth() - 360.0f - 8.0f : 8.0f,
+                    8.0f
+                };
+                F3Menu_Draw(server, camera, f3_pos);
             }
         EndDrawing();  // has to be last thing in loop (i.e. raylib does all its finalization stuff here)
 #else

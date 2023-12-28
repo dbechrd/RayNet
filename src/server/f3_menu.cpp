@@ -1,14 +1,10 @@
 #include "f3_menu.h"
 
-void F3Menu_Draw(GameServer &server, Camera2D &camera)
+void F3Menu_Draw(GameServer &server, Camera2D &camera, Vector2 pos)
 {
     IO::Scoped scope(IO::IO_F3Menu);
 
-    Vector2 hudCursor{
-        GetRenderWidth() - 360.0f - 8.0f,
-        8.0f
-    };
-
+    Vector2 hudCursor = pos;
     Vector2 histoCursor = hudCursor;
     hudCursor.y += (Histogram::histoHeight + 8) * 1;
 

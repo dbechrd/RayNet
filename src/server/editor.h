@@ -121,17 +121,18 @@ struct EditModeState {
 };
 
 struct Editor {
-    bool          active   {};
-    EditMode      mode     {};
-    EditModeState state    {};
-    uint16_t      map_id   {};
+    bool          active    {};
+    bool          dock_left {};
+    EditMode      mode      {};
+    EditModeState state     {};
+    uint16_t      map_id    {};
 
     Editor(uint16_t map_id) : map_id(map_id) {}
     Err Init(void);
     void HandleInput(Camera2D &camera);
     void DrawGroundOverlays(Camera2D &camera, double now);
     void DrawEntityOverlays(Camera2D &camera, double now);
-    UIState DrawUI(Vector2 position, double now);
+    UIState DrawUI(double now);
 
 private:
     // Ground overlays (above tiles, below entities)

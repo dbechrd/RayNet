@@ -2,4 +2,4 @@
 #include "../common/common.h"
 #include "game_server.h"
 
-void F3Menu_Draw(GameServer &server, Camera2D &camera);
+void F3Menu_Draw(GameServer &server, Camera2D &camera, Vector2 pos);

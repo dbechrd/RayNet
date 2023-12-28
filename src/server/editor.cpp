@@ -37,7 +37,12 @@ void Editor::HandleInput(Camera2D &camera)
     io.PushScope(IO::IO_Editor);
 
     if (io.KeyPressed(KEY_GRAVE)) {
-        active = !active;
+        if (io.KeyDown(KEY_LEFT_SHIFT)) {
+            dock_left = !dock_left;
+            active = true;
+        } else {
+            active = !active;
+        }
     }
 
     if (active) {
@@ -477,22 +482,27 @@ void EndScrollPanel(UI &ui, ScrollPanel &scrollPanel)
     const float scrollbarSpace = scrollPanel.panelRect.height * (1 - scrollRatio);
     const float scrollPct = scrollPanel.scrollOffset / scrollPanel.scrollOffsetMax;
     Rectangle scrollbar{
-        scrollPanel.panelRect.width - 2 - scrollbarWidth,
+        scrollPanel.panelRect.x + scrollPanel.panelRect.width - 2 - scrollbarWidth,
         scrollPanel.panelRect.y + scrollbarSpace * scrollPct,
         scrollbarWidth,
         scrollbarHeight
     };
     DrawRectangleRec(scrollbar, LIGHTGRAY);
-    DrawRectangleLinesEx(scrollPanel.panelRect, 2, BLACK);
+    //DrawRectangleLinesEx(scrollPanel.panelRect, 2, WHITE);
 }
 
-UIState Editor::DrawUI(Vector2 position, double now)
+UIState Editor::DrawUI(double now)
 {
     io.PushScope(IO::IO_EditorUI);
 
     UIState state{};
     if (active) {
-        state = DrawUI_ActionBar(position, now);
+        Vector2 pos{};
+        if (!dock_left) {
+            pos.x = GetRenderWidth() - 430.0f;
+        }
+
+        state = DrawUI_ActionBar(pos, now);
         if (state.hover) {
             io.CaptureMouse();
         }
@@ -1677,7 +1687,7 @@ void Editor::DrawUI_PackFiles(UI &uiActionBar, double now)
             }
 
             uiActionBar.PushWidth(400);
-            uiActionBar.PushMargin({ 1, 0, 1, 0 });
+            uiActionBar.PushMargin({ 1, 3, 1, 3 });
 
             const char *text = TextFormat("[%s] %s", selected ? "-" : "+", desc);
             if (uiActionBar.Text(CSTRLEN(text), WHITE, ColorBrightness(filter.color, -0.2f)).pressed) {
