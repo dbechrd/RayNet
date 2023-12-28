@@ -8,6 +8,7 @@
 #pragma warning(pop)
 
 #include "stb_herringbone_wang_tile.h"
+#include "lz4.h"
 
 #include <cassert>
 #include <cstdio>
@@ -121,6 +122,7 @@
 #define SV_MAX_TILE_INTERACT_DIST_IN_TILES   1  // max distance player can be from a tile to interact with it
 #define SV_MAX_ENTITY_INTERACT_DIST          (TILE_W * 2)  // max distance player can be from a tile to interact with it
 #define SV_MAX_TITLE_LEN                     127
+#define SV_COMPRESS_TILE_CHUNK_WITH_LZ4      1
 
 //#define CL_PORT                 30000
 #define CL_BANDWIDTH_SMOOTHING_FACTOR   0.5f

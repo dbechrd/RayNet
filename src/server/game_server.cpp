@@ -977,25 +977,23 @@ void GameServer::SendTileChunk(int clientIdx, Tilemap &map, uint16_t x, uint16_t
                 }
             }
 
-            int original_bytes = sizeof(chunk[0]) * chunk.size();
+            int chunk_bytes = sizeof(chunk[0]) * chunk.size();
             int chunk_smol_bytes{};
-            uint8_t *chunk_smol = CompressData((uint8_t *)chunk.data(), original_bytes, &chunk_smol_bytes);
-
-            for (int i = 0; i < chunk_smol_bytes; i++) {
-                printf("%x ", chunk_smol[i]);
-            }
-
-            int chunk_beeg_bytes{};
-            uint16_t *chunk_beeg = (uint16_t *)DecompressData(chunk_smol, chunk_smol_bytes, &chunk_beeg_bytes);
-            assert(chunk_beeg_bytes == original_bytes);
-
+            uint8_t *chunk_smol{};
+#if SV_COMPRESS_TILE_CHUNK_WITH_LZ4
+            int lz4_bound = LZ4_compressBound(chunk_bytes);
+            chunk_smol = (uint8_t *)MemAlloc(lz4_bound);
+            chunk_smol_bytes = LZ4_compress_default((char *)chunk.data(), (char *)chunk_smol, chunk_bytes, lz4_bound);
+#else
+            chunk_smol = CompressData((uint8_t *)chunk.data(), chunk_bytes, &chunk_smol_bytes);
+#endif
             uint8_t *block = yj_server->AllocateBlock(clientIdx, chunk_smol_bytes);
             memcpy(block, chunk_smol, chunk_smol_bytes);
             MemFree(chunk_smol);
 
-            msg->beeg_size = original_bytes;
+            msg->beeg_size = chunk_bytes;
             msg->smol_size = chunk_smol_bytes;
-            printf("Sending tile chunk, (beeg %d, smol %d)\n", msg->beeg_size, msg->smol_size);
+            //printf("Sending tile chunk, (beeg %d, smol %d)\n", msg->beeg_size, msg->smol_size);
 
             yj_server->AttachBlockToMessage(clientIdx, msg, block, chunk_smol_bytes);
             yj_server->SendMessage(clientIdx, CHANNEL_R_TILE_EVENT, msg);

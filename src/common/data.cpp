@@ -83,18 +83,37 @@ Err LoadResources(Pack &pack);
 
 Err Init(void)
 {
+#if 0
     {
-        uint8_t data[]{ 1, 1, 1, 1, 1 };
+        uint8_t data[]{ 1, 2, 3, 4, 5 };
 
         int deflated_bytes = 0;
-        uint8_t *deflated = CompressData((uint8_t *)data, sizeof(data), &deflated_bytes);
-
         int inflated_bytes = 0;
-        uint8_t *inflated = DecompressData(deflated, deflated_bytes, &inflated_bytes);
 
-        MemFree(deflated);
-        MemFree(inflated);
+        uint8_t *deflated = 0;
+        uint8_t *inflated = 0;
+
+        // 1 - 4 bytes works fine
+        deflated = CompressData(data, 1, &deflated_bytes);
+        inflated = DecompressData(deflated, deflated_bytes, &inflated_bytes);
+        deflated = CompressData(data, 2, &deflated_bytes);
+        inflated = DecompressData(deflated, deflated_bytes, &inflated_bytes);
+        deflated = CompressData(data, 3, &deflated_bytes);
+        inflated = DecompressData(deflated, deflated_bytes, &inflated_bytes);
+        deflated = CompressData(data, 4, &deflated_bytes);
+        inflated = DecompressData(deflated, deflated_bytes, &inflated_bytes);
+
+        // 5 - 8 bytes asserts during DecompressData()
+        deflated = CompressData(data, 5, &deflated_bytes);
+        inflated = DecompressData(deflated, deflated_bytes, &inflated_bytes);
+        deflated = CompressData(data, 6, &deflated_bytes);
+        inflated = DecompressData(deflated, deflated_bytes, &inflated_bytes);
+        deflated = CompressData(data, 7, &deflated_bytes);
+        inflated = DecompressData(deflated, deflated_bytes, &inflated_bytes);
+        deflated = CompressData(data, 8, &deflated_bytes);
+        inflated = DecompressData(deflated, deflated_bytes, &inflated_bytes);
     }
+#endif
 
 #if HAQ_ENABLE_SCHEMA
     haq_print(hqt_gfx_file_schema);

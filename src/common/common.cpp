@@ -627,6 +627,7 @@ void dlb_CommonTests(void)
 #include "file_utils.cpp"
 #include "haq.cpp"
 #include "histogram.cpp"
+#include "lz4.c"
 #include "io.cpp"
 #include "net/net.cpp"
 #include "perf_timer.cpp"

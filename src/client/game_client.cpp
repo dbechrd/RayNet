@@ -174,26 +174,27 @@ void GameClient::ProcessMsg(Msg_S_TileChunk &msg)
     Tilemap *map = world->FindOrLoadMap(msg.map_id);
     if (map) {
         if (map->id = msg.map_id) {
-            printf("Receiving tile chunk, (beeg %d, smol %d)\n", msg.beeg_size, msg.smol_size);
+            //printf("Receiving tile chunk, (beeg %d, smol %d)\n", msg.beeg_size, msg.smol_size);
 
             int block_size = msg.GetBlockSize();
             uint8_t *block = msg.GetBlockData();
             assert(block_size == msg.smol_size);
 
-            for (int i = 0; i < block_size; i++) {
-                printf("%x ", block[i]);
-            }
-            printf("\n");
-
             int chunk_beeg_bytes{};
-            uint16_t *chunk_beeg = (uint16_t *)DecompressData(block, block_size, &chunk_beeg_bytes);
+            uint8_t *chunk_beeg{};
+#if SV_COMPRESS_TILE_CHUNK_WITH_LZ4
+            chunk_beeg = (uint8_t *)MemAlloc(msg.beeg_size);
+            chunk_beeg_bytes = LZ4_decompress_safe((char *)block, (char *)chunk_beeg, block_size, msg.beeg_size);
+#else
+            chunk_beeg = (uint8_t *)DecompressData(block, block_size, &chunk_beeg_bytes);
+#endif
             assert(chunk_beeg_bytes == msg.beeg_size);
 
             int index = 0;
             for (int layer = 0; layer < TILE_LAYER_COUNT; layer++) {
                 for (uint32_t ty = msg.y; ty < msg.w; ty++) {
                     for (uint32_t tx = msg.x; tx < msg.h; tx++) {
-                        map->Set((TileLayerType)layer, msg.x + tx, msg.y + ty, chunk_beeg[index], 0);
+                        map->Set((TileLayerType)layer, msg.x + tx, msg.y + ty, ((uint16_t *)chunk_beeg)[index], 0);
                         index++;
                     }
                 }
