@@ -20,9 +20,9 @@ bool Tilemap::AtTry(TileLayerType layer, int x, int y, uint16_t &tile_id)
 }
 bool Tilemap::WorldToTileIndex(int world_x, int world_y, Coord &coord)
 {
+    coord.x = world_x / TILE_W;
+    coord.y = world_y / TILE_W;
     if (world_x >= 0 && world_y >= 0 && world_x < width * TILE_W && world_y < height * TILE_W) {
-        coord.x = world_x / TILE_W;
-        coord.y = world_y / TILE_W;
         return true;
     }
     return false;

@@ -113,68 +113,72 @@ void Editor::DrawGroundOverlay_Tiles(Camera2D &camera, double now)
         auto &map = packs[0].FindById<Tilemap>(map_id);
 
         Tilemap::Coord coord{};
-        bool validCoord = map.WorldToTileIndex(cursorWorldPos.x, cursorWorldPos.y, coord);
-        if (validCoord) {
-            if (editorPlaceTile) {
-                Tilemap::Region pick_region = cursor.PickRegion();
-                Tilemap::Coord region_offset = pick_region.CenterOffset();
+        map.WorldToTileIndex(cursorWorldPos.x, cursorWorldPos.y, coord);
+        if (editorPlaceTile) {
+            Tilemap::Coord selection_center = cursor.SelectionCenter();
 
-                int i = 0;
-                for (int y = pick_region.tl.y, rel_y = 0; y <= pick_region.br.y; y++, rel_y++) {
-                    for (int x = pick_region.tl.x, rel_x = 0; x <= pick_region.br.x; x++, rel_x++) {
-                        uint16_t tile = cursor.tile_ids[layer][i];
-                        map.SetTry(layer,
-                            coord.x + rel_x + region_offset.x,
-                            coord.y + rel_y + region_offset.y, tile, now);
-                        i++;
-                    }
+            int i = 0;
+            for (int y = 0; y < cursor.selection_size.y; y++) {
+                for (int x = 0; x < cursor.selection_size.x; x++) {
+                    uint16_t tile = cursor.selection_tiles[layer][i];
+                    map.SetTry(layer,
+                        coord.x - selection_center.x + x,
+                        coord.y - selection_center.y + y, tile, now);
+                    i++;
                 }
-            } else if (editorPickTile) {
-                if (io.MouseButtonPressed(MOUSE_BUTTON_MIDDLE)) {
-                    cursor.pick_start = coord;
-                }
-                cursor.pick_current = coord;
+            }
+        } else if (editorPickTile) {
+            if (io.MouseButtonPressed(MOUSE_BUTTON_MIDDLE)) {
+                cursor.pick_start = coord;
+            }
+            cursor.pick_current = coord;
 
-                cursor.tile_ids[layer].clear();
-                Tilemap::Region pick_region = cursor.PickRegion();
+            Tilemap::Region pick_region = cursor.PickRegion();
+            cursor.selection_type = SELECTION_MAP;
+            cursor.selection_size.x = pick_region.br.x - pick_region.tl.x + 1;
+            cursor.selection_size.y = pick_region.br.y - pick_region.tl.y + 1;
+
+            for (int layer = 0; layer < TILE_LAYER_COUNT; layer++) {
+                cursor.selection_tiles[layer].clear();
                 for (int y = pick_region.tl.y; y <= pick_region.br.y; y++) {
                     for (int x = pick_region.tl.x; x <= pick_region.br.x; x++) {
-                        uint16_t tile = map.At(layer, x, y);
-                        cursor.tile_ids[layer].push_back(tile);
+                        uint16_t tile = map.At((TileLayerType)layer, x, y);
+                        cursor.selection_tiles[layer].push_back(tile);
                     }
                 }
-            } else if (editorFillTile) {
-                if (cursor.tile_ids->size()) {
-                    map.Fill(layer, coord.x, coord.y, cursor.tile_ids[layer][0], now);
-                }
+            }
+        } else if (editorFillTile) {
+            if (cursor.selection_tiles->size()) {
+                map.Fill(layer, coord.x, coord.y, cursor.selection_tiles[layer][0], now);
             }
         }
 
-        if (cursor.tile_ids[layer].size()) {
-            Tilemap::Region pick_region = cursor.PickRegion();
+        if (cursor.selection_tiles[layer].size()) {
+            Tilemap::Coord selection_center = cursor.SelectionCenter();
 
             // Find "center" of cursor coord with respect to picked region size
-            Tilemap::Coord region_offset = pick_region.CenterOffset();
-            Tilemap::Coord selectDrawCoord = coord;
-            selectDrawCoord.x += region_offset.x;
-            selectDrawCoord.y += region_offset.y;
+            Vector2 brush_tl{};
+            if (editorPickTile) {
+                Tilemap::Region pick_region = cursor.PickRegion();
+                brush_tl.x = pick_region.tl.x;
+                brush_tl.y = pick_region.tl.y;
+            } else {
+                brush_tl.x = coord.x - selection_center.x;
+                brush_tl.y = coord.y - selection_center.y;
+            }
 
             // Draw picked region as brush
             int i = 0;
-            for (int y = pick_region.tl.y, rel_y = 0; y <= pick_region.br.y; y++, rel_y++) {
-                for (int x = pick_region.tl.x, rel_x = 0; x <= pick_region.br.x; x++, rel_x++) {
-                    uint16_t tile = cursor.tile_ids[layer][i];
+            for (int y = 0; y < cursor.selection_size.y; y++) {
+                for (int x = 0; x < cursor.selection_size.x; x++) {
+                    uint16_t tile = cursor.selection_tiles[layer][i];
                     if (tile) {
-                        Vector2 drawPos{};
-                        if (editorPickTile) {
-                            drawPos.x = x;
-                            drawPos.y = y;
-                        } else {
-                            drawPos.x += selectDrawCoord.x + rel_x;
-                            drawPos.y += selectDrawCoord.y + rel_y;
-                        }
-                        drawPos = Vector2Scale(drawPos, TILE_W);
-                        map.DrawTile(tile, drawPos, 0, Fade(WHITE, 0.8f));
+                        Vector2 brush_tile_pos = brush_tl;
+                        brush_tile_pos.x += x;
+                        brush_tile_pos.y += y;
+                        brush_tile_pos = Vector2Scale(brush_tile_pos, TILE_W);
+
+                        map.DrawTile(tile, brush_tile_pos, 0, Fade(WHITE, 0.8f));
                     }
                     i++;
                 }
@@ -182,19 +186,12 @@ void Editor::DrawGroundOverlay_Tiles(Camera2D &camera, double now)
 
             // Brush blueness overlay
             Rectangle selectRect{
-                0,
-                0,
-                (float)(pick_region.br.x - pick_region.tl.x + 1) * TILE_W,
-                (float)(pick_region.br.y - pick_region.tl.y + 1) * TILE_W
+                brush_tl.x * TILE_W,
+                brush_tl.y * TILE_W,
+                (float)cursor.selection_size.x * TILE_W,
+                (float)cursor.selection_size.y * TILE_W
             };
-            if (editorPickTile) {
-                selectRect.x = pick_region.tl.x * TILE_W;
-                selectRect.y = pick_region.tl.y * TILE_W;
-            } else {
-                selectRect.x = selectDrawCoord.x * TILE_W;
-                selectRect.y = selectDrawCoord.y * TILE_W;
-            }
-            DrawRectangleRec(selectRect, Fade(SKYBLUE, 0.1f));
+            DrawRectangleRec(selectRect, Fade(SKYBLUE, 0.2f));
             DrawRectangleLinesEx(selectRect, 2, SKYBLUE);
         }
     }
@@ -831,6 +828,8 @@ void Editor::DrawUI_Tilesheet(UI &uiActionBar, double now)
 
     auto &map = packs[0].FindById<Tilemap>(map_id);
     auto &tile_defs = packs[0].tile_defs;
+    TileLayerType layer = state.tiles.layer;
+    auto &cursor = state.tiles.cursor;
 
     int tiles_x = 6;
     int tiles_y = tile_defs.size() / 6 + (tile_defs.size() % 6 > 0);
@@ -961,77 +960,112 @@ void Editor::DrawUI_Tilesheet(UI &uiActionBar, double now)
         const Vector2 mouseRel = Vector2Subtract(mousePos, imgTL);
 
         // Draw hover highlight on tilesheet if mouse hovering a valid tiledef
-        const int tile_x = (int)mouseRel.x / TILE_W;
-        const int tile_y = (int)mouseRel.y / TILE_W;
-        const int tileIdx = tile_y * tiles_x + tile_x;
-
-        if (tileIdx < tile_defs.size()) {
-            if (state.tiles.tileEditMode != TileEditMode_AutoTileMask) {
-                DrawRectangleLinesEx(
-                    { imgTL.x + tile_x * TILE_W, imgTL.y + tile_y * TILE_W, TILE_W, TILE_W },
-                    2,
-                    Fade(WHITE, 0.7f)
-                );
-            }
-        }
+        const int tile_x = CLAMP((int)mouseRel.x / TILE_W, 0, tiles_x);
+        const int tile_y = CLAMP((int)mouseRel.y / TILE_W, 0, tiles_y);
 
         // If mouse pressed, select tile, or change collision data, depending on mode
-        if (sheet.pressed) {
-            if (tileIdx >= 0 && tileIdx < tile_defs.size()) {
-                switch (state.tiles.tileEditMode) {
-                    case TileEditMode_Select: {
-                        state.tiles.cursor.tile_ids[state.tiles.layer].clear();
-                        state.tiles.cursor.tile_ids[state.tiles.layer].push_back(tileIdx);
-                        break;
-                    }
-                    case TileEditMode_Collision:
-                    case TileEditMode_AutoTileMask: {
-                        const int tileXRemainder = (int)mouseRel.x % TILE_W - 1;
-                        const int tileYRemainder = (int)mouseRel.y % TILE_W - 1;
-                        if (tileXRemainder < 0 || tileXRemainder > (TILE_W - 3) ||
-                            tileYRemainder < 0 || tileYRemainder > (TILE_W - 3))
-                        {
-                            break;
-                        }
-                        const int tileXSegment = tileXRemainder / (TILE_W / 3);
-                        const int tileYSegment = tileYRemainder / (TILE_W / 3);
+        switch (state.tiles.tileEditMode) {
+            case TileEditMode_Select: {
+                if (!sheet.down) break;
 
-                        const int tileSegment = tileYSegment * 3 + tileXSegment;
+                // Track drag start/end
+                if (io.MouseButtonPressed(MOUSE_BUTTON_LEFT)) {
+                    cursor.pick_start = { tile_x, tile_y };
+                }
+                cursor.pick_current = { tile_x, tile_y };
 
-                        if (state.tiles.tileEditMode == TileEditMode_Collision) {
-                            uint8_t flags = tile_defs[tileIdx].flags;
-                            switch (tileSegment) {
-                                case 0: flags ^= TILEDEF_FLAG_SOLID;  break;
-                                case 1: flags ^= TILEDEF_FLAG_LIQUID; break;
+                // Normalize the region so that TL is min and BR is max
+                Tilemap::Region pick_region = cursor.PickRegion();
+                cursor.selection_type = SELECTION_PALETTE;
+                cursor.selection_size.x = pick_region.br.x - pick_region.tl.x + 1;
+                cursor.selection_size.y = pick_region.br.y - pick_region.tl.y + 1;
+
+                // Copy tile ids into selection buffer
+                for (int layer = 0; layer < TILE_LAYER_COUNT; layer++) {
+                    cursor.selection_tiles[layer].clear();
+                    for (int y = pick_region.tl.y; y <= pick_region.br.y; y++) {
+                        for (int x = pick_region.tl.x; x <= pick_region.br.x; x++) {
+                            int tileIdx = y * tiles_x + x;
+                            if (tileIdx < 0 || tileIdx >= tile_defs.size()) {
+                                tileIdx = 0;
                             }
-                            tile_defs[tileIdx].flags = (TileDefFlags)flags;
-                        } else if (state.tiles.tileEditMode == TileEditMode_AutoTileMask) {
-                            //printf("x: %d, y: %d, s: %d\n", tileXSegment, tileYSegment, tileSegment);
-                            switch (tileSegment) {
-                                case 0: tile_defs[tileIdx].auto_tile_mask ^= 0b10000000; break;
-                                case 1: tile_defs[tileIdx].auto_tile_mask ^= 0b01000000; break;
-                                case 2: tile_defs[tileIdx].auto_tile_mask ^= 0b00100000; break;
-                                case 3: tile_defs[tileIdx].auto_tile_mask ^= 0b00010000; break;
-                                case 4: tile_defs[tileIdx].auto_tile_mask ^= 0b00000000; break;
-                                case 5: tile_defs[tileIdx].auto_tile_mask ^= 0b00001000; break;
-                                case 6: tile_defs[tileIdx].auto_tile_mask ^= 0b00000100; break;
-                                case 7: tile_defs[tileIdx].auto_tile_mask ^= 0b00000010; break;
-                                case 8: tile_defs[tileIdx].auto_tile_mask ^= 0b00000001; break;
-                            }
+                            cursor.selection_tiles[layer].push_back(tile_defs[tileIdx].id);
                         }
-                        break;
                     }
                 }
-            } else {
-                assert(!"wut da heck, how you select a tile that's not in the map at all?");
+                break;
+            }
+            case TileEditMode_Collision:
+            case TileEditMode_AutoTileMask: {
+                if (!sheet.pressed) break;
+
+                int tileIdx = tile_y * tiles_x + tile_x;
+                if (tileIdx < 0 || tileIdx > tile_defs.size()) {
+                    break;
+                }
+
+                const int tileXRemainder = (int)mouseRel.x % TILE_W - 1;
+                const int tileYRemainder = (int)mouseRel.y % TILE_W - 1;
+                if (tileXRemainder < 0 || tileXRemainder > (TILE_W - 3) ||
+                    tileYRemainder < 0 || tileYRemainder > (TILE_W - 3))
+                {
+                    break;
+                }
+                const int tileXSegment = tileXRemainder / (TILE_W / 3);
+                const int tileYSegment = tileYRemainder / (TILE_W / 3);
+
+                const int tileSegment = tileYSegment * 3 + tileXSegment;
+
+                if (state.tiles.tileEditMode == TileEditMode_Collision) {
+                    uint8_t flags = tile_defs[tileIdx].flags;
+                    switch (tileSegment) {
+                        case 0: flags ^= TILEDEF_FLAG_SOLID;  break;
+                        case 1: flags ^= TILEDEF_FLAG_LIQUID; break;
+                    }
+                    tile_defs[tileIdx].flags = (TileDefFlags)flags;
+                } else if (state.tiles.tileEditMode == TileEditMode_AutoTileMask) {
+                    //printf("x: %d, y: %d, s: %d\n", tileXSegment, tileYSegment, tileSegment);
+                    switch (tileSegment) {
+                        case 0: tile_defs[tileIdx].auto_tile_mask ^= 0b10000000; break;
+                        case 1: tile_defs[tileIdx].auto_tile_mask ^= 0b01000000; break;
+                        case 2: tile_defs[tileIdx].auto_tile_mask ^= 0b00100000; break;
+                        case 3: tile_defs[tileIdx].auto_tile_mask ^= 0b00010000; break;
+                        case 4: tile_defs[tileIdx].auto_tile_mask ^= 0b00000000; break;
+                        case 5: tile_defs[tileIdx].auto_tile_mask ^= 0b00001000; break;
+                        case 6: tile_defs[tileIdx].auto_tile_mask ^= 0b00000100; break;
+                        case 7: tile_defs[tileIdx].auto_tile_mask ^= 0b00000010; break;
+                        case 8: tile_defs[tileIdx].auto_tile_mask ^= 0b00000001; break;
+                    }
+                }
+                break;
             }
         }
     }
 
-    // Draw highlight around currently styleSelected tiledef in draw mode
-    if (state.tiles.cursor.tile_ids[state.tiles.layer].size() == 1) {
-        int tile_x = state.tiles.cursor.tile_ids[state.tiles.layer][0] % tiles_x;
-        int tile_y = state.tiles.cursor.tile_ids[state.tiles.layer][0] / tiles_x;
+    // Draw highlight around currently selected tiledef in draw mode
+    if (state.tiles.tileEditMode != TileEditMode_AutoTileMask && cursor.selection_type == SELECTION_PALETTE) {
+        if (cursor.selection_tiles[layer].size()) {
+            Tilemap::Region pick_region = cursor.PickRegion();
+            Vector2 brush_tl{};
+            brush_tl.x = pick_region.tl.x;
+            brush_tl.y = pick_region.tl.y;
+
+            // Selected tiles blueness overlay
+            Rectangle selectRect{
+                imgTL.x + brush_tl.x * TILE_W,
+                imgTL.y + brush_tl.y * TILE_W,
+                (float)cursor.selection_size.x * TILE_W,
+                (float)cursor.selection_size.y * TILE_W
+            };
+            DrawRectangleRec(selectRect, Fade(SKYBLUE, 0.2f));
+            DrawRectangleLinesEx(selectRect, 2, SKYBLUE);
+        }
+    }
+
+#if 0
+    if (state.tiles.cursor.selection_tiles[state.tiles.layer].size() == 1) {
+        int tile_x = state.tiles.cursor.selection_tiles[state.tiles.layer][0] % tiles_x;
+        int tile_y = state.tiles.cursor.selection_tiles[state.tiles.layer][0] / tiles_x;
         Rectangle tileDefRectScreen{
             imgTL.x + (TILE_W * tile_x),
             imgTL.y + (TILE_W * tile_y),
@@ -1040,6 +1074,7 @@ void Editor::DrawUI_Tilesheet(UI &uiActionBar, double now)
         };
         DrawRectangleLinesEx(tileDefRectScreen, 2, WHITE);
     }
+#endif
 
     DrawUI_WangTile(now);
 }
@@ -1141,8 +1176,9 @@ void Editor::DrawUI_WangTile(double now)
 
     Rectangle wangBg{ 434, 4, 560, 560 };
 
-    if ((state.wang.hTex >= 0 || state.wang.vTex >= 0) && state.tiles.cursor.tile_ids[state.tiles.layer].size() == 1) {
-        const uint16_t selectedTile = state.tiles.cursor.tile_ids[state.tiles.layer][0];
+    auto &selected_tiles = state.tiles.cursor.selection_tiles[state.tiles.layer];
+    if ((state.wang.hTex >= 0 || state.wang.vTex >= 0) && selected_tiles.size() == 1) {
+        const uint16_t selectedTile = selected_tiles[0];
         static double lastUpdatedAt = 0;
         static double lastChangedAt = 0;
         const double updateDelay = 0.02;

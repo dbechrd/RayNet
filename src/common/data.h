@@ -275,7 +275,7 @@ struct TileChunk {
 
 struct Tilemap {
     struct Coord {
-        uint16_t x, y;
+        int x, y;
 
         bool operator==(const Coord &other) const
         {
@@ -296,13 +296,6 @@ struct Tilemap {
     struct Region {
         Coord tl;
         Coord br;
-
-        Coord CenterOffset(void) {
-            Coord centerOffset{};
-            centerOffset.x -= (br.x - tl.x) / 2;
-            centerOffset.y -= (br.y - tl.y) / 2;
-            return centerOffset;
-        }
     };
 
     static const DataType dtype = DAT_TYP_TILE_MAP;

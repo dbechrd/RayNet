@@ -25,10 +25,17 @@ enum TileEditMode {
     TileEditMode_Count
 };
 
+enum SelectionType {
+    SELECTION_MAP,     // Tiles picked from map
+    SELECTION_PALETTE, // Tiles picked from tileset palette
+    SELECTION_COUNT
+};
+
 struct EditModeTiles {
     TileEditMode tileEditMode;
     TileLayerType layer;
     struct {
+        // Tile picking from the tile palette
         Tilemap::Coord pick_start{};
         Tilemap::Coord pick_current{};
         Tilemap::Region PickRegion(void) {
@@ -45,7 +52,16 @@ struct EditModeTiles {
             return region;
         }
 
-        std::vector<uint16_t> tile_ids[TILE_LAYER_COUNT];
+        Tilemap::Coord SelectionCenter(void) {
+            Tilemap::Coord center{};
+            center.x = selection_size.x / 2;
+            center.y = selection_size.y / 2;
+            return center;
+        }
+
+        SelectionType selection_type{};
+        Tilemap::Coord selection_size{};
+        std::vector<uint16_t> selection_tiles[TILE_LAYER_COUNT];
     } cursor;
 };
 
