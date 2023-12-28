@@ -174,23 +174,29 @@ void GameClient::ProcessMsg(Msg_S_TileChunk &msg)
     Tilemap *map = world->FindOrLoadMap(msg.map_id);
     if (map) {
         if (map->id = msg.map_id) {
+            printf("Receiving tile chunk, (beeg %d, smol %d)\n", msg.beeg_size, msg.smol_size);
+
+            int block_size = msg.GetBlockSize();
             uint8_t *block = msg.GetBlockData();
+            assert(block_size == msg.smol_size);
+
+            for (int i = 0; i < block_size; i++) {
+                printf("%x ", block[i]);
+            }
+            printf("\n");
 
             int chunk_beeg_bytes{};
-            TileChunk *chunk_beeg = (TileChunk *)DecompressData(msg.GetBlockData(), msg.GetBlockSize(), &chunk_beeg_bytes);
+            uint16_t *chunk_beeg = (uint16_t *)DecompressData(block, block_size, &chunk_beeg_bytes);
+            assert(chunk_beeg_bytes == msg.beeg_size);
 
-            if (chunk_beeg_bytes == sizeof(TileChunk)) {
-                static TileChunk chunk;
-                for (int layer = 0; layer < TILE_LAYER_COUNT; layer++) {
-                    for (uint32_t ty = msg.y; ty < msg.w; ty++) {
-                        for (uint32_t tx = msg.x; tx < msg.h; tx++) {
-                            const uint32_t index = ty * msg.w + tx;
-                            map->Set((TileLayerType)layer, msg.x + tx, msg.y + ty, chunk_beeg->layers[layer][index], 0);
-                        }
+            int index = 0;
+            for (int layer = 0; layer < TILE_LAYER_COUNT; layer++) {
+                for (uint32_t ty = msg.y; ty < msg.w; ty++) {
+                    for (uint32_t tx = msg.x; tx < msg.h; tx++) {
+                        map->Set((TileLayerType)layer, msg.x + tx, msg.y + ty, chunk_beeg[index], 0);
+                        index++;
                     }
                 }
-            } else {
-                printf("[game_client] msg.GetBlockSize() [%d] != sizeof(TileChunk) [%zu]\n", msg.GetBlockSize(), sizeof(TileChunk));
             }
 
             MemFree(chunk_beeg);

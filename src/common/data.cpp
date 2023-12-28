@@ -83,6 +83,19 @@ Err LoadResources(Pack &pack);
 
 Err Init(void)
 {
+    {
+        uint8_t data[]{ 1, 1, 1, 1, 1 };
+
+        int deflated_bytes = 0;
+        uint8_t *deflated = CompressData((uint8_t *)data, sizeof(data), &deflated_bytes);
+
+        int inflated_bytes = 0;
+        uint8_t *inflated = DecompressData(deflated, deflated_bytes, &inflated_bytes);
+
+        MemFree(deflated);
+        MemFree(inflated);
+    }
+
 #if HAQ_ENABLE_SCHEMA
     haq_print(hqt_gfx_file_schema);
     printf("");

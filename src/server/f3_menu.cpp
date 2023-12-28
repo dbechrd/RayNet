@@ -45,6 +45,7 @@ void F3Menu_Draw(GameServer &server, Camera2D &camera)
     DRAW_TEXT("cursorScn", "%d, %d", GetMouseX(), GetMouseY());
     const Vector2 cursorWorldPos = GetScreenToWorld2D({ (float)GetMouseX(), (float)GetMouseY() }, camera);
     DRAW_TEXT("cursorWld", "%.f, %.f", cursorWorldPos.x, cursorWorldPos.y);
+    DRAW_TEXT("cursorTil", "%.f, %.f", floorf(cursorWorldPos.x / TILE_W), floorf(cursorWorldPos.y / TILE_W));
     DRAW_TEXT("clients", "%d", server.yj_server->GetNumConnectedClients());
 
     static bool showClientInfo[yojimbo::MaxClients];

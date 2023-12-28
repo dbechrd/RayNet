@@ -1042,8 +1042,8 @@ void Editor::DrawUI_Tilesheet(UI &uiActionBar, double now)
         }
     }
 
-    // Draw highlight around currently selected tiledef in draw mode
-    if (state.tiles.tileEditMode != TileEditMode_AutoTileMask && cursor.selection_type == SELECTION_PALETTE) {
+    // Draw highlight around currently selected tile(s)
+    if (cursor.selection_type == SELECTION_PALETTE) {
         if (cursor.selection_tiles[layer].size()) {
             Tilemap::Region pick_region = cursor.PickRegion();
             Vector2 brush_tl{};
@@ -1061,20 +1061,6 @@ void Editor::DrawUI_Tilesheet(UI &uiActionBar, double now)
             DrawRectangleLinesEx(selectRect, 2, SKYBLUE);
         }
     }
-
-#if 0
-    if (state.tiles.cursor.selection_tiles[state.tiles.layer].size() == 1) {
-        int tile_x = state.tiles.cursor.selection_tiles[state.tiles.layer][0] % tiles_x;
-        int tile_y = state.tiles.cursor.selection_tiles[state.tiles.layer][0] / tiles_x;
-        Rectangle tileDefRectScreen{
-            imgTL.x + (TILE_W * tile_x),
-            imgTL.y + (TILE_W * tile_y),
-            TILE_W,
-            TILE_W
-        };
-        DrawRectangleLinesEx(tileDefRectScreen, 2, WHITE);
-    }
-#endif
 
     DrawUI_WangTile(now);
 }

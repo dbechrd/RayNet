@@ -36,7 +36,8 @@ void GameServer::OnClientJoin(int clientIdx)
         const Vector3 caveEntrance{ 3100, 1100, 0 };
         const Vector3 townCenter{ 1660, 2360, 0 };
         const Vector3 inTree{ 2980.15f, 832.31f };
-        player->position = caveEntrance;
+        const Vector3 freyaHouse{ 1560.0f, 2460.0f };
+        player->position = freyaHouse;
         player->radius = 16;
         player->hp_max = 100;
         player->hp = player->hp_max;
@@ -958,29 +959,43 @@ void GameServer::SendTileChunk(int clientIdx, Tilemap &map, uint16_t x, uint16_t
     if (yj_server->CanSendMessage(clientIdx, CHANNEL_R_TILE_EVENT)) {
         Msg_S_TileChunk *msg = (Msg_S_TileChunk *)yj_server->CreateMessage(clientIdx, MSG_S_TILE_CHUNK);
         if (msg) {
-            static TileChunk chunk;
             msg->map_id = map.id;
             msg->x = x;
             msg->y = y;
             msg->w = MIN(map.width, SV_MAX_TILE_CHUNK_WIDTH);
             msg->h = MIN(map.height, SV_MAX_TILE_CHUNK_WIDTH);
 
-            chunk = {};
+            std::vector<uint16_t> chunk{};
+            chunk.reserve(TILE_LAYER_COUNT * msg->w * msg->h);
             for (int layer = 0; layer < TILE_LAYER_COUNT; layer++) {
                 for (uint16_t ty = y; ty < msg->h; ty++) {
                     for (uint16_t tx = x; tx < msg->w; tx++) {
-                        const uint16_t index = ty * msg->w + tx;
-                        map.AtTry((TileLayerType)layer, tx, ty, chunk.layers[layer][index]);
+                        uint16_t tile = 0;
+                        map.AtTry((TileLayerType)layer, tx, ty, tile);
+                        chunk.push_back(tile);
                     }
                 }
             }
 
+            int original_bytes = sizeof(chunk[0]) * chunk.size();
             int chunk_smol_bytes{};
-            uint8_t *chunk_smol = CompressData((uint8_t *)&chunk, sizeof(chunk), &chunk_smol_bytes);
+            uint8_t *chunk_smol = CompressData((uint8_t *)chunk.data(), original_bytes, &chunk_smol_bytes);
+
+            for (int i = 0; i < chunk_smol_bytes; i++) {
+                printf("%x ", chunk_smol[i]);
+            }
+
+            int chunk_beeg_bytes{};
+            uint16_t *chunk_beeg = (uint16_t *)DecompressData(chunk_smol, chunk_smol_bytes, &chunk_beeg_bytes);
+            assert(chunk_beeg_bytes == original_bytes);
 
             uint8_t *block = yj_server->AllocateBlock(clientIdx, chunk_smol_bytes);
             memcpy(block, chunk_smol, chunk_smol_bytes);
             MemFree(chunk_smol);
+
+            msg->beeg_size = original_bytes;
+            msg->smol_size = chunk_smol_bytes;
+            printf("Sending tile chunk, (beeg %d, smol %d)\n", msg->beeg_size, msg->smol_size);
 
             yj_server->AttachBlockToMessage(clientIdx, msg, block, chunk_smol_bytes);
             yj_server->SendMessage(clientIdx, CHANNEL_R_TILE_EVENT, msg);
