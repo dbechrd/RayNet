@@ -294,7 +294,7 @@ int main(int argc, char *argv[])
                 const bool button_left = io.KeyDown(KEY_A);
                 const bool button_down = io.KeyDown(KEY_S);
                 const bool button_right = io.KeyDown(KEY_D);
-                const bool button_primary = io.MouseButtonPressed(MOUSE_BUTTON_LEFT);
+                const bool button_primary = io.MouseButtonDown(MOUSE_BUTTON_LEFT);
                 const bool button_secondary = io.MouseButtonPressed(MOUSE_BUTTON_RIGHT);
 
                 // TODO: Use this for dismissing dialogs, updating player facing dir, etc.?
@@ -308,7 +308,7 @@ int main(int argc, char *argv[])
 
                 Controller &controller = client->controller;
                 InputCmd &input = controller.cmdAccum;
-                input.facing = facing;
+                input.SetFacing(facing);
                 input.north |= button_up;
                 input.west  |= button_left;
                 input.south |= button_down;
@@ -453,6 +453,24 @@ int main(int argc, char *argv[])
                 DrawCircle(center.x, center.y, radius, DARKGRAY);
                 edge.Draw(MAGENTA, 2);
                 DrawLineEx(manifold.contact, Vector2Add(manifold.contact, Vector2Scale(manifold.normal, manifold.depth)), 2, GREEN);
+            }
+#endif
+#if _DEBUG && 0
+            {
+                // Debug circle-edge collision
+                Vector2 center = { GetRenderWidth() / 2.0f, GetRenderHeight() / 2.0f };
+                float radius = 100.0f;
+
+                Vector2 mouse = GetMousePosition();
+                Vector2 toMouse = Vector2Subtract(mouse, center);
+                uint8_t facing = InputCmd::QuantizeFacing(Vector2Normalize(toMouse));
+                Vector2 dir = InputCmd::ReconstructFacing(facing);
+
+                DrawCircle(center.x, center.y, radius, DARKGRAY);
+                DrawLineEx(center, Vector2Add(center, toMouse), 2, WHITE);
+                DrawLineEx(center, Vector2Add(center, Vector2Scale(dir, Vector2Length(toMouse))), 2, GREEN);
+                const char *text = TextFormat("%u", facing);
+                dlb_DrawTextShadowEx(fntSmall, CSTRLEN(text), { mouse.x + 10, mouse.y + 10 }, WHITE);
             }
 #endif
         EndDrawing();

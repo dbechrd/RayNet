@@ -511,7 +511,7 @@ void GameServer::TickPlayers(void)
                     if (player->Attack(now)) {
                         Vector3 projectile_spawn_pos = player->position;
                         projectile_spawn_pos.z += 24;  // "hand" height
-                        Entity *projectile = SpawnProjectile(player->map_id, projectile_spawn_pos, input_cmd->facing, player->velocity);
+                        Entity *projectile = SpawnProjectile(player->map_id, projectile_spawn_pos, input_cmd->Facing(), player->velocity);
                         if (projectile) {
                             Vector3 recoil_force{};
                             recoil_force.x = -projectile->velocity.x;
