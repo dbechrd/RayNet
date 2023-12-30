@@ -32,10 +32,26 @@ void MenuSystem::Draw(GameClient &client, bool &back) {
     }
 }
 
+MenuMain::MenuMain(void) : Menu(Menu::MENU_MAIN)
+{
+    background = LoadTexture("resources/graphics/title.png");
+}
+
+MenuMain::~MenuMain(void)
+{
+    UnloadTexture(background);
+}
+
 void MenuMain::Draw(GameClient &client, bool &back)
 {
+    DrawTexture(background,
+        floorf(GetRenderWidth() / 2.0f - background.width / 2.0f),
+        floorf(GetRenderHeight() / 2.0f - background.height / 2.0f),
+        WHITE
+    );
+
     Vector2 uiPosition{ floorf(GetRenderWidth() / 2.0f), floorf(GetRenderHeight() / 2.0f) };
-    uiPosition.y -= 50;
+    uiPosition.y -= 115;
     UIStyle uiStyleMenu {};
     uiStyleMenu.margin = {};
     uiStyleMenu.pad = { 16, 4 };
@@ -65,8 +81,10 @@ void MenuMain::Draw(GameClient &client, bool &back)
         //rnSoundCatalog.Play(RN_Sound_Lily_Introduction);
         client.TryConnect();
     }
+    uiMenu.Space({ 0, 62 });
     uiMenu.Newline();
     uiMenu.Button(CSTR("Options"));
+    uiMenu.Space({ 0, 62 });
     uiMenu.Newline();
     UIState quitButton = uiMenu.Button(CSTR("Quit"));
     if (quitButton.released) {

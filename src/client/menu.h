@@ -19,9 +19,13 @@ struct Menu {
 };
 
 struct MenuMain : public Menu {
-    MenuMain(void) : Menu(Menu::MENU_MAIN) {}
+    MenuMain(void);
+    ~MenuMain(void);
 
     void Draw(GameClient &client, bool &back) override;
+
+private:
+    Texture background{};
 };
 
 struct MenuConnecting : public Menu {

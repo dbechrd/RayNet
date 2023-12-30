@@ -402,7 +402,8 @@ int main(int argc, char *argv[])
         //--------------------
         // Draw
         BeginDrawing();
-            ClearBackground(BLACK); //GRAYISH_BLUE);
+            //ClearBackground(BLACK); //GRAYISH_BLUE);
+            ClearBackground({ 93, 137, 129, 255 });
 
             if (client->yj_client->IsConnected()) {
                 client->world->Draw(*client);
