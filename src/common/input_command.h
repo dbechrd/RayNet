@@ -2,14 +2,13 @@
 #include "common.h"
 
 struct InputCmd {
-    uint32_t seq;
+    uint8_t seq;
     uint8_t facing;
     bool north;
     bool west;
     bool south;
     bool east;
     bool fire;
-    double sampledAt;  // client time for debug
 
     static uint8_t QuantizeFacing(Vector2 dir)
     {

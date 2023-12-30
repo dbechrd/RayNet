@@ -61,7 +61,7 @@ struct GhostSnapshot {
     int      hp          {};
 
     // TODO: Wtf do I do with this shit?
-    uint32_t last_processed_input_cmd {};
+    uint8_t last_processed_input_cmd {};
 
     GhostSnapshot(void) {}
     GhostSnapshot(Msg_S_EntitySpawn &msg);

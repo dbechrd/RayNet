@@ -42,7 +42,7 @@ struct ServerPlayer {
     double   joinedAt       {};
     bool     needsClockSync {};
     uint32_t entityId       {};
-    uint32_t lastInputSeq   {};  // sequence number of last input command we processed
+    uint8_t  lastInputSeq   {};  // sequence number of last input command we processed
     RingBuffer<InputCmd, CL_SEND_INPUT_COUNT> inputQueue{};
     // TODO(dlb): Also send tile chunks whenever a client enters the render distance of it
     bool     needsChunkSync {};

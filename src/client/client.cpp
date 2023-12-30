@@ -85,6 +85,7 @@ void draw_f3_menu(GameClient &client)
         hudCursor.x += 16.0f;
         yojimbo::NetworkInfo netInfo{};
         client.yj_client->GetNetworkInfo(netInfo);
+        DRAW_TEXT("inputSeq", "%u", client.controller.nextSeq);
         DRAW_TEXT("rtt", "%.2f", netInfo.RTT);
         DRAW_TEXT("% loss", "%.2f", netInfo.packetLoss);
         DRAW_TEXT("sent (kbps)", "%.2f", netInfo.sentBandwidth);

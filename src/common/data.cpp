@@ -84,6 +84,34 @@ Err LoadResources(Pack &pack);
 Err Init(void)
 {
 #if 0
+    uint8_t seq_c = 253;
+    uint8_t seq_s = 243;
+
+    printf("s   c   c > s\n");
+    for (int i = 0; i < 20; i++) {
+        bool ahead = paws_greater(seq_c, seq_s);
+        assert(ahead);
+        printf("%-3u %-3u %s\n", seq_s, seq_c, ahead ? "true" : "false");
+        seq_c++;
+        seq_s++;
+    }
+
+    seq_c = 243;
+    seq_s = 253;
+
+    printf("s   c   c > s\n");
+    for (int i = 0; i < 20; i++) {
+        bool ahead = paws_greater(seq_c, seq_s);
+        assert(!ahead);
+        printf("%-3u %-3u %s\n", seq_s, seq_c, ahead ? "true" : "false");
+        seq_c++;
+        seq_s++;
+    }
+
+    printf("");
+#endif
+
+#if 0
     {
         uint8_t data[]{ 1, 2, 3, 4, 5 };
 

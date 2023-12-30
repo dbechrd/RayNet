@@ -171,6 +171,16 @@ void dlb_DrawNPatch(Rectangle rec);
 
 bool StrFilter(const char *str, const char *filter);
 
+// Protect Against Wrap Sequence comparisons
+// https://www.rfc-editor.org/rfc/rfc1323#section-4
+template <typename T>
+bool paws_greater(T a, T b) {
+    static_assert(std::is_unsigned_v<T>, "PAWS comparison requires unsigned integer type");
+    const T diff = (a - b);
+    const T half_range = (1 << (sizeof(T) * 8 - 1));
+    return diff > 0 && diff < half_range;
+}
+
 inline void hash_combine(std::size_t& seed) {}
 
 template <typename T, typename... Rest>

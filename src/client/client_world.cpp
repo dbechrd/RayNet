@@ -123,7 +123,7 @@ void ClientWorld::UpdateLocalPlayerHisto(GameClient &client, Entity &entity, His
 }
 void ClientWorld::UpdateLocalPlayer(GameClient &client, Entity &entity)
 {
-    uint32_t latestSnapInputSeq = 0;
+    uint8_t latestSnapInputSeq = 0;
 
     // Apply latest snapshot
     const GhostSnapshot &latestSnapshot = entity.ghost->newest();
@@ -141,7 +141,7 @@ void ClientWorld::UpdateLocalPlayer(GameClient &client, Entity &entity)
         // Apply unacked input
         for (size_t cmdIndex = 0; cmdIndex < client.controller.cmdQueue.size(); cmdIndex++) {
             InputCmd &inputCmd = client.controller.cmdQueue[cmdIndex];
-            if (inputCmd.seq > latestSnapInputSeq) {
+            if (paws_greater(inputCmd.seq, latestSnapInputSeq)) {
                 entity.ApplyForce(inputCmd.GenerateMoveForce(entity.speed));
                 entityDb->EntityTick(entity, SV_TICK_DT, client.now);
                 map->ResolveEntityCollisionsEdges(entity);
@@ -163,8 +163,8 @@ void ClientWorld::UpdateLocalPlayer(GameClient &client, Entity &entity)
 #endif
 
     // Check for ignored input packets
-    uint32_t oldestInput = client.controller.cmdQueue.oldest().seq;
-    if (oldestInput > latestSnapInputSeq + 1) {
+    uint8_t oldestInput = client.controller.cmdQueue.oldest().seq;
+    if (paws_greater(oldestInput, (uint8_t)(latestSnapInputSeq + 1))) {
         printf(" localPlayer: %d inputs dropped\n", oldestInput - latestSnapInputSeq - 1);
     }
 
@@ -440,7 +440,7 @@ void ClientWorld::DrawEntitySnapshotShadows(GameClient &client, Entity &entity, 
 #if CL_CLIENT_SIDE_PREDICT
         Tilemap *map = FindOrLoadMap(entity.map_id);
         if (map) {
-            uint32_t lastProcessedInputCmd = 0;
+            uint8_t lastProcessedInputCmd = 0;
             const GhostSnapshot &latestSnapshot = ghost.newest();
             if (latestSnapshot.server_time) {
                 ApplyStateInterpolated(ghostData.entity, latestSnapshot, latestSnapshot, 0, client.frameDt);
@@ -449,7 +449,7 @@ void ClientWorld::DrawEntitySnapshotShadows(GameClient &client, Entity &entity, 
 
             for (size_t cmdIndex = 0; cmdIndex < controller.cmdQueue.size(); cmdIndex++) {
                 InputCmd &inputCmd = controller.cmdQueue[cmdIndex];
-                if (inputCmd.seq > lastProcessedInputCmd) {
+                if (paws_greater(inputCmd.seq, lastProcessedInputCmd)) {
                     ghostData.entity.ApplyForce(inputCmd.GenerateMoveForce(ghostData.entity.speed));
                     entityDb->EntityTick(ghostData.entity, SV_TICK_DT, client.now);
                     map->ResolveEntityCollisionsEdges(ghostData.entity);

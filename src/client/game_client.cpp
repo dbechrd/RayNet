@@ -279,7 +279,6 @@ void GameClient::Update(void)
     // Sample accumulator once per server tick and push command into command queue
     if (controller.sampleInputAccum >= CL_SAMPLE_INPUT_DT) {
         controller.cmdAccum.seq = ++controller.nextSeq;
-        controller.cmdAccum.sampledAt = now;
         controller.cmdQueue.push(controller.cmdAccum);
         controller.cmdAccum = {};
         controller.lastInputSampleAt = now;

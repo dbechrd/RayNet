@@ -8,8 +8,7 @@ struct Msg_S_EntitySnapshot;
 struct GameClient;
 
 struct Controller {
-    int nextSeq{};  // next input command sequence number to use
-
+    uint8_t nextSeq{};           // next input command sequence number to use
     InputCmd cmdAccum{};         // accumulate input until we're ready to sample
     double sampleInputAccum{};   // when this fills up, we are due to sample again
     double lastInputSampleAt{};  // time we last sampled accumulator

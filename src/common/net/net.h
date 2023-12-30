@@ -76,7 +76,7 @@ struct Msg_C_InputCommands : public yojimbo::Message
     {
         for (int i = 0; i < CL_SEND_INPUT_COUNT; i++) {
             InputCmd &cmd = cmdQueue[i];
-            serialize_uint32(stream, cmd.seq);
+            serialize_uint8(stream, cmd.seq);
             serialize_uint8(stream, cmd.facing);
             serialize_bool(stream, cmd.north);
             serialize_bool(stream, cmd.west);
@@ -201,7 +201,7 @@ struct Msg_S_EntitySnapshot : public yojimbo::Message
     Vector3       velocity   {};
 
     // Only sent to the player who owns this player entity.
-    uint32_t      last_processed_input_cmd {};
+    uint8_t       last_processed_input_cmd {};
 
     template <typename Stream> bool Serialize(Stream &stream)
     {
@@ -231,7 +231,7 @@ struct Msg_S_EntitySnapshot : public yojimbo::Message
 
         if (type == ENTITY_PLAYER) {
             serialize_bool(stream, on_warp_cooldown);
-            serialize_uint32(stream, last_processed_input_cmd);
+            serialize_uint8(stream, last_processed_input_cmd);
         }
 
         return true;
@@ -264,7 +264,7 @@ struct Msg_S_EntitySpawn : public yojimbo::Message
     uint16_t      sprite_id   {};
 
     // Only sent to the player who owns this player entity.
-    uint32_t      last_processed_input_cmd {};
+    uint8_t       last_processed_input_cmd {};
 
     template <typename Stream> bool Serialize(Stream &stream)
     {
@@ -301,7 +301,7 @@ struct Msg_S_EntitySpawn : public yojimbo::Message
 
         // Player
         if (type == ENTITY_PLAYER) {
-            serialize_uint32(stream, last_processed_input_cmd);
+            serialize_uint8(stream, last_processed_input_cmd);
         }
 
         return true;

@@ -490,13 +490,14 @@ void GameServer::DestroyDespawnedEntities(void)
 void GameServer::TickPlayers(void)
 {
     for (ServerPlayer &sv_player : players) {
+        if (!sv_player.entityId) continue;
+
         const InputCmd *input_cmd = 0;
         for (int i = 0; i < sv_player.inputQueue.size(); i++) {
             const InputCmd &cmd = sv_player.inputQueue[i];
-            if (cmd.seq > sv_player.lastInputSeq) {
+            if (paws_greater(cmd.seq, sv_player.lastInputSeq)) {
                 input_cmd = &cmd;
                 sv_player.lastInputSeq = input_cmd->seq;
-                //printf("Processed command %d\n", (int32_t)tick - (int32_t)input_cmd->seq);
                 break;
             }
         }
