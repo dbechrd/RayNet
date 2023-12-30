@@ -631,6 +631,7 @@ void dlb_CommonTests(void)
 #include "io.cpp"
 #include "net/net.cpp"
 #include "perf_timer.cpp"
+#include "screen_fx.cpp"
 #include "strings.cpp"
 #include "tilemap.cpp"
 #include "ui/ui.cpp"

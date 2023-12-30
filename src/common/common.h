@@ -125,7 +125,8 @@
 #define SV_COMPRESS_TILE_CHUNK_WITH_LZ4      1
 
 //#define CL_PORT                 30000
-#define CL_BANDWIDTH_SMOOTHING_FACTOR   0.5f
+#define CL_MENU_FADE_IN_DURATION        0.5
+#define CL_BANDWIDTH_SMOOTHING_FACTOR   0.99f      // higher = less smooth (thanks yojimbo! -_-)
 #define CL_SAMPLE_INPUT_DT              SV_TICK_DT //(1.0/120.0)
 #define CL_SEND_INPUT_COUNT             64
 #define CL_SEND_INPUT_DT                SV_TICK_DT //(1.0/120.0)

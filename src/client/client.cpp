@@ -4,6 +4,7 @@
 #include "../common/histogram.h"
 #include "../common/io.h"
 #include "../common/perf_timer.h"
+#include "../common/screen_fx.h"
 #include "../common/ui/ui.h"
 #include "client_world.h"
 #include "game_client.h"
@@ -413,6 +414,11 @@ int main(int argc, char *argv[])
             client->menu_system.Draw(*client, back);
             if (client->menu_system.active_menu_id == Menu::MENU_MAIN && back) {
                 quit = true;
+            }
+
+            if (client->menu_system.active_menu_id) {
+                static double boot_fade_menu_in = client->now;
+                ScreenFX_Fade(boot_fade_menu_in, CL_MENU_FADE_IN_DURATION, client->now);
             }
 
             if (client->showF3Menu) {

@@ -426,11 +426,8 @@ void Tilemap::DrawTile(uint16_t tile_id, Vector2 position, DrawCmdQueue *sortedD
     }
 
     if (sortedDraws) {
-        DrawCmd cmd{};
-        cmd.texture = gfx_file.texture;
-        cmd.rect = texRect;
-        cmd.position = { position.x, position.y, 0 };
-        cmd.color = color;
+        Vector3 pos = { position.x, position.y, 0 };
+        DrawCmd cmd = DrawCmd::Texture(gfx_file.texture, texRect, pos, color);
         sortedDraws->push(cmd);
     } else {
         dlb_DrawTextureRec(gfx_file.texture, texRect, position, color);

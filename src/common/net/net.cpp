@@ -35,7 +35,7 @@ void InitClientServerConfig(yojimbo::ClientServerConfig &config)
     config.channel[CHANNEL_R_TILE_EVENT].type = yojimbo::CHANNEL_TYPE_RELIABLE_ORDERED;
     config.channel[CHANNEL_R_GLOBAL_EVENT].type = yojimbo::CHANNEL_TYPE_RELIABLE_ORDERED;
 
-    //config.bandwidthSmoothingFactor = CL_BANDWIDTH_SMOOTHING_FACTOR;
+    config.bandwidthSmoothingFactor = CL_BANDWIDTH_SMOOTHING_FACTOR;
 }
 
 int yj_printf(const char *format, ...)

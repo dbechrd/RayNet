@@ -395,7 +395,7 @@ void ClientWorld::DrawHoveredTileIndicator(GameClient &client)
         DrawRectangleLinesEx(tileRect, 2.0f, WHITE);
     }
 }
-void ClientWorld::DrawEntitySnapshotShadows(GameClient &client, Entity &entity, Controller &controller)
+void ClientWorld::DrawEntitySnapshotShadows(GameClient &client, Entity &entity, DrawCmdQueue &sortedDraws, Controller &controller)
 {
     // TODO: Everything that says "ghostInstance" needs to be an entity_id, but we don't
     // want to modify the actual entity... so perhaps we need a "temp" entity that we can
@@ -431,8 +431,8 @@ void ClientWorld::DrawEntitySnapshotShadows(GameClient &client, Entity &entity, 
         ghostRect.y = floorf(ghostRect.y);
         ghostRect.width = floorf(ghostRect.width);
         ghostRect.height = floorf(ghostRect.height);
-        DrawRectangleRec(ghostRect, Fade(snapColor, 0.1f));
-        DrawRectangleLinesEx(ghostRect, 1, Fade(snapColor, 0.8f));
+        sortedDraws.push(DrawCmd::RectSolid(ghostRect, Fade(snapColor, 0.1f)));
+        sortedDraws.push(DrawCmd::RectOutline(ghostRect, Fade(snapColor, 0.8f), 1));
     }
 
     // NOTE(dlb): These aren't actually snapshot shadows, they're client-side prediction shadows
@@ -454,8 +454,8 @@ void ClientWorld::DrawEntitySnapshotShadows(GameClient &client, Entity &entity, 
                     entityDb->EntityTick(ghostData.entity, SV_TICK_DT, client.now);
                     map->ResolveEntityCollisionsEdges(ghostData.entity);
                     Rectangle ghostRect = ghostData.entity.GetSpriteRect();
-                    DrawRectangleRec(ghostRect, Fade(GREEN, 0.1f));
-                    DrawRectangleLinesEx(ghostRect, 1, Fade(GREEN, 0.8f));
+                    sortedDraws.push(DrawCmd::RectSolid(ghostRect, Fade(GREEN, 0.1f)));
+                    sortedDraws.push(DrawCmd::RectOutline(ghostRect, Fade(GREEN, 0.8f), 1));
                 }
             }
         }
@@ -478,7 +478,7 @@ void ClientWorld::DrawEntitySnapshotShadows(GameClient &client, Entity &entity, 
         ghostRect.y = floorf(ghostRect.y);
         ghostRect.width = floorf(ghostRect.width);
         ghostRect.height = floorf(ghostRect.height);
-        DrawRectangleLinesEx(ghostRect, 1, Fade(BLUE, 0.8f));
+        sortedDraws.push(DrawCmd::RectOutline(ghostRect, Fade(BLUE, 0.8f), 1));
 #endif
 #endif
     }
@@ -491,7 +491,7 @@ void ClientWorld::DrawEntities(GameClient &client, Tilemap &map, DrawCmdQueue &s
                 continue;
             }
             assert(entity.id);
-            DrawEntitySnapshotShadows(client, entity, client.controller);
+            DrawEntitySnapshotShadows(client, entity, sortedDraws, client.controller);
         }
     }
 
@@ -911,12 +911,5 @@ void ClientWorld::Draw(GameClient &client)
     DrawHUDSignEditor();
     DrawHUDMenu();
 
-    if (warpFadeInStartedAt) {
-        const double fadeInAlpha = (client.now - warpFadeInStartedAt) / CL_WARP_FADE_IN_DURATION;
-        if (fadeInAlpha < 1.0f) {
-            DrawRectangle(0, 0, GetRenderWidth(), GetRenderHeight(), Fade(BLACK, 1.0f - fadeInAlpha));
-        } else {
-            warpFadeInStartedAt = 0;
-        }
-    }
+    ScreenFX_Fade(warpFadeInStartedAt, CL_WARP_FADE_IN_DURATION, client.now);
 }

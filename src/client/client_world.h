@@ -258,7 +258,7 @@ private:
     void UpdateHUDSpinner(void);
 
     void DrawHoveredTileIndicator(GameClient &client);
-    void DrawEntitySnapshotShadows(GameClient &client, Entity &entity, Controller &controller);
+    void DrawEntitySnapshotShadows(GameClient &client, Entity &entity, DrawCmdQueue &sortedDraws, Controller &controller);
     void DrawEntities(GameClient &client, Tilemap &map, DrawCmdQueue &sortedDraws);
     void DrawHoveredObjectIndicator(GameClient &client, Tilemap &map);
     void DrawDialog(GameClient &client, Entity &entity, Vector2 bottomCenterScreen, std::vector<FancyTextTip> &tips);

@@ -6,11 +6,75 @@ struct Msg_S_TileChunk;
 struct Msg_S_EntitySnapshot;
 struct WangMap;
 
+enum DrawCmdType {
+    DRAW_CMD_RECT_SOLID,
+    DRAW_CMD_RECT_OUTLINE,
+    DRAW_CMD_TEXTURE,
+};
+
 struct DrawCmd {
-    Texture2D texture{};
-    Rectangle rect{};
-    Vector3   position{};
-    Color     color{};
+    DrawCmdType type      {};
+    Vector3     position  {};
+    Rectangle   rect      {};
+    Color       color     {};
+    union {
+        Texture2D texture;
+        int       thickness;
+    };
+
+    static DrawCmd RectSolid(Rectangle rect, Color color)
+    {
+        DrawCmd cmd{};
+        cmd.type = DRAW_CMD_RECT_SOLID;
+        cmd.position = { rect.x, rect.y };
+        cmd.rect = { rect.x, rect.y, rect.width, rect.height };
+        cmd.color = color;
+        return cmd;
+    }
+
+    static DrawCmd RectOutline(Rectangle rect, Color color, int thickness)
+    {
+        DrawCmd cmd{};
+        cmd.type = DRAW_CMD_RECT_OUTLINE;
+        cmd.position = { rect.x, rect.y };
+        cmd.rect = rect;
+        cmd.color = color;
+        cmd.thickness = thickness;
+        return cmd;
+    }
+
+    static DrawCmd Texture(Texture tex, Rectangle rect, Vector3 pos, Color color)
+    {
+        DrawCmd cmd{};
+        cmd.type = DRAW_CMD_TEXTURE;
+        cmd.position = { pos.x, pos.y };
+        cmd.rect = rect;
+        cmd.color = color;
+        cmd.texture = tex;
+        return cmd;
+    }
+
+    void Draw(void) const
+    {
+        switch (type) {
+            case DRAW_CMD_RECT_SOLID: {
+                DrawRectangleRec(rect, color);
+                break;
+            }
+            case DRAW_CMD_RECT_OUTLINE: {
+                DrawRectangleLinesEx(rect, thickness, color);
+                break;
+            }
+            case DRAW_CMD_TEXTURE: {
+                const Vector2 pos = {
+                    position.x,
+                    position.y - position.z
+                };
+                dlb_DrawTextureRec(texture, rect, pos, color);
+                break;
+            }
+        }
+    }
 
     bool operator<(const DrawCmd& rhs) const {
         const float me = position.y + position.z + rect.height;
@@ -22,12 +86,7 @@ struct DrawCmdQueue : public std::priority_queue<DrawCmd> {
     void Draw(void) {
         while (!empty()) {
             const DrawCmd &cmd = top();
-            const Vector2 pos = {
-                cmd.position.x,
-                cmd.position.y - cmd.position.z
-            };
-            dlb_DrawTextureRec(cmd.texture, cmd.rect, pos, cmd.color);
-            //DrawCircle(pos.x, pos.y + cmd.rect.height, 3, PINK);
+            cmd.Draw();
             pop();
         }
     }

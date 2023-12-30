@@ -1121,11 +1121,7 @@ void DrawSprite(const Entity &entity, DrawCmdQueue *sortedDraws, bool highlight)
 
     const Rectangle frame_rec{ (float)frame.x, (float)frame.y, (float)frame.w, (float)frame.h };
     if (sortedDraws) {
-        DrawCmd cmd{};
-        cmd.texture = gfx_file.texture;
-        cmd.rect = frame_rec;
-        cmd.position = pos;
-        cmd.color = color;
+        DrawCmd cmd = DrawCmd::Texture(gfx_file.texture, frame_rec, pos, color);
         sortedDraws->push(cmd);
     } else {
         const Vector2 sprite_pos{ pos.x, pos.y - pos.z };
