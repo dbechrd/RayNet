@@ -8,8 +8,8 @@ struct EntityDB {
     std::array<AspectGhost, SV_MAX_ENTITIES> ghosts         {};
 
     Entity *FindEntity(uint32_t entity_id, bool evenIfDespawned = false);
-    Entity *FindEntity(uint32_t entity_id, EntityType type, bool evenIfDespawned = false);
-    Entity *SpawnEntity(uint32_t entity_id, EntityType type, double now);
+    Entity *FindEntity(uint32_t entity_id, Entity::Type type, bool evenIfDespawned = false);
+    Entity *SpawnEntity(uint32_t entity_id, Entity::Type type, double now);
     bool DespawnEntity(uint32_t entity_id, double now);
     void DestroyEntity(uint32_t entity_id);
 

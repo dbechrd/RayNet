@@ -30,11 +30,14 @@
 #include <unordered_set>
 #include <vector>
 
+#include "collision.h"
+#include "draw_cmd.h"
 #include "error.h"
 #include "haq.h"
-#include "strings.h"
 #include "ring_buffer.h"
+#include "strings.h"
 #include "ui/stb_textedit_config.h"
+#include "wang.h"
 
 // Stuff that probably shouldn't be here
 
@@ -75,14 +78,15 @@
 #define ENUM_V_VALUE(v) v,
 #define ENUM_VD_VALUE(v, d) v,
 #define ENUM_V_CASE_RETURN_VSTR(v) case v: return #v;
-#define ENUM_VD_CASE_RETURN_VSTR(v) case v: return #v;
+#define ENUM_VD_CASE_RETURN_VSTR(v, d) case v: return #v;
+#define ENUM_VN_CASE_RETURN_VSTR(v, ns) case v: return #v;
 #define ENUM_VD_CASE_RETURN_DESC(v, d) case v: return d;
-#define ENUM_STR_CONVERTER(type, enumDef, enumGen) \
-    const char *type##Str(type id) {               \
-        switch (id) {                              \
-            enumDef(enumGen)                       \
-            default: return "<unknown>";           \
-        }                                          \
+#define ENUM_STR_CONVERTER(name, type, enumDef, enumGen) \
+    const char *name(type id) {          \
+        switch (id) {                    \
+            enumDef(enumGen)             \
+            default: return "<unknown>"; \
+        }                                \
     }
 
 // Custom colors

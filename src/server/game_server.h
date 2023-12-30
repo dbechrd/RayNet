@@ -116,7 +116,7 @@ private:
     Tilemap *FindOrLoadMap(uint16_t map_id);
     Tilemap *FindMap(uint16_t map_id);
 
-    Entity *SpawnEntity(EntityType type);
+    Entity *SpawnEntity(Entity::Type type);
     Entity *SpawnEntityProto(uint16_t map_id, Vector3 position, EntityProto &proto);
     Entity *SpawnProjectile(uint16_t map_id, Vector3 position, Vector2 direction, Vector3 initial_velocity);
     void WarpEntity(Entity &entity, uint16_t dest_map_id, Vector3 dest_pos);

@@ -13,7 +13,7 @@ ClientWorld::ClientWorld(void)
 
 Entity *ClientWorld::LocalPlayer(void)
 {
-    Entity *localPlayer = entityDb->FindEntity(localPlayerEntityId, ENTITY_PLAYER);
+    Entity *localPlayer = entityDb->FindEntity(localPlayerEntityId, Entity::TYP_PLAYER);
     return localPlayer;
 }
 uint16_t ClientWorld::LocalPlayerMapId(void)
@@ -213,7 +213,7 @@ void ClientWorld::UpdateLocalGhost(GameClient &client, Entity &entity, uint16_t 
         bool hover = dlb_CheckCollisionPointRec(cursorWorldPos, rect);
         if (hover) {
             hoveredEntityId = entity.id;
-            if (entity.spec == ENTITY_SPEC_NPC_TOWNFOLK) {
+            if (entity.spec == Entity::SPC_NPC_TOWNFOLK) {
                 // NOTE: This has to check for ENTITY_TOWNFOLK or entity.attackable, etc.,
                 // otherwise you can't shoot da enemies!
                 io.PushScope(IO::IO_GameNPC);
@@ -221,7 +221,7 @@ void ClientWorld::UpdateLocalGhost(GameClient &client, Entity &entity, uint16_t 
                 io.PopScope();
             }
 
-            Entity *e_player = entityDb->FindEntity(localPlayerEntityId, ENTITY_PLAYER);
+            Entity *e_player = entityDb->FindEntity(localPlayerEntityId, Entity::TYP_PLAYER);
             if (e_player) {
                 const float dist_x = fabs(e_player->position.x - entity.position.x);
                 const float dist_y = fabs(e_player->position.y - entity.position.y);
@@ -241,7 +241,7 @@ void ClientWorld::UpdateEntities(GameClient &client)
 
     const uint16_t player_map_id = LocalPlayerMapId();
 
-    Entity *e_player = entityDb->FindEntity(localPlayerEntityId, ENTITY_PLAYER);
+    Entity *e_player = entityDb->FindEntity(localPlayerEntityId, Entity::TYP_PLAYER);
     if (!e_player) {
         assert(!"player entity not found!?");
         return;

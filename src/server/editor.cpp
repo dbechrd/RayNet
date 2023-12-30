@@ -892,7 +892,7 @@ void Editor::DrawUI_Tilesheet(UI &uiActionBar, double now)
                     pos.y += tileSixth - size.y / 2.0f;
                     dlb_DrawTextShadowEx(fntSmall, CSTR("X"), pos, WHITE);
                 } else {
-                    if (tile_defs[i].flags & TILEDEF_FLAG_SOLID) {
+                    if (tile_defs[i].flags & TileDef::FLAG_SOLID) {
                         DrawRectangle(cursor.x, cursor.y, tileThird, tileThird, Fade(DARKGREEN, 0.7f));
 
                         Vector2 size = dlb_MeasureTextEx(fntSmall, "S", 1, 0);
@@ -902,7 +902,7 @@ void Editor::DrawUI_Tilesheet(UI &uiActionBar, double now)
                         dlb_DrawTextShadowEx(fntSmall, CSTR("S"), pos, WHITE);
                     }
                     cursor.x += tileThird + 1;
-                    if (tile_defs[i].flags & TILEDEF_FLAG_LIQUID) {
+                    if (tile_defs[i].flags & TileDef::FLAG_LIQUID) {
                         DrawRectangle(cursor.x, cursor.y, tileThird, tileThird, Fade(SKYBLUE, 0.7f));
 
                         Vector2 size = dlb_MeasureTextEx(fntSmall, "L", 1, 0);
@@ -1029,10 +1029,10 @@ void Editor::DrawUI_Tilesheet(UI &uiActionBar, double now)
                 if (state.tiles.tileEditMode == TileEditMode_Collision) {
                     uint8_t flags = tile_defs[tileIdx].flags;
                     switch (tileSegment) {
-                        case 0: flags ^= TILEDEF_FLAG_SOLID;  break;
-                        case 1: flags ^= TILEDEF_FLAG_LIQUID; break;
+                        case 0: flags ^= TileDef::FLAG_SOLID;  break;
+                        case 1: flags ^= TileDef::FLAG_LIQUID; break;
                     }
-                    tile_defs[tileIdx].flags = (TileDefFlags)flags;
+                    tile_defs[tileIdx].flags = (TileDef::Flags)flags;
                 } else if (state.tiles.tileEditMode == TileEditMode_AutoTileMask) {
                     //printf("x: %d, y: %d, s: %d\n", tileXSegment, tileYSegment, tileSegment);
                     switch (tileSegment) {
@@ -1379,7 +1379,7 @@ void Editor::DrawUI_EntityActions(UI &uiActionBar, double now)
     auto &map = packs[0].FindById<Tilemap>(map_id);
     if (uiActionBar.Button(CSTR("Despawn all"), ColorBrightness(MAROON, -0.3f)).pressed) {
         for (const Entity &entity : entityDb->entities) {
-            if (entity.type == ENTITY_PLAYER || entity.map_id != map.id) {
+            if (entity.type == Entity::TYP_PLAYER || entity.map_id != map.id) {
                 continue;
             }
             assert(entity.id && entity.type);
@@ -1703,8 +1703,10 @@ void Editor::DrawUI_PackFiles(UI &uiActionBar, double now)
             uiActionBar.Newline();
 
             if (selected) {
-                #define HAQ_UI_FIELD(c_type, c_name, c_init, flags, parent) \
-                    uiActionBar.HAQField(__COUNTER__, #c_name, parent.c_name, (flags), labelWidth);
+                #define HAQ_UI_FIELD(c_type, c_name, c_init, flags, condition, parent) \
+                    if (condition) { \
+                        uiActionBar.HAQField(__COUNTER__, #c_name, parent.c_name, (flags), labelWidth); \
+                    }
 
                 #define HAQ_UI(hqt, parent) \
                     hqt(HAQ_UI_FIELD, parent)

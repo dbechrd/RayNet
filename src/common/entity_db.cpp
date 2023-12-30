@@ -19,7 +19,7 @@ Entity *EntityDB::FindEntity(uint32_t entity_id, bool evenIfDespawned)
 
     return &entity;
 }
-Entity *EntityDB::FindEntity(uint32_t entity_id, EntityType type, bool evenIfDespawned)
+Entity *EntityDB::FindEntity(uint32_t entity_id, Entity::Type type, bool evenIfDespawned)
 {
     Entity *entity = FindEntity(entity_id, evenIfDespawned);
     if (entity && entity->type != type) {
@@ -27,7 +27,7 @@ Entity *EntityDB::FindEntity(uint32_t entity_id, EntityType type, bool evenIfDes
     }
     return entity;
 }
-Entity *EntityDB::SpawnEntity(uint32_t entity_id, EntityType type, double now)
+Entity *EntityDB::SpawnEntity(uint32_t entity_id, Entity::Type type, double now)
 {
     assert(entity_id);
     assert(type);

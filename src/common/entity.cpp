@@ -38,6 +38,32 @@ GhostSnapshot::GhostSnapshot(Msg_S_EntitySnapshot &msg)
     velocity = msg.velocity;
 }
 
+const char *EntityTypeStr(Entity::Type type)
+{
+    switch (type) {
+        case Entity::TYP_NONE       : return "TYP_NONE";
+        case Entity::TYP_PLAYER     : return "TYP_PLAYER";
+        case Entity::TYP_NPC        : return "TYP_NPC";
+        case Entity::TYP_ITEM       : return "TYP_ITEM";
+        case Entity::TYP_PROJECTILE : return "TYP_PROJECTILE";
+    }
+    assert(!"fix me");
+    return "<unknown entity type>";
+}
+
+const char *EntitySpeciesStr(Entity::Species type)
+{
+    switch (type) {
+        case Entity::SPC_NONE         : return "SPC_NONE";
+        case Entity::SPC_NPC_TOWNFOLK : return "SPC_NPC_TOWNFOLK";
+        case Entity::SPC_NPC_CHICKEN  : return "SPC_NPC_CHICKEN";
+        case Entity::SPC_ITM_NORMAL   : return "SPC_ITM_NORMAL";
+        case Entity::SPC_PRJ_FIREBALL : return "SPC_PRJ_FIREBALL";
+    }
+    assert(!"fix me");
+    return "<unknown entity species>";
+}
+
 Vector2 Entity::Position2D(void)
 {
     Vector2 screenPos{

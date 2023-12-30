@@ -76,17 +76,17 @@ void MenuMain::Draw(GameClient &client, bool &back)
         DrawRectangleLinesEx(menuBgRect, 20, BLACK);
     }
 #endif
-    UIState connectButton = uiMenu.Button(CSTR("Play"));
+    UIState connectButton = uiMenu.Button(CSTRS(SLOCAL_UI_MENU_PLAY.str()));
     if (connectButton.released) {
         //rnSoundCatalog.Play(RN_Sound_Lily_Introduction);
         client.TryConnect();
     }
     uiMenu.Space({ 0, 62 });
     uiMenu.Newline();
-    uiMenu.Button(CSTR("Options"));
+    uiMenu.Button(CSTRS(SLOCAL_UI_MENU_OPTIONS.str()));
     uiMenu.Space({ 0, 62 });
     uiMenu.Newline();
-    UIState quitButton = uiMenu.Button(CSTR("Quit"));
+    UIState quitButton = uiMenu.Button(CSTRS(SLOCAL_UI_MENU_QUIT.str()));
     if (quitButton.released) {
         back = true;
     }

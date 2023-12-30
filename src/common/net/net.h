@@ -182,12 +182,12 @@ struct Msg_S_EntitySnapshot : public yojimbo::Message
     double server_time {};
 
     // Entity
-    uint32_t      entity_id  {};
-    EntityType    type       {};  // doesn't change, but needed for switch statements in deserializer
-    EntitySpecies spec       {};
-    uint16_t      map_id     {};
-    Vector3       position   {};
-    bool          on_warp_cooldown {};
+    uint32_t        entity_id  {};
+    Entity::Type    type       {};  // doesn't change, but needed for switch statements in deserializer
+    Entity::Species spec       {};
+    uint16_t        map_id     {};
+    Vector3         position   {};
+    bool            on_warp_cooldown {};
 
     // Collision
     //float       radius     {};  // when would this ever change? doesn't.. for now.
@@ -222,14 +222,14 @@ struct Msg_S_EntitySnapshot : public yojimbo::Message
         serialize_float(stream, velocity.z);
 
         // Life
-        if (type == ENTITY_PLAYER || type == ENTITY_NPC) {
+        if (type == Entity::TYP_PLAYER || type == Entity::TYP_NPC) {
             serialize_varint32(stream, hp_max);
             if (hp_max) {
                 serialize_varint32(stream, hp);
             }
         }
 
-        if (type == ENTITY_PLAYER) {
+        if (type == Entity::TYP_PLAYER) {
             serialize_bool(stream, on_warp_cooldown);
             serialize_uint8(stream, last_processed_input_cmd);
         }
@@ -245,23 +245,23 @@ struct Msg_S_EntitySpawn : public yojimbo::Message
     double        server_time {};
 
     // Entity
-    uint32_t      entity_id   {};
-    EntityType    type        {};
-    EntitySpecies spec        {};
-    char          name        [SV_MAX_ENTITY_NAME_LEN + 1]{};
-    uint16_t      map_id      {};
-    Vector3       position    {};
+    uint32_t        entity_id   {};
+    Entity::Type    type        {};
+    Entity::Species spec        {};
+    char            name        [SV_MAX_ENTITY_NAME_LEN + 1]{};
+    uint16_t        map_id      {};
+    Vector3         position    {};
     // Collision
-    float         radius      {};
+    float           radius      {};
     // Life
-    int           hp_max      {};
-    int           hp          {};
+    int             hp_max      {};
+    int             hp          {};
     // Physics
-    float         drag        {};  // TODO: EntityType should imply this.. client should have prototypes
-    float         speed       {};
-    Vector3       velocity    {};
+    float           drag        {};  // TODO: EntityType should imply this.. client should have prototypes
+    float           speed       {};
+    Vector3         velocity    {};
     // Sprite
-    uint16_t      sprite_id   {};
+    uint16_t        sprite_id   {};
 
     // Only sent to the player who owns this player entity.
     uint8_t       last_processed_input_cmd {};
@@ -300,7 +300,7 @@ struct Msg_S_EntitySpawn : public yojimbo::Message
         serialize_uint32(stream, sprite_id);
 
         // Player
-        if (type == ENTITY_PLAYER) {
+        if (type == Entity::TYP_PLAYER) {
             serialize_uint8(stream, last_processed_input_cmd);
         }
 

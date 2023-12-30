@@ -1033,8 +1033,8 @@ void UI::HAQFieldValue(uint32_t ctrlid, const std::string &name, T &value, int f
 
 void UI::HAQFieldValue(uint32_t ctrlid, const std::string &name, ObjectData &obj, int flags, int labelWidth)
 {
-#define HAQ_UI_FIELD(c_type, c_name, c_init, flags, userdata, condition) \
-    { \
+#define HAQ_UI_FIELD(c_type, c_name, c_init, flags, condition, userdata) \
+    if constexpr ((flags) & HAQ_SERIALIZE) { \
         if (condition) { \
             size_t hash{}; \
             hash_combine(hash, __COUNTER__, name); \
@@ -1126,24 +1126,22 @@ void UI::HAQFieldEditor(uint32_t ctrlid, const std::string &name, T &value, int 
     while (popStyle--) PopStyle();
 }
 
-void UI::HAQFieldEditor(uint32_t ctrlid, const std::string &name, TileDefFlags &value, int flags, int labelWidth)
+void UI::HAQFieldEditor(uint32_t ctrlid, const std::string &name, TileDef::Flags &value, int flags, int labelWidth)
 {
     uint8_t bitflags = value;
-    if (Button(CSTR("Solid"), bitflags & TILEDEF_FLAG_SOLID, GRAY, SKYBLUE).pressed) {
-        bitflags ^= TILEDEF_FLAG_SOLID;
+    if (Button(CSTR("Solid"), bitflags & TileDef::FLAG_SOLID, GRAY, SKYBLUE).pressed) {
+        bitflags ^= TileDef::FLAG_SOLID;
     }
-    if (Button(CSTR("Liquid"), bitflags & TILEDEF_FLAG_LIQUID, GRAY, SKYBLUE).pressed) {
-        bitflags ^= TILEDEF_FLAG_LIQUID;
+    if (Button(CSTR("Liquid"), bitflags & TileDef::FLAG_LIQUID, GRAY, SKYBLUE).pressed) {
+        bitflags ^= TileDef::FLAG_LIQUID;
     }
-    value = (TileDefFlags)bitflags;
+    value = (TileDef::Flags)bitflags;
 }
 
 template <typename T>
 void UI::HAQField(uint32_t ctrlid, const std::string &name, T &value, int flags, int labelWidth)
 {
-    if (!((flags) & HAQ_SERIALIZE)) {
-        return;
-    }
+    assert(!((flags) & HAQ_SERIALIZE));
 
     if (name.size() && name[0] != '#') {
         Label(name, labelWidth);

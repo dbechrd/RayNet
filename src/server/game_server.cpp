@@ -22,7 +22,7 @@ void GameServer::OnClientJoin(int clientIdx)
         SKYBLUE
     };
 
-    Entity *player = SpawnEntity(ENTITY_PLAYER);
+    Entity *player = SpawnEntity(Entity::TYP_PLAYER);
     if (player) {
         Tilemap &level_001 = packs[0].FindByName<Tilemap>(MAP_OVERWORLD);
 
@@ -31,7 +31,7 @@ void GameServer::OnClientJoin(int clientIdx)
         sv_player.joinedAt = now;
         sv_player.entityId = player->id;
 
-        player->type = ENTITY_PLAYER;
+        player->type = Entity::TYP_PLAYER;
         player->map_id = level_001.id;
         const Vector3 caveEntrance{ 3100, 1100, 0 };
         const Vector3 townCenter{ 1660, 2360, 0 };
@@ -95,8 +95,8 @@ void ProtoDb::Load(void)
         return;
     }
 
-    npc_lily.type = ENTITY_NPC;
-    npc_lily.spec = ENTITY_SPEC_NPC_TOWNFOLK;
+    npc_lily.type = Entity::TYP_NPC;
+    npc_lily.spec = Entity::SPC_NPC_TOWNFOLK;
     npc_lily.name = "Lily";
     npc_lily.radius = 16;
     npc_lily.dialog_root_key = "DIALOG_LILY_INTRO";
@@ -108,8 +108,8 @@ void ProtoDb::Load(void)
     npc_lily.sprite_id = packs[0].FindByName<Sprite>("sprite_npc_lily").id;
     npc_lily.direction = DIR_E;
 
-    npc_freye.type = ENTITY_NPC;
-    npc_freye.spec = ENTITY_SPEC_NPC_TOWNFOLK;
+    npc_freye.type = Entity::TYP_NPC;
+    npc_freye.spec = Entity::SPC_NPC_TOWNFOLK;
     npc_freye.name = "Freye";
     npc_freye.radius = 16;
     npc_freye.dialog_root_key = "DIALOG_FREYE_INTRO";
@@ -121,8 +121,8 @@ void ProtoDb::Load(void)
     npc_freye.sprite_id = packs[0].FindByName<Sprite>("sprite_npc_freye").id;
     npc_freye.direction = DIR_E;
 
-    npc_nessa.type = ENTITY_NPC;
-    npc_nessa.spec = ENTITY_SPEC_NPC_TOWNFOLK;
+    npc_nessa.type = Entity::TYP_NPC;
+    npc_nessa.spec = Entity::SPC_NPC_TOWNFOLK;
     npc_nessa.name = "Nessa";
     npc_nessa.radius = 16;
     npc_nessa.dialog_root_key = "DIALOG_NESSA_INTRO";
@@ -134,8 +134,8 @@ void ProtoDb::Load(void)
     npc_nessa.sprite_id = packs[0].FindByName<Sprite>("sprite_npc_nessa").id;
     npc_nessa.direction = DIR_E;
 
-    npc_elane.type = ENTITY_NPC;
-    npc_elane.spec = ENTITY_SPEC_NPC_TOWNFOLK;
+    npc_elane.type = Entity::TYP_NPC;
+    npc_elane.spec = Entity::SPC_NPC_TOWNFOLK;
     npc_elane.name = "Elane";
     npc_elane.radius = 16;
     npc_elane.dialog_root_key = "DIALOG_ELANE_INTRO";
@@ -147,8 +147,8 @@ void ProtoDb::Load(void)
     npc_elane.sprite_id = packs[0].FindByName<Sprite>("sprite_npc_elane").id;
     npc_elane.direction = DIR_E;
 
-    npc_chicken.type = ENTITY_NPC;
-    npc_chicken.spec = ENTITY_SPEC_NPC_CHICKEN;
+    npc_chicken.type = Entity::TYP_NPC;
+    npc_chicken.spec = Entity::SPC_NPC_CHICKEN;
     npc_chicken.name = "Chicken";
     npc_chicken.ambient_fx = "sfx_chicken_cluck";
     npc_chicken.ambient_fx_delay_min = 15;
@@ -160,8 +160,8 @@ void ProtoDb::Load(void)
     npc_chicken.drag = 1.0f;
     npc_chicken.sprite_id = packs[0].FindByName<Sprite>("sprite_npc_chicken").id;
 
-    itm_poop.type = ENTITY_ITEM;
-    itm_poop.spec = ENTITY_SPEC_ITM_NORMAL;
+    itm_poop.type = Entity::TYP_ITEM;
+    itm_poop.spec = Entity::SPC_ITM_NORMAL;
     itm_poop.name = "Chicken Poop";
     itm_poop.radius = 5;
     itm_poop.drag = 1.0f;
@@ -322,7 +322,7 @@ Tilemap *GameServer::FindMap(uint16_t map_id)
     return &tile_map;
 }
 
-Entity *GameServer::SpawnEntity(EntityType type)
+Entity *GameServer::SpawnEntity(Entity::Type type)
 {
     uint32_t entityId = nextEntityId++;
     Entity *entity = entityDb->SpawnEntity(entityId, type, now);
@@ -365,10 +365,10 @@ Entity *GameServer::SpawnEntityProto(uint16_t map_id, Vector3 position, EntityPr
 }
 Entity *GameServer::SpawnProjectile(uint16_t map_id, Vector3 position, Vector2 direction, Vector3 initial_velocity)
 {
-    Entity *projectile = SpawnEntity(ENTITY_PROJECTILE);
+    Entity *projectile = SpawnEntity(Entity::TYP_PROJECTILE);
     if (!projectile) return 0;
 
-    projectile->spec = ENTITY_SPEC_PRJ_FIREBALL;
+    projectile->spec = Entity::SPC_PRJ_FIREBALL;
 
     // [Entity] position
     projectile->position = position;
@@ -404,7 +404,7 @@ void GameServer::WarpEntity(Entity &entity, uint16_t dest_map_id, Vector3 dest_p
         entity.velocity = {};
         entity.last_moved_at = now;
 
-        if (entity.type == ENTITY_PLAYER) {
+        if (entity.type == Entity::TYP_PLAYER) {
             ServerPlayer *s_player = FindServerPlayer(entity.id);
             if (s_player) {
                 s_player->needsChunkSync = true;
@@ -469,7 +469,7 @@ void GameServer::DespawnEntity(uint32_t entityId)
         Entity *entity = entityDb->FindEntity(entityId, true);
 
         // TODO: Generic loot table check
-        if (entity && entity->spec == ENTITY_SPEC_NPC_CHICKEN && entity->hp == 0.0f) {
+        if (entity && entity->spec == Entity::SPC_NPC_CHICKEN && entity->hp == 0.0f) {
             Entity *chicken_poop = SpawnEntityProto(entity->map_id, entity->position, protoDb.itm_poop);
             if (chicken_poop) {
                 BroadcastEntitySpawn(chicken_poop->id);
@@ -503,7 +503,7 @@ void GameServer::TickPlayers(void)
         }
 
         if (input_cmd) {
-            Entity *player = entityDb->FindEntity(sv_player.entityId, ENTITY_PLAYER);
+            Entity *player = entityDb->FindEntity(sv_player.entityId, Entity::TYP_PLAYER);
             if (player) {
                 Vector3 move_force = input_cmd->GenerateMoveForce(player->speed);
                 player->ApplyForce(move_force);
@@ -556,7 +556,7 @@ void GameServer::TickSpawnTownNPCs(uint16_t map_id)
     const double townfolkSpawnRate = 2.0;
     if (now - lastTownfolkSpawnedAt >= townfolkSpawnRate) {
         for (int i = 0; i < ARRAY_SIZE(townfolk_ids); i++) {
-            Entity *entity = entityDb->FindEntity(townfolk_ids[i], ENTITY_NPC);
+            Entity *entity = entityDb->FindEntity(townfolk_ids[i], Entity::TYP_NPC);
             if (!entity) {
                 entity = SpawnEntityProto(map_id, { 0, 0 }, *townfolk[i]);
                 if (entity) {
@@ -572,7 +572,7 @@ void GameServer::TickSpawnTownNPCs(uint16_t map_id)
     const double chickenSpawnCooldown = 3.0;
     if (now - lastChickenSpawnedAt >= chickenSpawnCooldown) {
         for (int i = 0; i < ARRAY_SIZE(chicken_ids); i++) {
-            Entity *entity = entityDb->FindEntity(chicken_ids[i], ENTITY_NPC);
+            Entity *entity = entityDb->FindEntity(chicken_ids[i], Entity::TYP_NPC);
             if (!entity) {
                 Vector3 spawn{};
                 // TODO: If chicken spawns inside something, immediately despawn
@@ -593,9 +593,9 @@ void GameServer::TickSpawnTownNPCs(uint16_t map_id)
 void GameServer::TickSpawnCaveNPCs(uint16_t map_id)
 {
     for (int i = 0; i < ARRAY_SIZE(eid_bots); i++) {
-        Entity *entity = entityDb->FindEntity(eid_bots[i], ENTITY_NPC);
+        Entity *entity = entityDb->FindEntity(eid_bots[i], Entity::TYP_NPC);
         if (!entity && ((int)tick % 100 == i * 10)) {
-            entity = SpawnEntity(ENTITY_NPC);
+            entity = SpawnEntity(Entity::TYP_NPC);
             if (!entity) continue;
 
             entity->name = "Cave Lily";
@@ -675,7 +675,7 @@ void GameServer::TickEntityNPC(Entity &e_npc, double dt, double now)
     }
 
     // Chicken pathing AI (really bad)
-    if (e_npc.spec == ENTITY_SPEC_NPC_CHICKEN) {
+    if (e_npc.spec == Entity::SPC_NPC_CHICKEN) {
         if (e_npc.colliding) {
             e_npc.path_rand_direction = {};
         }
@@ -723,7 +723,7 @@ void GameServer::TickEntityProjectile(Entity &e_projectile, double dt, double no
     }
 
     for (Entity &e_target : entityDb->entities) {
-        if (e_target.type == ENTITY_NPC
+        if (e_target.type == Entity::TYP_NPC
             && !e_target.despawned_at
             && e_target.Alive()
             && e_target.map_id == e_projectile.map_id)
@@ -740,12 +740,12 @@ void GameServer::TickEntityProjectile(Entity &e_projectile, double dt, double no
                 if (e_target.Alive()) {
                     if (!e_target.dialog_spawned_at) {
                         switch (e_target.spec) {
-                            case ENTITY_SPEC_NPC_TOWNFOLK: {
+                            case Entity::SPC_NPC_TOWNFOLK: {
                                 //BroadcastEntitySay(victim.id, TextFormat("Ouch! You hit me with\nprojectile #%u!", entity.id));
                                 BroadcastEntitySay(e_target.id, e_target.name, "Ouch!");
                                 break;
                             }
-                            case ENTITY_SPEC_NPC_CHICKEN: {
+                            case Entity::SPC_NPC_CHICKEN: {
                                 BroadcastEntitySay(e_target.id, e_target.name, "*squawk*!");
                                 break;
                             }
@@ -766,13 +766,13 @@ void GameServer::TickResolveEntityWarpCollisions(Tilemap &map, Entity &entity)
     if (!entity.on_warp || entity.on_warp_cooldown) {
         return;
     }
-    if (entity.type != ENTITY_PLAYER) {
+    if (entity.type != Entity::TYP_PLAYER) {
         return;
     }
 
     ObjectData *obj_data = map.GetObjectData(entity.on_warp_coord.x, entity.on_warp_coord.y);
     if (obj_data) {
-        assert(obj_data->type == "warp");
+        assert(obj_data->type == S_WARP);
         Vector3 dest{};
         dest.x = obj_data->warp_dest_x * TILE_W + TILE_W * 0.5f;
         dest.y = obj_data->warp_dest_y * TILE_W + TILE_W - entity.radius; // * 0.5f;
@@ -808,9 +808,9 @@ void GameServer::Tick(void)
         // TODO: if (map.sleeping) continue
 
         switch (entity.type) {
-            case ENTITY_NPC:        TickEntityNPC        (entity, SV_TICK_DT, now); break;
-            case ENTITY_PLAYER:     TickEntityPlayer     (entity, SV_TICK_DT, now); break;
-            case ENTITY_PROJECTILE: TickEntityProjectile (entity, SV_TICK_DT, now); break;
+            case Entity::TYP_NPC:        TickEntityNPC        (entity, SV_TICK_DT, now); break;
+            case Entity::TYP_PLAYER:     TickEntityPlayer     (entity, SV_TICK_DT, now); break;
+            case Entity::TYP_PROJECTILE: TickEntityProjectile (entity, SV_TICK_DT, now); break;
         }
 
         Tilemap *map = FindMap(entity.map_id);
@@ -1081,10 +1081,10 @@ void GameServer::ProcessMsg(int clientIdx, Msg_C_EntityInteract &msg)
     // TODO: Check if sv_player is allowed to actually interact with this
     // particular entity. E.g. are they even in the same map as them!?
     // Proximity, etc.
-    Entity *entity = entityDb->FindEntity(msg.entityId, ENTITY_NPC);
+    Entity *entity = entityDb->FindEntity(msg.entityId, Entity::TYP_NPC);
     if (entity) {
         ServerPlayer &player = players[clientIdx];
-        Entity *e_player = entityDb->FindEntity(player.entityId, ENTITY_PLAYER);
+        Entity *e_player = entityDb->FindEntity(player.entityId, Entity::TYP_PLAYER);
         if (!e_player) {
             assert(!"player entity not found.. huh?");
             return;
@@ -1129,7 +1129,7 @@ void GameServer::ProcessMsg(int clientIdx, Msg_C_EntityInteractDialogOption &msg
     // TODO: Check if player is allowed to actually interact with this
     // particular entity. E.g. are they even in the same map as them!?
     // Proximity, etc. If they leave proximity, send EntityInteractCancel
-    Entity *entity = entityDb->FindEntity(msg.entity_id, ENTITY_NPC);
+    Entity *entity = entityDb->FindEntity(msg.entity_id, Entity::TYP_NPC);
     if (entity) {
         DialogNode &optionTag = prevDialog->nodes[msg.option_id];
 
@@ -1158,7 +1158,7 @@ void GameServer::ProcessMsg(int clientIdx, Msg_C_TileInteract &msg)
 {
     ServerPlayer &player = players[clientIdx];
 
-    Entity *e_player = entityDb->FindEntity(player.entityId, ENTITY_PLAYER);
+    Entity *e_player = entityDb->FindEntity(player.entityId, Entity::TYP_PLAYER);
     if (msg.map_id != e_player->map_id) {
         // Wrong map, kick player?
         return;
@@ -1210,7 +1210,7 @@ void GameServer::ProcessMsg(int clientIdx, Msg_C_TileInteract &msg)
     ObjectData *obj_data = map->GetObjectData(msg.x, msg.y);
 
     if (msg.primary == false && obj_data) {
-        if (obj_data->type == "lever") {
+        if (obj_data->type == S_LEVER) {
             if (obj_data->power_level) {
                 obj_data->power_level = 0;
                 map->Set(TILE_LAYER_OBJECT, msg.x, msg.y, obj_data->tile_def, now);
@@ -1221,11 +1221,11 @@ void GameServer::ProcessMsg(int clientIdx, Msg_C_TileInteract &msg)
                 printf("lever on\n");
             }
             //BroadcastTileUpdate(*map, msg.x, msg.y);  // dirty should handle this
-        } else if (obj_data->type == "lootable") {
+        } else if (obj_data->type == S_LOOTABLE) {
             SendEntitySay(clientIdx, player.entityId, 0, "Chest", TextFormat("loot_table_id: %u", obj_data->loot_table_id));
-        } else if (obj_data->type == "sign") {
+        } else if (obj_data->type == S_SIGN) {
             SendEntitySay(clientIdx, player.entityId, 0, "Sign", obj_data->sign_text.c_str());
-        } else if (obj_data->type == "warp") {
+        } else if (obj_data->type == S_WARP) {
             Tilemap &map = packs[0].FindById<Tilemap>(obj_data->warp_map_id);
             const char *warpInfo = TextFormat("%s (%u, %u)",
                 map.name.c_str(),

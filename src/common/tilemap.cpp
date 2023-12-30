@@ -51,7 +51,7 @@ bool Tilemap::IsSolid(int x, int y)
         }
 
         const TileDef &tileDef = GetTileDef(tile_id);
-        if (tileDef.flags & TILEDEF_FLAG_SOLID) {
+        if (tileDef.flags & TileDef::FLAG_SOLID) {
             return true;
         }
     }
@@ -212,12 +212,12 @@ AiPathNode *Tilemap::GetPathNode(uint16_t pathId, uint16_t pathNodeIndex) {
 bool IsActivePowerSource(ObjectData &obj)
 {
     // TODO: Make object flags or something more efficient
-    return obj.power_level && obj.type == "lever";
+    return obj.power_level && obj.type == S_LEVER;
 }
 
 bool IsPowerLoad(ObjectData &obj)
 {
-    return obj.type == "door";
+    return obj.type == S_DOOR;
 }
 
 void Tilemap::UpdatePower(double now)
@@ -384,7 +384,7 @@ void Tilemap::ResolveEntityCollisionsTriggers(Entity &entity)
     int xMin = floorf(topLeft.x / TILE_W) - 1;
     int xMax = ceilf(bottomRight.x / TILE_W) + 1;
 
-    if (entity.type == ENTITY_PLAYER) {
+    if (entity.type == Entity::TYP_PLAYER) {
         assert(entity.radius);
 
         entity.on_warp = false;
@@ -392,7 +392,7 @@ void Tilemap::ResolveEntityCollisionsTriggers(Entity &entity)
         for (int y = yMin; y < yMax && !entity.on_warp; y++) {
             for (int x = xMin; x < xMax && !entity.on_warp; x++) {
                 const ObjectData *object = GetObjectData(x, y);
-                if (object && object->type == "warp") {
+                if (object && object->type == S_WARP) {
                     Rectangle tileRect{
                         (float)x * TILE_W,
                         (float)y * TILE_W,

@@ -3,46 +3,19 @@
 struct Msg_S_EntitySpawn;
 struct Msg_S_EntitySnapshot;
 
+enum Direction : uint8_t {
+    DIR_N,
+    DIR_E,
+    DIR_S,
+    DIR_W,
+    DIR_NE,
+    DIR_SE,
+    DIR_SW,
+    DIR_NW
+};
+
 // Best rap song: "i added it outta habit" by dandymcgee
-#define ENTITY_TYPES(gen) \
-gen(ENTITY_NONE)          \
-gen(ENTITY_PLAYER)        \
-gen(ENTITY_NPC)           \
-gen(ENTITY_ITEM)          \
-gen(ENTITY_PROJECTILE)
 
-enum EntityType : uint8_t {
-    ENTITY_TYPES(ENUM_V_VALUE)
-};
-
-#define ENTITY_SPECIES(gen)   \
-gen(ENTITY_SPEC_NONE)         \
-gen(ENTITY_SPEC_NPC_TOWNFOLK) \
-gen(ENTITY_SPEC_NPC_CHICKEN)  \
-gen(ENTITY_SPEC_ITM_NORMAL)   \
-gen(ENTITY_SPEC_PRJ_FIREBALL)
-
-enum EntitySpecies : uint8_t {
-    ENTITY_SPECIES(ENUM_V_VALUE)
-};
-
-struct EntityProto {
-    EntityType    type                 {};
-    EntitySpecies spec                 {};
-    std::string   name                 {};
-    std::string   ambient_fx           {};
-    double        ambient_fx_delay_min {};
-    double        ambient_fx_delay_max {};
-    float         radius               {};
-    std::string   dialog_root_key      {};
-    float         hp_max               {};
-    uint32_t      path_id              {};
-    float         speed_min            {};
-    float         speed_max            {};
-    float         drag                 {};
-    uint32_t      sprite_id            {};
-    Direction     direction            {};
-};
 
 struct GhostSnapshot {
     double   server_time {};
@@ -74,18 +47,35 @@ typedef RingBuffer<GhostSnapshot, CL_SNAPSHOT_COUNT> AspectGhost;
 struct Entity {
     static const DataType dtype = DAT_TYP_ENTITY;
 
-    //// Entity ////
-    uint32_t      id            {};
-    EntityType    type          {};
-    EntitySpecies spec          {};
-    std::string   name          {};
-    uint32_t      caused_by     {};  // who spawned the projectile?
-    double        spawned_at    {};
-    double        despawned_at  {};
-    AspectGhost   *ghost        {};
+    enum Type : uint8_t {
+        TYP_NONE,
+        TYP_PLAYER,
+        TYP_NPC,
+        TYP_ITEM,
+        TYP_PROJECTILE,
+        TYP_COUNT
+    };
+    enum Species : uint8_t {
+        SPC_NONE,
+        SPC_NPC_TOWNFOLK,
+        SPC_NPC_CHICKEN,
+        SPC_ITM_NORMAL,
+        SPC_PRJ_FIREBALL,
+        SPC_COUNT
+    };
 
-    uint32_t      map_id        {};
-    Vector3       position      {};
+    //// Entity ////
+    uint32_t    id            {};
+    Type        type          {};
+    Species     spec          {};
+    std::string name          {};
+    uint32_t    caused_by     {};  // who spawned the projectile?
+    double      spawned_at    {};
+    double      despawned_at  {};
+
+    uint32_t    map_id        {};
+    Vector3     position      {};
+    AspectGhost *ghost        {};
 
     //// Audio ////
     std::string ambient_fx           {};  // some sound they play occasionally
@@ -168,4 +158,25 @@ struct Entity {
     bool Dead(void);
     bool Active(double now);
     void ApplyForce(Vector3 force);
+};
+
+const char *EntityTypeStr(Entity::Type type);
+const char *EntitySpeciesStr(Entity::Species type);
+
+struct EntityProto {
+    Entity::Type    type                 {};
+    Entity::Species spec                 {};
+    std::string     name                 {};
+    std::string     ambient_fx           {};
+    double          ambient_fx_delay_min {};
+    double          ambient_fx_delay_max {};
+    float           radius               {};
+    std::string     dialog_root_key      {};
+    float           hp_max               {};
+    uint32_t        path_id              {};
+    float           speed_min            {};
+    float           speed_max            {};
+    float           drag                 {};
+    uint32_t        sprite_id            {};
+    Direction       direction            {};
 };
