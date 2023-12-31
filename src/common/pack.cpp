@@ -246,61 +246,7 @@ void Process(PackStream &stream, TileMat &tile_mat)
 }
 void Process(PackStream &stream, ObjectData &obj_data)
 {
-    //HAQ_IO(HQT_OBJECT_DATA_FIELDS, obj_data);
-
-    if constexpr ((HAQ_SERIALIZE | HAQ_EDIT) & HAQ_SERIALIZE) {
-        if (true) {
-            Process(stream, obj_data.x);
-        }
-    } if constexpr ((HAQ_SERIALIZE | HAQ_EDIT) & HAQ_SERIALIZE) {
-        if (true) {
-            Process(stream, obj_data.y);
-        }
-    } if constexpr ((HAQ_SERIALIZE | HAQ_EDIT) & HAQ_SERIALIZE) {
-        if (true) {
-            Process(stream, obj_data.type);
-        }
-    } if constexpr ((HAQ_SERIALIZE | HAQ_EDIT) & HAQ_SERIALIZE) {
-        if (true) {
-            Process(stream, obj_data.tile_def);
-        }
-    } if constexpr ((HAQ_SERIALIZE | HAQ_EDIT) & HAQ_SERIALIZE) {
-        if (obj_data.type == S_LEVER || obj_data.type == S_DOOR) {
-            Process(stream, obj_data.power_level);
-        }
-    } if constexpr ((HAQ_SERIALIZE | HAQ_EDIT) & HAQ_SERIALIZE) {
-        if (obj_data.type == S_LEVER || obj_data.type == S_DOOR) {
-            Process(stream, obj_data.power_channel);
-        }
-    } if constexpr ((HAQ_SERIALIZE | HAQ_EDIT) & HAQ_SERIALIZE) {
-        if (obj_data.type == S_LEVER || obj_data.type == S_DOOR) {
-            Process(stream, obj_data.tile_def_powered);
-        }
-    } if constexpr ((HAQ_SERIALIZE | HAQ_EDIT) & HAQ_SERIALIZE) {
-        if (obj_data.type == S_LOOTABLE) {
-            Process(stream, obj_data.loot_table_id);
-        }
-    } if constexpr ((HAQ_SERIALIZE | HAQ_EDIT) & HAQ_SERIALIZE) {
-        if (obj_data.type == S_SIGN) {
-            Process(stream, obj_data.sign_text);
-        }
-    } if constexpr ((HAQ_SERIALIZE | HAQ_EDIT) & HAQ_SERIALIZE) {
-        if (obj_data.type == S_WARP) {
-            Process(stream, obj_data.warp_map_id);
-        }
-    } if constexpr ((HAQ_SERIALIZE | HAQ_EDIT) & HAQ_SERIALIZE) {
-        if (obj_data.type == S_WARP) {
-            Process(stream, obj_data.warp_dest_x);
-        }
-    } if constexpr ((HAQ_SERIALIZE | HAQ_EDIT) & HAQ_SERIALIZE) {
-        if (obj_data.type == S_WARP) {
-            Process(stream, obj_data.warp_dest_y);
-        }
-    } if constexpr ((HAQ_SERIALIZE | HAQ_EDIT) & HAQ_SERIALIZE) {
-        if (obj_data.type == S_WARP) {
-            Process(stream, obj_data.warp_dest_z);
-        }
-    };
+    HAQ_IO(HQT_OBJECT_DATA_FIELDS, obj_data);
 }
 void Process(PackStream &stream, AiPathNode &aiPathNode)
 {

@@ -212,12 +212,12 @@ AiPathNode *Tilemap::GetPathNode(uint16_t pathId, uint16_t pathNodeIndex) {
 bool IsActivePowerSource(ObjectData &obj)
 {
     // TODO: Make object flags or something more efficient
-    return obj.power_level && obj.type == S_LEVER;
+    return obj.power_level && obj.type == OBJ_LEVER;
 }
 
 bool IsPowerLoad(ObjectData &obj)
 {
-    return obj.type == S_DOOR;
+    return obj.type == OBJ_DOOR;
 }
 
 void Tilemap::UpdatePower(double now)
@@ -392,7 +392,7 @@ void Tilemap::ResolveEntityCollisionsTriggers(Entity &entity)
         for (int y = yMin; y < yMax && !entity.on_warp; y++) {
             for (int x = xMin; x < xMax && !entity.on_warp; x++) {
                 const ObjectData *object = GetObjectData(x, y);
-                if (object && object->type == S_WARP) {
+                if (object && object->type == OBJ_WARP) {
                     Rectangle tileRect{
                         (float)x * TILE_W,
                         (float)y * TILE_W,

@@ -181,33 +181,69 @@ struct TileMat {
 
 ////////////////////////////////////////////////////////////////////////////
 
+// DO NOT re-order these! They are hard-coded pack files
+enum ObjType {
+    OBJ_NONE     = 0,
+    OBJ_DECOR    = 1,
+    OBJ_LEVER    = 2,
+    OBJ_DOOR     = 3,
+    OBJ_LOOTABLE = 4,
+    OBJ_SIGN     = 5,
+    OBJ_WARP     = 6,
+};
+
 struct ObjectData {
-#define HQT_OBJECT_DATA_FIELDS(FIELD, udata)                                                                              \
-    FIELD(uint16_t, x       , {}, HAQ_SERIALIZE | HAQ_EDIT, true, udata)                                                  \
-    FIELD(uint16_t, y       , {}, HAQ_SERIALIZE | HAQ_EDIT, true, udata)                                                  \
-    FIELD(RNString, type    , {}, HAQ_SERIALIZE | HAQ_EDIT, true, udata)                                                  \
-    FIELD(uint16_t, tile_def, {}, HAQ_SERIALIZE | HAQ_EDIT, true, udata)                                                  \
-                                                                                                                          \
-    /* type == "decoration" */                                                                                            \
-    /* no extra fields atm  */                                                                                            \
-                                                                                                                          \
-    /* type == ["lever", "door"] */                                                                                       \
-    FIELD(uint8_t , power_level     , {}, HAQ_SERIALIZE | HAQ_EDIT, udata.type == S_LEVER || udata.type == S_DOOR, udata) \
-    FIELD(uint8_t , power_channel   , {}, HAQ_SERIALIZE | HAQ_EDIT, udata.type == S_LEVER || udata.type == S_DOOR, udata) \
-    FIELD(uint16_t, tile_def_powered, {}, HAQ_SERIALIZE | HAQ_EDIT, udata.type == S_LEVER || udata.type == S_DOOR, udata) \
-                                                                                                                          \
-    /* type == "lootable" */                                                                                              \
-    FIELD(uint16_t, loot_table_id, {}, HAQ_SERIALIZE | HAQ_EDIT, udata.type == S_LOOTABLE, udata)                         \
-                                                                                                                          \
-    /* type == "sign" */                                                                                                  \
-    FIELD(std::string, sign_text, {}, HAQ_SERIALIZE | HAQ_EDIT, udata.type == S_SIGN, udata)                              \
-                                                                                                                          \
-    /* type == "warp" */                                                                                                  \
-    FIELD(uint16_t, warp_map_id, {}, HAQ_SERIALIZE | HAQ_EDIT, udata.type == S_WARP, udata)                               \
-    FIELD(uint16_t, warp_dest_x, {}, HAQ_SERIALIZE | HAQ_EDIT, udata.type == S_WARP, udata)                               \
-    FIELD(uint16_t, warp_dest_y, {}, HAQ_SERIALIZE | HAQ_EDIT, udata.type == S_WARP, udata)                               \
-    FIELD(uint16_t, warp_dest_z, {}, HAQ_SERIALIZE | HAQ_EDIT, udata.type == S_WARP, udata)
+#define HQT_OBJECT_DATA_FIELDS(FIELD, udata)                                                                                  \
+    FIELD(ObjType , type    , {}, HAQ_SERIALIZE | HAQ_EDIT, true, udata)                                                      \
+    FIELD(uint16_t, x       , {}, HAQ_SERIALIZE | HAQ_EDIT, true, udata)                                                      \
+    FIELD(uint16_t, y       , {}, HAQ_SERIALIZE | HAQ_EDIT, true, udata)                                                      \
+    FIELD(uint16_t, tile_def, {}, HAQ_SERIALIZE | HAQ_EDIT, true, udata)                                                      \
+                                                                                                                              \
+    /* type == "decoration" */                                                                                                \
+    /* no extra fields atm  */                                                                                                \
+                                                                                                                              \
+    /* type == ["lever", "door"] */                                                                                           \
+    FIELD(uint8_t , power_level     , {}, HAQ_SERIALIZE | HAQ_EDIT, udata.type == OBJ_LEVER || udata.type == OBJ_DOOR, udata) \
+    FIELD(uint8_t , power_channel   , {}, HAQ_SERIALIZE | HAQ_EDIT, udata.type == OBJ_LEVER || udata.type == OBJ_DOOR, udata) \
+    FIELD(uint16_t, tile_def_powered, {}, HAQ_SERIALIZE | HAQ_EDIT, udata.type == OBJ_LEVER || udata.type == OBJ_DOOR, udata) \
+                                                                                                                              \
+    /* type == "lootable" */                                                                                                  \
+    FIELD(uint16_t, loot_table_id, {}, HAQ_SERIALIZE | HAQ_EDIT, udata.type == OBJ_LOOTABLE, udata)                           \
+                                                                                                                              \
+    /* type == "sign" */                                                                                                      \
+    FIELD(std::string, sign_text, {}, HAQ_SERIALIZE | HAQ_EDIT, udata.type == OBJ_SIGN, udata)                                \
+                                                                                                                              \
+    /* type == "warp" */                                                                                                      \
+    FIELD(uint16_t, warp_map_id, {}, HAQ_SERIALIZE | HAQ_EDIT, udata.type == OBJ_WARP, udata)                                 \
+    FIELD(uint16_t, warp_dest_x, {}, HAQ_SERIALIZE | HAQ_EDIT, udata.type == OBJ_WARP, udata)                                 \
+    FIELD(uint16_t, warp_dest_y, {}, HAQ_SERIALIZE | HAQ_EDIT, udata.type == OBJ_WARP, udata)                                 \
+    FIELD(uint16_t, warp_dest_z, {}, HAQ_SERIALIZE | HAQ_EDIT, udata.type == OBJ_WARP, udata)
     HQT_OBJECT_DATA_FIELDS(HAQ_C_FIELD, 0);
+#if 0
+    static RNString ObjTypeToStr(ObjType type)
+    {
+        switch (type) {
+            case OBJ_DECOR    : return S_DECOR   ;
+            case OBJ_LEVER    : return S_LEVER   ;
+            case OBJ_DOOR     : return S_DOOR    ;
+            case OBJ_LOOTABLE : return S_LOOTABLE;
+            case OBJ_SIGN     : return S_SIGN    ;
+            case OBJ_WARP     : return S_WARP    ;
+        }
+    }
+
+    static ObjType ObjTypeFromStr(RNString str)
+    {
+        switch (str.id) {
+            case S_DECOR   .id : return OBJ_DECOR   ;
+            case S_LEVER   .id : return OBJ_LEVER   ;
+            case S_DOOR    .id : return OBJ_DOOR    ;
+            case S_LOOTABLE.id : return OBJ_LOOTABLE;
+            case S_SIGN    .id : return OBJ_SIGN    ;
+            case S_WARP    .id : return OBJ_WARP    ;
+        }
+    }
+#endif
 };
 
 struct AiPathNode {

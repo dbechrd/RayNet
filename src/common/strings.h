@@ -43,6 +43,7 @@ extern StringCatalog rnStringCatalog;
 
 // Data
 extern RNString S_NULL;
+extern RNString S_DECOR;
 extern RNString S_LEVER;
 extern RNString S_DOOR;
 extern RNString S_LOOTABLE;

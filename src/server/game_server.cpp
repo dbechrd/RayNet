@@ -772,7 +772,7 @@ void GameServer::TickResolveEntityWarpCollisions(Tilemap &map, Entity &entity)
 
     ObjectData *obj_data = map.GetObjectData(entity.on_warp_coord.x, entity.on_warp_coord.y);
     if (obj_data) {
-        assert(obj_data->type == S_WARP);
+        assert(obj_data->type == OBJ_WARP);
         Vector3 dest{};
         dest.x = obj_data->warp_dest_x * TILE_W + TILE_W * 0.5f;
         dest.y = obj_data->warp_dest_y * TILE_W + TILE_W - entity.radius; // * 0.5f;
@@ -1210,7 +1210,7 @@ void GameServer::ProcessMsg(int clientIdx, Msg_C_TileInteract &msg)
     ObjectData *obj_data = map->GetObjectData(msg.x, msg.y);
 
     if (msg.primary == false && obj_data) {
-        if (obj_data->type == S_LEVER) {
+        if (obj_data->type == OBJ_LEVER) {
             if (obj_data->power_level) {
                 obj_data->power_level = 0;
                 map->Set(TILE_LAYER_OBJECT, msg.x, msg.y, obj_data->tile_def, now);
@@ -1221,11 +1221,11 @@ void GameServer::ProcessMsg(int clientIdx, Msg_C_TileInteract &msg)
                 printf("lever on\n");
             }
             //BroadcastTileUpdate(*map, msg.x, msg.y);  // dirty should handle this
-        } else if (obj_data->type == S_LOOTABLE) {
+        } else if (obj_data->type == OBJ_LOOTABLE) {
             SendEntitySay(clientIdx, player.entityId, 0, "Chest", TextFormat("loot_table_id: %u", obj_data->loot_table_id));
-        } else if (obj_data->type == S_SIGN) {
+        } else if (obj_data->type == OBJ_SIGN) {
             SendEntitySay(clientIdx, player.entityId, 0, "Sign", obj_data->sign_text.c_str());
-        } else if (obj_data->type == S_WARP) {
+        } else if (obj_data->type == OBJ_WARP) {
             Tilemap &map = packs[0].FindById<Tilemap>(obj_data->warp_map_id);
             const char *warpInfo = TextFormat("%s (%u, %u)",
                 map.name.c_str(),

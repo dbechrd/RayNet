@@ -4,6 +4,7 @@ StringCatalog rnStringCatalog;
 
 // Data
 RNString S_NULL;
+RNString S_DECOR;
 RNString S_LEVER;
 RNString S_DOOR;
 RNString S_LOOTABLE;
@@ -26,6 +27,7 @@ const std::string &RNString::str(void) const
 void StringCatalog::Init(void)
 {
     S_NULL     = Insert("<null>");
+    S_DECOR    = Insert("decor");
     S_LEVER    = Insert("lever");
     S_DOOR     = Insert("door");
     S_LOOTABLE = Insert("lootable");
