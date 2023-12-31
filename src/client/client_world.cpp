@@ -28,14 +28,21 @@ Tilemap *ClientWorld::LocalPlayerMap(void)
 {
     Entity *localPlayer = LocalPlayer();
     if (localPlayer && localPlayer->map_id) {
-        return FindOrLoadMap(localPlayer->map_id);
+        return &FindOrLoadMap(localPlayer->map_id);
     }
     return 0;
 }
-Tilemap *ClientWorld::FindOrLoadMap(uint16_t map_id)
+Tilemap &ClientWorld::FindOrLoadMap(uint16_t map_id)
 {
-    Tilemap &map = packs[0].FindById<Tilemap>(map_id);
-    return &map;
+    Tilemap *map = pack_maps.FindByIdTry<Tilemap>(map_id);
+    if (map) {
+        return *map;
+    }
+
+    Tilemap &new_map = pack_maps.tile_maps.emplace_back();
+    new_map.id = map_id;
+    pack_maps.dat_by_id[DAT_TYP_TILE_MAP][map_id] = pack_maps.tile_maps.size() - 1;
+    return new_map;
 }
 
 void ClientWorld::ApplySpawnEvent(const Msg_S_EntitySpawn &entitySpawn)
@@ -136,29 +143,28 @@ void ClientWorld::UpdateLocalPlayer(GameClient &client, Entity &entity)
     Vector3 cmdAccumForce{};
 
 #if CL_CLIENT_SIDE_PREDICT
-    Tilemap *map = FindOrLoadMap(entity.map_id);
-    if (map) {
-        // Apply unacked input
-        for (size_t cmdIndex = 0; cmdIndex < client.controller.cmdQueue.size(); cmdIndex++) {
-            InputCmd &inputCmd = client.controller.cmdQueue[cmdIndex];
-            if (paws_greater(inputCmd.seq, latestSnapInputSeq)) {
-                entity.ApplyForce(inputCmd.GenerateMoveForce(entity.speed));
-                entityDb->EntityTick(entity, SV_TICK_DT, client.now);
-                map->ResolveEntityCollisionsEdges(entity);
-            }
-        }
+    Tilemap &map = FindOrLoadMap(entity.map_id);
 
-        cmdAccumDt = client.now - client.controller.lastInputSampleAt;
-        if (cmdAccumDt > 0) {
-            Vector3 posBefore = entity.position;
-            cmdAccumForce = client.controller.cmdAccum.GenerateMoveForce(entity.speed);
-            entity.ApplyForce(cmdAccumForce);
+    // Apply unacked input
+    for (size_t cmdIndex = 0; cmdIndex < client.controller.cmdQueue.size(); cmdIndex++) {
+        InputCmd &inputCmd = client.controller.cmdQueue[cmdIndex];
+        if (paws_greater(inputCmd.seq, latestSnapInputSeq)) {
+            entity.ApplyForce(inputCmd.GenerateMoveForce(entity.speed));
             entityDb->EntityTick(entity, SV_TICK_DT, client.now);
-            map->ResolveEntityCollisionsEdges(entity);
-
-            entity.position.x = LERP(posBefore.x, entity.position.x, cmdAccumDt / SV_TICK_DT);
-            entity.position.y = LERP(posBefore.y, entity.position.y, cmdAccumDt / SV_TICK_DT);
+            map.ResolveEntityCollisionsEdges(entity);
         }
+    }
+
+    cmdAccumDt = client.now - client.controller.lastInputSampleAt;
+    if (cmdAccumDt > 0) {
+        Vector3 posBefore = entity.position;
+        cmdAccumForce = client.controller.cmdAccum.GenerateMoveForce(entity.speed);
+        entity.ApplyForce(cmdAccumForce);
+        entityDb->EntityTick(entity, SV_TICK_DT, client.now);
+        map.ResolveEntityCollisionsEdges(entity);
+
+        entity.position.x = LERP(posBefore.x, entity.position.x, cmdAccumDt / SV_TICK_DT);
+        entity.position.y = LERP(posBefore.y, entity.position.y, cmdAccumDt / SV_TICK_DT);
     }
 #endif
 
@@ -438,38 +444,36 @@ void ClientWorld::DrawEntitySnapshotShadows(GameClient &client, Entity &entity, 
     // NOTE(dlb): These aren't actually snapshot shadows, they're client-side prediction shadows
     if (entity.id == localPlayerEntityId) {
 #if CL_CLIENT_SIDE_PREDICT
-        Tilemap *map = FindOrLoadMap(entity.map_id);
-        if (map) {
-            uint8_t lastProcessedInputCmd = 0;
-            const GhostSnapshot &latestSnapshot = ghost.newest();
-            if (latestSnapshot.server_time) {
-                ApplyStateInterpolated(ghostData.entity, latestSnapshot, latestSnapshot, 0, client.frameDt);
-                lastProcessedInputCmd = latestSnapshot.last_processed_input_cmd;
-            }
+        Tilemap &map = FindOrLoadMap(entity.map_id);
+        uint8_t lastProcessedInputCmd = 0;
+        const GhostSnapshot &latestSnapshot = ghost.newest();
+        if (latestSnapshot.server_time) {
+            ApplyStateInterpolated(ghostData.entity, latestSnapshot, latestSnapshot, 0, client.frameDt);
+            lastProcessedInputCmd = latestSnapshot.last_processed_input_cmd;
+        }
 
-            for (size_t cmdIndex = 0; cmdIndex < controller.cmdQueue.size(); cmdIndex++) {
-                InputCmd &inputCmd = controller.cmdQueue[cmdIndex];
-                if (paws_greater(inputCmd.seq, lastProcessedInputCmd)) {
-                    ghostData.entity.ApplyForce(inputCmd.GenerateMoveForce(ghostData.entity.speed));
-                    entityDb->EntityTick(ghostData.entity, SV_TICK_DT, client.now);
-                    map->ResolveEntityCollisionsEdges(ghostData.entity);
-                    Rectangle ghostRect = ghostData.entity.GetSpriteRect();
-                    sortedDraws.push(DrawCmd::RectSolid(ghostRect, Fade(GREEN, 0.1f)));
-                    sortedDraws.push(DrawCmd::RectOutline(ghostRect, Fade(GREEN, 0.8f), 1));
-                }
+        for (size_t cmdIndex = 0; cmdIndex < controller.cmdQueue.size(); cmdIndex++) {
+            InputCmd &inputCmd = controller.cmdQueue[cmdIndex];
+            if (paws_greater(inputCmd.seq, lastProcessedInputCmd)) {
+                ghostData.entity.ApplyForce(inputCmd.GenerateMoveForce(ghostData.entity.speed));
+                entityDb->EntityTick(ghostData.entity, SV_TICK_DT, client.now);
+                map.ResolveEntityCollisionsEdges(ghostData.entity);
+                Rectangle ghostRect = ghostData.entity.GetSpriteRect();
+                sortedDraws.push(DrawCmd::RectSolid(ghostRect, Fade(GREEN, 0.1f)));
+                sortedDraws.push(DrawCmd::RectOutline(ghostRect, Fade(GREEN, 0.8f), 1));
             }
         }
 
 #if 1
         // We don't really need to draw a blue rect at currently entity position unless
         // the entity is invisible.
-            const double cmdAccumDt = client.now - controller.lastInputSampleAt;
+        const double cmdAccumDt = client.now - controller.lastInputSampleAt;
         if (cmdAccumDt > 0) {
             Vector3 posBefore = ghostData.entity.position;
             Vector3 cmdAccumForce = controller.cmdAccum.GenerateMoveForce(ghostData.entity.speed);
             ghostData.entity.ApplyForce(cmdAccumForce);
             entityDb->EntityTick(ghostData.entity, SV_TICK_DT, client.now);
-            map->ResolveEntityCollisionsEdges(ghostData.entity);
+            map.ResolveEntityCollisionsEdges(ghostData.entity);
             ghostData.entity.position.y = LERP(posBefore.y, ghostData.entity.position.y, cmdAccumDt / SV_TICK_DT);
             ghostData.entity.position.x = LERP(posBefore.x, ghostData.entity.position.x, cmdAccumDt / SV_TICK_DT);
         }
@@ -511,7 +515,7 @@ void ClientWorld::DrawHoveredObjectIndicator(GameClient &client, Tilemap &map)
         map.AtTry(TILE_LAYER_OBJECT, client.controller.tile_x, client.controller.tile_y, object_id);
         if (object_id) {
             const GfxFrame &gfx_frame = map.GetTileGfxFrame(object_id);
-            const GfxFile &gfx_file = packs[0].FindByName<GfxFile>(gfx_frame.gfx);
+            const GfxFile &gfx_file = pack_assets.FindByName<GfxFile>(gfx_frame.gfx);
             const Rectangle texRect{ (float)gfx_frame.x, (float)gfx_frame.y, (float)gfx_frame.w, (float)gfx_frame.h };
 
             Vector2 texAspect{ 1.0f, 1.0f };

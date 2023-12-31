@@ -12,8 +12,6 @@ const bool IS_SERVER = true;
 
 void RN_TraceLogCallback(int logLevel, const char *text, va_list args)
 {
-    //return;
-
     const char *outofbounds = "Requested image pixel";
     if (!strncmp(text, outofbounds, strlen(outofbounds))) {
         logLevel = LOG_FATAL;
@@ -26,12 +24,12 @@ void RN_TraceLogCallback(int logLevel, const char *text, va_list args)
 
     switch (logLevel)
     {
-        case LOG_TRACE: strcpy(buffer, "TRACE: "); break;
-        case LOG_DEBUG: strcpy(buffer, "DEBUG: "); break;
-        case LOG_INFO: strcpy(buffer, "INFO: "); break;
+        case LOG_TRACE:   strcpy(buffer, "TRACE:   "); break;
+        case LOG_DEBUG:   strcpy(buffer, "DEBUG:   "); break;
+        case LOG_INFO:    strcpy(buffer, "INFO:    "); break;
         case LOG_WARNING: strcpy(buffer, "WARNING: "); break;
-        case LOG_ERROR: strcpy(buffer, "ERROR: "); break;
-        case LOG_FATAL: strcpy(buffer, "FATAL: "); break;
+        case LOG_ERROR:   strcpy(buffer, "ERROR:   "); break;
+        case LOG_FATAL:   strcpy(buffer, "FATAL:   "); break;
         default: break;
     }
 
@@ -93,7 +91,7 @@ Err Play(GameServer &server)
     Camera2D camera{};
     camera.zoom = 1;
 
-    Tilemap &level_001 = packs[0].FindByName<Tilemap>(MAP_OVERWORLD);
+    Tilemap &level_001 = pack_maps.FindByName<Tilemap>(MAP_OVERWORLD);
     Editor editor{ level_001.id };
     editor.Init();
 
@@ -170,7 +168,7 @@ Err Play(GameServer &server)
         BeginDrawing();
             ClearBackground(BLUE_DESAT);
             BeginMode2D(camera);
-                auto &editor_map = packs[0].FindById<Tilemap>(editor.map_id);
+                auto &editor_map = pack_maps.FindById<Tilemap>(editor.map_id);
 
                 DrawCmdQueue sortedDraws{};
 

@@ -153,17 +153,12 @@ void GameClient::ProcessMsg(Msg_S_EntitySpawn &msg)
     //printf("[ENTITY_SPAWN] id=%u mapId=%u\n", msg->entity_id, msg->map_id);
     Entity *entity = entityDb->FindEntity(msg.entity_id);
     if (!entity) {
-        Tilemap *map = world->FindOrLoadMap(msg.map_id);
-        assert(map && "why no map? we get chunks before entities, right!?");
-        if (map) {
-            Entity *entity = entityDb->SpawnEntity(msg.entity_id, msg.type, now);
-            if (entity) {
-                world->ApplySpawnEvent(msg);
-                GhostSnapshot ghostSnapshot{ msg };
-                entity->ghost->push(ghostSnapshot);
-            }
-        } else {
-            printf("[game_client] Failed to load map id %u to spawn entity id %u\n", msg.map_id, msg.entity_id);
+        Tilemap &map = world->FindOrLoadMap(msg.map_id);
+        Entity *entity = entityDb->SpawnEntity(msg.entity_id, msg.type, now);
+        if (entity) {
+            world->ApplySpawnEvent(msg);
+            GhostSnapshot ghostSnapshot{ msg };
+            entity->ghost->push(ghostSnapshot);
         }
     } else {
         assert(!"why two spawn events for same entityId??");
@@ -171,74 +166,55 @@ void GameClient::ProcessMsg(Msg_S_EntitySpawn &msg)
 }
 void GameClient::ProcessMsg(Msg_S_TileChunk &msg)
 {
-    Tilemap *map = world->FindOrLoadMap(msg.map_id);
-    if (map) {
-        if (map->id = msg.map_id) {
-            if (!map->width) {
-                map->width = msg.map_w;
-                map->height = msg.map_h;
-                for (int layer = 0; layer < TILE_LAYER_COUNT; layer++) {
-                    map->layers[layer].resize(map->width * map->height);
-                }
-            } else {
-                // map changed size.. uhhhh wot?
-                assert(map->width == msg.map_w);
-                assert(map->height == msg.map_h);
-            }
+    Tilemap &map = world->FindOrLoadMap(msg.map_id);
+    assert(map.id = msg.map_id);
 
-            //printf("Receiving tile chunk, (beeg %d, smol %d)\n", msg.beeg_size, msg.smol_size);
-
-            int block_size = msg.GetBlockSize();
-            uint8_t *block = msg.GetBlockData();
-            assert(block_size == msg.smol_size);
-
-            int chunk_beeg_bytes{};
-            uint8_t *chunk_beeg{};
-#if SV_COMPRESS_TILE_CHUNK_WITH_LZ4
-            chunk_beeg = (uint8_t *)MemAlloc(msg.beeg_size);
-            chunk_beeg_bytes = LZ4_decompress_safe((char *)block, (char *)chunk_beeg, block_size, msg.beeg_size);
-#else
-            chunk_beeg = (uint8_t *)DecompressData(block, block_size, &chunk_beeg_bytes);
-#endif
-            assert(chunk_beeg_bytes == msg.beeg_size);
-
-            int index = 0;
-            for (int layer = 0; layer < TILE_LAYER_COUNT; layer++) {
-                for (uint32_t ty = msg.y; ty < msg.w; ty++) {
-                    for (uint32_t tx = msg.x; tx < msg.h; tx++) {
-                        map->Set((TileLayerType)layer, msg.x + tx, msg.y + ty, ((uint16_t *)chunk_beeg)[index], 0);
-                        index++;
-                    }
-                }
-            }
-
-            MemFree(chunk_beeg);
-        } else {
-            printf("[game_client] Failed to deserialize chunk with mapId %u into map with id %u\n", msg.map_id, map->id);
+    if (!map.width) {
+        map.width = msg.map_w;
+        map.height = msg.map_h;
+        for (int layer = 0; layer < TILE_LAYER_COUNT; layer++) {
+            map.layers[layer].resize(map.width * map.height);
         }
     } else {
-        // TODO: LoadPack the right map by ID somehow
-        //if (msg->mapId != world->map.id) {
-        //    //world->map.LoadPack(tileChunk.mapName, 0);
-        //}
+        // map changed size.. uhhhh wot?
+        assert(map.width == msg.map_w);
+        assert(map.height == msg.map_h);
     }
+
+    //printf("Receiving tile chunk, (beeg %d, smol %d)\n", msg.beeg_size, msg.smol_size);
+
+    int block_size = msg.GetBlockSize();
+    uint8_t *block = msg.GetBlockData();
+    assert(block_size == msg.smol_size);
+
+    int chunk_beeg_bytes{};
+    uint8_t *chunk_beeg{};
+#if SV_COMPRESS_TILE_CHUNK_WITH_LZ4
+    chunk_beeg = (uint8_t *)MemAlloc(msg.beeg_size);
+    chunk_beeg_bytes = LZ4_decompress_safe((char *)block, (char *)chunk_beeg, block_size, msg.beeg_size);
+#else
+    chunk_beeg = (uint8_t *)DecompressData(block, block_size, &chunk_beeg_bytes);
+#endif
+    assert(chunk_beeg_bytes == msg.beeg_size);
+
+    int index = 0;
+    for (int layer = 0; layer < TILE_LAYER_COUNT; layer++) {
+        for (uint32_t ty = msg.y; ty < msg.w; ty++) {
+            for (uint32_t tx = msg.x; tx < msg.h; tx++) {
+                map.Set((TileLayerType)layer, msg.x + tx, msg.y + ty, ((uint16_t *)chunk_beeg)[index], 0);
+                index++;
+            }
+        }
+    }
+
+    MemFree(chunk_beeg);
 }
 void GameClient::ProcessMsg(Msg_S_TileUpdate &msg)
 {
-    Tilemap *map = world->FindOrLoadMap(msg.map_id);
-    if (map) {
-        if (map->id = msg.map_id) {
-            for (int layer = 0; layer < TILE_LAYER_COUNT; layer++) {
-                map->Set((TileLayerType)layer, msg.x, msg.y, msg.tile_ids[layer], 0);
-            }
-        } else {
-            printf("[game_client] Failed to deserialize chunk with mapId %u into map with id %u\n", msg.map_id, map->id);
-        }
-    } else {
-        // TODO: LoadPack the right map by ID somehow
-        //if (msg->mapId != world->map.id) {
-        //    //world->map.LoadPack(tileChunk.mapName, 0);
-        //}
+    Tilemap &map = world->FindOrLoadMap(msg.map_id);
+    assert(map.id = msg.map_id);
+    for (int layer = 0; layer < TILE_LAYER_COUNT; layer++) {
+        map.Set((TileLayerType)layer, msg.x, msg.y, msg.tile_ids[layer], 0);
     }
 }
 void GameClient::ProcessMsg(Msg_S_TitleShow &msg)

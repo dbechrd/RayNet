@@ -148,17 +148,17 @@ void Tilemap::Fill(TileLayerType layer, uint16_t x, uint16_t y, uint16_t new_til
 
 TileDef &Tilemap::GetTileDef(uint16_t tile_id)
 {
-    if (tile_id < packs[0].tile_defs.size()) {
-         return packs[0].tile_defs[tile_id];
+    if (tile_id < pack_assets.tile_defs.size()) {
+         return pack_assets.tile_defs[tile_id];
     }
-    return packs[0].tile_defs[0];
+    return pack_assets.tile_defs[0];
 }
 const GfxFrame &Tilemap::GetTileGfxFrame(uint16_t tile_id)
 {
     const TileDef &tile_def = GetTileDef(tile_id);
-    const GfxAnim &gfx_anim = packs[0].FindByName<GfxAnim>(tile_def.anim);
+    const GfxAnim &gfx_anim = pack_assets.FindByName<GfxAnim>(tile_def.anim);
     const std::string &gfx_frame_id = gfx_anim.GetFrame(tile_def.anim_state.frame);
-    const GfxFrame &gfx_frame = packs[0].FindByName<GfxFrame>(gfx_frame_id);
+    const GfxFrame &gfx_frame = pack_assets.FindByName<GfxFrame>(gfx_frame_id);
     return gfx_frame;
 }
 Rectangle Tilemap::TileDefRect(uint16_t tile_id)
@@ -419,7 +419,7 @@ void Tilemap::DrawTile(uint16_t tile_id, Vector2 position, DrawCmdQueue *sortedD
 {
     // TODO: Yikes.. that's a lot of lookups in a tight loop. Memoize some pointers or something man.
     const GfxFrame &gfx_frame = GetTileGfxFrame(tile_id);
-    const GfxFile &gfx_file = packs[0].FindByName<GfxFile>(gfx_frame.gfx);
+    const GfxFile &gfx_file = pack_assets.FindByName<GfxFile>(gfx_frame.gfx);
     Rectangle texRect{ (float)gfx_frame.x, (float)gfx_frame.y, (float)gfx_frame.w, (float)gfx_frame.h };
     if (gfx_frame.h > TILE_W) {
         position.y -= gfx_frame.h - TILE_W;

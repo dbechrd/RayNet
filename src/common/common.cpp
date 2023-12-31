@@ -425,7 +425,7 @@ void dlb_DrawTexturePro(Texture2D texture, Rectangle source, Rectangle dest, Vec
 
 void dlb_DrawNPatch(Rectangle rec)
 {
-    const GfxFile &gfx_file = packs[0].FindByName<GfxFile>("gfx_dlg_npatch");
+    const GfxFile &gfx_file = pack_assets.FindByName<GfxFile>("gfx_dlg_npatch");
     NPatchInfo nPatch{};
     nPatch.source = { 0, 0, (float)gfx_file.texture.width, (float)gfx_file.texture.height };
     nPatch.left   = 16;

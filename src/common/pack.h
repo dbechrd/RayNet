@@ -100,28 +100,50 @@ struct Pack {
     }
 
     template <typename T>
-    T &FindById(uint16_t id) {
+    T *FindByIdTry(uint16_t id) {
         auto &vec = *(std::vector<T> *)GetPool(T::dtype);
         const auto &map = dat_by_id[T::dtype];
         const auto &entry = map.find(id);
         if (entry != map.end()) {
-            return vec[entry->second];
+            return &vec[entry->second];
         } else {
-            //TraceLog(LOG_WARNING, "Could not find resource of type %s by id '%u'.", DataTypeStr(T::dtype), id);
-            return vec[0];
+            return 0;
         }
     }
 
     template <typename T>
-    T &FindByName(const std::string &name) {
+    T *FindByNameTry(const std::string &name) {
         const DataType dtype = T::dtype;
         auto &vec = *(std::vector<T> *)GetPool(T::dtype);
         const auto &map = dat_by_name[dtype];
         const auto &entry = map.find(name);
         if (entry != map.end()) {
-            return vec[entry->second];
+            return &vec[entry->second];
+        } else {
+            return 0;
+        }
+    }
+
+    template <typename T>
+    T &FindById(uint16_t id) {
+        T *val = FindByIdTry<T>(id);
+        if (val) {
+            return *val;
+        } else {
+            //TraceLog(LOG_WARNING, "Could not find resource of type %s by id '%u'.", DataTypeStr(T::dtype), id);
+            auto &vec = *(std::vector<T> *)GetPool(T::dtype);
+            return vec[0];
+        };
+    }
+
+    template <typename T>
+    T &FindByName(const std::string &name) {
+        T *val = FindByNameTry<T>(name);
+        if (val) {
+            return *val;
         } else {
             //TraceLog(LOG_WARNING, "Could not find resource of type %s by name '%s'.", DataTypeStr(T::dtype), name.c_str());
+            auto &vec = *(std::vector<T> *)GetPool(T::dtype);
             return vec[0];
         }
     }

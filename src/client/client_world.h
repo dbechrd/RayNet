@@ -233,7 +233,7 @@ struct ClientWorld {
     Entity *LocalPlayer(void);
     uint16_t LocalPlayerMapId(void);
     Tilemap *LocalPlayerMap(void);
-    Tilemap *FindOrLoadMap(uint16_t map_id);
+    Tilemap &FindOrLoadMap(uint16_t map_id);
 
     void ApplySpawnEvent(const Msg_S_EntitySpawn &entitySpawn);
     void ApplyStateInterpolated(Entity &entity, const GhostSnapshot &a, const GhostSnapshot &b, float alpha, float dt);

@@ -1034,12 +1034,10 @@ void UI::HAQFieldValue(uint32_t ctrlid, const std::string &name, T &value, int f
 void UI::HAQFieldValue(uint32_t ctrlid, const std::string &name, ObjectData &obj, int flags, int labelWidth)
 {
 #define HAQ_UI_FIELD(c_type, c_name, c_init, flags, condition, userdata) \
-    if constexpr ((flags) & HAQ_SERIALIZE) { \
-        if (condition) { \
-            size_t hash{}; \
-            hash_combine(hash, __COUNTER__, name); \
-            HAQField(hash, #c_name, userdata.c_name, (flags), labelWidth); \
-        } \
+    if (condition) { \
+        size_t hash{}; \
+        hash_combine(hash, __COUNTER__, name); \
+        HAQField(hash, #c_name, userdata.c_name, (flags), labelWidth); \
     }
 
 #define HAQ_UI(hqt, userdata) \
@@ -1067,6 +1065,7 @@ void UI::HAQFieldValue(uint32_t ctrlid, const std::string &name, std::vector<T> 
         PushFgColor(GRAY);
         Label(name_i, labelWidth);
         PopStyle();
+        Newline();
         HAQField(hash, "#" + name_i, vec[i], flags, labelWidth);
     }
 
@@ -1119,7 +1118,6 @@ void UI::HAQFieldEditor(uint32_t ctrlid, const std::string &name, T &value, int 
         Textbox(ctrlid, valueFloat, "%.f");
         value = CLAMP(valueFloat, std::numeric_limits<T>::min(), std::numeric_limits<T>::max());
     } else {
-        Newline();
         HAQFieldValue(ctrlid, name, value, flags, labelWidth);
     }
 
@@ -1141,12 +1139,12 @@ void UI::HAQFieldEditor(uint32_t ctrlid, const std::string &name, TileDef::Flags
 template <typename T>
 void UI::HAQField(uint32_t ctrlid, const std::string &name, T &value, int flags, int labelWidth)
 {
-    assert(!((flags) & HAQ_SERIALIZE));
-
-    if (name.size() && name[0] != '#') {
-        Label(name, labelWidth);
-    } else {
-        Space({ (float)labelWidth, 0 });
+    if (name[0] != '#') {
+        if (name.size()) {
+            Label(name, labelWidth);
+        } else {
+            Space({ (float)labelWidth, 0 });
+        }
     }
 
     if ((flags) & HAQ_EDIT) {

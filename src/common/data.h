@@ -285,13 +285,5 @@ extern Font fntMedium;
 extern Font fntBig;
 
 // Packs
-enum {
-    PACK_ASSETS,
-#if SV_SERVER
-    PACK_SV_MAP_OVERWORLD,
-    PACK_SV_MAP_CAVE,
-    PACK_SV_MAP_FREYA_HOUSE,
-#endif
-    PACK_ID_COUNT
-};
-extern Pack packs[PACK_ID_COUNT];
+extern Pack pack_assets;
+extern Pack pack_maps;

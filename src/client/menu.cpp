@@ -99,7 +99,7 @@ void MenuConnecting::OnEnter(void) {
     msg_index        = 0;
     msg_last_updated = 0;
     if (!campfire.sprite_id) {
-        campfire.sprite_id = packs[0].FindByName<Sprite>("sprite_obj_campfire").id;
+        campfire.sprite_id = pack_assets.FindByName<Sprite>("sprite_obj_campfire").id;
     }
 }
 

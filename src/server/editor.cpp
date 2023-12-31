@@ -69,7 +69,7 @@ void Editor::DrawGroundOverlays(Camera2D &camera, double now)
 {
     io.PushScope(IO::IO_EditorGroundOverlay);
 
-    auto &map = packs[0].FindById<Tilemap>(map_id);
+    auto &map = pack_maps.FindById<Tilemap>(map_id);
 
     // Draw tile collision layer
     if (state.showColliders) {
@@ -115,7 +115,7 @@ void Editor::DrawGroundOverlay_Tiles(Camera2D &camera, double now)
 
         TileLayerType layer = state.tiles.layer;
         auto &cursor = state.tiles.cursor;
-        auto &map = packs[0].FindById<Tilemap>(map_id);
+        auto &map = pack_maps.FindById<Tilemap>(map_id);
 
         Tilemap::Coord coord{};
         map.WorldToTileIndex(cursorWorldPos.x, cursorWorldPos.y, coord);
@@ -210,7 +210,7 @@ void Editor::DrawGroundOverlay_Paths(Camera2D &camera, double now)
     const Vector2 cursorWorldPos = GetScreenToWorld2D({ (float)GetMouseX(), (float)GetMouseY() }, camera);
 
     // Draw path edges
-    auto &map = packs[0].FindById<Tilemap>(map_id);
+    auto &map = pack_maps.FindById<Tilemap>(map_id);
     for (uint16_t aiPathId = 1; aiPathId <= map.paths.size(); aiPathId++) {
         AiPath *aiPath = map.GetPath(aiPathId);
         if (!aiPath) {
@@ -316,7 +316,7 @@ void Editor::DrawEntityOverlays(Camera2D &camera, double now)
     io.PushScope(IO::IO_EditorEntityOverlay);
 
     Entity *selectedEntity = entityDb->FindEntity(state.entities.selectedId);
-    auto &map = packs[0].FindById<Tilemap>(map_id);
+    auto &map = pack_maps.FindById<Tilemap>(map_id);
     if (selectedEntity && selectedEntity->map_id == map.id) {
         const char *text = TextFormat("[selected]");
         Vector2 tc = GetWorldToScreen2D(selectedEntity->TopCenter(), camera);
@@ -358,7 +358,7 @@ void Editor::DrawEntityOverlays(Camera2D &camera, double now)
 }
 void Editor::DrawEntityOverlay_Collision(Camera2D &camera, double now)
 {
-    auto &map = packs[0].FindById<Tilemap>(map_id);
+    auto &map = pack_maps.FindById<Tilemap>(map_id);
     for (Entity &entity : entityDb->entities) {
         if (entity.map_id != map.id) {
             continue;
@@ -533,7 +533,7 @@ UIState Editor::DrawUI_ActionBar(Vector2 position, double now)
     static std::string openRequest;
     static std::string saveAsRequest;
 
-    auto &map = packs[0].FindById<Tilemap>(map_id);
+    auto &map = pack_maps.FindById<Tilemap>(map_id);
 
 #if 0
     UIState openButton = uiActionBar.Button(CSTR("Open"));
@@ -566,8 +566,8 @@ UIState Editor::DrawUI_ActionBar(Vector2 position, double now)
 #endif
     UIState saveButton = uiActionBar.Button(CSTR("Save"));
     if (saveButton.released) {
-        std::string path = packs[0].GetPath(PACK_TYPE_TEXT);
-        Err err = SavePack(packs[0], PACK_TYPE_TEXT);
+        std::string path = pack_assets.GetPath(PACK_TYPE_TEXT);
+        Err err = SavePack(pack_assets, PACK_TYPE_TEXT);
         if (err) {
             std::thread errorThread([path, err]{
                 const char *msg = TextFormat("Failed to save file %s. %s\n", path.c_str(), ErrStr(err));
@@ -579,7 +579,7 @@ UIState Editor::DrawUI_ActionBar(Vector2 position, double now)
 
     UIState saveAsButton = uiActionBar.Button(CSTR("Save As"));
     if (saveAsButton.released) {
-        std::string path = packs[0].GetPath(PACK_TYPE_TEXT);
+        std::string path = pack_assets.GetPath(PACK_TYPE_TEXT);
         std::thread saveAsThread([path, mapFileFilter]{
             const char *saveAsRequestBuf = tinyfd_saveFileDialog(
                 "Save File",
@@ -592,7 +592,7 @@ UIState Editor::DrawUI_ActionBar(Vector2 position, double now)
         saveAsThread.detach();
     }
     if (saveAsRequest.size()) {
-        Err err = SavePack(packs[0], PACK_TYPE_TEXT, saveAsRequest);
+        Err err = SavePack(pack_assets, PACK_TYPE_TEXT, saveAsRequest);
         if (err) {
             std::thread errorThread([err]{
                 const char *msg = TextFormat("Failed to save file %s. %s\n", saveAsRequest.c_str(), ErrStr(err));
@@ -613,8 +613,8 @@ UIState Editor::DrawUI_ActionBar(Vector2 position, double now)
         // HACK(dlb): What the hell is size() == 2?
         Err err = RN_BAD_FILE_READ;
         if (reload_pack.tile_maps.size() == 2) {
-            Tilemap &old_map = packs[0].FindById<Tilemap>(map.id);
-            if (&old_map != &packs[0].tile_maps[0]) {
+            Tilemap &old_map = pack_maps.FindById<Tilemap>(map.id);
+            if (&old_map != &pack_maps.tile_maps[0]) {
                 old_map = reload_pack.tile_maps[1];
                 err = RN_SUCCESS;
             }
@@ -712,7 +712,7 @@ UIState Editor::DrawUI_ActionBar(Vector2 position, double now)
 }
 void Editor::DrawUI_MapActions(UI &uiActionBar, double now)
 {
-    for (const Tilemap &map : packs[0].tile_maps) {
+    for (const Tilemap &map : pack_maps.tile_maps) {
         if (uiActionBar.Button(CSTRLEN(TextFormat("%s", map.name.c_str()))).pressed) {
             map_id = map.id;
         }
@@ -754,7 +754,7 @@ void Editor::DrawUI_TileActions(UI &uiActionBar, double now)
     uiActionBar.Newline();
 #endif
 
-    auto &map = packs[0].FindById<Tilemap>(map_id);
+    auto &map = pack_maps.FindById<Tilemap>(map_id);
 
     static float width = 0;
     static float height = 0;
@@ -836,8 +836,8 @@ void Editor::DrawUI_Tilesheet(UI &uiActionBar, double now)
 {
     // TODO(dlb): Support multi-select (big rectangle?), and figure out where this lives
 
-    auto &map = packs[0].FindById<Tilemap>(map_id);
-    auto &tile_defs = packs[0].tile_defs;
+    auto &map = pack_maps.FindById<Tilemap>(map_id);
+    auto &tile_defs = pack_assets.tile_defs;
     TileLayerType layer = state.tiles.layer;
     auto &cursor = state.tiles.cursor;
 
@@ -1151,7 +1151,7 @@ void Editor::DrawUI_Wang(UI &uiActionBar, double now)
 
     uiActionBar.PopStyle();
 
-    auto &map = packs[0].FindById<Tilemap>(map_id);
+    auto &map = pack_maps.FindById<Tilemap>(map_id);
 
     if (uiActionBar.Button(CSTR("Re-generate Map")).pressed) {
         wangTileset.GenerateMap(map.width, map.height, wangMap);
@@ -1167,8 +1167,8 @@ void Editor::DrawUI_Wang(UI &uiActionBar, double now)
 void Editor::DrawUI_WangTile(double now)
 {
     WangTileset &wangTileset = state.wang.wangTileset;
-    auto &map = packs[0].FindById<Tilemap>(map_id);
-    auto &tile_defs = packs[0].tile_defs;
+    auto &map = pack_maps.FindById<Tilemap>(map_id);
+    auto &tile_defs = pack_assets.tile_defs;
 
     Rectangle wangBg{ 434, 4, 560, 560 };
 
@@ -1200,7 +1200,7 @@ void Editor::DrawUI_WangTile(double now)
                     uint8_t tile = pixel[0] < tile_defs.size() ? pixel[0] : 0;
 
                     const GfxFrame &gfx_frame = map.GetTileGfxFrame(selectedTile);
-                    const GfxFile &gfx_file = packs[0].FindByName<GfxFile>(gfx_frame.gfx);
+                    const GfxFile &gfx_file = pack_assets.FindByName<GfxFile>(gfx_frame.gfx);
                     const Rectangle tileRect = map.TileDefRect(tile);
                     if (uiWangTile.Image(gfx_file.texture, tileRect).down) {
                         pixel[0] = selectedTile; //^ (selectedTile*55);
@@ -1222,7 +1222,7 @@ void Editor::DrawUI_WangTile(double now)
                     uint8_t tile = pixel[0] < tile_defs.size() ? pixel[0] : 0;
 
                     const GfxFrame &gfx_frame = map.GetTileGfxFrame(selectedTile);
-                    const GfxFile &gfx_file = packs[0].FindByName<GfxFile>(gfx_frame.gfx);
+                    const GfxFile &gfx_file = pack_assets.FindByName<GfxFile>(gfx_frame.gfx);
                     const Rectangle tileRect = map.TileDefRect(tile);
                     if (uiWangTile.Image(gfx_file.texture, tileRect).down) {
                         pixel[0] = selectedTile; //^ (selectedTile*55);
@@ -1363,7 +1363,7 @@ void Editor::DrawUI_DialogActions(UI &uiActionBar, double now)
                 uiActionBar.Newline();
                 float id = dialog.option_ids[i];
                 uiActionBar.Textbox(txtOptionId[i], id, 0, "%.f");
-                dialog.option_ids[i] = (DialogId)CLAMP(id, 0, packs[0].dialogs.size() - 1);
+                dialog.option_ids[i] = (DialogId)CLAMP(id, 0, pack_assets.dialogs.size() - 1);
                 uiActionBar.Newline();
             }
         } else {
@@ -1376,7 +1376,7 @@ void Editor::DrawUI_DialogActions(UI &uiActionBar, double now)
 }
 void Editor::DrawUI_EntityActions(UI &uiActionBar, double now)
 {
-    auto &map = packs[0].FindById<Tilemap>(map_id);
+    auto &map = pack_maps.FindById<Tilemap>(map_id);
     if (uiActionBar.Button(CSTR("Despawn all"), ColorBrightness(MAROON, -0.3f)).pressed) {
         for (const Entity &entity : entityDb->entities) {
             if (entity.type == Entity::TYP_PLAYER || entity.map_id != map.id) {
@@ -1537,7 +1537,10 @@ void Editor::DrawUI_PackFiles(UI &uiActionBar, double now)
     uiActionBar.Textbox(__COUNTER__, filter);
     uiActionBar.Newline();
 
-    for (Pack &pack : packs) {
+    Pack *packs[]{ &pack_assets, &pack_maps };
+
+    for (Pack *packPtr : packs) {
+        Pack &pack = *packPtr;
         if (!pack.version) {
             continue;
         }

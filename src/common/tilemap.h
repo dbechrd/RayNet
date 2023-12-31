@@ -1,6 +1,5 @@
 #pragma once
 #include "common.h"
-//#include "data.h"
 
 enum TileLayerType {
     TILE_LAYER_GROUND,

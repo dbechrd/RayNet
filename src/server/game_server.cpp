@@ -24,7 +24,7 @@ void GameServer::OnClientJoin(int clientIdx)
 
     Entity *player = SpawnEntity(Entity::TYP_PLAYER);
     if (player) {
-        Tilemap &level_001 = packs[0].FindByName<Tilemap>(MAP_OVERWORLD);
+        Tilemap &level_001 = pack_maps.FindByName<Tilemap>(MAP_OVERWORLD);
 
         ServerPlayer &sv_player = players[clientIdx];
         sv_player.needsClockSync = true;
@@ -43,7 +43,7 @@ void GameServer::OnClientJoin(int clientIdx)
         player->hp = player->hp_max;
         player->speed = 3000;
         player->drag = 0.9f;
-        player->sprite_id = packs[0].FindByName<Sprite>("sprite_chr_mage").id;
+        player->sprite_id = pack_assets.FindByName<Sprite>("sprite_chr_mage").id;
         //projectile->direction = DIR_E;  // what's it do if it defaults to North?
 
         sv_player.needsChunkSync = true;
@@ -105,7 +105,7 @@ void ProtoDb::Load(void)
     npc_lily.speed_min = 300;
     npc_lily.speed_max = 600;
     npc_lily.drag = 1.0f;
-    npc_lily.sprite_id = packs[0].FindByName<Sprite>("sprite_npc_lily").id;
+    npc_lily.sprite_id = pack_assets.FindByName<Sprite>("sprite_npc_lily").id;
     npc_lily.direction = DIR_E;
 
     npc_freye.type = Entity::TYP_NPC;
@@ -118,7 +118,7 @@ void ProtoDb::Load(void)
     npc_freye.speed_min = 300;
     npc_freye.speed_max = 600;
     npc_freye.drag = 1.0f;
-    npc_freye.sprite_id = packs[0].FindByName<Sprite>("sprite_npc_freye").id;
+    npc_freye.sprite_id = pack_assets.FindByName<Sprite>("sprite_npc_freye").id;
     npc_freye.direction = DIR_E;
 
     npc_nessa.type = Entity::TYP_NPC;
@@ -131,7 +131,7 @@ void ProtoDb::Load(void)
     npc_nessa.speed_min = 300;
     npc_nessa.speed_max = 600;
     npc_nessa.drag = 1.0f;
-    npc_nessa.sprite_id = packs[0].FindByName<Sprite>("sprite_npc_nessa").id;
+    npc_nessa.sprite_id = pack_assets.FindByName<Sprite>("sprite_npc_nessa").id;
     npc_nessa.direction = DIR_E;
 
     npc_elane.type = Entity::TYP_NPC;
@@ -144,7 +144,7 @@ void ProtoDb::Load(void)
     npc_elane.speed_min = 300;
     npc_elane.speed_max = 600;
     npc_elane.drag = 1.0f;
-    npc_elane.sprite_id = packs[0].FindByName<Sprite>("sprite_npc_elane").id;
+    npc_elane.sprite_id = pack_assets.FindByName<Sprite>("sprite_npc_elane").id;
     npc_elane.direction = DIR_E;
 
     npc_chicken.type = Entity::TYP_NPC;
@@ -158,14 +158,14 @@ void ProtoDb::Load(void)
     npc_chicken.speed_min = 50;
     npc_chicken.speed_max = 150;
     npc_chicken.drag = 1.0f;
-    npc_chicken.sprite_id = packs[0].FindByName<Sprite>("sprite_npc_chicken").id;
+    npc_chicken.sprite_id = pack_assets.FindByName<Sprite>("sprite_npc_chicken").id;
 
     itm_poop.type = Entity::TYP_ITEM;
     itm_poop.spec = Entity::SPC_ITM_NORMAL;
     itm_poop.name = "Chicken Poop";
     itm_poop.radius = 5;
     itm_poop.drag = 1.0f;
-    itm_poop.sprite_id = packs[0].FindByName<Sprite>("sprite_itm_poop").id;
+    itm_poop.sprite_id = pack_assets.FindByName<Sprite>("sprite_itm_poop").id;
 }
 
 Err GameServer::Start(void)
@@ -271,57 +271,6 @@ void GameServer::Stop(void)
     delete entityDb;
 }
 
-Tilemap *GameServer::FindOrLoadMap(uint16_t map_id)
-{
-#if 1
-    // TODO: Go back to assuming it's not already loaded once we figure out packs
-    Tilemap &map = packs[0].FindById<Tilemap>(map_id);
-    if (map.id) {
-        return &map;
-    } else {
-        return 0;
-    }
-#else
-    const auto &mapEntry = mapsByName.find(filename);
-    if (mapEntry != mapsByName.end()) {
-        size_t mapIndex = mapEntry->second;
-        return maps[mapIndex];
-    } else {
-        Err err = RN_SUCCESS;
-        Tilemap *map = new Tilemap();
-        do {
-            if (!map) {
-                printf("Failed to load map %s with code %d\n", filename.c_str(), err);
-                err = RN_BAD_ALLOC;
-                break;
-            }
-
-            err = map->Load(filename);
-            if (err) break;
-
-            map->id = nextMapId++;
-            map->chunkLastUpdatedAt = now;
-            mapsById[map->id] = maps.size();
-            mapsByName[map->name] = maps.size();
-            maps.push_back(map);
-            return map;
-        } while (0);
-
-        if (err) {
-            assert(!"failed to load map, what to do here?");
-            printf("Failed to load map %s with code %d\n", filename.c_str(), err);
-        }
-        return 0;
-    }
-#endif
-}
-Tilemap *GameServer::FindMap(uint16_t map_id)
-{
-    // TODO: Remove this alias and call * directly?
-    auto &tile_map = packs[0].FindById<Tilemap>(map_id);
-    return &tile_map;
-}
-
 Entity *GameServer::SpawnEntity(Entity::Type type)
 {
     uint32_t entityId = nextEntityId++;
@@ -332,9 +281,7 @@ Entity *GameServer::SpawnEntityProto(uint16_t map_id, Vector3 position, EntityPr
 {
     assert(proto.type);
 
-    Tilemap *map = FindMap(map_id);
-    if (!map) return 0;
-
+    Tilemap &map = pack_maps.FindById<Tilemap>(map_id);
     Entity *entity = SpawnEntity(proto.type);
     if (!entity) return 0;
 
@@ -355,7 +302,7 @@ Entity *GameServer::SpawnEntityProto(uint16_t map_id, Vector3 position, EntityPr
     entity->sprite_id            = proto.sprite_id;
     entity->direction            = proto.direction;
 
-    AiPathNode *aiPathNode = map->GetPathNode(entity->path_id, 0);
+    AiPathNode *aiPathNode = map.GetPathNode(entity->path_id, 0);
     if (aiPathNode) {
         entity->position.x = aiPathNode->pos.x;
         entity->position.y = aiPathNode->pos.y;
@@ -388,7 +335,7 @@ Entity *GameServer::SpawnProjectile(uint16_t map_id, Vector3 position, Vector2 d
     projectile->velocity = velocity;
     projectile->drag = 0.02f;
 
-    projectile->sprite_id = packs[0].FindByName<Sprite>("sprite_prj_fireball").id;
+    projectile->sprite_id = pack_assets.FindByName<Sprite>("sprite_prj_fireball").id;
     //projectile->direction = DIR_E;
 
     BroadcastEntitySpawn(projectile->id);
@@ -396,7 +343,7 @@ Entity *GameServer::SpawnProjectile(uint16_t map_id, Vector3 position, Vector2 d
 }
 void GameServer::WarpEntity(Entity &entity, uint16_t dest_map_id, Vector3 dest_pos)
 {
-    Tilemap *dest_map = FindOrLoadMap(dest_map_id);
+    Tilemap *dest_map = pack_maps.FindByIdTry<Tilemap>(dest_map_id);
     if (dest_map) {
         entity.map_id = dest_map->id;
         entity.position = dest_pos;
@@ -410,7 +357,7 @@ void GameServer::WarpEntity(Entity &entity, uint16_t dest_map_id, Vector3 dest_p
                 s_player->needsChunkSync = true;
             }
 
-            Tilemap &map = packs[0].FindById<Tilemap>(entity.map_id);
+            Tilemap &map = pack_maps.FindById<Tilemap>(entity.map_id);
             if (map.title.size()) {
                 int clientIdx = 0;
                 ServerPlayer *player = FindServerPlayer(entity.id, &clientIdx);
@@ -611,7 +558,7 @@ void GameServer::TickSpawnCaveNPCs(uint16_t map_id)
             entity->speed = GetRandomValue(300, 600);
             entity->drag = 8.0f;
 
-            entity->sprite_id = packs[0].FindByName<Sprite>("sprite_npc_lily").id;
+            entity->sprite_id = pack_assets.FindByName<Sprite>("sprite_npc_lily").id;
             //entity->direction = DIR_E;
 
             BroadcastEntitySpawn(entity->id);
@@ -621,8 +568,7 @@ void GameServer::TickSpawnCaveNPCs(uint16_t map_id)
 }
 void GameServer::TickEntityNPC(Entity &e_npc, double dt, double now)
 {
-    Tilemap *map = FindMap(e_npc.map_id);
-    if (!map) return;
+    Tilemap &map = pack_maps.FindById<Tilemap>(e_npc.map_id);
 
     if (now - e_npc.dialog_spawned_at > SV_ENTITY_DIALOG_INTERESTED_DURATION) {
         e_npc.dialog_spawned_at = 0;
@@ -630,7 +576,7 @@ void GameServer::TickEntityNPC(Entity &e_npc, double dt, double now)
 
     // TODO: tick_pathfind?
     if (e_npc.path_id && !e_npc.dialog_spawned_at) {
-        AiPathNode *ai_path_node = map->GetPathNode(e_npc.path_id, e_npc.path_node_target);
+        AiPathNode *ai_path_node = map.GetPathNode(e_npc.path_id, e_npc.path_node_target);
         if (ai_path_node) {
             Vector3 target = ai_path_node->pos;
             Vector3 to_target = Vector3Subtract(target, e_npc.position);
@@ -642,7 +588,7 @@ void GameServer::TickEntityNPC(Entity &e_npc, double dt, double now)
                 }
                 if (now - e_npc.path_node_arrived_at > ai_path_node->waitFor) {
                     // Been at node long enough, move on
-                    e_npc.path_node_target = map->GetNextPathNodeIndex(e_npc.path_id, e_npc.path_node_target);
+                    e_npc.path_node_target = map.GetNextPathNodeIndex(e_npc.path_id, e_npc.path_node_target);
                 }
             } else {
                 e_npc.path_node_last_reached = 0;
@@ -788,13 +734,13 @@ void GameServer::Tick(void)
     TickPlayers();
 
     // TODO: Only do this when the map loads or changes.
-    for (Tilemap &map : packs[0].tile_maps) {
+    for (Tilemap &map : pack_maps.tile_maps) {
         map.Update(now, true);
     }
 
     // HACK: Only spawn NPCs in map 1, whatever map that may be (hopefully it's Level_001)
-    Tilemap &map_overworld = packs[0].FindByName<Tilemap>(MAP_OVERWORLD);
-    Tilemap &map_cave = packs[0].FindByName<Tilemap>(MAP_CAVE);
+    Tilemap &map_overworld = pack_maps.FindByName<Tilemap>(MAP_OVERWORLD);
+    Tilemap &map_cave = pack_maps.FindByName<Tilemap>(MAP_CAVE);
     TickSpawnTownNPCs(map_overworld.id);
     TickSpawnCaveNPCs(map_cave.id);
 
@@ -813,12 +759,10 @@ void GameServer::Tick(void)
             case Entity::TYP_PROJECTILE: TickEntityProjectile (entity, SV_TICK_DT, now); break;
         }
 
-        Tilemap *map = FindMap(entity.map_id);
-        if (map) {
-            map->ResolveEntityCollisionsEdges(entity);
-            map->ResolveEntityCollisionsTriggers(entity);
-            TickResolveEntityWarpCollisions(*map, entity);
-        }
+        Tilemap &map = pack_maps.FindById<Tilemap>(entity.map_id);
+        map.ResolveEntityCollisionsEdges(entity);
+        map.ResolveEntityCollisionsTriggers(entity);
+        TickResolveEntityWarpCollisions(map, entity);
 
         bool newlySpawned = entity.spawned_at == now;
         UpdateSprite(entity, SV_TICK_DT, newlySpawned);
@@ -1172,14 +1116,10 @@ void GameServer::ProcessMsg(int clientIdx, Msg_C_TileInteract &msg)
     // TODO: Check if sv_player is allowed to actually interact with this
     // particular tile. E.g. are they even in the same map as it!?
     // Holding the right tool, proximity, etc.
-    Tilemap *map = FindMap(msg.map_id);
-    if (!map) {
-        // Map not loaded, kick player?
-        return;
-    }
+    Tilemap &map = pack_maps.FindById<Tilemap>(msg.map_id);
 
     Tilemap::Coord player_coord{};
-    if (!map->WorldToTileIndex(e_player->position.x, e_player->position.y, player_coord)) {
+    if (!map.WorldToTileIndex(e_player->position.x, e_player->position.y, player_coord)) {
         // Player somehow not on a tile!? Server error!?!?
         assert(!"player outside of map, wot?");
         return;
@@ -1203,23 +1143,23 @@ void GameServer::ProcessMsg(int clientIdx, Msg_C_TileInteract &msg)
     }
 
     uint16_t tile_id{};
-    if (!map->AtTry(TILE_LAYER_GROUND, msg.x, msg.y, tile_id)) {
+    if (!map.AtTry(TILE_LAYER_GROUND, msg.x, msg.y, tile_id)) {
         assert(!"not a valid tile coordinate");
         return;
     }
 
-    //uint16_t object_id = map->At_Obj(msg.x, msg.y);
-    ObjectData *obj_data = map->GetObjectData(msg.x, msg.y);
+    //uint16_t object_id = map.At_Obj(msg.x, msg.y);
+    ObjectData *obj_data = map.GetObjectData(msg.x, msg.y);
 
     if (msg.primary == false && obj_data) {
         if (obj_data->type == OBJ_LEVER) {
             if (obj_data->power_level) {
                 obj_data->power_level = 0;
-                map->Set(TILE_LAYER_OBJECT, msg.x, msg.y, obj_data->tile_def, now);
+                map.Set(TILE_LAYER_OBJECT, msg.x, msg.y, obj_data->tile_def, now);
                 printf("lever off\n");
             } else {
                 obj_data->power_level = 1;
-                map->Set(TILE_LAYER_OBJECT, msg.x, msg.y, obj_data->tile_def_powered, now);
+                map.Set(TILE_LAYER_OBJECT, msg.x, msg.y, obj_data->tile_def_powered, now);
                 printf("lever on\n");
             }
             //BroadcastTileUpdate(*map, msg.x, msg.y);  // dirty should handle this
@@ -1228,7 +1168,7 @@ void GameServer::ProcessMsg(int clientIdx, Msg_C_TileInteract &msg)
         } else if (obj_data->type == OBJ_SIGN) {
             SendEntitySay(clientIdx, player.entityId, 0, "Sign", obj_data->sign_text.c_str());
         } else if (obj_data->type == OBJ_WARP) {
-            Tilemap &map = packs[0].FindById<Tilemap>(obj_data->warp_map_id);
+            Tilemap &map = pack_maps.FindById<Tilemap>(obj_data->warp_map_id);
             const char *warpInfo = TextFormat("%s (%u, %u)",
                 map.name.c_str(),
                 obj_data->warp_dest_x,
@@ -1237,7 +1177,7 @@ void GameServer::ProcessMsg(int clientIdx, Msg_C_TileInteract &msg)
             SendEntitySay(clientIdx, player.entityId, 0, "Warp", warpInfo);
         }
     } else if (msg.primary) {
-        const TileDef &tile_def = map->GetTileDef(tile_id);
+        const TileDef &tile_def = map.GetTileDef(tile_id);
         const char *new_tile_def_name = 0;
         if (tile_def.name == "til_water_dark") {
             new_tile_def_name = "til_stone_path";
@@ -1246,11 +1186,11 @@ void GameServer::ProcessMsg(int clientIdx, Msg_C_TileInteract &msg)
         }
 
         if (new_tile_def_name) {
-            const TileDef &new_tile_def = packs[0].FindByName<TileDef>(new_tile_def_name);
+            const TileDef &new_tile_def = pack_assets.FindByName<TileDef>(new_tile_def_name);
             // TODO(perf): Make some kind of map from string -> tile_def_index in the map?
             // * OR * make the maps all have global tile def ids instead of local tile def ids
             if (new_tile_def.id) {
-                map->Set(TILE_LAYER_GROUND, msg.x, msg.y, new_tile_def.id, now);
+                map.Set(TILE_LAYER_GROUND, msg.x, msg.y, new_tile_def.id, now);
             }
         }
     }
@@ -1316,12 +1256,7 @@ void GameServer::SendClientSnapshots(void)
             continue;
         }
 
-        Tilemap *map = FindMap(entity->map_id);
-        if (!map) {
-            assert(0);
-            printf("[game_server] could not find client id %d's entity id %u's map. cannot send snapshots\n", clientIdx, serverPlayer.entityId);
-            continue;
-        }
+        Tilemap &map = pack_maps.FindById<Tilemap>(entity->map_id);
 
         const bool fullSnapshot = serverPlayer.joinedAt == now;
 
@@ -1337,14 +1272,14 @@ void GameServer::SendClientSnapshots(void)
                 }
             }
 #else
-            SendTileChunk(clientIdx, *map, 0, 0);
+            SendTileChunk(clientIdx, map, 0, 0);
             serverPlayer.needsChunkSync = false;
-            printf("[game_server] sending map '%s' chunk to client\n", map->title.c_str());
+            printf("[game_server] sending map '%s' chunk to client\n", map.title.c_str());
 #endif
         }
 
-        for (const Tilemap::Coord &coord : map->dirtyTiles) {
-            SendTileUpdate(clientIdx, *map, coord.x, coord.y);
+        for (const Tilemap::Coord &coord : map.dirtyTiles) {
+            SendTileUpdate(clientIdx, map, coord.x, coord.y);
         }
 
         // TODO: Send only the world state that's relevant to this particular client
@@ -1384,7 +1319,7 @@ void GameServer::SendClientSnapshots(void)
         }
     }
 
-    for (Tilemap &map : packs[0].tile_maps) {
+    for (Tilemap &map : pack_maps.tile_maps) {
         map.dirtyTiles.clear();
     }
 }

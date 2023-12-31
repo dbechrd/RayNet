@@ -10,14 +10,8 @@ struct GameState {
 };
 GameState game_state;
 
-Pack packs[PACK_ID_COUNT]{
-    { "assets" },
-#if SV_SERVER
-    { "maps/overworld" },
-    { "maps/cave" },
-    { "maps/freya_house" },
-#endif
-};
+Pack pack_assets{ "assets" };
+Pack pack_maps{ "maps" };
 
 Shader shdSdfText;
 Shader shdPixelFixer;
@@ -203,25 +197,23 @@ Err Init(void)
     {
         PerfTimer t{ "Build pack files" };
 
-        Pack packsToBuild[PACK_ID_COUNT]{
-            { "assets" },
+        Pack buildAssets{ "assets" };
+        ERR_RETURN(LoadPack(buildAssets, PACK_TYPE_TEXT));
+        ERR_RETURN(SavePack(buildAssets, PACK_TYPE_BINARY));
 #if SV_SERVER
-            { "maps/overworld" },
-            { "maps/cave" },
-            { "maps/freya_house" },
+        Pack buildMaps{ "maps" };
+        ERR_RETURN(LoadPack(buildMaps, PACK_TYPE_TEXT));
+        ERR_RETURN(SavePack(buildMaps, PACK_TYPE_BINARY));
 #endif
-        };
-        for (Pack &pack : packsToBuild) {
-            ERR_RETURN(LoadPack(pack, PACK_TYPE_TEXT));
-            ERR_RETURN(SavePack(pack, PACK_TYPE_BINARY));
-        }
     }
 #endif
 
-    for (Pack &pack : packs) {
-        ERR_RETURN(LoadPack(pack, PACK_TYPE_BINARY, pack.GetPath(PACK_TYPE_BINARY)));
-        ERR_RETURN(LoadResources(pack));
-    }
+    ERR_RETURN(LoadPack(pack_assets, PACK_TYPE_BINARY));
+    ERR_RETURN(LoadResources(pack_assets));
+#if SV_SERVER
+    ERR_RETURN(LoadPack(pack_maps, PACK_TYPE_BINARY));
+    ERR_RETURN(LoadResources(pack_maps));
+#endif
 
 #if 0
     // TODO: make dlb_CompressFile and Use LZ4 instead if we want to do this.
@@ -275,7 +267,7 @@ const SfxVariant &PickSoundVariant(const SfxFile &sfx_file)
 
 void PlaySound(const std::string &id, float pitchVariance)
 {
-    const SfxFile &sfx_file = packs[0].FindByName<SfxFile>(id);
+    const SfxFile &sfx_file = pack_assets.FindByName<SfxFile>(id);
     const SfxVariant &sfx_variant = PickSoundVariant(sfx_file);
     assert(sfx_variant.instances.size() == sfx_file.max_instances);
 
@@ -291,7 +283,7 @@ void PlaySound(const std::string &id, float pitchVariance)
 }
 bool IsSoundPlaying(const std::string &id)
 {
-    const SfxFile &sfx_file = packs[0].FindByName<SfxFile>(id);
+    const SfxFile &sfx_file = pack_assets.FindByName<SfxFile>(id);
     const SfxVariant &sfx_variant = PickSoundVariant(sfx_file);
     assert(sfx_variant.instances.size() == sfx_file.max_instances);
 
@@ -304,7 +296,7 @@ bool IsSoundPlaying(const std::string &id)
 }
 void StopSound(const std::string &id)
 {
-    const SfxFile &sfx_file = packs[0].FindByName<SfxFile>(id);
+    const SfxFile &sfx_file = pack_assets.FindByName<SfxFile>(id);
     const SfxVariant &sfx_variant = PickSoundVariant(sfx_file);
     assert(sfx_variant.instances.size() == sfx_file.max_instances);
 
@@ -344,19 +336,19 @@ void UpdateSprite(Entity &entity, double dt, bool newlySpawned)
         }
     }
 
-    const Sprite &sprite = packs[0].FindById<Sprite>(entity.sprite_id);
-    const GfxAnim &anim = packs[0].FindByName<GfxAnim>(sprite.anims[entity.direction]);
+    const Sprite &sprite = pack_assets.FindById<Sprite>(entity.sprite_id);
+    const GfxAnim &anim = pack_assets.FindByName<GfxAnim>(sprite.anims[entity.direction]);
     UpdateGfxAnim(anim, dt, entity.anim_state);
 
     if (newlySpawned && anim.sound != "null") {
-        const SfxFile &sfx_file = packs[0].FindByName<SfxFile>(anim.sound);
+        const SfxFile &sfx_file = pack_assets.FindByName<SfxFile>(anim.sound);
         PlaySound(sfx_file.name);  // TODO: Play by id instead
     }
 }
 void ResetSprite(Entity &entity)
 {
-    const Sprite &sprite = packs[0].FindById<Sprite>(entity.sprite_id);
-    GfxAnim &anim = packs[0].FindByName<GfxAnim>(sprite.anims[entity.direction]);
+    const Sprite &sprite = pack_assets.FindById<Sprite>(entity.sprite_id);
+    GfxAnim &anim = pack_assets.FindByName<GfxAnim>(sprite.anims[entity.direction]);
     StopSound(anim.sound);
 
     entity.anim_state.frame = 0;
@@ -365,7 +357,7 @@ void ResetSprite(Entity &entity)
 void DrawSprite(const Entity &entity, DrawCmdQueue *sortedDraws, bool highlight)
 {
     const GfxFrame &frame = entity.GetSpriteFrame();
-    const GfxFile &gfx_file = packs[0].FindByName<GfxFile>(frame.gfx);
+    const GfxFile &gfx_file = pack_assets.FindByName<GfxFile>(frame.gfx);
 
     Rectangle sprite_rect = entity.GetSpriteRect();
     Vector3 pos = { sprite_rect.x, sprite_rect.y };
@@ -396,8 +388,8 @@ void DrawSprite(const Entity &entity, DrawCmdQueue *sortedDraws, bool highlight)
 
 void UpdateTileDefAnimations(double dt)
 {
-    for (TileDef &tile_def : packs[0].tile_defs) {
-        const GfxAnim &anim = packs[0].FindByName<GfxAnim>(tile_def.anim);
+    for (TileDef &tile_def : pack_assets.tile_defs) {
+        const GfxAnim &anim = pack_assets.FindByName<GfxAnim>(tile_def.anim);
         UpdateGfxAnim(anim, dt, tile_def.anim_state);
     }
 }
