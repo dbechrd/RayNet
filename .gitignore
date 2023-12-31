@@ -1,6 +1,7 @@
 ## RayNet ignores
 
 bin/maps/*.bak
+bin/pack/**/*.dat
 bin/*.exe
 bin/pack/*.dat
 bin/resources/music/copyright/

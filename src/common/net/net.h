@@ -313,6 +313,8 @@ struct Msg_S_EntitySpawn : public yojimbo::Message
 struct Msg_S_TileChunk : public yojimbo::BlockMessage
 {
     uint16_t map_id    {};
+    uint16_t map_w     {};
+    uint16_t map_h     {};
     uint16_t x         {};
     uint16_t y         {};
     uint16_t w         {};
@@ -323,6 +325,8 @@ struct Msg_S_TileChunk : public yojimbo::BlockMessage
     template <typename Stream> bool Serialize(Stream &stream)
     {
         serialize_uint16(stream, map_id);
+        serialize_uint16(stream, map_w);
+        serialize_uint16(stream, map_h);
         serialize_uint16(stream, x);
         serialize_uint16(stream, y);
         serialize_uint16(stream, w);

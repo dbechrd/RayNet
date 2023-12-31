@@ -16,7 +16,6 @@ enum Direction : uint8_t {
 
 // Best rap song: "i added it outta habit" by dandymcgee
 
-
 struct GhostSnapshot {
     double   server_time {};
 

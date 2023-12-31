@@ -961,6 +961,8 @@ void GameServer::SendTileChunk(int clientIdx, Tilemap &map, uint16_t x, uint16_t
         Msg_S_TileChunk *msg = (Msg_S_TileChunk *)yj_server->CreateMessage(clientIdx, MSG_S_TILE_CHUNK);
         if (msg) {
             msg->map_id = map.id;
+            msg->map_w = map.width;
+            msg->map_h = map.height;
             msg->x = x;
             msg->y = y;
             msg->w = MIN(map.width, SV_MAX_TILE_CHUNK_WIDTH);

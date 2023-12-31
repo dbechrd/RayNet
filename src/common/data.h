@@ -181,7 +181,7 @@ struct TileMat {
 
 ////////////////////////////////////////////////////////////////////////////
 
-// DO NOT re-order these! They are hard-coded pack files
+// DO NOT re-order these! They are hard-coded in pack files
 enum ObjType {
     OBJ_NONE     = 0,
     OBJ_DECOR    = 1,
@@ -284,5 +284,14 @@ extern Font fntSmall;
 extern Font fntMedium;
 extern Font fntBig;
 
-// Assets
-extern std::vector<Pack> packs;
+// Packs
+enum {
+    PACK_ASSETS,
+#if SV_SERVER
+    PACK_SV_MAP_OVERWORLD,
+    PACK_SV_MAP_CAVE,
+    PACK_SV_MAP_FREYA_HOUSE,
+#endif
+    PACK_ID_COUNT
+};
+extern Pack packs[PACK_ID_COUNT];

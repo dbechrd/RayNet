@@ -10,7 +10,14 @@ struct GameState {
 };
 GameState game_state;
 
-std::vector<Pack> packs;
+Pack packs[PACK_ID_COUNT]{
+    { "assets" },
+#if SV_SERVER
+    { "maps/overworld" },
+    { "maps/cave" },
+    { "maps/freya_house" },
+#endif
+};
 
 Shader shdSdfText;
 Shader shdPixelFixer;
@@ -196,15 +203,20 @@ Err Init(void)
     {
         PerfTimer t{ "Build pack files" };
 
-        Pack packAssets{ "assets" };
-        ERR_RETURN(LoadPack(packAssets, PACK_TYPE_TEXT));
-        //PackDebugPrint(packAssets);
-
-        ERR_RETURN(SavePack(packAssets, PACK_TYPE_BINARY));
+        Pack packsToBuild[PACK_ID_COUNT]{
+            { "assets" },
+#if SV_SERVER
+            { "maps/overworld" },
+            { "maps/cave" },
+            { "maps/freya_house" },
+#endif
+        };
+        for (Pack &pack : packsToBuild) {
+            ERR_RETURN(LoadPack(pack, PACK_TYPE_TEXT));
+            ERR_RETURN(SavePack(pack, PACK_TYPE_BINARY));
+        }
     }
 #endif
-
-    packs.emplace_back("assets");
 
     for (Pack &pack : packs) {
         ERR_RETURN(LoadPack(pack, PACK_TYPE_BINARY, pack.GetPath(PACK_TYPE_BINARY)));
@@ -212,6 +224,7 @@ Err Init(void)
     }
 
 #if 0
+    // TODO: make dlb_CompressFile and Use LZ4 instead if we want to do this.
     CompressFile("pack/assets.dat", "pack/assets.smol");
 #endif
 

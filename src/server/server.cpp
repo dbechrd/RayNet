@@ -8,6 +8,8 @@
 #include "f3_menu.h"
 #include "game_server.h"
 
+const bool IS_SERVER = true;
+
 void RN_TraceLogCallback(int logLevel, const char *text, va_list args)
 {
     //return;

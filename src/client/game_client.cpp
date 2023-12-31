@@ -174,6 +174,18 @@ void GameClient::ProcessMsg(Msg_S_TileChunk &msg)
     Tilemap *map = world->FindOrLoadMap(msg.map_id);
     if (map) {
         if (map->id = msg.map_id) {
+            if (!map->width) {
+                map->width = msg.map_w;
+                map->height = msg.map_h;
+                for (int layer = 0; layer < TILE_LAYER_COUNT; layer++) {
+                    map->layers[layer].resize(map->width * map->height);
+                }
+            } else {
+                // map changed size.. uhhhh wot?
+                assert(map->width == msg.map_w);
+                assert(map->height == msg.map_h);
+            }
+
             //printf("Receiving tile chunk, (beeg %d, smol %d)\n", msg.beeg_size, msg.smol_size);
 
             int block_size = msg.GetBlockSize();

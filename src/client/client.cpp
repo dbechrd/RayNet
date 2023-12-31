@@ -11,6 +11,8 @@
 #include "menu.h"
 #include "todo.h"
 
+const bool IS_SERVER = false;
+
 void draw_f3_menu(GameClient &client)
 {
     IO::Scoped scope(IO::IO_F3Menu);
@@ -163,11 +165,14 @@ int main(int argc, char *argv[])
 
     // HACK: Fix this..
     for (Tilemap &map : packs[0].tile_maps) {
+        map = {};
+#if 0
         for (auto &layer : map.layers) {
             for (auto &tile : layer) {
                 tile = 0;
             }
         }
+#endif
     }
 
     Image icon = LoadImage("../res/client.png");
