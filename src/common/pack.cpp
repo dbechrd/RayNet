@@ -465,12 +465,12 @@ Err Process(PackStream &stream)
             #define HAQ_TXT_DOC_COMMENT_FIELD(c_type, c_name, c_init, flags, condition, userdata) \
                 if constexpr ((flags) & HAQ_SERIALIZE) { \
                     if (condition) { \
-                        fprintf(stream.file, "%s ", #c_name); \
+                        fprintf(stream.file, " %s", #c_name); \
                     } \
                 }
 
             #define HAQ_TXT_DOC_COMMENT(c_type_name, hqt_fields) \
-                fprintf(stream.file, "\n# %s ", #c_type_name); \
+                fprintf(stream.file, "\n# %s", #c_type_name); \
                 hqt_fields(HAQ_TXT_DOC_COMMENT_FIELD, 0); \
                 fprintf(stream.file, "\n");
 

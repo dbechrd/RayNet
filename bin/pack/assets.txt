@@ -281,5 +281,7 @@
 7 4 "mat_grass" "sfx_footstep_grass"
 7 5 "mat_wood" "sfx_footstep_wood"
 
+# Tilemap version id name width height title bg_music layers object_data path_nodes paths
+
 # EOF marker
 -1
