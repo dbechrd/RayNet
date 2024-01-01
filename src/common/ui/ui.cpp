@@ -556,7 +556,8 @@ UIState UI::Textbox(uint32_t ctrlid, std::string &text, bool multiline, KeyPreCa
 
     Vector2 contentSize = style.size;
     if (contentSize.x <= 0 || contentSize.y <= 0) {
-        Vector2 textSize = dlb_MeasureTextEx(*style.font, CSTRS(text));
+        const std::string &tmp = text.size() ? text : " ";
+        Vector2 textSize = dlb_MeasureTextEx(*style.font, CSTRS(tmp));
         if (contentSize.x <= 0) {
             contentSize.x = textSize.x;
         }
@@ -1150,7 +1151,7 @@ void UI::HAQFieldEditor(uint32_t ctrlid, const std::string &name, ObjType &value
     const float typeStrSpace = typeStrWidth + pad + margin;
     HAQFieldEditor(__COUNTER__, "", vint, flags, labelWidth + typeStrSpace);
 
-    value = (ObjType)CLAMP(vint, 0, OBJ_COUNT - 1);
+    value = (ObjType)CLAMP(vint, 1, OBJ_COUNT - 1);
 }
 
 template <typename T>

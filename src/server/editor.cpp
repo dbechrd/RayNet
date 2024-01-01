@@ -920,15 +920,31 @@ void Editor::DrawUI_TileActions(UI &uiActionBar, double now)
 void Editor::DrawUI_ObjectActions(UI &uiActionBar, double now)
 {
     auto &map = pack_maps.FindById<Tilemap>(map_id);
-    ObjectData *obj_data = map.GetObjectData(state.objects.selected_coord.x, state.objects.selected_coord.y);
-    if (!obj_data) {
-        uiActionBar.Label("Select an object");
-        return;
+    Tilemap::Coord coord = state.objects.selected_coord;
+    ObjectData *obj_data = map.GetObjectData(coord.x, coord.y);
+    if (obj_data) {
+        uiActionBar.Label("Object Data");
+        uiActionBar.Newline();
+        uiActionBar.HAQField(__COUNTER__, "", *obj_data, HAQ_EDIT, 100);
+    } else {
+        uiActionBar.Label("Create object:");
+        uiActionBar.Newline();
+        int create_type = 0;
+        for (int i = 1; i < OBJ_COUNT; i++) {
+            if (uiActionBar.Button(ObjTypeStr((ObjType)i)).pressed) {
+                create_type = i;
+            }
+            uiActionBar.Newline();
+        }
+        if (create_type) {
+            ObjectData obj{};
+            obj.type = (ObjType)create_type;
+            obj.x = coord.x;
+            obj.y = coord.y;
+            obj.tile = ObjTypeTileDefId(obj.type);
+            map.object_data.push_back(obj);
+        }
     }
-
-    uiActionBar.Label("Object Data");
-    uiActionBar.Newline();
-    uiActionBar.HAQField(__COUNTER__, "", *obj_data, HAQ_EDIT, 100);
 }
 void DrawRectangleRectOffset(const Rectangle &rect, Vector2 &offset, Color color)
 {

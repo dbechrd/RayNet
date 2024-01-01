@@ -75,18 +75,31 @@
 #define CSTRS(x) (x).data(), (x).size()
 #define STRSTR(x) STR(x)
 
+// Value
 #define ENUM_V_VALUE(v) v,
+// Value, Desc
 #define ENUM_VD_VALUE(v, d) v,
-#define ENUM_V_CASE_RETURN_VSTR(v) case v: return #v;
-#define ENUM_VD_CASE_RETURN_VSTR(v, d) case v: return #v;
-#define ENUM_VN_CASE_RETURN_VSTR(v, ns) case v: return #v;
-#define ENUM_VD_CASE_RETURN_DESC(v, d) case v: return d;
+// Value, Desc, Meta
+#define ENUM_VDM_VALUE(v, d, m) v,
+
+#define ENUM_V_CASE_RETURN_VSTR(v, ...) case v: return #v;
+#define ENUM_VD_CASE_RETURN_DESC(v, d, ...) case v: return d;
+#define ENUM_VDM_CASE_RETURN_META(v, d, m) case v: return m;
+
 #define ENUM_STR_CONVERTER(name, type, enumDef, enumGen) \
     const char *name(type id) {          \
         switch (id) {                    \
             enumDef(enumGen)             \
             default: return "<unknown>"; \
         }                                \
+    }
+
+#define ENUM_META_CONVERTER(name, type, enumDef, enumGen, retType, retDefault) \
+    retType name(type id) {             \
+        switch (id) {                   \
+            enumDef(enumGen)            \
+            default: return retDefault; \
+        }                               \
     }
 
 // Custom colors

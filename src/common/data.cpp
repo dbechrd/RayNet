@@ -5,6 +5,7 @@
 
 ENUM_STR_CONVERTER(DataTypeStr, DataType, DATA_TYPES, ENUM_VD_CASE_RETURN_DESC);
 ENUM_STR_CONVERTER(ObjTypeStr, ObjType, OBJ_TYPES, ENUM_VD_CASE_RETURN_DESC);
+ENUM_META_CONVERTER(ObjTypeTileDefId, ObjType, OBJ_TYPES, ENUM_VDM_CASE_RETURN_META, uint16_t, 0);
 
 struct GameState {
     bool freye_introduced;
