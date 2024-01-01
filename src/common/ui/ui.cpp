@@ -1135,6 +1135,24 @@ void UI::HAQFieldEditor(uint32_t ctrlid, const std::string &name, TileDef::Flags
     value = (TileDef::Flags)bitflags;
 }
 
+void UI::HAQFieldEditor(uint32_t ctrlid, const std::string &name, ObjType &value, int flags, int labelWidth)
+{
+    uint32_t vint = value;
+    const float typeStrWidth = 80;
+
+    PushWidth(typeStrWidth);
+    UIState typeText = Text(ObjTypeStr(value));
+    PopStyle();
+
+    const UIStyle &style = GetStyle();
+    const float pad = style.pad.left + style.pad.right;
+    const float margin = style.margin.left + style.margin.right;
+    const float typeStrSpace = typeStrWidth + pad + margin;
+    HAQFieldEditor(__COUNTER__, "", vint, flags, labelWidth + typeStrSpace);
+
+    value = (ObjType)CLAMP(vint, 0, OBJ_COUNT - 1);
+}
+
 template <typename T>
 void UI::HAQField(uint32_t ctrlid, const std::string &name, T &value, int flags, int labelWidth)
 {

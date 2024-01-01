@@ -4,6 +4,7 @@
 #include "perf_timer.h"
 
 ENUM_STR_CONVERTER(DataTypeStr, DataType, DATA_TYPES, ENUM_VD_CASE_RETURN_DESC);
+ENUM_STR_CONVERTER(ObjTypeStr, ObjType, OBJ_TYPES, ENUM_VD_CASE_RETURN_DESC);
 
 struct GameState {
     bool freye_introduced;

@@ -193,15 +193,21 @@ struct TileMat {
 ////////////////////////////////////////////////////////////////////////////
 
 // DO NOT re-order these! They are hard-coded in pack files
+#define OBJ_TYPES(gen) \
+    gen(OBJ_NONE    , "<none>")   \
+    gen(OBJ_DECOR   , "Decor")    \
+    gen(OBJ_LEVER   , "Lever")    \
+    gen(OBJ_DOOR    , "Door")     \
+    gen(OBJ_LOOTABLE, "Lootable") \
+    gen(OBJ_SIGN    , "Sign")     \
+    gen(OBJ_WARP    , "Warp")     \
+    gen(OBJ_COUNT   , "<count>")
+
 enum ObjType {
-    OBJ_NONE     = 0,
-    OBJ_DECOR    = 1,
-    OBJ_LEVER    = 2,
-    OBJ_DOOR     = 3,
-    OBJ_LOOTABLE = 4,
-    OBJ_SIGN     = 5,
-    OBJ_WARP     = 6,
+    OBJ_TYPES(ENUM_VD_VALUE)
 };
+
+const char *ObjTypeStr(ObjType type);
 
 struct ObjectData {
 #define HQT_OBJECT_DATA_FIELDS(FIELD, udata)                                                                                       \

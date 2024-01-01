@@ -174,6 +174,7 @@ private:
     template <typename T>
     void HAQFieldEditor(uint32_t ctrlid, const std::string &name, T &value, int flags, int labelWidth);
     void HAQFieldEditor(uint32_t ctrlid, const std::string &name, TileDef::Flags &value, int flags, int labelWidth);
+    void HAQFieldEditor(uint32_t ctrlid, const std::string &name, ObjType &value, int flags, int labelWidth);
 };
 
 extern void LimitStringLength(std::string &str, void *userData);
