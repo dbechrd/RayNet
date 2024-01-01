@@ -620,10 +620,8 @@ UIState Editor::DrawUI_ActionBar(Vector2 position, double now)
     if (openRequest.size()) {
         Tilemap *openedMap = server.FindOrLoadMap(openRequest);
         if (!openedMap) {
-            std::thread errorThread([]{
-                const char *msg = TextFormat("Failed to load file %s.\n", openRequest);
-                tinyfd_messageBox("Error", msg, "ok", "error", 1);
-            });
+            const std::string &msg = TextFormat("Failed to load file %s.\n", openRequest);
+            std::thread errorThread([msg]{ tinyfd_messageBox("Error", msg.data(), "ok", "error", 1); });
             errorThread.detach();
         }
         openRequest.clear();
@@ -631,46 +629,71 @@ UIState Editor::DrawUI_ActionBar(Vector2 position, double now)
 #endif
     UIState saveButton = uiActionBar.Button("Save");
     if (saveButton.released) {
-        std::string path = pack_assets.GetPath(PACK_TYPE_TEXT);
-        Err err = SavePack(pack_assets, PACK_TYPE_TEXT);
-        if (err) {
-            std::thread errorThread([path, err]{
-                const char *msg = TextFormat("Failed to save file %s. %s\n", path.c_str(), ErrStr(err));
-                tinyfd_messageBox("Error", msg, "ok", "error", 1);
-            });
-            errorThread.detach();
+        {
+            std::string path = pack_assets.GetPath(PACK_TYPE_TEXT);
+            Err err = SavePack(pack_assets, PACK_TYPE_TEXT);
+            if (err) {
+                const std::string &msg = TextFormat("Failed to save file %s. %s\n", path.c_str(), ErrStr(err));
+                std::thread errorThread([msg]{ tinyfd_messageBox("Error", msg.data(), "ok", "error", 1); });
+                errorThread.detach();
+            }
+        }
+        {
+            std::string path = pack_maps.GetPath(PACK_TYPE_TEXT);
+            Err err = SavePack(pack_maps, PACK_TYPE_TEXT);
+            if (err) {
+                const std::string &msg = TextFormat("Failed to save file %s. %s\n", path.c_str(), ErrStr(err));
+                std::thread errorThread([msg]{ tinyfd_messageBox("Error", msg.data(), "ok", "error", 1); });
+                errorThread.detach();
+            }
         }
     }
 
-    UIState saveAsButton = uiActionBar.Button("Save As");
+    UIState saveAsButton = uiActionBar.Button("Save As", GRAY);
+#if 0
     if (saveAsButton.released) {
-        std::string path = pack_assets.GetPath(PACK_TYPE_TEXT);
-        std::thread saveAsThread([path, mapFileFilter]{
-            const char *saveAsRequestBuf = tinyfd_saveFileDialog(
-                "Save File",
-                path.c_str(),
-                ARRAY_SIZE(mapFileFilter),
-                mapFileFilter,
-                "RayNet Pack (*.dat)");
-            if (saveAsRequestBuf) saveAsRequest = saveAsRequestBuf;
-        });
-        saveAsThread.detach();
+        {
+            std::string path = pack_assets.GetPath(PACK_TYPE_TEXT);
+            std::thread saveAsThread([path, mapFileFilter]{
+                const char *saveAsRequestBuf = tinyfd_saveFileDialog(
+                    "Save File",
+                    path.c_str(),
+                    ARRAY_SIZE(mapFileFilter),
+                    mapFileFilter,
+                    "RayNet Pack (*.dat)");
+                if (saveAsRequestBuf) saveAsRequest = saveAsRequestBuf;
+            });
+            saveAsThread.detach();
+        }
+        {
+            std::string path = pack_maps.GetPath(PACK_TYPE_TEXT);
+            std::thread saveAsThread([path, mapFileFilter]{
+                const char *saveAsRequestBuf = tinyfd_saveFileDialog(
+                    "Save File",
+                    path.c_str(),
+                    ARRAY_SIZE(mapFileFilter),
+                    mapFileFilter,
+                    "RayNet Pack (*.dat)");
+                // HACK(dlb): This doesn't work we would need a temp buffer per pack name.
+                assert(!"NOPE"); if (saveAsRequestBuf) saveAsRequest = saveAsRequestBuf;
+            });
+            saveAsThread.detach();
+        }
     }
     if (saveAsRequest.size()) {
         Err err = SavePack(pack_assets, PACK_TYPE_TEXT, saveAsRequest);
         if (err) {
-            std::thread errorThread([err]{
-                const char *msg = TextFormat("Failed to save file %s. %s\n", saveAsRequest.c_str(), ErrStr(err));
-                tinyfd_messageBox("Error", msg, "ok", "error", 1);
-            });
+            const std::string &msg = TextFormat("Failed to save file %s. %s\n", saveAsRequest.c_str(), ErrStr(err));
+            std::thread errorThread([msg]{ tinyfd_messageBox("Error", msg.data(), "ok", "error", 1); });
             errorThread.detach();
         }
         saveAsRequest.clear();
     }
+#endif
 
-    UIState reloadButton = uiActionBar.Button("Reload");
-    if (reloadButton.released) {
+    UIState reloadButton = uiActionBar.Button("Reload", GRAY);
 #if 0
+    if (reloadButton.released) {
         // TODO: Probably want to be able to just reload the map, not *everything* right? Hmm..
         Pack reload_pack{ "packs/assets.dat" };
         LoadPack(reload_pack, PACK_TYPE_BINARY);
@@ -687,14 +710,12 @@ UIState Editor::DrawUI_ActionBar(Vector2 position, double now)
 
         if (err) {
             std::string filename = "resources/map/" + map.name + ".mdesk";
-            std::thread errorThread([filename, err]{
-                const char *msg = TextFormat("Failed to reload file %s. %s\n", filename.c_str(), ErrStr(err));
-                tinyfd_messageBox("Error", msg, "ok", "error", 1);
-            });
+            const std::string &msg = TextFormat("Failed to reload file %s. %s\n", filename.c_str(), ErrStr(err));
+            std::thread errorThread([msg]{ tinyfd_messageBox("Error", msg.data(), "ok", "error", 1); });
             errorThread.detach();
         }
-#endif
     }
+#endif
     uiActionBar.Newline();
 
     UIState mapPath = uiActionBar.Text(GetFileName(map.name.c_str()), WHITE);
