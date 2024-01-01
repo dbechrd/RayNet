@@ -738,7 +738,7 @@ void GameServer::Tick(void)
         map.Update(now, true);
     }
 
-    // HACK: Only spawn NPCs in map 1, whatever map that may be (hopefully it's Level_001)
+    // HACK: This should be something the map can handle by itself (e.g. Objects in map that act as spawner?)
     Tilemap &map_overworld = pack_maps.FindByName<Tilemap>(MAP_OVERWORLD);
     Tilemap &map_cave = pack_maps.FindByName<Tilemap>(MAP_CAVE);
     TickSpawnTownNPCs(map_overworld.id);
@@ -1155,11 +1155,11 @@ void GameServer::ProcessMsg(int clientIdx, Msg_C_TileInteract &msg)
         if (obj_data->type == OBJ_LEVER) {
             if (obj_data->power_level) {
                 obj_data->power_level = 0;
-                map.Set(TILE_LAYER_OBJECT, msg.x, msg.y, obj_data->tile_def, now);
+                map.Set(TILE_LAYER_OBJECT, msg.x, msg.y, obj_data->tile, now);
                 printf("lever off\n");
             } else {
                 obj_data->power_level = 1;
-                map.Set(TILE_LAYER_OBJECT, msg.x, msg.y, obj_data->tile_def_powered, now);
+                map.Set(TILE_LAYER_OBJECT, msg.x, msg.y, obj_data->tile_powered, now);
                 printf("lever on\n");
             }
             //BroadcastTileUpdate(*map, msg.x, msg.y);  // dirty should handle this
@@ -1187,8 +1187,6 @@ void GameServer::ProcessMsg(int clientIdx, Msg_C_TileInteract &msg)
 
         if (new_tile_def_name) {
             const TileDef &new_tile_def = pack_assets.FindByName<TileDef>(new_tile_def_name);
-            // TODO(perf): Make some kind of map from string -> tile_def_index in the map?
-            // * OR * make the maps all have global tile def ids instead of local tile def ids
             if (new_tile_def.id) {
                 map.Set(TILE_LAYER_GROUND, msg.x, msg.y, new_tile_def.id, now);
             }

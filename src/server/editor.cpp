@@ -15,13 +15,14 @@ const char *EditModeStr(EditMode mode)
     switch (mode) {
         case EditMode_Maps:      return "Maps";
         case EditMode_Tiles:     return "Tiles";
+        case EditMode_Objects:   return "Objects";
         case EditMode_Wang:      return "Wang";
         case EditMode_Paths:     return "Paths";
         case EditMode_Dialog:    return "Dialog";
         case EditMode_Entities:  return "Entities";
         case EditMode_PackFiles: return "Pack";
         case EditMode_Debug:     return "Debug";
-        default: return "<null>";
+        default: assert(!"unhandled mode"); return "<null>";
     }
 }
 
@@ -84,21 +85,10 @@ void Editor::DrawGroundOverlays(Camera2D &camera, double now)
 
     if (active) {
         switch (mode) {
-            case EditMode_Tiles: {
-                DrawGroundOverlay_Tiles(camera, now);
-                break;
-            }
-            case EditMode_Wang: {
-                DrawGroundOverlay_Wang(camera, now);
-                break;
-            }
-            case EditMode_Paths: {
-                DrawGroundOverlay_Paths(camera, now);
-                break;
-            }
-            case EditMode_Entities: {
-                break;
-            }
+            case EditMode_Tiles:   DrawGroundOverlay_Tiles   (camera, now); break;
+            case EditMode_Objects: DrawGroundOverlay_Objects (camera, now); break;
+            case EditMode_Wang:    DrawGroundOverlay_Wang    (camera, now); break;
+            case EditMode_Paths:   DrawGroundOverlay_Paths   (camera, now); break;
         }
     }
 
@@ -200,6 +190,51 @@ void Editor::DrawGroundOverlay_Tiles(Camera2D &camera, double now)
             DrawRectangleLinesEx(selectRect, 2, SKYBLUE);
         }
     }
+}
+void Editor::DrawGroundOverlay_Objects(Camera2D &camera, double now)
+{
+    if (!io.MouseCaptured()) {
+        // Draw hover highlight
+        const Vector2 cursorWorldPos = GetScreenToWorld2D({ (float)GetMouseX(), (float)GetMouseY() }, camera);
+        const bool editorPickObject = io.MouseButtonPressed(MOUSE_BUTTON_LEFT);
+
+        TileLayerType layer = state.tiles.layer;
+        auto &map = pack_maps.FindById<Tilemap>(map_id);
+
+        Tilemap::Coord coord{};
+        map.WorldToTileIndex(cursorWorldPos.x, cursorWorldPos.y, coord);
+        if (editorPickObject) {
+            state.objects.selected_coord = coord;
+        }
+
+        // Hovered obj yellow highlight
+        Vector2 brush_tl{
+            (float)coord.x * TILE_W,
+            (float)coord.y * TILE_W,
+        };
+        Rectangle selectRect{
+            brush_tl.x,
+            brush_tl.y,
+            TILE_W,
+            TILE_W
+        };
+        DrawRectangleRec(selectRect, Fade(YELLOW, 0.1f));
+        DrawRectangleLinesEx(selectRect, 2, Fade(YELLOW, 0.2f));
+    }
+
+    // Selected obj yellow highlight
+    Vector2 brush_tl{
+        (float)state.objects.selected_coord.x * TILE_W,
+        (float)state.objects.selected_coord.y * TILE_W,
+    };
+    Rectangle selectRect{
+        brush_tl.x,
+        brush_tl.y,
+        TILE_W,
+        TILE_W
+    };
+    DrawRectangleRec(selectRect, Fade(YELLOW, 0.2f));
+    DrawRectangleLinesEx(selectRect, 2, YELLOW);
 }
 void Editor::DrawGroundOverlay_Wang(Camera2D &camera, double now)
 {
@@ -491,7 +526,7 @@ void EndScrollPanel(UI &ui, ScrollPanel &scrollPanel)
     //DrawRectangleLinesEx(scrollPanel.panelRect, 2, WHITE);
 }
 
-UIState Editor::DrawUI(double now)
+UIState Editor::DrawUI(Camera2D &camera, double now)
 {
     io.PushScope(IO::IO_EditorUI);
 
@@ -499,12 +534,42 @@ UIState Editor::DrawUI(double now)
     if (active) {
         Vector2 pos{};
         if (!dock_left) {
-            pos.x = GetRenderWidth() - 430.0f;
+            pos.x = GetRenderWidth() - width;
         }
 
         state = DrawUI_ActionBar(pos, now);
         if (state.hover) {
             io.CaptureMouse();
+        }
+
+        // Reset camera when map changes
+        static uint16_t editor_map_id = map_id;
+        if (map_id != editor_map_id) {
+            auto &new_editor_map = pack_maps.FindById<Tilemap>(map_id);
+
+            Vector2 viewportSize{
+                (float)(GetRenderWidth() - width),
+                (float)GetRenderHeight()
+            };
+            Vector2 mapSize{
+                (float)new_editor_map.width * TILE_W,
+                (float)new_editor_map.height * TILE_W,
+            };
+
+            camera.offset = {
+                viewportSize.x / 2.0f,
+                viewportSize.y / 2.0f
+            };
+            camera.zoom = MIN(
+                viewportSize.x / mapSize.x,
+                viewportSize.y / mapSize.y
+            );
+            camera.zoom = CLAMP(camera.zoom, 0.1f, 2.0f);
+            camera.target = {
+                mapSize.x / 2.0f,
+                mapSize.y / 2.0f
+            };
+            editor_map_id = map_id;
         }
     }
 
@@ -518,7 +583,7 @@ UIState Editor::DrawUI_ActionBar(Vector2 position, double now)
 
     // TODO: UI::Panel
     UIState uiState{};
-    const Rectangle actionBarRect{ position.x, position.y, 430.0f, (float)GetRenderHeight() };
+    const Rectangle actionBarRect{ position.x, position.y, width, (float)GetRenderHeight() };
 #if 0
     DrawRectangleRounded(actionBarRect, 0.15f, 8, ASESPRITE_BEIGE);
     DrawRectangleRoundedLines(actionBarRect, 0.15f, 8, 2.0f, BLACK);
@@ -536,7 +601,7 @@ UIState Editor::DrawUI_ActionBar(Vector2 position, double now)
     auto &map = pack_maps.FindById<Tilemap>(map_id);
 
 #if 0
-    UIState openButton = uiActionBar.Button(CSTR("Open"));
+    UIState openButton = uiActionBar.Button("Open");
     if (openButton.released) {
         std::string filename = "resources/map/" + map.name + ".mdesk";
         std::thread openFileThread([filename, mapFileFilter]{
@@ -564,7 +629,7 @@ UIState Editor::DrawUI_ActionBar(Vector2 position, double now)
         openRequest.clear();
     }
 #endif
-    UIState saveButton = uiActionBar.Button(CSTR("Save"));
+    UIState saveButton = uiActionBar.Button("Save");
     if (saveButton.released) {
         std::string path = pack_assets.GetPath(PACK_TYPE_TEXT);
         Err err = SavePack(pack_assets, PACK_TYPE_TEXT);
@@ -577,7 +642,7 @@ UIState Editor::DrawUI_ActionBar(Vector2 position, double now)
         }
     }
 
-    UIState saveAsButton = uiActionBar.Button(CSTR("Save As"));
+    UIState saveAsButton = uiActionBar.Button("Save As");
     if (saveAsButton.released) {
         std::string path = pack_assets.GetPath(PACK_TYPE_TEXT);
         std::thread saveAsThread([path, mapFileFilter]{
@@ -603,7 +668,7 @@ UIState Editor::DrawUI_ActionBar(Vector2 position, double now)
         saveAsRequest.clear();
     }
 
-    UIState reloadButton = uiActionBar.Button(CSTR("Reload"));
+    UIState reloadButton = uiActionBar.Button("Reload");
     if (reloadButton.released) {
 #if 0
         // TODO: Probably want to be able to just reload the map, not *everything* right? Hmm..
@@ -632,28 +697,28 @@ UIState Editor::DrawUI_ActionBar(Vector2 position, double now)
     }
     uiActionBar.Newline();
 
-    UIState mapPath = uiActionBar.Text(CSTRLEN(GetFileName(map.name.c_str())), WHITE);
+    UIState mapPath = uiActionBar.Text(GetFileName(map.name.c_str()), WHITE);
     if (mapPath.released) {
         system("explorer maps");
     }
-    uiActionBar.Text(CSTRLEN(TextFormat("(v%d)", map.version)));
+    uiActionBar.Text(TextFormat("(v%d)", map.version));
 
     uiActionBar.Space({ 0, 8 });
     uiActionBar.Newline();
 
-    UIState showCollidersButton = uiActionBar.Button(CSTR("Collision"), state.showColliders, GRAY, MAROON);
+    UIState showCollidersButton = uiActionBar.Button("Collision", state.showColliders, GRAY, MAROON);
     if (showCollidersButton.released) {
         state.showColliders = !state.showColliders;
     }
-    UIState showTileEdgesButton = uiActionBar.Button(CSTR("Edges"), state.showTileEdges, GRAY, MAROON);
+    UIState showTileEdgesButton = uiActionBar.Button("Edges", state.showTileEdges, GRAY, MAROON);
     if (showTileEdgesButton.released) {
         state.showTileEdges = !state.showTileEdges;
     }
-    UIState showTileIdsButton = uiActionBar.Button(CSTR("Tile IDs"), state.showTileIds, GRAY, LIGHTGRAY);
+    UIState showTileIdsButton = uiActionBar.Button("Tile IDs", state.showTileIds, GRAY, LIGHTGRAY);
     if (showTileIdsButton.released) {
         state.showTileIds = !state.showTileIds;
     }
-    UIState showEntityIdsButton = uiActionBar.Button(CSTR("Entity IDs"), state.showEntityIds, GRAY, LIGHTGRAY);
+    UIState showEntityIdsButton = uiActionBar.Button("Entity IDs", state.showEntityIds, GRAY, LIGHTGRAY);
     if (showEntityIdsButton.released) {
         state.showEntityIds = !state.showEntityIds;
     }
@@ -662,7 +727,7 @@ UIState Editor::DrawUI_ActionBar(Vector2 position, double now)
     uiActionBar.Newline();
 
     for (int i = 0; i < EditMode_Count; i++) {
-        if (uiActionBar.Button(CSTRLEN(EditModeStr((EditMode)i)), mode == i, BLUE_DESAT, ColorBrightness(BLUE_DESAT, -0.3f)).pressed) {
+        if (uiActionBar.Button(EditModeStr((EditMode)i), mode == i, BLUE_DESAT, ColorBrightness(BLUE_DESAT, -0.3f)).pressed) {
             mode = (EditMode)i;
         }
         if (i % 6 == 5) {
@@ -680,6 +745,10 @@ UIState Editor::DrawUI_ActionBar(Vector2 position, double now)
         }
         case EditMode_Tiles: {
             DrawUI_TileActions(uiActionBar, now);
+            break;
+        }
+        case EditMode_Objects: {
+            DrawUI_ObjectActions(uiActionBar, now);
             break;
         }
         case EditMode_Wang: {
@@ -713,7 +782,7 @@ UIState Editor::DrawUI_ActionBar(Vector2 position, double now)
 void Editor::DrawUI_MapActions(UI &uiActionBar, double now)
 {
     for (const Tilemap &map : pack_maps.tile_maps) {
-        if (uiActionBar.Button(CSTRLEN(TextFormat("%s", map.name.c_str()))).pressed) {
+        if (uiActionBar.Button(TextFormat("%s", map.name.c_str())).pressed) {
             map_id = map.id;
         }
         uiActionBar.Newline();
@@ -727,7 +796,7 @@ void Editor::DrawUI_TileActions(UI &uiActionBar, double now)
 #if 0
     const std::string &tilesetPath = rnStringCatalog.GetString(map.textureId);
     uiActionBar.Text(tilesetPath.c_str());
-    if (uiActionBar.Button(CSTR("Change tileset"), ColorBrightness(ORANGE, -0.3f)).released) {
+    if (uiActionBar.Button("Change tileset", ColorBrightness(ORANGE, -0.3f)).released) {
         std::thread openFileThread([tilesetPath, mapFileFilter]{
             openRequest = tinyfd_openFileDialog(
                 "Open File",
@@ -767,12 +836,12 @@ void Editor::DrawUI_TileActions(UI &uiActionBar, double now)
         height = map.height;
     }
 
-    uiActionBar.Text(CSTR("Size"));
+    uiActionBar.Text("Size");
     uiActionBar.PushWidth(100);
     uiActionBar.Textbox(ctrlid_width, width);
     uiActionBar.Textbox(ctrlid_height, height);
     uiActionBar.PopStyle();
-    if (uiActionBar.Button(CSTR("Resize!")).pressed) {
+    if (uiActionBar.Button("Resize!").pressed) {
         uint16_t newWidth = (uint16_t)width;
         uint16_t newHeight = (uint16_t)height;
 
@@ -800,30 +869,43 @@ void Editor::DrawUI_TileActions(UI &uiActionBar, double now)
     }
     uiActionBar.Newline();
 
-    uiActionBar.Text(CSTR("Flag"));
+    uiActionBar.Text("Flag");
 
     auto &tileEditMode = state.tiles.tileEditMode;
-    if (uiActionBar.Button(CSTR("Select"), tileEditMode == TileEditMode_Select, GRAY, SKYBLUE).pressed) {
+    if (uiActionBar.Button("Select", tileEditMode == TileEditMode_Select, GRAY, SKYBLUE).pressed) {
         tileEditMode = TileEditMode_Select;
     }
-    if (uiActionBar.Button(CSTR("Collision"), tileEditMode == TileEditMode_Collision, GRAY, SKYBLUE).pressed) {
+    if (uiActionBar.Button("Collision", tileEditMode == TileEditMode_Collision, GRAY, SKYBLUE).pressed) {
         tileEditMode = TileEditMode_Collision;
     }
-    if (uiActionBar.Button(CSTR("Auto-tile Mask"), tileEditMode == TileEditMode_AutoTileMask, GRAY, SKYBLUE).pressed) {
+    if (uiActionBar.Button("Auto-tile Mask", tileEditMode == TileEditMode_AutoTileMask, GRAY, SKYBLUE).pressed) {
         tileEditMode = TileEditMode_AutoTileMask;
     }
     uiActionBar.Newline();
 
-    uiActionBar.Text(CSTR("Layer"));
-    if (uiActionBar.Button(CSTR("Ground"), state.tiles.layer == TILE_LAYER_GROUND, GRAY, SKYBLUE).pressed) {
+    uiActionBar.Text("Layer");
+    if (uiActionBar.Button("Ground", state.tiles.layer == TILE_LAYER_GROUND, GRAY, SKYBLUE).pressed) {
         state.tiles.layer = TILE_LAYER_GROUND;
     }
-    if (uiActionBar.Button(CSTR("Object"), state.tiles.layer == TILE_LAYER_OBJECT, GRAY, SKYBLUE).pressed) {
+    if (uiActionBar.Button("Object", state.tiles.layer == TILE_LAYER_OBJECT, GRAY, SKYBLUE).pressed) {
         state.tiles.layer = TILE_LAYER_OBJECT;
     }
     uiActionBar.Newline();
 
     DrawUI_Tilesheet(uiActionBar, now);
+}
+void Editor::DrawUI_ObjectActions(UI &uiActionBar, double now)
+{
+    auto &map = pack_maps.FindById<Tilemap>(map_id);
+    ObjectData *obj_data = map.GetObjectData(state.objects.selected_coord.x, state.objects.selected_coord.y);
+    if (!obj_data) {
+        uiActionBar.Label("Select an object");
+        return;
+    }
+
+    uiActionBar.Label("Object Data");
+    uiActionBar.Newline();
+    uiActionBar.HAQField(__COUNTER__, "", *obj_data, HAQ_EDIT, 100);
 }
 void DrawRectangleRectOffset(const Rectangle &rect, Vector2 &offset, Color color)
 {
@@ -1076,7 +1158,7 @@ void Editor::DrawUI_Tilesheet(UI &uiActionBar, double now)
 }
 void Editor::DrawUI_Wang(UI &uiActionBar, double now)
 {
-    if (uiActionBar.Button(CSTR("Generate template")).pressed) {
+    if (uiActionBar.Button("Generate template").pressed) {
         Err err = WangTileset::GenerateTemplate("resources/wang/template.png");
         if (err) {
             // TODO: Show the user
@@ -1142,7 +1224,7 @@ void Editor::DrawUI_Wang(UI &uiActionBar, double now)
     }
     uiActionBar.Newline();
 
-    if (uiActionBar.Button(CSTR("Export tileset")).pressed) {
+    if (uiActionBar.Button("Export tileset").pressed) {
         ExportImage(wangTileset.ts.img, wangTileset.filename.c_str());
     }
     uiActionBar.Newline();
@@ -1153,7 +1235,7 @@ void Editor::DrawUI_Wang(UI &uiActionBar, double now)
 
     auto &map = pack_maps.FindById<Tilemap>(map_id);
 
-    if (uiActionBar.Button(CSTR("Re-generate Map")).pressed) {
+    if (uiActionBar.Button("Re-generate Map").pressed) {
         wangTileset.GenerateMap(map.width, map.height, wangMap);
     }
     uiActionBar.Newline();
@@ -1305,17 +1387,17 @@ void Editor::DrawUI_PathActions(UI &uiActionBar, double now)
     if (state.pathNodes.cursor.dragging) {
         printf("dragging\n");
     }
-    uiActionBar.Text(CSTRLEN(TextFormat(
+    uiActionBar.Text(TextFormat(
         "drag: %s, path: %d, node: %d",
         state.pathNodes.cursor.dragging ? "true" : "false",
         state.pathNodes.cursor.dragPathId,
         state.pathNodes.cursor.dragPathNodeIndex
-    )));
+    ));
 }
 void Editor::DrawUI_DialogActions(UI &uiActionBar, double now)
 {
 #if 0
-    //if (uiActionBar.Button(CSTR("Add"), DARKGREEN).pressed) {
+    //if (uiActionBar.Button("Add", DARKGREEN).pressed) {
     //    //map.warps.push_back({});
     //}
     //uiActionBar.Newline();
@@ -1351,7 +1433,7 @@ void Editor::DrawUI_DialogActions(UI &uiActionBar, double now)
     if (state.dialog.dialogId) {
         Dialog *dialog = dialog_library.FindById(state.dialog.dialogId);
         if (dialog) {
-            uiActionBar.Text(CSTR("message"));
+            uiActionBar.Text("message");
             uiActionBar.Newline();
             static STB_TexteditState txtMessage{};
             uiActionBar.Textbox(txtMessage, dialog.msg);
@@ -1377,7 +1459,7 @@ void Editor::DrawUI_DialogActions(UI &uiActionBar, double now)
 void Editor::DrawUI_EntityActions(UI &uiActionBar, double now)
 {
     auto &map = pack_maps.FindById<Tilemap>(map_id);
-    if (uiActionBar.Button(CSTR("Despawn all"), ColorBrightness(MAROON, -0.3f)).pressed) {
+    if (uiActionBar.Button("Despawn all", ColorBrightness(MAROON, -0.3f)).pressed) {
         for (const Entity &entity : entityDb->entities) {
             if (entity.type == Entity::TYP_PLAYER || entity.map_id != map.id) {
                 continue;
@@ -1412,7 +1494,7 @@ void Editor::DrawUI_EntityActions(UI &uiActionBar, double now)
         }
 
         Color bgColor = entity.id == state.entities.selectedId ? ColorBrightness(ORANGE, -0.3f) : BLUE_DESAT;
-        if (uiActionBar.Text(CSTRLEN(idStr), WHITE, bgColor).down) {
+        if (uiActionBar.Text(idStr, WHITE, bgColor).down) {
             state.entities.selectedId = entity.id;
         }
         uiActionBar.Newline();
@@ -1427,15 +1509,15 @@ void Editor::DrawUI_EntityActions(UI &uiActionBar, double now)
 
             ////////////////////////////////////////////////////////////////////////
             // Entity
-            uiActionBar.Label(CSTR("id"), labelWidth);
-            uiActionBar.Text(CSTRLEN(TextFormat("%d", entity->id)));
+            uiActionBar.Label("id", labelWidth);
+            uiActionBar.Text(TextFormat("%d", entity->id));
             uiActionBar.Newline();
 
-            uiActionBar.Label(CSTR("type"), labelWidth);
-            uiActionBar.Text(CSTRLEN(EntityTypeStr(entity->type)));
+            uiActionBar.Label("type", labelWidth);
+            uiActionBar.Text(EntityTypeStr(entity->type));
             uiActionBar.Newline();
 
-            uiActionBar.Label(CSTR("position"), labelWidth);
+            uiActionBar.Label("position", labelWidth);
             uiActionBar.PushBgColor({ 127, 0, 0, 255 }, UI_CtrlTypeTextbox);
             uiActionBar.PushWidth(80);
             uiActionBar.Textbox(__COUNTER__, entity->position.x);
@@ -1451,43 +1533,43 @@ void Editor::DrawUI_EntityActions(UI &uiActionBar, double now)
 
             ////////////////////////////////////////////////////////////////////////
             // Combat
-            uiActionBar.Label(CSTR("attk cooldown"), labelWidth);
+            uiActionBar.Label("attk cooldown", labelWidth);
             const float attackCooldownLeft = MAX(0, entity->attack_cooldown - (now - entity->last_attacked_at));
-            uiActionBar.Text(CSTRLEN(TextFormat("%.3f", attackCooldownLeft)));
+            uiActionBar.Text(TextFormat("%.3f", attackCooldownLeft));
             uiActionBar.Newline();
 
             ////////////////////////////////////////////////////////////////////////
             // Collision
-            uiActionBar.Label(CSTR("radius"), labelWidth);
+            uiActionBar.Label("radius", labelWidth);
             uiActionBar.PushWidth(80);
             uiActionBar.Textbox(__COUNTER__, entity->radius);
             uiActionBar.PopStyle();
             uiActionBar.Newline();
 
-            uiActionBar.Label(CSTR("colliding"), labelWidth);
+            uiActionBar.Label("colliding", labelWidth);
             if (entity->colliding) {
-                uiActionBar.Text(CSTR("True"), RED);
+                uiActionBar.Text("True", RED);
             } else {
-                uiActionBar.Text(CSTR("False"), WHITE);
+                uiActionBar.Text("False", WHITE);
             }
             uiActionBar.Newline();
 
-            uiActionBar.Label(CSTR("onWarp"), labelWidth);
+            uiActionBar.Label("onWarp", labelWidth);
             if (entity->on_warp) {
-                uiActionBar.Text(CSTR("True"), SKYBLUE);
+                uiActionBar.Text("True", SKYBLUE);
             } else {
-                uiActionBar.Text(CSTR("False"), WHITE);
+                uiActionBar.Text("False", WHITE);
             }
             uiActionBar.Newline();
 
             ////////////////////////////////////////////////////////////////////////
             // Life
-            uiActionBar.Label(CSTR("health"), labelWidth);
+            uiActionBar.Label("health", labelWidth);
             uiActionBar.PushWidth(80);
             uiActionBar.Textbox(__COUNTER__, entity->hp);
             uiActionBar.PopStyle();
 
-            uiActionBar.Text(CSTR("/"));
+            uiActionBar.Text("/");
 
             uiActionBar.PushWidth(80);
             uiActionBar.Textbox(__COUNTER__, entity->hp_max);
@@ -1496,19 +1578,19 @@ void Editor::DrawUI_EntityActions(UI &uiActionBar, double now)
 
             ////////////////////////////////////////////////////////////////////////
             // Physics
-            uiActionBar.Label(CSTR("drag"), labelWidth);
+            uiActionBar.Label("drag", labelWidth);
             uiActionBar.PushWidth(80);
             uiActionBar.Textbox(__COUNTER__, entity->drag);
             uiActionBar.PopStyle();
             uiActionBar.Newline();
 
-            uiActionBar.Label(CSTR("speed"), labelWidth);
+            uiActionBar.Label("speed", labelWidth);
             uiActionBar.PushWidth(80);
             uiActionBar.Textbox(__COUNTER__, entity->speed);
             uiActionBar.PopStyle();
             uiActionBar.Newline();
 
-            uiActionBar.Label(CSTR("velocity"), labelWidth);
+            uiActionBar.Label("velocity", labelWidth);
             uiActionBar.PushBgColor({ 127, 0, 0, 255 }, UI_CtrlTypeTextbox);
             uiActionBar.PushWidth(80);
             uiActionBar.Textbox(__COUNTER__, entity->velocity.x);
@@ -1551,7 +1633,7 @@ void Editor::DrawUI_PackFiles(UI &uiActionBar, double now)
             continue;
         }
 
-        if (uiActionBar.Text(CSTRLEN(idStr), WHITE, bgColor).down) {
+        if (uiActionBar.Text(idStr, WHITE, bgColor).down) {
             state.packFiles.selectedPack = &pack;
         }
         uiActionBar.Newline();
@@ -1564,12 +1646,12 @@ void Editor::DrawUI_PackFiles(UI &uiActionBar, double now)
 
         const int labelWidth = 100;
 
-        uiActionBar.Label(CSTR("version"), labelWidth);
-        uiActionBar.Text(CSTRLEN(TextFormat("%d", pack.version)));
+        uiActionBar.Label("version", labelWidth);
+        uiActionBar.Text(TextFormat("%d", pack.version));
         uiActionBar.Newline();
 
-        uiActionBar.Label(CSTR("tocEntries"), labelWidth);
-        uiActionBar.Text(CSTRLEN(TextFormat("%zu", pack.toc.entries.size())));
+        uiActionBar.Label("tocEntries", labelWidth);
+        uiActionBar.Text(TextFormat("%zu", pack.toc.entries.size()));
         uiActionBar.Newline();
 
         static struct DatTypeFilter {
@@ -1592,7 +1674,7 @@ void Editor::DrawUI_PackFiles(UI &uiActionBar, double now)
         uiActionBar.PushWidth(34);
         for (int i = 0; i < DAT_TYP_COUNT; i++) {
             DatTypeFilter &filter = datTypeFilter[i];
-            if (uiActionBar.Button(CSTRLEN(filter.text ? filter.text : "???"), filter.enabled, DARKGRAY, filter.color).pressed) {
+            if (uiActionBar.Button(filter.text ? filter.text : "???", filter.enabled, DARKGRAY, filter.color).pressed) {
                 if (io.KeyDown(KEY_LEFT_SHIFT)) {
                     filter.enabled = !filter.enabled;
                 } else {
@@ -1611,7 +1693,7 @@ void Editor::DrawUI_PackFiles(UI &uiActionBar, double now)
         uiActionBar.Space({ 0, 4 });
 
         static ScrollPanel scrollPanel{};
-        BeginScrollPanel(uiActionBar, scrollPanel, 430);
+        BeginScrollPanel(uiActionBar, scrollPanel, width);
 
         // Defer changing selection until after the loop has rendered every item
         int newSelectedOffset = 0;
@@ -1693,7 +1775,7 @@ void Editor::DrawUI_PackFiles(UI &uiActionBar, double now)
             uiActionBar.PushMargin({ 1, 3, 1, 3 });
 
             const char *text = TextFormat("[%s] %s", selected ? "-" : "+", desc);
-            if (uiActionBar.Text(CSTRLEN(text), WHITE, ColorBrightness(filter.color, -0.2f)).pressed) {
+            if (uiActionBar.Text(text, WHITE, ColorBrightness(filter.color, -0.2f)).pressed) {
                 if (!selected) {
                     newSelectedOffset = entry.offset;
                 } else {
@@ -1733,11 +1815,11 @@ void Editor::DrawUI_PackFiles(UI &uiActionBar, double now)
                         HAQ_UI(HQT_SFX_FILE_FIELDS, sfx_file);
 
                         if (!IsSoundPlaying(sfx_file.name)) {
-                            if (uiActionBar.Button(CSTR("Play"), ColorBrightness(DARKGREEN, -0.3f)).pressed) {
+                            if (uiActionBar.Button("Play", ColorBrightness(DARKGREEN, -0.3f)).pressed) {
                                 PlaySound(sfx_file.name, 0);
                             }
                         } else {
-                            if (uiActionBar.Button(CSTR("Stop"), ColorBrightness(MAROON, -0.3f)).pressed) {
+                            if (uiActionBar.Button("Stop", ColorBrightness(MAROON, -0.3f)).pressed) {
                                 StopSound(sfx_file.name);
                             }
                         }
@@ -1756,19 +1838,19 @@ void Editor::DrawUI_PackFiles(UI &uiActionBar, double now)
                         GfxAnim &gfx_anim = pack.gfx_anims[entry.index];
                         HAQ_UI(HQT_GFX_ANIM_FIELDS, gfx_anim);
 #if 0
-                        uiActionBar.Label(CSTR("id"), labelWidth);
+                        uiActionBar.Label("id", labelWidth);
                         uiActionBar.Text(CSTRS(gfxAnim.id));
                         uiActionBar.Newline();
 
-                        uiActionBar.Label(CSTR("sound"), labelWidth);
+                        uiActionBar.Label("sound", labelWidth);
                         uiActionBar.Text(CSTRS(gfxAnim.sound));
                         uiActionBar.Newline();
 
-                        uiActionBar.Label(CSTR("frame_delay"), labelWidth);
+                        uiActionBar.Label("frame_delay", labelWidth);
                         uiActionBar.Text(CSTRLEN(TextFormat("%u", gfxAnim.frame_delay)));
                         uiActionBar.Newline();
 
-                        uiActionBar.Label(CSTR("frames"), labelWidth);
+                        uiActionBar.Label("frames", labelWidth);
                         uiActionBar.Newline();
 
                         for (int i = 0; i < gfxAnim.frames.size(); i++) {
@@ -1785,39 +1867,39 @@ void Editor::DrawUI_PackFiles(UI &uiActionBar, double now)
 #if 1
                         HAQ_UI(HQT_SPRITE_FIELDS, sprite);
 #else
-                        uiActionBar.Label(CSTR("name"), labelWidth);
+                        uiActionBar.Label("name", labelWidth);
                         uiActionBar.Text(CSTRS(sprite.name));
                         uiActionBar.Newline();
 
-                        uiActionBar.Label(CSTR("N "), labelWidth);
+                        uiActionBar.Label("N ", labelWidth);
                         uiActionBar.Text(CSTRS(sprite.anims[DIR_N]));
                         uiActionBar.Newline();
 
-                        uiActionBar.Label(CSTR("E "), labelWidth);
+                        uiActionBar.Label("E ", labelWidth);
                         uiActionBar.Text(CSTRS(sprite.anims[DIR_E]));
                         uiActionBar.Newline();
 
-                        uiActionBar.Label(CSTR("S "), labelWidth);
+                        uiActionBar.Label("S ", labelWidth);
                         uiActionBar.Text(CSTRS(sprite.anims[DIR_S]));
                         uiActionBar.Newline();
 
-                        uiActionBar.Label(CSTR("S "), labelWidth);
+                        uiActionBar.Label("S ", labelWidth);
                         uiActionBar.Text(CSTRS(sprite.anims[DIR_W]));
                         uiActionBar.Newline();
 
-                        uiActionBar.Label(CSTR("NE"), labelWidth);
+                        uiActionBar.Label("NE", labelWidth);
                         uiActionBar.Text(CSTRS(sprite.anims[DIR_SE]));
                         uiActionBar.Newline();
 
-                        uiActionBar.Label(CSTR("SE"), labelWidth);
+                        uiActionBar.Label("SE", labelWidth);
                         uiActionBar.Text(CSTRS(sprite.anims[DIR_SE]));
                         uiActionBar.Newline();
 
-                        uiActionBar.Label(CSTR("SW"), labelWidth);
+                        uiActionBar.Label("SW", labelWidth);
                         uiActionBar.Text(CSTRS(sprite.anims[DIR_SW]));
                         uiActionBar.Newline();
 
-                        uiActionBar.Label(CSTR("NW"), labelWidth);
+                        uiActionBar.Label("NW", labelWidth);
                         uiActionBar.Text(CSTRS(sprite.anims[DIR_NW]));
                         uiActionBar.Newline();
 #endif
@@ -1843,7 +1925,7 @@ void Editor::DrawUI_PackFiles(UI &uiActionBar, double now)
                     }
                     case DAT_TYP_ENTITY:
                     {
-                        uiActionBar.Text(CSTR("TODO"));
+                        uiActionBar.Text("TODO");
                         uiActionBar.Newline();
                         break;
                     }
@@ -1865,14 +1947,14 @@ void Editor::DrawUI_PackFiles(UI &uiActionBar, double now)
 void Editor::DrawUI_Debug(UI &uiActionBar, double now)
 {
     static UID uid = NextUID();
-    uiActionBar.Text(CSTRLEN(TextFormat("%.*s", 20, uid.bytes)));
-    if (true) {// || uiActionBar.Button(CSTR("NextUID")).pressed) {
+    uiActionBar.Text(TextFormat("%.*s", 20, uid.bytes));
+    if (true) {// || uiActionBar.Button("NextUID").pressed) {
         uid = NextUID();
     }
     uiActionBar.Newline();
 
 #if 0
-    uiActionBar.Text(CSTR("^^^ ignore all this stuff ^^^"));
+    uiActionBar.Text("^^^ ignore all this stuff ^^^");
     uiActionBar.Space({ 0, 50 });
     uiActionBar.Newline();
 
@@ -1895,7 +1977,7 @@ void Editor::DrawUI_Debug(UI &uiActionBar, double now)
         { false, false },
     };
 
-    if (uiActionBar.Button(CSTR("Reset")).pressed) {
+    if (uiActionBar.Button("Reset").pressed) {
         for (int i = 0; i < ARRAY_SIZE(elements); i++) {
             elements[i] = elements_default[i];
         }
@@ -1906,9 +1988,9 @@ void Editor::DrawUI_Debug(UI &uiActionBar, double now)
     bool multi = false;
     int selected_count = 0;
 
-    uiActionBar.Text(CSTR("_____________________________________________"), GRAY);
+    uiActionBar.Text("_____________________________________________", GRAY);
     uiActionBar.Newline();
-    uiActionBar.Text(CSTR("Elements:"), LIGHTGRAY);
+    uiActionBar.Text("Elements:", LIGHTGRAY);
     uiActionBar.Newline();
     for (int i = 0; i < ARRAY_SIZE(elements); i++) {
         uiActionBar.Text(elements[i].selected ? "[x]" : "[   ]");
@@ -1938,13 +2020,13 @@ void Editor::DrawUI_Debug(UI &uiActionBar, double now)
     }
 
     if (multi) {
-        uiActionBar.Button(CSTR("Various Statuses"), true, PURPLE, PURPLE);
+        uiActionBar.Button("Various Statuses", true, PURPLE, PURPLE);
     }
     uiActionBar.Newline();
 
-    uiActionBar.Text(CSTR("_____________________________________________"), GRAY);
+    uiActionBar.Text("_____________________________________________", GRAY);
     uiActionBar.Newline();
-    uiActionBar.Text(CSTR("Element Inspector:"), LIGHTGRAY);
+    uiActionBar.Text("Element Inspector:", LIGHTGRAY);
     uiActionBar.Newline();
     if (selected_count) {
         //uiActionBar.PushFgColor(BLACK);
@@ -1960,10 +2042,10 @@ void Editor::DrawUI_Debug(UI &uiActionBar, double now)
             }
         }
     } else {
-        uiActionBar.Text(CSTR("Select some elements to see their status."));
+        uiActionBar.Text("Select some elements to see their status.");
     }
     uiActionBar.Newline();
-    uiActionBar.Text(CSTR("_____________________________________________"), GRAY);
+    uiActionBar.Text("_____________________________________________", GRAY);
     uiActionBar.Newline();
 #endif
 }

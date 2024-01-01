@@ -205,6 +205,13 @@ void UI::Space(Vector2 space)
 
 UIState UI::Text(const char *text, size_t textLen)
 {
+    if (!textLen) {
+        textLen = strlen(text);
+        if (!textLen) {
+            return {};
+        }
+    }
+
     const UIStyle &style = GetStyle();
 
     Vector2 ctrlPosition{
@@ -259,13 +266,15 @@ UIState UI::Text(const char *text, size_t textLen)
     return state;
 }
 
-UIState UI::Text(const char *text, size_t textLen, Color fgColor, Color bgColor)
+UIState UI::Text(const std::string &text, Color fgColor, Color bgColor)
 {
     UIStyle style = GetStyle();
     style.bgColor[UI_CtrlTypeDefault] = bgColor;
-    style.fgColor = fgColor;
+    if (fgColor.a) {
+        style.fgColor = fgColor;
+    }
     PushStyle(style);
-    UIState state = Text(text, textLen);
+    UIState state = Text(text.data(), text.size());
     PopStyle();
     return state;
 }
@@ -273,30 +282,25 @@ UIState UI::Text(const char *text, size_t textLen, Color fgColor, Color bgColor)
 UIState UI::Text(uint8_t value)
 {
     const char *text = TextFormat("%" PRIu8, value);
-    return Text(CSTRLEN(text));
+    return Text(text);
 }
 
 UIState UI::Text(uint16_t value)
 {
     const char *text = TextFormat("%" PRIu16, value);
-    return Text(CSTRLEN(text));
+    return Text(text);
 }
 
 UIState UI::Text(uint32_t value)
 {
     const char *text = TextFormat("%" PRIu32, value);
-    return Text(CSTRLEN(text));
+    return Text(text);
 }
 
 UIState UI::Text(uint64_t value)
 {
     const char *text = TextFormat("%" PRIu64, value);
-    return Text(CSTRLEN(text));
-}
-
-UIState UI::Text(const std::string &text)
-{
-    return Text(text.data(), text.size());
+    return Text(text);
 }
 
 template <typename T>
@@ -304,24 +308,16 @@ UIState UI::Text(T value)
 {
     const char *text = TextFormat("<%s>", typeid(T).name());
     PushFgColor(Fade(LIGHTGRAY, 0.5f));
-    UIState result = Text(CSTRLEN(text));
+    UIState result = Text(text);
     PopStyle();
     return result;
 }
 
-UIState UI::Label(const char *text, size_t textLen, int width)
-{
-    PushWidth(width);
-    UIState state = Text(text, textLen);
-    PopStyle();
-    return state;
-}
-
 UIState UI::Label(const std::string &text, int width)
 {
-    PushWidth(width);
-    UIState state = Text(text.data(), text.size());
-    PopStyle();
+    if (width) PushWidth(width);
+    UIState state = Text(text);
+    if (width) PopStyle();
     return state;
 }
 
@@ -377,7 +373,7 @@ UIState UI::Image(const Texture &texture, Rectangle srcRect)
     return state;
 }
 
-UIState UI::Button(const char *text, size_t textLen)
+UIState UI::Button(const std::string &text)
 {
     const UIStyle &style = GetStyle();
 
@@ -391,7 +387,7 @@ UIState UI::Button(const char *text, size_t textLen)
 
     Vector2 size = style.size;
     if (!size.x || !size.y) {
-        Vector2 textSize = dlb_MeasureTextEx(*style.font, text, textLen);
+        Vector2 textSize = dlb_MeasureTextEx(*style.font, text.data(), text.size());
         if (!size.x) size.x = textSize.x;
         if (!size.y) size.y = textSize.y;
     }
@@ -443,7 +439,7 @@ UIState UI::Button(const char *text, size_t textLen)
     DrawRectangleRounded(contentRect, cornerRoundness, cornerSegments, bgColorFx);
 
     // Draw button text
-    dlb_DrawTextShadowEx(*style.font, text, textLen,
+    dlb_DrawTextShadowEx(*style.font, text.data(), text.size(),
         {
             contentRect.x + style.pad.left,
             contentRect.y + style.pad.top
@@ -457,23 +453,23 @@ UIState UI::Button(const char *text, size_t textLen)
     return state;
 }
 
-UIState UI::Button(const char *text, size_t textLen, Color bgColor)
+UIState UI::Button(const std::string &text, Color bgColor)
 {
     UIStyle style = GetStyle();
     style.bgColor[UI_CtrlTypeButton] = bgColor;
     PushStyle(style);
-    UIState state = Button(text, textLen);
+    UIState state = Button(text);
     PopStyle();
     return state;
 }
 
-UIState UI::Button(const char *text, size_t textLen, bool pressed, Color bgColor, Color bgColorPressed)
+UIState UI::Button(const std::string &text, bool pressed, Color bgColor, Color bgColorPressed)
 {
     UIStyle style = GetStyle();
     style.bgColor[UI_CtrlTypeButton] = pressed ? bgColorPressed : bgColor;
     style.buttonPressed = pressed;
     PushStyle(style);
-    UIState state = Button(text, textLen);
+    UIState state = Button(text);
     PopStyle();
     return state;
 }
@@ -545,7 +541,7 @@ bool RN_stb_is_space(char ch)
 #define STB_TEXTEDIT_IMPLEMENTATION
 #include "stb_textedit.h"
 
-UIState UI::Textbox(uint32_t ctrlid, std::string &text, bool singleline, KeyPreCallback preCallback, KeyPostCallback postCallback, void *userData)
+UIState UI::Textbox(uint32_t ctrlid, std::string &text, bool multiline, KeyPreCallback preCallback, KeyPostCallback postCallback, void *userData)
 {
     static STB_TexteditState stbState{};
 
@@ -595,7 +591,7 @@ UIState UI::Textbox(uint32_t ctrlid, std::string &text, bool singleline, KeyPreC
 
     const bool wasActive = prevActiveEditor == ctrlid;
     const bool isActive = activeEditor == ctrlid;
-    const bool newlyActive = isActive && (!stbState.initialized || !wasActive);
+    const bool newlyActive = isActive && (/*!stbState.initialized || */!wasActive);
 
     if (isActive) {
         //--------------------------------------------------------------------------
@@ -617,7 +613,7 @@ UIState UI::Textbox(uint32_t ctrlid, std::string &text, bool singleline, KeyPreC
         const double timeSinceLastClick = now - lastClickTime;
 
         if (newlyActive) {
-            stb_textedit_initialize_state(&stbState, singleline);
+            stb_textedit_initialize_state(&stbState, !multiline);
             prevActiveEditor = activeEditor;
             newlyActivePress = true;
         }
@@ -1027,7 +1023,7 @@ template <typename T>
 void UI::HAQFieldValue(uint32_t ctrlid, const std::string &name, T &value, int flags, int labelWidth)
 {
     PushFgColor(RED);
-    Label(CSTR("No UI Renderer"));
+    Label("No UI Renderer");
     PopStyle();
 }
 
@@ -1082,26 +1078,26 @@ void UI::HAQFieldEditor(uint32_t ctrlid, const std::string &name, T &value, int 
     PushWidth(textboxWidth);
     popStyle++;
 
-    if (flags & HAQ_EDIT_TEXTBOX_STYLE_X) {
+    if (flags & HAQ_STYLE_BGCOLOR_RED) {
         PushBgColor({ 127, 0, 0, 255 }, UI_CtrlTypeTextbox);
         popStyle++;
-    } else if (flags & HAQ_EDIT_TEXTBOX_STYLE_Y) {
+    } else if (flags & HAQ_STYLE_BGCOLOR_GREEN) {
         PushBgColor({ 0, 127, 0, 255 }, UI_CtrlTypeTextbox);
         popStyle++;
-    } else if (flags & HAQ_EDIT_TEXTBOX_STYLE_Z) {
+    } else if (flags & HAQ_STYLE_BGCOLOR_BLUE) {
         PushBgColor({ 0, 0, 127, 255 }, UI_CtrlTypeTextbox);
         popStyle++;
     }
 
     if constexpr (std::is_same_v<T, std::string>) {
-        Textbox(ctrlid, value);
+        Textbox(ctrlid, value, flags & HAQ_STYLE_STRING_MULTILINE);
     } else if constexpr (std::is_same_v<T, float>) {
         const char* floatFmt = "%f";
         float floatInc = 1.0f;
-        if (flags & HAQ_EDIT_FLOAT_TENTH) {
+        if (flags & HAQ_STYLE_FLOAT_TENTH) {
             floatFmt = "%.1f";
             floatInc = 0.1f;
-        } else if (flags & HAQ_EDIT_FLOAT_HUNDRETH) {
+        } else if (flags & HAQ_STYLE_FLOAT_HUNDRETH) {
             floatFmt = "%.2f";
             floatInc = 0.01f;
         }
@@ -1127,10 +1123,10 @@ void UI::HAQFieldEditor(uint32_t ctrlid, const std::string &name, T &value, int 
 void UI::HAQFieldEditor(uint32_t ctrlid, const std::string &name, TileDef::Flags &value, int flags, int labelWidth)
 {
     uint8_t bitflags = value;
-    if (Button(CSTR("Solid"), bitflags & TileDef::FLAG_SOLID, GRAY, SKYBLUE).pressed) {
+    if (Button("Solid", bitflags & TileDef::FLAG_SOLID, GRAY, SKYBLUE).pressed) {
         bitflags ^= TileDef::FLAG_SOLID;
     }
-    if (Button(CSTR("Liquid"), bitflags & TileDef::FLAG_LIQUID, GRAY, SKYBLUE).pressed) {
+    if (Button("Liquid", bitflags & TileDef::FLAG_LIQUID, GRAY, SKYBLUE).pressed) {
         bitflags ^= TileDef::FLAG_LIQUID;
     }
     value = (TileDef::Flags)bitflags;
@@ -1139,7 +1135,7 @@ void UI::HAQFieldEditor(uint32_t ctrlid, const std::string &name, TileDef::Flags
 template <typename T>
 void UI::HAQField(uint32_t ctrlid, const std::string &name, T &value, int flags, int labelWidth)
 {
-    if (name[0] != '#') {
+    if (name.size() && name[0] != '#') {
         if (name.size()) {
             Label(name, labelWidth);
         } else {

@@ -239,9 +239,9 @@ void Tilemap::UpdatePower(double now)
         }
 
         uint16_t old_tile_id = At(TILE_LAYER_OBJECT, obj.x, obj.y);
-        uint16_t new_tile_id = obj.tile_def;
+        uint16_t new_tile_id = obj.tile;
         if (obj.power_level) {
-            new_tile_id = obj.tile_def_powered;
+            new_tile_id = obj.tile_powered;
         }
 
         if (new_tile_id != old_tile_id) {

@@ -130,16 +130,16 @@ void TodoList::Draw(Vector2 position)
     uiStyle.margin = { 4, 0, 0, 4 };
     UI ui{ position, uiStyle };
 
-    UIState loadButton = ui.Button(CSTR("Load"));
+    UIState loadButton = ui.Button("Load");
     if (loadButton.released) {
         Load(TODO_LIST_PATH);
     }
 
     UIState saveButton;
     if (dirty) {
-        saveButton = ui.Button(CSTR("Save*"), ColorBrightness(ORANGE, -0.2f));
+        saveButton = ui.Button("Save*", ColorBrightness(ORANGE, -0.2f));
     } else {
-        saveButton = ui.Button(CSTR("Save"));
+        saveButton = ui.Button("Save");
     }
     if (saveButton.released) {
         Save(TODO_LIST_PATH);
@@ -153,20 +153,20 @@ void TodoList::Draw(Vector2 position)
     const Vector2 margin { 8, 6 };
     for (int i = 0; i < itemCount; i++) {
         if (items[i].done) {
-            UIState doneButton = ui.Button(CSTR("Done"), DARKGREEN);
+            UIState doneButton = ui.Button("Done", DARKGREEN);
             if (doneButton.released) {
                 items[i].done = false;
                 dirty = true;
             }
         } else {
-            UIState todoButton = ui.Button(CSTR("Todo"), MAROON);
+            UIState todoButton = ui.Button("Todo", MAROON);
             if (todoButton.released) {
                 items[i].done = true;
                 dirty = true;
             }
         }
 
-        UIState dragButton = ui.Button(CSTR(" "), i == textDraggingIndex ? ORANGE : DARKGRAY);
+        UIState dragButton = ui.Button(" ", i == textDraggingIndex ? ORANGE : DARKGRAY);
         if (dragButton.pressed) {
             textDraggingIndex = i;
         } else if (textDraggingIndex == i && !io.MouseButtonDown(MOUSE_BUTTON_LEFT)) {

@@ -196,7 +196,7 @@ Err Play(GameServer &server)
             editor.DrawEntityOverlays(camera, server.now);
 
             // [Editor] Menus, action bar, etc.
-            editor.DrawUI(server.now);
+            editor.DrawUI(camera, server.now);
 
             // [Debug] FPS, clock, etc.
             if (server.showF3Menu) {

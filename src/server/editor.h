@@ -9,6 +9,7 @@ struct GameServer;
 enum EditMode {
     EditMode_Maps,
     EditMode_Tiles,
+    EditMode_Objects,
     EditMode_Wang,
     EditMode_Paths,
     EditMode_Dialog,
@@ -65,6 +66,11 @@ struct EditModeTiles {
     } cursor;
 };
 
+
+struct EditModeObjects {
+    Tilemap::Coord selected_coord;
+};
+
 struct EditModeWang {
     WangTileset wangTileset;
     WangMap wangMap;
@@ -111,6 +117,7 @@ struct EditModeState {
     bool showEntityIds {};
 
     EditModeTiles     tiles     {};
+    EditModeObjects   objects   {};
     EditModeWang      wang      {};
     EditModeDialog    dialog    {};
     EditModeEntities  entities  {};
@@ -122,6 +129,7 @@ struct EditModeState {
 
 struct Editor {
     bool          active    {};
+    float         width     = 430.0f;
     bool          dock_left {};
     EditMode      mode      {};
     EditModeState state     {};
@@ -132,11 +140,12 @@ struct Editor {
     void HandleInput(Camera2D &camera);
     void DrawGroundOverlays(Camera2D &camera, double now);
     void DrawEntityOverlays(Camera2D &camera, double now);
-    UIState DrawUI(double now);
+    UIState DrawUI(Camera2D &camera, double now);
 
 private:
     // Ground overlays (above tiles, below entities)
     void DrawGroundOverlay_Tiles(Camera2D &camera, double now);
+    void DrawGroundOverlay_Objects(Camera2D &camera, double now);
     void DrawGroundOverlay_Wang(Camera2D &camera, double now);
     void DrawGroundOverlay_Paths(Camera2D &camera, double now);
 
@@ -147,6 +156,7 @@ private:
     UIState DrawUI_ActionBar(Vector2 position, double now);
     void DrawUI_MapActions(UI &uiActionBar, double now);
     void DrawUI_TileActions(UI &uiActionBar, double now);
+    void DrawUI_ObjectActions(UI &uiActionBar, double now);
     void DrawUI_Tilesheet(UI &uiActionBar, double now);
     void DrawUI_WangTile(double now);
     void DrawUI_Wang(UI &uiActionBar, double now);

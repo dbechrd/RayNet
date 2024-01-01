@@ -857,24 +857,24 @@ void ClientWorld::DrawHUDMenu(void)
     UI uiHUDMenu{ {}, uiHUDMenuStyle };
 
     // TODO: Add Quit button to the menu at the very least
-    uiHUDMenu.Button(CSTR("Menu"));
-    uiHUDMenu.Button(CSTR("Quests"));
-    uiHUDMenu.Button(CSTR("Inventory"));
-    uiHUDMenu.Button(CSTR("Map"));
+    uiHUDMenu.Button("Menu");
+    uiHUDMenu.Button("Quests");
+    uiHUDMenu.Button("Inventory");
+    uiHUDMenu.Button("Map");
     uiHUDMenu.Newline();
 
     const char *holdingItem = spinner.ItemName();
     if (!holdingItem) {
         holdingItem = "-Empty-";
     }
-    uiHUDMenu.Text(CSTRLEN(holdingItem));
+    uiHUDMenu.Text(holdingItem);
     uiHUDMenu.Newline();
 
     Tilemap *map = LocalPlayerMap();
     if (map) {
-        uiHUDMenu.Text(map->bg_music.c_str(), map->bg_music.size());
+        uiHUDMenu.Text(map->bg_music);
     } else {
-        uiHUDMenu.Text(CSTR("-Empty-"));
+        uiHUDMenu.Text("-Empty-");
     }
     uiHUDMenu.Newline();
 }

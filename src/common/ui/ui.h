@@ -104,25 +104,23 @@ struct UI {
 
     void Newline(void);
     void Space(Vector2 space);
-    UIState Text(const char *text, size_t textLen);
-    UIState Text(const char *text, size_t textLen, Color fgColor, Color bgColor = BLANK);
+    UIState Text(const char *text, size_t textLen = 0);
+    UIState Text(const std::string &text, Color fgColor = BLANK, Color bgColor = BLANK);
     UIState Text(uint8_t value);
     UIState Text(uint16_t value);
     UIState Text(uint32_t value);
     UIState Text(uint64_t value);
-    UIState Text(const std::string &text);
     template <typename T> UIState Text(T value);
-    UIState Label(const char *text, size_t textLen, int width);
-    UIState Label(const std::string &text, int width);
+    UIState Label(const std::string &text, int width = 0);
     UIState Image(const Texture &texture, Rectangle srcRect = {});
-    UIState Button(const char *text, size_t textLen);
-    UIState Button(const char *text, size_t textLen, Color bgColor);
-    UIState Button(const char *text, size_t textLen, bool pressed, Color bgColor, Color bgColorPressed);
+    UIState Button(const std::string &text);
+    UIState Button(const std::string &text, Color bgColor);
+    UIState Button(const std::string &text, bool pressed, Color bgColor, Color bgColorPressed);
 
     typedef void (*KeyPreCallback)(std::string &str, void *userData, bool &keyHandled);
     typedef void (*KeyPostCallback)(std::string &str, void *userData);
 
-    UIState Textbox(uint32_t ctrlid, std::string &text, bool singleline = true, KeyPreCallback preCallback = 0, KeyPostCallback postCallback = 0, void *userData = 0);
+    UIState Textbox(uint32_t ctrlid, std::string &text, bool multline = false, KeyPreCallback preCallback = 0, KeyPostCallback postCallback = 0, void *userData = 0);
     UIState Textbox(uint32_t ctrlid, float &value, const char *fmt = "%.f", float increment = 1);
 
     template <typename T>

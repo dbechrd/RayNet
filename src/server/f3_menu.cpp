@@ -38,6 +38,7 @@ void F3Menu_Draw(GameServer &server, Camera2D &camera, Vector2 pos)
     DRAW_TEXT("tickAccum", "%.02f", server.tickAccum);
     DRAW_TEXT("window", "%d, %d", GetScreenWidth(), GetScreenHeight());
     DRAW_TEXT("render", "%d, %d", GetRenderWidth(), GetRenderHeight());
+    DRAW_TEXT("zoom", "%.2f", camera.zoom);
     DRAW_TEXT("cursorScn", "%d, %d", GetMouseX(), GetMouseY());
     const Vector2 cursorWorldPos = GetScreenToWorld2D({ (float)GetMouseX(), (float)GetMouseY() }, camera);
     DRAW_TEXT("cursorWld", "%.f, %.f", cursorWorldPos.x, cursorWorldPos.y);
