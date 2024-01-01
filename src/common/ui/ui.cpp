@@ -1111,7 +1111,10 @@ void UI::HAQFieldEditor(uint32_t ctrlid, const std::string &name, T &value, int 
         std::is_same_v<T, int32_t >
         ) {
         float valueFloat = (float)value;
-        Textbox(ctrlid, valueFloat, "%.f");
+        UIState state = Textbox(ctrlid, valueFloat, "%.f");
+        if (flags & HAQ_HOVER_SHOW_TILE && state.hover) {
+            Tilemap::DrawTile(value, GetMousePosition(), &tooltips);
+        }
         value = CLAMP(valueFloat, std::numeric_limits<T>::min(), std::numeric_limits<T>::max());
     } else {
         HAQFieldValue(ctrlid, name, value, flags, labelWidth);
@@ -1150,4 +1153,9 @@ void UI::HAQField(uint32_t ctrlid, const std::string &name, T &value, int flags,
     }
 
     Newline();
+}
+
+void UI::DrawTooltips(void)
+{
+    tooltips.Draw();
 }

@@ -44,23 +44,25 @@ struct GfxAnimState {
 };
 
 enum HAQ_FLAGS {
-    HAQ_NONE                    = 0b00000000,  // no flags set
-    HAQ_SERIALIZE               = 0b00000001,  // serialize field to pack file
-    HAQ_EDIT                    = 0b00000010,  // allow field to be edited in editor (if type is supported)
-    HAQ_STYLE_FLOAT_TENTH       = 0b00000100,  // set format to %.1f and increment to 0.1f
-    HAQ_STYLE_FLOAT_HUNDRETH    = 0b00001000,  // set format to %.2f and increment to 0.01f
-    HAQ_STYLE_STRING_MULTILINE  = 0b00010000,  // allow multi-line editing (field must be std::string!)
-    HAQ_STYLE_BGCOLOR_RED       = 0b00100000,  // set textbox background color to red
-    HAQ_STYLE_BGCOLOR_GREEN     = 0b01000000,  // set textbox background color to green
-    HAQ_STYLE_BGCOLOR_BLUE      = 0b10000000,  // set textbox background color to blue
+    HAQ_NONE                    = 0b0000000000000000,  // no flags set
+    HAQ_SERIALIZE               = 0b0000000000000001,  // serialize field to pack file
+    HAQ_EDIT                    = 0b0000000000000010,  // allow field to be edited in editor (if type is supported)
+    HAQ_STYLE_FLOAT_TENTH       = 0b0000000000000100,  // set format to %.1f and increment to 0.1f
+    HAQ_STYLE_FLOAT_HUNDRETH    = 0b0000000000001000,  // set format to %.2f and increment to 0.01f
+    HAQ_STYLE_STRING_MULTILINE  = 0b0000000000010000,  // allow multi-line editing (field must be std::string!)
+    HAQ_STYLE_BGCOLOR_RED       = 0b0000000000100000,  // set textbox background color to red
+    HAQ_STYLE_BGCOLOR_GREEN     = 0b0000000001000000,  // set textbox background color to green
+    HAQ_STYLE_BGCOLOR_BLUE      = 0b0000000010000000,  // set textbox background color to blue
+    HAQ_HOVER_SHOW_TILE         = 0b0000000100000000,  // show value as a tile texture on mouse hover
 
-    // Convenience combos
+    // Some presets for convenience
     HAQ_EDIT_FLOAT_TENTH      = HAQ_EDIT | HAQ_STYLE_FLOAT_TENTH     ,
     HAQ_EDIT_FLOAT_HUNDRETH   = HAQ_EDIT | HAQ_STYLE_FLOAT_HUNDRETH  ,
     HAQ_EDIT_STRING_MULTILINE = HAQ_EDIT | HAQ_STYLE_STRING_MULTILINE,
     HAQ_EDIT_FLOAT_X          = HAQ_EDIT | HAQ_STYLE_BGCOLOR_RED     ,
     HAQ_EDIT_FLOAT_Y          = HAQ_EDIT | HAQ_STYLE_BGCOLOR_GREEN   ,
     HAQ_EDIT_FLOAT_Z          = HAQ_EDIT | HAQ_STYLE_BGCOLOR_BLUE    ,
+    HAQ_EDIT_TILE_ID          = HAQ_EDIT | HAQ_HOVER_SHOW_TILE       ,
 };
 
 struct GfxFile {
@@ -202,30 +204,30 @@ enum ObjType {
 };
 
 struct ObjectData {
-#define HQT_OBJECT_DATA_FIELDS(FIELD, udata)                                                                               \
-    FIELD(ObjType , type, {}, HAQ_SERIALIZE | HAQ_EDIT, true, udata)                                                       \
-    FIELD(uint16_t, x   , {}, HAQ_SERIALIZE | HAQ_EDIT, true, udata)                                                       \
-    FIELD(uint16_t, y   , {}, HAQ_SERIALIZE | HAQ_EDIT, true, udata)                                                       \
-    FIELD(uint16_t, tile, {}, HAQ_SERIALIZE | HAQ_EDIT, true, udata)                                                       \
-                                                                                                                           \
-    /* type == "decoration" */                                                                                             \
-    /* no extra fields atm  */                                                                                             \
-                                                                                                                           \
-    /* type == ["lever", "door"] */                                                                                        \
-    FIELD(uint16_t, tile_powered , {}, HAQ_SERIALIZE | HAQ_EDIT, udata.type == OBJ_LEVER || udata.type == OBJ_DOOR, udata) \
-    FIELD(uint8_t , power_level  , {}, HAQ_SERIALIZE | HAQ_EDIT, udata.type == OBJ_LEVER || udata.type == OBJ_DOOR, udata) \
-    FIELD(uint8_t , power_channel, {}, HAQ_SERIALIZE | HAQ_EDIT, udata.type == OBJ_LEVER || udata.type == OBJ_DOOR, udata) \
-                                                                                                                           \
-    /* type == "lootable" */                                                                                               \
-    FIELD(uint16_t, loot_table_id, {}, HAQ_SERIALIZE | HAQ_EDIT, udata.type == OBJ_LOOTABLE, udata)                        \
-                                                                                                                           \
-    /* type == "sign" */                                                                                                   \
-    FIELD(std::string, sign_text, {}, HAQ_SERIALIZE | HAQ_EDIT_STRING_MULTILINE, udata.type == OBJ_SIGN, udata)            \
-                                                                                                                           \
-    /* type == "warp" */                                                                                                   \
-    FIELD(uint16_t, warp_map_id, {}, HAQ_SERIALIZE | HAQ_EDIT, udata.type == OBJ_WARP, udata)                              \
-    FIELD(uint16_t, warp_dest_x, {}, HAQ_SERIALIZE | HAQ_EDIT, udata.type == OBJ_WARP, udata)                              \
-    FIELD(uint16_t, warp_dest_y, {}, HAQ_SERIALIZE | HAQ_EDIT, udata.type == OBJ_WARP, udata)                              \
+#define HQT_OBJECT_DATA_FIELDS(FIELD, udata)                                                                                       \
+    FIELD(ObjType , type, {}, HAQ_SERIALIZE | HAQ_EDIT        , true, udata)                                                       \
+    FIELD(uint16_t, x   , {}, HAQ_SERIALIZE | HAQ_EDIT        , true, udata)                                                       \
+    FIELD(uint16_t, y   , {}, HAQ_SERIALIZE | HAQ_EDIT        , true, udata)                                                       \
+    FIELD(uint16_t, tile, {}, HAQ_SERIALIZE | HAQ_EDIT_TILE_ID, true, udata)                                                       \
+                                                                                                                                   \
+    /* type == "decoration" */                                                                                                     \
+    /* no extra fields atm  */                                                                                                     \
+                                                                                                                                   \
+    /* type == ["lever", "door"] */                                                                                                \
+    FIELD(uint16_t, tile_powered , {}, HAQ_SERIALIZE | HAQ_EDIT_TILE_ID, udata.type == OBJ_LEVER || udata.type == OBJ_DOOR, udata) \
+    FIELD(uint8_t , power_level  , {}, HAQ_SERIALIZE | HAQ_EDIT        , udata.type == OBJ_LEVER || udata.type == OBJ_DOOR, udata) \
+    FIELD(uint8_t , power_channel, {}, HAQ_SERIALIZE | HAQ_EDIT        , udata.type == OBJ_LEVER || udata.type == OBJ_DOOR, udata) \
+                                                                                                                                   \
+    /* type == "lootable" */                                                                                                       \
+    FIELD(uint16_t, loot_table_id, {}, HAQ_SERIALIZE | HAQ_EDIT, udata.type == OBJ_LOOTABLE, udata)                                \
+                                                                                                                                   \
+    /* type == "sign" */                                                                                                           \
+    FIELD(std::string, sign_text, {}, HAQ_SERIALIZE | HAQ_EDIT_STRING_MULTILINE, udata.type == OBJ_SIGN, udata)                    \
+                                                                                                                                   \
+    /* type == "warp" */                                                                                                           \
+    FIELD(uint16_t, warp_map_id, {}, HAQ_SERIALIZE | HAQ_EDIT, udata.type == OBJ_WARP, udata)                                      \
+    FIELD(uint16_t, warp_dest_x, {}, HAQ_SERIALIZE | HAQ_EDIT, udata.type == OBJ_WARP, udata)                                      \
+    FIELD(uint16_t, warp_dest_y, {}, HAQ_SERIALIZE | HAQ_EDIT, udata.type == OBJ_WARP, udata)                                      \
     FIELD(uint16_t, warp_dest_z, {}, HAQ_SERIALIZE | HAQ_EDIT, udata.type == OBJ_WARP, udata)
     HQT_OBJECT_DATA_FIELDS(HAQ_C_FIELD, 0);
 #if 0

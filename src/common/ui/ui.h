@@ -89,6 +89,15 @@ struct UI {
     static bool UnfocusActiveEditor(void);
 
     UI(Vector2 position, UIStyle style);
+
+    inline Vector2 CursorScreen(void) {
+        return Vector2Add(position, cursor);
+    }
+
+    void SetCursor(Vector2 cursor) {
+        this->cursor = cursor;
+    }
+
     void PushStyle(UIStyle style);
     void PushMargin(UIMargin margin);
     void PushPadding(UIPad padding);
@@ -126,14 +135,7 @@ struct UI {
     template <typename T>
     void HAQField(uint32_t ctrlid, const std::string &name, T &value, int flags, int labelWidth);
 
-    inline Vector2 CursorScreen(void) {
-        return Vector2Add(position, cursor);
-    }
-
-    void SetCursor(Vector2 cursor) {
-        this->cursor = cursor;
-    }
-
+    void DrawTooltips(void);
 private:
     Vector2 position{}; // top left of this UI
     Vector2 cursor{};   // where to draw next element
@@ -146,6 +148,8 @@ private:
     static bool tabHandledThisFrame;  // to de-dupe
     static uint32_t lastDrawnEditor;  // for shift-tab (1 frame delay)
     static uint32_t tabToPrevEditor;  // for shift-tab (1 frame delay)
+
+    DrawCmdQueue tooltips;
 
     struct HoverHash {
         Vector2 position{};

@@ -798,6 +798,8 @@ UIState Editor::DrawUI_ActionBar(Vector2 position, double now)
         }
     }
 
+    uiActionBar.DrawTooltips();
+
     return uiState;
 }
 void Editor::DrawUI_MapActions(UI &uiActionBar, double now)
