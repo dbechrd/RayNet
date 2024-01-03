@@ -110,6 +110,10 @@ struct EditModeDebug {
     int foo{};
 };
 
+struct GfxAnimEditor {
+    uint16_t selectedId{};
+};
+
 struct EditModeState {
     bool showColliders {};
     bool showTileEdges {};
@@ -125,6 +129,8 @@ struct EditModeState {
     EditModeSfxFiles  sfxFiles  {};
     EditModePackFiles packFiles {};
     EditModeDebug     debug     {};
+
+    GfxAnimEditor     gfxAnimEditor {};
 };
 
 struct Editor {
@@ -138,8 +144,8 @@ struct Editor {
 
     bool showTileDefEditor       {};
     bool showTileDefEditorDirty  {};
-    bool showGfxFrameEditor      {};
-    bool showGfxFrameEditorDirty {};
+    bool showGfxAnimEditor      {};
+    bool showGfxAnimEditorDirty {};
 
     Editor(uint16_t map_id) : map_id(map_id) {}
     Err Init(void);
@@ -174,5 +180,6 @@ private:
     void DrawUI_PackFiles(UI &uiActionBar, double now);
     void DrawUI_Debug(UI &uiActionBar, double now);
 
+    UIState DrawUI_GfxAnimEditor(void);
     UIState DrawUI_TileDefEditor(void);
 };

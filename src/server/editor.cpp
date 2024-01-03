@@ -489,6 +489,7 @@ UIState Editor::DrawUI(Camera2D &camera, double now)
     UIState state{};
     if (active) {
         state = DrawUI_ActionBar(now);
+        state = DrawUI_GfxAnimEditor();
         state = DrawUI_TileDefEditor();
 
         static uint16_t editor_map_id = map_id;
@@ -499,7 +500,7 @@ UIState Editor::DrawUI(Camera2D &camera, double now)
 
         dock_dirty = false;
         showTileDefEditorDirty = false;
-        showGfxFrameEditorDirty = false;
+        showGfxAnimEditorDirty = false;
     }
 
     io.PopScope();
@@ -516,11 +517,11 @@ UIState Editor::DrawUI_ActionBar(double now)
         }
     }
 
-    UIStyle uiActionBarStyle{};
-    UI uiActionBar{ uiPosition, uiActionBarStyle };
+    UIStyle uiStyle{};
+    UI ui{ uiPosition, uiStyle };
 
     // TODO: UI::Panel
-    //BeginScrollPanel(uiActionBar, scrollPanel);
+    //BeginScrollPanel(ui, scrollPanel);
     UIState uiState{};
     const Rectangle actionBarRect{ uiPosition.x, uiPosition.y, width, (float)GetRenderHeight() };
 #if 0
@@ -543,7 +544,7 @@ UIState Editor::DrawUI_ActionBar(double now)
     auto &map = pack_maps.FindById<Tilemap>(map_id);
 
 #if 0
-    UIState openButton = uiActionBar.Button("Open");
+    UIState openButton = ui.Button("Open");
     if (openButton.released) {
         std::string filename = "resources/map/" + map.name + ".mdesk";
         std::thread openFileThread([filename, mapFileFilter]{
@@ -569,7 +570,7 @@ UIState Editor::DrawUI_ActionBar(double now)
         openRequest.clear();
     }
 #endif
-    UIState saveButton = uiActionBar.Button("Save");
+    UIState saveButton = ui.Button("Save");
     if (saveButton.released) {
         {
             std::string path = pack_assets.GetPath(PACK_TYPE_TEXT);
@@ -591,7 +592,7 @@ UIState Editor::DrawUI_ActionBar(double now)
         }
     }
 
-    UIState saveAsButton = uiActionBar.Button("Save As", GRAY);
+    UIState saveAsButton = ui.Button("Save As", GRAY);
 #if 0
     if (saveAsButton.released) {
         {
@@ -633,7 +634,7 @@ UIState Editor::DrawUI_ActionBar(double now)
     }
 #endif
 
-    UIState reloadButton = uiActionBar.Button("Reload", GRAY);
+    UIState reloadButton = ui.Button("Reload", GRAY);
 #if 0
     if (reloadButton.released) {
         // TODO: Probably want to be able to just reload the map, not *everything* right? Hmm..
@@ -658,110 +659,110 @@ UIState Editor::DrawUI_ActionBar(double now)
         }
     }
 #endif
-    uiActionBar.Newline();
+    ui.Newline();
 
-    UIState mapPath = uiActionBar.Text(GetFileName(map.name.c_str()), WHITE);
+    UIState mapPath = ui.Text(GetFileName(map.name.c_str()), WHITE);
     if (mapPath.released) {
         system("explorer maps");
     }
-    uiActionBar.Text(TextFormat("(v%d)", map.version));
+    ui.Text(TextFormat("(v%d)", map.version));
 
-    uiActionBar.Space({ 0, 8 });
-    uiActionBar.Newline();
+    ui.Space({ 0, 8 });
+    ui.Newline();
 
-    UIState showCollidersButton = uiActionBar.Button("Collision", state.showColliders, GRAY, MAROON);
+    UIState showCollidersButton = ui.Button("Collision", state.showColliders, GRAY, MAROON);
     if (showCollidersButton.released) {
         state.showColliders = !state.showColliders;
     }
-    UIState showTileEdgesButton = uiActionBar.Button("Edges", state.showTileEdges, GRAY, MAROON);
+    UIState showTileEdgesButton = ui.Button("Edges", state.showTileEdges, GRAY, MAROON);
     if (showTileEdgesButton.released) {
         state.showTileEdges = !state.showTileEdges;
     }
-    UIState showTileIdsButton = uiActionBar.Button("Tile IDs", state.showTileIds, GRAY, LIGHTGRAY);
+    UIState showTileIdsButton = ui.Button("Tile IDs", state.showTileIds, GRAY, LIGHTGRAY);
     if (showTileIdsButton.released) {
         state.showTileIds = !state.showTileIds;
     }
-    UIState showEntityIdsButton = uiActionBar.Button("Entity IDs", state.showEntityIds, GRAY, LIGHTGRAY);
+    UIState showEntityIdsButton = ui.Button("Entity IDs", state.showEntityIds, GRAY, LIGHTGRAY);
     if (showEntityIdsButton.released) {
         state.showEntityIds = !state.showEntityIds;
     }
 
-    uiActionBar.Space({ 0, 8 });
-    uiActionBar.Newline();
+    ui.Space({ 0, 8 });
+    ui.Newline();
 
     for (int i = 0; i < EditMode_Count; i++) {
-        if (uiActionBar.Button(EditModeStr((EditMode)i), mode == i, BLUE_DESAT, ColorBrightness(BLUE_DESAT, -0.3f)).pressed) {
+        if (ui.Button(EditModeStr((EditMode)i), mode == i, BLUE_DESAT, ColorBrightness(BLUE_DESAT, -0.3f)).pressed) {
             mode = (EditMode)i;
         }
         if (i % 6 == 5) {
-            uiActionBar.Newline();
+            ui.Newline();
         }
     }
 
-    uiActionBar.Space({ 0, 8 });
-    uiActionBar.Newline();
+    ui.Space({ 0, 8 });
+    ui.Newline();
 
     switch (mode) {
         case EditMode_Maps: {
-            DrawUI_MapActions(uiActionBar, now);
+            DrawUI_MapActions(ui, now);
             break;
         }
         case EditMode_Tiles: {
-            DrawUI_TileActions(uiActionBar, now);
+            DrawUI_TileActions(ui, now);
             break;
         }
         case EditMode_Objects: {
-            DrawUI_ObjectActions(uiActionBar, now);
+            DrawUI_ObjectActions(ui, now);
             break;
         }
         case EditMode_Wang: {
-            DrawUI_Wang(uiActionBar, now);
+            DrawUI_Wang(ui, now);
             break;
         }
         case EditMode_Paths: {
-            DrawUI_PathActions(uiActionBar, now);
+            DrawUI_PathActions(ui, now);
             break;
         }
         case EditMode_Dialog: {
-            DrawUI_DialogActions(uiActionBar, now);
+            DrawUI_DialogActions(ui, now);
             break;
         }
         case EditMode_Entities: {
-            DrawUI_EntityActions(uiActionBar, now);
+            DrawUI_EntityActions(ui, now);
             break;
         }
         case EditMode_PackFiles: {
-            DrawUI_PackFiles(uiActionBar, now);
+            DrawUI_PackFiles(ui, now);
             break;
         }
         case EditMode_Debug: {
-            DrawUI_Debug(uiActionBar, now);
+            DrawUI_Debug(ui, now);
             break;
         }
     }
 
-    uiActionBar.DrawTooltips();
+    ui.DrawTooltips();
 
     return uiState;
 }
-void Editor::DrawUI_MapActions(UI &uiActionBar, double now)
+void Editor::DrawUI_MapActions(UI &ui, double now)
 {
     for (const Tilemap &map : pack_maps.tile_maps) {
-        if (uiActionBar.Button(TextFormat("%s", map.name.c_str())).pressed) {
+        if (ui.Button(TextFormat("%s", map.name.c_str())).pressed) {
             map_id = map.id;
         }
-        uiActionBar.Newline();
+        ui.Newline();
     }
 }
-void Editor::DrawUI_TileActions(UI &uiActionBar, double now)
+void Editor::DrawUI_TileActions(UI &ui, double now)
 {
     const char *mapFileFilter[1] = { "*.png" };
     static const char *openRequest = 0;
 
 #if 0
     const std::string &tilesetPath = rnStringCatalog.GetString(map.textureId);
-    uiActionBar.Text(tilesetPath.c_str());
-    if (uiActionBar.Button("Change tileset", ColorBrightness(ORANGE, -0.3f)).released) {
+    ui.Text(tilesetPath.c_str());
+    if (ui.Button("Change tileset", ColorBrightness(ORANGE, -0.3f)).released) {
         std::thread openFileThread([tilesetPath, mapFileFilter]{
             openRequest = tinyfd_openFileDialog(
                 "Open File",
@@ -785,7 +786,7 @@ void Editor::DrawUI_TileActions(UI &uiActionBar, double now)
         }
         openRequest = 0;
     }
-    uiActionBar.Newline();
+    ui.Newline();
 #endif
 
     auto &map = pack_maps.FindById<Tilemap>(map_id);
@@ -801,12 +802,12 @@ void Editor::DrawUI_TileActions(UI &uiActionBar, double now)
         height = map.height;
     }
 
-    uiActionBar.Text("Size");
-    uiActionBar.PushWidth(100);
-    uiActionBar.Textbox(ctrlid_width, width);
-    uiActionBar.Textbox(ctrlid_height, height);
-    uiActionBar.PopStyle();
-    if (uiActionBar.Button("Resize!").pressed) {
+    ui.Text("Size");
+    ui.PushWidth(100);
+    ui.Textbox(ctrlid_width, width);
+    ui.Textbox(ctrlid_height, height);
+    ui.PopStyle();
+    if (ui.Button("Resize!").pressed) {
         uint16_t newWidth = (uint16_t)width;
         uint16_t newHeight = (uint16_t)height;
 
@@ -832,51 +833,51 @@ void Editor::DrawUI_TileActions(UI &uiActionBar, double now)
         map.width = (uint16_t)newWidth;
         map.height = (uint16_t)newHeight;
     }
-    uiActionBar.Newline();
+    ui.Newline();
 
-    uiActionBar.Text("Flag");
+    ui.Text("Flag");
 
     auto &tileEditMode = state.tiles.tileEditMode;
-    if (uiActionBar.Button("Select", tileEditMode == TileEditMode_Select, GRAY, SKYBLUE).pressed) {
+    if (ui.Button("Select", tileEditMode == TileEditMode_Select, GRAY, SKYBLUE).pressed) {
         tileEditMode = TileEditMode_Select;
     }
-    if (uiActionBar.Button("Collision", tileEditMode == TileEditMode_Collision, GRAY, SKYBLUE).pressed) {
+    if (ui.Button("Collision", tileEditMode == TileEditMode_Collision, GRAY, SKYBLUE).pressed) {
         tileEditMode = TileEditMode_Collision;
     }
-    if (uiActionBar.Button("Auto-tile Mask", tileEditMode == TileEditMode_AutoTileMask, GRAY, SKYBLUE).pressed) {
+    if (ui.Button("Auto-tile Mask", tileEditMode == TileEditMode_AutoTileMask, GRAY, SKYBLUE).pressed) {
         tileEditMode = TileEditMode_AutoTileMask;
     }
-    uiActionBar.Newline();
+    ui.Newline();
 
-    uiActionBar.Text("Layer");
-    if (uiActionBar.Button("Ground", state.tiles.layer == TILE_LAYER_GROUND, GRAY, SKYBLUE).pressed) {
+    ui.Text("Layer");
+    if (ui.Button("Ground", state.tiles.layer == TILE_LAYER_GROUND, GRAY, SKYBLUE).pressed) {
         state.tiles.layer = TILE_LAYER_GROUND;
     }
-    if (uiActionBar.Button("Object", state.tiles.layer == TILE_LAYER_OBJECT, GRAY, SKYBLUE).pressed) {
+    if (ui.Button("Object", state.tiles.layer == TILE_LAYER_OBJECT, GRAY, SKYBLUE).pressed) {
         state.tiles.layer = TILE_LAYER_OBJECT;
     }
-    uiActionBar.Newline();
+    ui.Newline();
 
-    DrawUI_Tilesheet(uiActionBar, now);
+    DrawUI_Tilesheet(ui, now);
 }
-void Editor::DrawUI_ObjectActions(UI &uiActionBar, double now)
+void Editor::DrawUI_ObjectActions(UI &ui, double now)
 {
     auto &map = pack_maps.FindById<Tilemap>(map_id);
     Tilemap::Coord coord = state.objects.selected_coord;
     ObjectData *obj_data = map.GetObjectData(coord.x, coord.y);
     if (obj_data) {
-        uiActionBar.Label("Object Data");
-        uiActionBar.Newline();
-        uiActionBar.HAQField(__COUNTER__, "", *obj_data, HAQ_EDIT, 100);
+        ui.Label("Object Data");
+        ui.Newline();
+        ui.HAQField(__COUNTER__, "", *obj_data, HAQ_EDIT, 100);
     } else {
-        uiActionBar.Label("Create object:");
-        uiActionBar.Newline();
+        ui.Label("Create object:");
+        ui.Newline();
         int create_type = 0;
         for (int i = 1; i < OBJ_COUNT; i++) {
-            if (uiActionBar.Button(ObjTypeStr((ObjType)i)).pressed) {
+            if (ui.Button(ObjTypeStr((ObjType)i)).pressed) {
                 create_type = i;
             }
-            uiActionBar.Newline();
+            ui.Newline();
         }
         if (create_type) {
             ObjectData obj{};
@@ -895,7 +896,7 @@ void DrawRectangleRectOffset(const Rectangle &rect, Vector2 &offset, Color color
     offsetRect.y += offset.y;
     DrawRectangleRec(offsetRect, color);
 }
-void Editor::DrawUI_Tilesheet(UI &uiActionBar, double now)
+void Editor::DrawUI_Tilesheet(UI &ui, double now)
 {
     // TODO(dlb): Support multi-select (big rectangle?), and figure out where this lives
 
@@ -917,9 +918,9 @@ void Editor::DrawUI_Tilesheet(UI &uiActionBar, double now)
 
     UIStyle blackBorderStyle{};
     blackBorderStyle.borderColor = BLACK;
-    uiActionBar.PushStyle(blackBorderStyle);
+    ui.PushStyle(blackBorderStyle);
 
-    UIState sheet = uiActionBar.Image(checkerTex);
+    UIState sheet = ui.Image(checkerTex);
     Vector2 imgTL{ sheet.contentRect.x, sheet.contentRect.y };
 
     // Draw tiledefs
@@ -929,7 +930,7 @@ void Editor::DrawUI_Tilesheet(UI &uiActionBar, double now)
         map.DrawTile(tile_defs[i].id, { imgTL.x + tile_x, imgTL.y + tile_y }, 0);
     }
 
-    uiActionBar.PopStyle();
+    ui.PopStyle();
 
     // Draw collision overlay on tilesheet if we're in collision editing mode
     switch (state.tiles.tileEditMode) {
@@ -1137,23 +1138,23 @@ void Editor::DrawUI_Tilesheet(UI &uiActionBar, double now)
 
     DrawUI_WangTile(now);
 }
-void Editor::DrawUI_Wang(UI &uiActionBar, double now)
+void Editor::DrawUI_Wang(UI &ui, double now)
 {
-    if (uiActionBar.Button("Generate template").pressed) {
+    if (ui.Button("Generate template").pressed) {
         Err err = WangTileset::GenerateTemplate("resources/wang/template.png");
         if (err) {
             // TODO: Show the user
             printf("[editor] Failed to generate wang tileset template\n");
         }
     }
-    uiActionBar.Newline();
+    ui.Newline();
 
     WangTileset &wangTileset = state.wang.wangTileset;
     WangMap &wangMap = state.wang.wangMap;
 
     UIStyle uiWangStyle4x{};
     uiWangStyle4x.scale = 2;
-    uiActionBar.PushStyle(uiWangStyle4x);
+    ui.PushStyle(uiWangStyle4x);
 
     UIStyle styleSelected{ uiWangStyle4x };
     styleSelected.borderColor = WHITE;
@@ -1168,19 +1169,19 @@ void Editor::DrawUI_Wang(UI &uiActionBar, double now)
         };
         bool stylePushed = false;
         if (i == state.wang.hTex) {
-            uiActionBar.PushStyle(styleSelected);
+            ui.PushStyle(styleSelected);
             stylePushed = true;
         }
-        if (uiActionBar.Image(wangTileset.thumbnail, srcRect).pressed) {
+        if (ui.Image(wangTileset.thumbnail, srcRect).pressed) {
             state.wang.hTex = state.wang.hTex == i ? -1 : i;
             state.wang.vTex = -1;
         }
         if (stylePushed) {
-            uiActionBar.PopStyle();
+            ui.PopStyle();
         }
     }
-    Vector2 cursorEndOfFirstLine = uiActionBar.CursorScreen();
-    uiActionBar.Newline();
+    Vector2 cursorEndOfFirstLine = ui.CursorScreen();
+    ui.Newline();
 
     for (int i = 0; i < wangTileset.ts.num_v_tiles; i++) {
         stbhw_tile *wangTile = wangTileset.ts.v_tiles[i];
@@ -1192,36 +1193,36 @@ void Editor::DrawUI_Wang(UI &uiActionBar, double now)
         };
         bool stylePushed = false;
         if (i == state.wang.vTex) {
-            uiActionBar.PushStyle(styleSelected);
+            ui.PushStyle(styleSelected);
             stylePushed = true;
         }
-        if (uiActionBar.Image(wangTileset.thumbnail, srcRect).pressed) {
+        if (ui.Image(wangTileset.thumbnail, srcRect).pressed) {
             state.wang.hTex = -1;
             state.wang.vTex = state.wang.vTex == i ? -1 : i;
         }
         if (stylePushed) {
-            uiActionBar.PopStyle();
+            ui.PopStyle();
         }
     }
-    uiActionBar.Newline();
+    ui.Newline();
 
-    if (uiActionBar.Button("Export tileset").pressed) {
+    if (ui.Button("Export tileset").pressed) {
         ExportImage(wangTileset.ts.img, wangTileset.filename.c_str());
     }
-    uiActionBar.Newline();
-    uiActionBar.Image(wangTileset.thumbnail);
-    uiActionBar.Newline();
+    ui.Newline();
+    ui.Image(wangTileset.thumbnail);
+    ui.Newline();
 
-    uiActionBar.PopStyle();
+    ui.PopStyle();
 
     auto &map = pack_maps.FindById<Tilemap>(map_id);
 
-    if (uiActionBar.Button("Re-generate Map").pressed) {
+    if (ui.Button("Re-generate Map").pressed) {
         wangTileset.GenerateMap(map.width, map.height, wangMap);
     }
-    uiActionBar.Newline();
+    ui.Newline();
 
-    if (uiActionBar.Image(wangMap.colorized).pressed) {
+    if (ui.Image(wangMap.colorized).pressed) {
         map.SetFromWangMap(wangMap, now);
     }
 
@@ -1365,36 +1366,42 @@ void Editor::DrawUI_WangTile(double now)
         }
     }
 }
-void Editor::DrawUI_PathActions(UI &uiActionBar, double now)
+void Editor::DrawUI_PathActions(UI &ui, double now)
 {
     if (state.pathNodes.cursor.dragging) {
         printf("dragging\n");
     }
-    uiActionBar.Text(TextFormat(
+    ui.Text(TextFormat(
         "drag: %s, path: %d, node: %d",
         state.pathNodes.cursor.dragging ? "true" : "false",
         state.pathNodes.cursor.dragPathId,
         state.pathNodes.cursor.dragPathNodeIndex
     ));
 }
-void Editor::DrawUI_DialogActions(UI &uiActionBar, double now)
+void Editor::DrawUI_DialogActions(UI &ui, double now)
 {
 #if 0
-    //if (uiActionBar.Button("Add", DARKGREEN).pressed) {
+    //if (ui.Button("Add", DARKGREEN).pressed) {
     //    //map.warps.push_back({});
     //}
-    //uiActionBar.Newline();
+    //ui.Newline();
 
-    UIStyle searchStyle = uiActionBar.GetStyle();
+    UIStyle searchStyle = ui.GetStyle();
     searchStyle.size.x = 400;
     searchStyle.pad = UIPad(8, 2);
-    searchStyle.margin = UIMargin(0, 0, 0, 6);
-    uiActionBar.PushStyle(searchStyle);
+    searchStyle.margin = UIMargin(0, 0, 4, 6);
+    ui.PushStyle(searchStyle);
 
     static STB_TexteditState txtSearch{};
-    static std::string filter{};
-    uiActionBar.Textbox(txtSearch, filter);
-    uiActionBar.Newline();
+    static std::string filter{ "*" };
+    ui.Newline();
+    ui.PushWidth(0);
+    if (ui.Button("Clear").pressed) filter = "";
+    if (ui.Button("All").pressed) filter = "*";
+    ui.PopStyle();
+    ui.Textbox(txtSearch, filter);
+
+    ui.Newline();
 
     for (Dialog &dialog : dialog_library.dialogs) {
         if (!dialog.id) {
@@ -1407,42 +1414,42 @@ void Editor::DrawUI_DialogActions(UI &uiActionBar, double now)
             continue;
         }
 
-        if (uiActionBar.Text(msg.c_str(), WHITE, bgColor).down) {
+        if (ui.Text(msg.c_str(), WHITE, bgColor).down) {
             state.dialog.dialogId = dialog.id;
         }
-        uiActionBar.Newline();
+        ui.Newline();
     }
 
     if (state.dialog.dialogId) {
         Dialog *dialog = dialog_library.FindById(state.dialog.dialogId);
         if (dialog) {
-            uiActionBar.Text("message");
-            uiActionBar.Newline();
+            ui.Text("message");
+            ui.Newline();
             static STB_TexteditState txtMessage{};
-            uiActionBar.Textbox(txtMessage, dialog.msg);
-            uiActionBar.Newline();
+            ui.Textbox(txtMessage, dialog.msg);
+            ui.Newline();
 
             static STB_TexteditState txtOptionId[SV_MAX_ENTITY_DIALOG_OPTIONS]{};
             for (int i = 0; i < SV_MAX_ENTITY_DIALOG_OPTIONS; i++) {
-                uiActionBar.Text(TextFormat("option %d", i));
-                uiActionBar.Newline();
+                ui.Text(TextFormat("option %d", i));
+                ui.Newline();
                 float id = dialog.option_ids[i];
-                uiActionBar.Textbox(txtOptionId[i], id, 0, "%.f");
+                ui.Textbox(txtOptionId[i], id, 0, "%.f");
                 dialog.option_ids[i] = (DialogId)CLAMP(id, 0, pack_assets.dialogs.size() - 1);
-                uiActionBar.Newline();
+                ui.Newline();
             }
         } else {
             state.dialog.dialogId = 0;
         }
     }
 
-    uiActionBar.PopStyle();
+    ui.PopStyle();
 #endif
 }
-void Editor::DrawUI_EntityActions(UI &uiActionBar, double now)
+void Editor::DrawUI_EntityActions(UI &ui, double now)
 {
     auto &map = pack_maps.FindById<Tilemap>(map_id);
-    if (uiActionBar.Button("Despawn all", ColorBrightness(MAROON, -0.3f)).pressed) {
+    if (ui.Button("Despawn all", ColorBrightness(MAROON, -0.3f)).pressed) {
         for (const Entity &entity : entityDb->entities) {
             if (entity.type == Entity::TYP_PLAYER || entity.map_id != map.id) {
                 continue;
@@ -1452,18 +1459,23 @@ void Editor::DrawUI_EntityActions(UI &uiActionBar, double now)
         }
     }
 
-    uiActionBar.Newline();
-    uiActionBar.Space({ 0, 4 });
+    ui.Newline();
+    ui.Space({ 0, 4 });
 
-    UIStyle searchStyle = uiActionBar.GetStyle();
+    UIStyle searchStyle = ui.GetStyle();
     searchStyle.size.x = 400;
     searchStyle.pad = UIPad(8, 2);
-    searchStyle.margin = UIMargin(0, 0, 0, 6);
-    uiActionBar.PushStyle(searchStyle);
+    searchStyle.margin = UIMargin(0, 0, 4, 6);
+    ui.PushStyle(searchStyle);
 
     static std::string filter{ "*" };
-    uiActionBar.Textbox(__COUNTER__, filter);
-    uiActionBar.Newline();
+    ui.Textbox(__COUNTER__, filter);
+    ui.Newline();
+    ui.PushWidth(0);
+    if (ui.Button("Clear").pressed) filter = "";
+    if (ui.Button("All").pressed) filter = "*";
+    ui.PopStyle();
+    ui.Newline();
 
     for (uint32_t i = 0; i < SV_MAX_ENTITIES; i++) {
         Entity &entity = entityDb->entities[i];
@@ -1477,13 +1489,13 @@ void Editor::DrawUI_EntityActions(UI &uiActionBar, double now)
         }
 
         Color bgColor = entity.id == state.entities.selectedId ? ColorBrightness(ORANGE, -0.3f) : BLUE_DESAT;
-        if (uiActionBar.Text(idStr, WHITE, bgColor).down) {
+        if (ui.Text(idStr, WHITE, bgColor).down) {
             state.entities.selectedId = entity.id;
         }
-        uiActionBar.Newline();
+        ui.Newline();
     }
 
-    uiActionBar.PopStyle();
+    ui.PopStyle();
 
     if (state.entities.selectedId) {
         Entity *entity = entityDb->FindEntity(state.entities.selectedId);
@@ -1492,115 +1504,120 @@ void Editor::DrawUI_EntityActions(UI &uiActionBar, double now)
 
             ////////////////////////////////////////////////////////////////////////
             // Entity
-            uiActionBar.Label("id", labelWidth);
-            uiActionBar.Text(TextFormat("%d", entity->id));
-            uiActionBar.Newline();
+            ui.Label("id", labelWidth);
+            ui.Text(TextFormat("%d", entity->id));
+            ui.Newline();
 
-            uiActionBar.Label("type", labelWidth);
-            uiActionBar.Text(EntityTypeStr(entity->type));
-            uiActionBar.Newline();
+            ui.Label("type", labelWidth);
+            ui.Text(EntityTypeStr(entity->type));
+            ui.Newline();
 
-            uiActionBar.Label("position", labelWidth);
-            uiActionBar.PushBgColor({ 127, 0, 0, 255 }, UI_CtrlTypeTextbox);
-            uiActionBar.PushWidth(80);
-            uiActionBar.Textbox(__COUNTER__, entity->position.x);
-            uiActionBar.PopStyle();
-            uiActionBar.PopStyle();
+            ui.Label("position", labelWidth);
+            ui.PushBgColor({ 127, 0, 0, 255 }, UI_CtrlTypeTextbox);
+            ui.PushWidth(80);
+            ui.Textbox(__COUNTER__, entity->position.x);
+            ui.PopStyle();
+            ui.PopStyle();
 
-            uiActionBar.PushBgColor({ 0, 127, 0, 255 }, UI_CtrlTypeTextbox);
-            uiActionBar.PushWidth(80);
-            uiActionBar.Textbox(__COUNTER__, entity->position.y);
-            uiActionBar.PopStyle();
-            uiActionBar.PopStyle();
-            uiActionBar.Newline();
+            ui.PushBgColor({ 0, 127, 0, 255 }, UI_CtrlTypeTextbox);
+            ui.PushWidth(80);
+            ui.Textbox(__COUNTER__, entity->position.y);
+            ui.PopStyle();
+            ui.PopStyle();
+            ui.Newline();
 
             ////////////////////////////////////////////////////////////////////////
             // Combat
-            uiActionBar.Label("attk cooldown", labelWidth);
+            ui.Label("attk cooldown", labelWidth);
             const float attackCooldownLeft = MAX(0, entity->attack_cooldown - (now - entity->last_attacked_at));
-            uiActionBar.Text(TextFormat("%.3f", attackCooldownLeft));
-            uiActionBar.Newline();
+            ui.Text(TextFormat("%.3f", attackCooldownLeft));
+            ui.Newline();
 
             ////////////////////////////////////////////////////////////////////////
             // Collision
-            uiActionBar.Label("radius", labelWidth);
-            uiActionBar.PushWidth(80);
-            uiActionBar.Textbox(__COUNTER__, entity->radius);
-            uiActionBar.PopStyle();
-            uiActionBar.Newline();
+            ui.Label("radius", labelWidth);
+            ui.PushWidth(80);
+            ui.Textbox(__COUNTER__, entity->radius);
+            ui.PopStyle();
+            ui.Newline();
 
-            uiActionBar.Label("colliding", labelWidth);
+            ui.Label("colliding", labelWidth);
             if (entity->colliding) {
-                uiActionBar.Text("True", RED);
+                ui.Text("True", RED);
             } else {
-                uiActionBar.Text("False", WHITE);
+                ui.Text("False", WHITE);
             }
-            uiActionBar.Newline();
+            ui.Newline();
 
-            uiActionBar.Label("onWarp", labelWidth);
+            ui.Label("onWarp", labelWidth);
             if (entity->on_warp) {
-                uiActionBar.Text("True", SKYBLUE);
+                ui.Text("True", SKYBLUE);
             } else {
-                uiActionBar.Text("False", WHITE);
+                ui.Text("False", WHITE);
             }
-            uiActionBar.Newline();
+            ui.Newline();
 
             ////////////////////////////////////////////////////////////////////////
             // Life
-            uiActionBar.Label("health", labelWidth);
-            uiActionBar.PushWidth(80);
-            uiActionBar.Textbox(__COUNTER__, entity->hp);
-            uiActionBar.PopStyle();
+            ui.Label("health", labelWidth);
+            ui.PushWidth(80);
+            ui.Textbox(__COUNTER__, entity->hp);
+            ui.PopStyle();
 
-            uiActionBar.Text("/");
+            ui.Text("/");
 
-            uiActionBar.PushWidth(80);
-            uiActionBar.Textbox(__COUNTER__, entity->hp_max);
-            uiActionBar.PopStyle();
-            uiActionBar.Newline();
+            ui.PushWidth(80);
+            ui.Textbox(__COUNTER__, entity->hp_max);
+            ui.PopStyle();
+            ui.Newline();
 
             ////////////////////////////////////////////////////////////////////////
             // Physics
-            uiActionBar.Label("drag", labelWidth);
-            uiActionBar.PushWidth(80);
-            uiActionBar.Textbox(__COUNTER__, entity->drag);
-            uiActionBar.PopStyle();
-            uiActionBar.Newline();
+            ui.Label("drag", labelWidth);
+            ui.PushWidth(80);
+            ui.Textbox(__COUNTER__, entity->drag);
+            ui.PopStyle();
+            ui.Newline();
 
-            uiActionBar.Label("speed", labelWidth);
-            uiActionBar.PushWidth(80);
-            uiActionBar.Textbox(__COUNTER__, entity->speed);
-            uiActionBar.PopStyle();
-            uiActionBar.Newline();
+            ui.Label("speed", labelWidth);
+            ui.PushWidth(80);
+            ui.Textbox(__COUNTER__, entity->speed);
+            ui.PopStyle();
+            ui.Newline();
 
-            uiActionBar.Label("velocity", labelWidth);
-            uiActionBar.PushBgColor({ 127, 0, 0, 255 }, UI_CtrlTypeTextbox);
-            uiActionBar.PushWidth(80);
-            uiActionBar.Textbox(__COUNTER__, entity->velocity.x);
-            uiActionBar.PopStyle();
-            uiActionBar.PopStyle();
-            uiActionBar.PushBgColor({ 0, 127, 0, 255 }, UI_CtrlTypeTextbox);
-            uiActionBar.PushWidth(80);
-            uiActionBar.Textbox(__COUNTER__, entity->velocity.y);
-            uiActionBar.PopStyle();
-            uiActionBar.PopStyle();
-            uiActionBar.Newline();
+            ui.Label("velocity", labelWidth);
+            ui.PushBgColor({ 127, 0, 0, 255 }, UI_CtrlTypeTextbox);
+            ui.PushWidth(80);
+            ui.Textbox(__COUNTER__, entity->velocity.x);
+            ui.PopStyle();
+            ui.PopStyle();
+            ui.PushBgColor({ 0, 127, 0, 255 }, UI_CtrlTypeTextbox);
+            ui.PushWidth(80);
+            ui.Textbox(__COUNTER__, entity->velocity.y);
+            ui.PopStyle();
+            ui.PopStyle();
+            ui.Newline();
         } else {
             state.entities.selectedId = 0;
         }
     }
 }
-void Editor::DrawUI_PackFiles(UI &uiActionBar, double now)
+void Editor::DrawUI_PackFiles(UI &ui, double now)
 {
-    UIStyle searchStyle = uiActionBar.GetStyle();
+    UIStyle searchStyle = ui.GetStyle();
     searchStyle.size.x = 400;
     searchStyle.pad = UIPad(8, 2);
-    searchStyle.margin = UIMargin(0, 0, 0, 6);
-    uiActionBar.PushStyle(searchStyle);
+    searchStyle.margin = UIMargin(0, 0, 4, 6);
+    ui.PushStyle(searchStyle);
 
     static std::string filter{ "*" };
-    uiActionBar.Textbox(__COUNTER__, filter);
-    uiActionBar.Newline();
+    ui.Textbox(__COUNTER__, filter);
+    ui.Newline();
+    ui.PushWidth(0);
+    if (ui.Button("Clear").pressed) filter = "";
+    if (ui.Button("All").pressed) filter = "*";
+    ui.PopStyle();
+    ui.Newline();
 
     Pack *packs[]{ &pack_assets, &pack_maps };
 
@@ -1616,26 +1633,26 @@ void Editor::DrawUI_PackFiles(UI &uiActionBar, double now)
             continue;
         }
 
-        if (uiActionBar.Text(idStr, WHITE, bgColor).down) {
+        if (ui.Text(idStr, WHITE, bgColor).down) {
             state.packFiles.selectedPack = &pack;
         }
-        uiActionBar.Newline();
+        ui.Newline();
     }
 
-    uiActionBar.PopStyle();
+    ui.PopStyle();
 
     if (state.packFiles.selectedPack) {
         Pack &pack = *state.packFiles.selectedPack;
 
         const int labelWidth = 100;
 
-        uiActionBar.Label("version", labelWidth);
-        uiActionBar.Text(TextFormat("%d", pack.version));
-        uiActionBar.Newline();
+        ui.Label("version", labelWidth);
+        ui.Text(TextFormat("%d", pack.version));
+        ui.Newline();
 
-        uiActionBar.Label("tocEntries", labelWidth);
-        uiActionBar.Text(TextFormat("%zu", pack.toc.entries.size()));
-        uiActionBar.Newline();
+        ui.Label("tocEntries", labelWidth);
+        ui.Text(TextFormat("%zu", pack.toc.entries.size()));
+        ui.Newline();
 
         static struct DatTypeFilter {
             bool enabled;
@@ -1654,10 +1671,10 @@ void Editor::DrawUI_PackFiles(UI &uiActionBar, double now)
             { true,  "ENT", ColorFromHSV((int)DAT_TYP_ENTITY    * (360.0f / (float)DAT_TYP_COUNT), 0.9f, 0.6f) },
         };
 
-        uiActionBar.PushWidth(34);
+        ui.PushWidth(34);
         for (int i = 0; i < DAT_TYP_COUNT; i++) {
             DatTypeFilter &filter = datTypeFilter[i];
-            if (uiActionBar.Button(filter.text ? filter.text : "???", filter.enabled, DARKGRAY, filter.color).pressed) {
+            if (ui.Button(filter.text ? filter.text : "???", filter.enabled, DARKGRAY, filter.color).pressed) {
                 if (io.KeyDown(KEY_LEFT_SHIFT)) {
                     filter.enabled = !filter.enabled;
                 } else {
@@ -1668,17 +1685,17 @@ void Editor::DrawUI_PackFiles(UI &uiActionBar, double now)
                 }
             }
             if ((i % 7 == 7 - 1) || i == DAT_TYP_COUNT - 1) {
-                uiActionBar.Newline();
+                ui.Newline();
             }
         }
-        uiActionBar.PopStyle();
+        ui.PopStyle();
 
-        uiActionBar.Space({ 0, 4 });
+        ui.Space({ 0, 4 });
 
         static ScrollPanel scrollPanel{{}};
-        const Vector2 panelTopLeft = uiActionBar.CursorScreen();
+        const Vector2 panelTopLeft = ui.CursorScreen();
         scrollPanel.rect = { panelTopLeft.x, panelTopLeft.y, width, GetRenderHeight() - panelTopLeft.y };
-        uiActionBar.BeginScrollPanel(scrollPanel);
+        ui.BeginScrollPanel(scrollPanel);
 
         // Defer changing selection until after the loop has rendered every item
         int newSelectedOffset = 0;
@@ -1756,11 +1773,11 @@ void Editor::DrawUI_PackFiles(UI &uiActionBar, double now)
                 }
             }
 
-            uiActionBar.PushWidth(400);
-            uiActionBar.PushMargin({ 1, 3, 1, 3 });
+            ui.PushWidth(400);
+            ui.PushMargin({ 1, 3, 1, 3 });
 
             const char *text = TextFormat("[%s] %s", selected ? "-" : "+", desc);
-            if (uiActionBar.Text(text, WHITE, ColorBrightness(filter.color, -0.2f)).pressed) {
+            if (ui.Text(text, WHITE, ColorBrightness(filter.color, -0.2f)).pressed) {
                 if (!selected) {
                     newSelectedOffset = entry.offset;
                 } else {
@@ -1768,14 +1785,14 @@ void Editor::DrawUI_PackFiles(UI &uiActionBar, double now)
                 }
             }
 
-            uiActionBar.PopStyle();
-            uiActionBar.PopStyle();
-            uiActionBar.Newline();
+            ui.PopStyle();
+            ui.PopStyle();
+            ui.Newline();
 
             if (selected) {
                 #define HAQ_UI_FIELD(c_type, c_name, c_init, flags, condition, parent) \
                     if (condition) { \
-                        uiActionBar.HAQField(__COUNTER__, #c_name, parent.c_name, (flags), labelWidth); \
+                        ui.HAQField(__COUNTER__, #c_name, parent.c_name, (flags), labelWidth); \
                     }
 
                 #define HAQ_UI(hqt, parent) \
@@ -1800,15 +1817,15 @@ void Editor::DrawUI_PackFiles(UI &uiActionBar, double now)
                         HAQ_UI(HQT_SFX_FILE_FIELDS, sfx_file);
 
                         if (!IsSoundPlaying(sfx_file.name)) {
-                            if (uiActionBar.Button("Play", ColorBrightness(DARKGREEN, -0.3f)).pressed) {
+                            if (ui.Button("Play", ColorBrightness(DARKGREEN, -0.3f)).pressed) {
                                 PlaySound(sfx_file.name, 0);
                             }
                         } else {
-                            if (uiActionBar.Button("Stop", ColorBrightness(MAROON, -0.3f)).pressed) {
+                            if (ui.Button("Stop", ColorBrightness(MAROON, -0.3f)).pressed) {
                                 StopSound(sfx_file.name);
                             }
                         }
-                        uiActionBar.Newline();
+                        ui.Newline();
                         break;
                     }
                     case DAT_TYP_GFX_FRAME:
@@ -1823,24 +1840,24 @@ void Editor::DrawUI_PackFiles(UI &uiActionBar, double now)
                         GfxAnim &gfx_anim = pack.gfx_anims[entry.index];
                         HAQ_UI(HQT_GFX_ANIM_FIELDS, gfx_anim);
 #if 0
-                        uiActionBar.Label("id", labelWidth);
-                        uiActionBar.Text(CSTRS(gfxAnim.id));
-                        uiActionBar.Newline();
+                        ui.Label("id", labelWidth);
+                        ui.Text(CSTRS(gfxAnim.id));
+                        ui.Newline();
 
-                        uiActionBar.Label("sound", labelWidth);
-                        uiActionBar.Text(CSTRS(gfxAnim.sound));
-                        uiActionBar.Newline();
+                        ui.Label("sound", labelWidth);
+                        ui.Text(CSTRS(gfxAnim.sound));
+                        ui.Newline();
 
-                        uiActionBar.Label("frame_delay", labelWidth);
-                        uiActionBar.Text(CSTRLEN(TextFormat("%u", gfxAnim.frame_delay)));
-                        uiActionBar.Newline();
+                        ui.Label("frame_delay", labelWidth);
+                        ui.Text(CSTRLEN(TextFormat("%u", gfxAnim.frame_delay)));
+                        ui.Newline();
 
-                        uiActionBar.Label("frames", labelWidth);
-                        uiActionBar.Newline();
+                        ui.Label("frames", labelWidth);
+                        ui.Newline();
 
                         for (int i = 0; i < gfxAnim.frames.size(); i++) {
-                            uiActionBar.Text(CSTRLEN(TextFormat("[%d] %s", i, gfxAnim.frames[i].c_str())));
-                            uiActionBar.Newline();
+                            ui.Text(CSTRLEN(TextFormat("[%d] %s", i, gfxAnim.frames[i].c_str())));
+                            ui.Newline();
                         }
 #endif
                         break;
@@ -1852,41 +1869,41 @@ void Editor::DrawUI_PackFiles(UI &uiActionBar, double now)
 #if 1
                         HAQ_UI(HQT_SPRITE_FIELDS, sprite);
 #else
-                        uiActionBar.Label("name", labelWidth);
-                        uiActionBar.Text(CSTRS(sprite.name));
-                        uiActionBar.Newline();
+                        ui.Label("name", labelWidth);
+                        ui.Text(CSTRS(sprite.name));
+                        ui.Newline();
 
-                        uiActionBar.Label("N ", labelWidth);
-                        uiActionBar.Text(CSTRS(sprite.anims[DIR_N]));
-                        uiActionBar.Newline();
+                        ui.Label("N ", labelWidth);
+                        ui.Text(CSTRS(sprite.anims[DIR_N]));
+                        ui.Newline();
 
-                        uiActionBar.Label("E ", labelWidth);
-                        uiActionBar.Text(CSTRS(sprite.anims[DIR_E]));
-                        uiActionBar.Newline();
+                        ui.Label("E ", labelWidth);
+                        ui.Text(CSTRS(sprite.anims[DIR_E]));
+                        ui.Newline();
 
-                        uiActionBar.Label("S ", labelWidth);
-                        uiActionBar.Text(CSTRS(sprite.anims[DIR_S]));
-                        uiActionBar.Newline();
+                        ui.Label("S ", labelWidth);
+                        ui.Text(CSTRS(sprite.anims[DIR_S]));
+                        ui.Newline();
 
-                        uiActionBar.Label("S ", labelWidth);
-                        uiActionBar.Text(CSTRS(sprite.anims[DIR_W]));
-                        uiActionBar.Newline();
+                        ui.Label("S ", labelWidth);
+                        ui.Text(CSTRS(sprite.anims[DIR_W]));
+                        ui.Newline();
 
-                        uiActionBar.Label("NE", labelWidth);
-                        uiActionBar.Text(CSTRS(sprite.anims[DIR_SE]));
-                        uiActionBar.Newline();
+                        ui.Label("NE", labelWidth);
+                        ui.Text(CSTRS(sprite.anims[DIR_SE]));
+                        ui.Newline();
 
-                        uiActionBar.Label("SE", labelWidth);
-                        uiActionBar.Text(CSTRS(sprite.anims[DIR_SE]));
-                        uiActionBar.Newline();
+                        ui.Label("SE", labelWidth);
+                        ui.Text(CSTRS(sprite.anims[DIR_SE]));
+                        ui.Newline();
 
-                        uiActionBar.Label("SW", labelWidth);
-                        uiActionBar.Text(CSTRS(sprite.anims[DIR_SW]));
-                        uiActionBar.Newline();
+                        ui.Label("SW", labelWidth);
+                        ui.Text(CSTRS(sprite.anims[DIR_SW]));
+                        ui.Newline();
 
-                        uiActionBar.Label("NW", labelWidth);
-                        uiActionBar.Text(CSTRS(sprite.anims[DIR_NW]));
-                        uiActionBar.Newline();
+                        ui.Label("NW", labelWidth);
+                        ui.Text(CSTRS(sprite.anims[DIR_NW]));
+                        ui.Newline();
 #endif
                         break;
                     }
@@ -1910,8 +1927,8 @@ void Editor::DrawUI_PackFiles(UI &uiActionBar, double now)
                     }
                     case DAT_TYP_ENTITY:
                     {
-                        uiActionBar.Text("TODO");
-                        uiActionBar.Newline();
+                        ui.Text("TODO");
+                        ui.Newline();
                         break;
                     }
                 }
@@ -1926,29 +1943,96 @@ void Editor::DrawUI_PackFiles(UI &uiActionBar, double now)
             state.packFiles.selectedPackEntryOffset = newSelectedOffset;
         }
 
-        uiActionBar.EndScrollPanel(scrollPanel);
+        ui.EndScrollPanel(scrollPanel);
     }
 }
-void Editor::DrawUI_Debug(UI &uiActionBar, double now)
+void Editor::DrawUI_Debug(UI &ui, double now)
 {
     static UID uid = NextUID();
-    uiActionBar.Text(TextFormat("%.*s", 20, uid.bytes));
-    if (true) {// || uiActionBar.Button("NextUID").pressed) {
+    ui.Text(TextFormat("%.*s", 20, uid.bytes));
+    if (true) {// || ui.Button("NextUID").pressed) {
         uid = NextUID();
     }
-    uiActionBar.Newline();
+    ui.Newline();
 
-    if (uiActionBar.Button("TileDef Editor").pressed) {
+    if (ui.Button("GfxAnim Editor").pressed) {
+        showGfxAnimEditor = !showGfxAnimEditor;
+        showGfxAnimEditorDirty = true;
+    }
+    ui.Newline();
+
+    if (ui.Button("TileDef Editor").pressed) {
         showTileDefEditor = !showTileDefEditor;
         showTileDefEditorDirty = true;
     }
-    uiActionBar.Newline();
+    ui.Newline();
+}
 
-    if (uiActionBar.Button("GfxAnim Editor").pressed) {
-        showGfxFrameEditor = !showGfxFrameEditor;
-        showGfxFrameEditorDirty = true;
+UIState Editor::DrawUI_GfxAnimEditor(void)
+{
+    if (!showGfxAnimEditor) {
+        return {};
     }
-    uiActionBar.Newline();
+
+    const Rectangle defaultRect{ 0, 0, 800, 800 };
+    static ScrollPanel scrollPanel{ defaultRect, true };
+
+    if (showGfxAnimEditorDirty && io.KeyDown(KEY_LEFT_CONTROL)) {
+        scrollPanel.rect = defaultRect;
+    }
+
+    Vector2 uiPosition = { scrollPanel.rect.x, scrollPanel.rect.y };
+    UIStyle uiStyle{};
+    UI ui{ uiPosition, uiStyle };
+
+    ui.BeginScrollPanel(scrollPanel);
+
+    ////// search //////
+    UIStyle searchStyle = ui.GetStyle();
+    searchStyle.size.x = 400;
+    searchStyle.pad = UIPad(8, 2);
+    searchStyle.margin = UIMargin(0, 0, 4, 6);
+    ui.PushStyle(searchStyle);
+
+    static std::string filter{ "*" };
+    ui.Textbox(__COUNTER__, filter);
+    ui.Newline();
+    ui.PushWidth(0);
+    if (ui.Button("Clear").pressed) filter = "";
+    if (ui.Button("All").pressed) filter = "*";
+    ui.PopStyle();
+    ui.Newline();
+
+    for (GfxAnim &gfx_anim : pack_assets.gfx_anims) {
+        Color bgColor = gfx_anim.id == state.gfxAnimEditor.selectedId ? SKYBLUE : BLUE_DESAT;
+        const char *idStr = gfx_anim.name.c_str();
+        if (!StrFilter(idStr, filter.c_str())) {
+            continue;
+        }
+
+        if (ui.Text(idStr, WHITE, bgColor).down) {
+            state.gfxAnimEditor.selectedId = gfx_anim.id;
+        }
+        ui.Newline();
+    }
+
+    ui.PopStyle();
+    ////////////////////////
+
+    if (state.gfxAnimEditor.selectedId) {
+        ui.Button("GfxAnim Test 1"); ui.Newline();
+        ui.Button("GfxAnim Test 2"); ui.Newline();
+        ui.Button("GfxAnim Test 3"); ui.Newline();
+        ui.Button("GfxAnim Test 4"); ui.Newline();
+        ui.Button("GfxAnim Test 5"); ui.Newline();
+        ui.Button("GfxAnim Test 6"); ui.Newline();
+        ui.Button("GfxAnim Test 7"); ui.Newline();
+        ui.Button("GfxAnim Test 8"); ui.Newline();
+        ui.Button("GfxAnim Test 9"); ui.Newline();
+    }
+
+    ui.EndScrollPanel(scrollPanel);
+    return scrollPanel.uiState;
 }
 
 UIState Editor::DrawUI_TileDefEditor(void)
@@ -1957,7 +2041,7 @@ UIState Editor::DrawUI_TileDefEditor(void)
         return {};
     }
 
-    const Rectangle defaultRect{ 0, 0, 800, 800 };
+    const Rectangle defaultRect{ 16, 16, 800, 800 };
     static ScrollPanel scrollPanel{ defaultRect, true };
 
     if (showTileDefEditorDirty && io.KeyDown(KEY_LEFT_CONTROL)) {
@@ -1970,15 +2054,15 @@ UIState Editor::DrawUI_TileDefEditor(void)
 
     ui.BeginScrollPanel(scrollPanel);
 
-    ui.Button("Test 1"); ui.Newline();
-    ui.Button("Test 2"); ui.Newline();
-    ui.Button("Test 3"); ui.Newline();
-    ui.Button("Test 4"); ui.Newline();
-    ui.Button("Test 5"); ui.Newline();
-    ui.Button("Test 6"); ui.Newline();
-    ui.Button("Test 7"); ui.Newline();
-    ui.Button("Test 8"); ui.Newline();
-    ui.Button("Test 9"); ui.Newline();
+    ui.Button("TileDef Test 1"); ui.Newline();
+    ui.Button("TileDef Test 2"); ui.Newline();
+    ui.Button("TileDef Test 3"); ui.Newline();
+    ui.Button("TileDef Test 4"); ui.Newline();
+    ui.Button("TileDef Test 5"); ui.Newline();
+    ui.Button("TileDef Test 6"); ui.Newline();
+    ui.Button("TileDef Test 7"); ui.Newline();
+    ui.Button("TileDef Test 8"); ui.Newline();
+    ui.Button("TileDef Test 9"); ui.Newline();
 
     ui.EndScrollPanel(scrollPanel);
     return scrollPanel.uiState;

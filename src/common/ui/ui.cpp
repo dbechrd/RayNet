@@ -263,7 +263,7 @@ void UI::EndScrollPanel(ScrollPanel &scrollPanel)
     const float contentEndY = CursorScreen().y;
     scrollPanel.panelHeightLastFrame = contentEndY - scrollPanel.rect.y;
 
-    const float scrollRatio = scrollPanel.rect.height / scrollPanel.panelHeightLastFrame;
+    const float scrollRatio = CLAMP(scrollPanel.rect.height / scrollPanel.panelHeightLastFrame, 0, 1);
     const float scrollbarWidth = 8;
     const float scrollbarHeight = scrollPanel.rect.height * scrollRatio;
     const float scrollbarSpace = scrollPanel.rect.height * (1 - scrollRatio);
@@ -297,9 +297,9 @@ void UI::EndScrollPanel(ScrollPanel &scrollPanel)
             io.CaptureMouse();
         }
 
-        if (!dragPanel) {
+        if (scrollPanel.uiState.hover) {
             if (io.MouseButtonPressed(MOUSE_BUTTON_LEFT)) {
-                if (io.KeyDown(KEY_LEFT_CONTROL)) {
+                if (io.KeyDown(KEY_LEFT_SHIFT)) {
                     dragPanel = &scrollPanel;
                     dragPanelOffset = Vector2Subtract(mousePos, { scrollPanel.rect.x, scrollPanel.rect.y });
                     dragPanelMode = DragMode_Move;
