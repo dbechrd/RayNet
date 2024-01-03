@@ -23,7 +23,7 @@
  3
  6 51 12 17 2 2 7 0
  6 22 37 17 3 2 3 0
- 5 25 37 18 "He said ""Yes""!"
+ 5 25 37 18 "Freya's house."
  20
  1312.00 2464.00 0.00 0.00
  1424.00 2480.00 0.00 0.00
@@ -54,14 +54,8 @@
  2 0 0 19 20 0 1
  3 7 2 21 22 0 1
  4 6 0 16 1
- 5 2 0 18 "I have heard that the
-[Sorcerer's Stone](# ""A blue, glowing magical stone"")
-is somewhere nearby
-this place. -Sign Painter"
- 5 0 2 18 "Kings of Leon
-Sex on Fire
-but you're in a
-bathroom at a party"
+ 5 2 0 18 "I have heard that the\n[Sorcerer's Stone](# \"A blue, glowing magical stone\")\nis somewhere nearby\nthis place. -Sign Painter"
+ 5 0 2 18 "Kings of Leon\nSex on Fire\nbut you're in a\nbathroom at a party"
  6 2 7 17 1 51 12 0
  0
  0

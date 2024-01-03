@@ -46,6 +46,7 @@ void ReportTxtError(FILE *f, const char *msg)
     printf("%*c\n", context_len, '^');
 
     assert(!"nope");
+    exit(-1);
 }
 
 template<class T>
@@ -106,33 +107,82 @@ void Process(PackStream &stream, std::string &str)
             fprintf(stream.file, " \"");
             int strLen = str.size();
             for (int i = 0; i < str.size(); i++) {
-                fputc(str[i], stream.file);
-                if (str[i] == '"') {
-                    // Double the quotes to escape them on read
-                    fputc('"', stream.file);
+                switch (str[i]) {
+                    case '"': {
+                        // Escape double quotes (\")
+                        fputc('\\', stream.file);
+                        fputc('"', stream.file);
+                        break;
+                    }
+                    case '\\': {
+                        // Escape backslashes (\\)
+                        fputc('\\', stream.file);
+                        fputc('\\', stream.file);
+                        break;
+                    }
+                    case '\n': {
+                        // Escape newlines (\n)
+                        fputc('\\', stream.file);
+                        fputc('n', stream.file);
+                        break;
+                    }
+                    default: {
+                        const char c = str[i];
+                        assert(isprint(c));
+                        fputc(str[i], stream.file);
+                        break;
+                    }
                 }
             }
             fprintf(stream.file, "\"");
         } else {
             assert(str.size() == 0);
+
+            fscanf(stream.file, " ");
+
+            char start_quote = fgetc(stream.file);
+            if (start_quote != '"') {
+                ReportTxtError(stream.file, "expected string to start with double quote");
+            }
+
             do {
                 char buf[1024]{};
-                fscanf(stream.file, " \"%1023[^\"]", buf);
+                fscanf(stream.file, "%1023[^\"\\]", buf);
 
-                char end_quote{};
-                fscanf(stream.file, " %c", &end_quote);
+                char next = PeekTxt(stream.file);
+                if (next == '\\') {
+                    assert(fgetc(stream.file) == '\\');
+                    next = fgetc(stream.file);
+                    switch (next) {
+                        case '"': {
+                            str += buf;
+                            str += '"';
+                            continue;
+                        }
+                        case '\\': {
+                            str += buf;
+                            str += '\\';
+                            continue;
+                        }
+                        case 'n': {
+                            str += buf;
+                            str += '\n';
+                            continue;
+                        }
+                        default: {
+                            ReportTxtError(stream.file, "unexpected escape sequence in string");
+                        }
+                    }
+                    assert(!"unreachable");
+                    exit(-1);
+                }
+
+                char end_quote = fgetc(stream.file);
                 if (end_quote != '"') {
                     ReportTxtError(stream.file, "string too long, not supported");
-                    exit(-1);
                 }
                 str += buf;
 
-                char next = PeekTxt(stream.file);
-                if (next == '"') {
-                    // if next char is quote, we have a double-double-quote situation and want to keep reading
-                    str += '"';
-                    continue;
-                }
                 break;
             } while (1);
         }
