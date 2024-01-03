@@ -84,8 +84,21 @@ void CompressFile(const char *srcFileName, const char *dstFileName)
     MemFree(compressedBytes);
 }
 
+void GenTileDefs(const std::string &gfx, int tiles_w, int tiles_h, int tile_w, int tile_h)
+{
+    for (int y = 0; y < tiles_h; y++) {
+        for (int x = 0; x < tiles_w; x++) {
+            printf("3 %u \"\" \"%s\" %u %u %u %u\n", UINT16_MAX, gfx.c_str(), x * tile_w, y * tile_h, tile_w, tile_h);
+        }
+    }
+}
+
 Err Init(void)
 {
+#if 0
+    GenTileDefs("gfx_til_cave", 16, 16, 64, 64);
+#endif
+
 #if 0
     uint8_t seq_c = 253;
     uint8_t seq_s = 243;

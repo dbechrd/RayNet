@@ -84,14 +84,34 @@ struct UIState {
     Rectangle contentRect;
 };
 
+struct ScrollPanel {
+    UIState   uiState              {};
+    Rectangle rect                 {};
+    float     scrollOffsetMax      {};
+    float     scrollOffset         {};
+    float     scrollOffsetTarget   {};
+    float     scrollVelocity       {};
+    float     scrollAccel          {};
+    float     panelHeightLastFrame {};
+    bool      resizable            {};
+
+    ScrollPanel(Rectangle rect, bool resizable = false) : rect(rect), resizable(resizable) {}
+};
+
+enum DragMode {
+    DragMode_None,
+    DragMode_Move,
+    DragMode_Resize,
+};
+
 struct UI {
     static bool IsActiveEditor(uint32_t ctrlid);
     static bool UnfocusActiveEditor(void);
 
-    UI(Vector2 position, UIStyle style);
+    UI(Vector2 &position, UIStyle style);
 
     inline Vector2 CursorScreen(void) {
-        return Vector2Add(position, cursor);
+        return Vector2Add(*position, cursor);
     }
 
     void SetCursor(Vector2 cursor) {
@@ -113,6 +133,10 @@ struct UI {
 
     void Newline(void);
     void Space(Vector2 space);
+
+    void BeginScrollPanel(ScrollPanel &scrollPanel);
+    void EndScrollPanel(ScrollPanel &scrollPanel);
+
     UIState Text(const char *text, size_t textLen = 0);
     UIState Text(const std::string &text, Color fgColor = BLANK, Color bgColor = BLANK);
     UIState Text(uint8_t value);
@@ -136,8 +160,9 @@ struct UI {
     void HAQField(uint32_t ctrlid, const std::string &name, T &value, int flags, int labelWidth);
 
     void DrawTooltips(void);
+    void HandleEvents(void);
 private:
-    Vector2 position{}; // top left of this UI
+    Vector2 *position{}; // top left of this UI
     Vector2 cursor{};   // where to draw next element
     Vector2 lineSize{}; // total size of current row of UI elements
     std::stack<UIStyle> styleStack{};
@@ -148,6 +173,9 @@ private:
     static bool tabHandledThisFrame;  // to de-dupe
     static uint32_t lastDrawnEditor;  // for shift-tab (1 frame delay)
     static uint32_t tabToPrevEditor;  // for shift-tab (1 frame delay)
+    static ScrollPanel *dragPanel;
+    static Vector2 dragPanelOffset;
+    static DragMode dragPanelMode;
 
     DrawCmdQueue tooltips;
 

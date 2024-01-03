@@ -13,6 +13,7 @@
 0 9 "gfx_prj_fireball" "resources/graphics/fireball.png"
 0 10 "gfx_til_overworld" "resources/graphics/tiles64tm.png"
 0 11 "gfx_til_auto_grass" "resources/graphics/autotile_3x3_min.png"
+0 12 "gfx_til_cave" "resources/graphics/autotile_3x3_min.png"
 
 # MusFile id name path
 1 0 "mus_bathroom" "resources/music/copyright/O9s5lzHl6W8.wav"
@@ -32,246 +33,502 @@
 2 9 "sfx_chicken_cluck" "resources/sound/copyright/chicken_cluck.wav" 5 10 0.05
 
 # GfxFrame id name gfx x y w h
-3 0 "gfx_frame_missing" "gfx_missing" 0 0 32 32
-3 1 "gfx_frame_chr_mage_e_0" "gfx_chr_mage" 0 0 64 128
-3 2 "gfx_frame_chr_mage_w_0" "gfx_chr_mage" 64 0 64 128
-3 3 "gfx_frame_npc_lily_e_0" "gfx_npc_lily" 0 0 64 128
-3 4 "gfx_frame_npc_lily_w_0" "gfx_npc_lily" 64 0 64 128
-3 5 "gfx_frame_npc_freye_e_0" "gfx_npc_freye" 0 0 64 128
-3 6 "gfx_frame_npc_freye_w_0" "gfx_npc_freye" 64 0 64 128
-3 7 "gfx_frame_npc_nessa_e_0" "gfx_npc_nessa" 0 0 64 128
-3 8 "gfx_frame_npc_nessa_w_0" "gfx_npc_nessa" 64 0 64 128
-3 9 "gfx_frame_npc_elane_e_0" "gfx_npc_elane" 0 0 64 128
-3 10 "gfx_frame_npc_elane_w_0" "gfx_npc_elane" 64 0 64 128
-3 11 "gfx_frame_npc_chicken_e_0" "gfx_npc_chicken" 0 0 64 64
-3 12 "gfx_frame_npc_chicken_w_0" "gfx_npc_chicken" 64 0 64 64
-3 13 "gfx_frame_obj_campfire_0" "gfx_obj_campfire" 0 0 256 256
-3 14 "gfx_frame_obj_campfire_1" "gfx_obj_campfire" 256 0 256 256
-3 15 "gfx_frame_obj_campfire_2" "gfx_obj_campfire" 512 0 256 256
-3 16 "gfx_frame_obj_campfire_3" "gfx_obj_campfire" 768 0 256 256
-3 17 "gfx_frame_obj_campfire_4" "gfx_obj_campfire" 1024 0 256 256
-3 18 "gfx_frame_obj_campfire_5" "gfx_obj_campfire" 1280 0 256 256
-3 19 "gfx_frame_obj_campfire_6" "gfx_obj_campfire" 1536 0 256 256
-3 20 "gfx_frame_obj_campfire_7" "gfx_obj_campfire" 1792 0 256 256
-3 21 "gfx_frame_prj_fireball_0" "gfx_prj_fireball" 0 0 16 16
-3 22 "gfx_frame_til_void" "gfx_til_overworld" 0 0 64 64
-3 23 "gfx_frame_til_stone_path" "gfx_til_overworld" 64 0 64 64
-3 24 "gfx_frame_til_water_dark_0" "gfx_til_overworld" 128 0 64 64
-3 25 "gfx_frame_til_water_dark_1" "gfx_til_overworld" 192 0 64 64
-3 26 "gfx_frame_til_water_dark_2" "gfx_til_overworld" 256 0 64 64
+3 0 "frm_missing" "gfx_missing" 0 0 32 32
+3 1 "frm_chr_mage_e_0" "gfx_chr_mage" 0 0 64 128
+3 2 "frm_chr_mage_w_0" "gfx_chr_mage" 64 0 64 128
+3 3 "frm_npc_lily_e_0" "gfx_npc_lily" 0 0 64 128
+3 4 "frm_npc_lily_w_0" "gfx_npc_lily" 64 0 64 128
+3 5 "frm_npc_freye_e_0" "gfx_npc_freye" 0 0 64 128
+3 6 "frm_npc_freye_w_0" "gfx_npc_freye" 64 0 64 128
+3 7 "frm_npc_nessa_e_0" "gfx_npc_nessa" 0 0 64 128
+3 8 "frm_npc_nessa_w_0" "gfx_npc_nessa" 64 0 64 128
+3 9 "frm_npc_elane_e_0" "gfx_npc_elane" 0 0 64 128
+3 10 "frm_npc_elane_w_0" "gfx_npc_elane" 64 0 64 128
+3 11 "frm_npc_chicken_e_0" "gfx_npc_chicken" 0 0 64 64
+3 12 "frm_npc_chicken_w_0" "gfx_npc_chicken" 64 0 64 64
+3 13 "frm_obj_campfire_0" "gfx_obj_campfire" 0 0 256 256
+3 14 "frm_obj_campfire_1" "gfx_obj_campfire" 256 0 256 256
+3 15 "frm_obj_campfire_2" "gfx_obj_campfire" 512 0 256 256
+3 16 "frm_obj_campfire_3" "gfx_obj_campfire" 768 0 256 256
+3 17 "frm_obj_campfire_4" "gfx_obj_campfire" 1024 0 256 256
+3 18 "frm_obj_campfire_5" "gfx_obj_campfire" 1280 0 256 256
+3 19 "frm_obj_campfire_6" "gfx_obj_campfire" 1536 0 256 256
+3 20 "frm_obj_campfire_7" "gfx_obj_campfire" 1792 0 256 256
+3 21 "frm_prj_fireball_0" "gfx_prj_fireball" 0 0 16 16
+3 22 "frm_til_void" "gfx_til_overworld" 0 0 64 64
+3 23 "frm_til_stone_path" "gfx_til_overworld" 64 0 64 64
+3 24 "frm_til_water_dark_0" "gfx_til_overworld" 128 0 64 64
+3 25 "frm_til_water_dark_1" "gfx_til_overworld" 192 0 64 64
+3 26 "frm_til_water_dark_2" "gfx_til_overworld" 256 0 64 64
 3 27 "null" "gfx_til_overworld" 320 0 64 64
 3 28 "null" "gfx_til_overworld" 384 0 64 64
 3 29 "null" "gfx_til_overworld" 448 0 64 64
-3 30 "gfx_frame_til_grass_weeds_0" "gfx_til_overworld" 0 64 64 64
-3 31 "gfx_frame_til_grass_weeds_1" "gfx_til_overworld" 64 64 64 64
-3 32 "gfx_frame_til_grass_flowers_0" "gfx_til_overworld" 128 64 64 64
-3 33 "gfx_frame_til_grass_flowers_1" "gfx_til_overworld" 192 64 64 64
+3 30 "frm_til_grass_weeds_0" "gfx_til_overworld" 0 64 64 64
+3 31 "frm_til_grass_weeds_1" "gfx_til_overworld" 64 64 64 64
+3 32 "frm_til_grass_flowers_0" "gfx_til_overworld" 128 64 64 64
+3 33 "frm_til_grass_flowers_1" "gfx_til_overworld" 192 64 64 64
 3 34 "null" "gfx_til_overworld" 256 64 64 64
 3 35 "null" "gfx_til_overworld" 320 64 64 64
 3 36 "null" "gfx_til_overworld" 384 64 64 64
 3 37 "null" "gfx_til_overworld" 448 64 64 64
-3 38 "gfx_frame_til_stone_wall_tl" "gfx_til_overworld" 0 128 64 64
-3 39 "gfx_frame_til_stone_wall_tc" "gfx_til_overworld" 64 128 64 64
-3 40 "gfx_frame_til_stone_wall_tr" "gfx_til_overworld" 128 128 64 64
-3 41 "gfx_frame_obj_bush" "gfx_til_overworld" 192 128 64 64
+3 38 "frm_til_stone_wall_tl" "gfx_til_overworld" 0 128 64 64
+3 39 "frm_til_stone_wall_tc" "gfx_til_overworld" 64 128 64 64
+3 40 "frm_til_stone_wall_tr" "gfx_til_overworld" 128 128 64 64
+3 41 "frm_obj_bush" "gfx_til_overworld" 192 128 64 64
 3 42 "null" "gfx_til_overworld" 256 128 64 64
-3 43 "gfx_frame_obj_portal_0" "gfx_til_overworld" 320 128 64 128
-3 44 "gfx_frame_obj_portal_1" "gfx_til_overworld" 384 128 64 128
-3 45 "gfx_frame_obj_portal_2" "gfx_til_overworld" 448 128 64 128
-3 46 "gfx_frame_til_stone_wall_cl" "gfx_til_overworld" 0 192 64 64
-3 47 "gfx_frame_til_stone_wall_cc" "gfx_til_overworld" 64 192 64 64
-3 48 "gfx_frame_til_stone_wall_cr" "gfx_til_overworld" 128 192 64 64
-3 49 "gfx_frame_obj_sign" "gfx_til_overworld" 192 192 64 64
-3 50 "gfx_frame_obj_chest_closed" "gfx_til_overworld" 256 192 64 64
+3 43 "frm_obj_portal_0" "gfx_til_overworld" 320 128 64 128
+3 44 "frm_obj_portal_1" "gfx_til_overworld" 384 128 64 128
+3 45 "frm_obj_portal_2" "gfx_til_overworld" 448 128 64 128
+3 46 "frm_til_stone_wall_cl" "gfx_til_overworld" 0 192 64 64
+3 47 "frm_til_stone_wall_cc" "gfx_til_overworld" 64 192 64 64
+3 48 "frm_til_stone_wall_cr" "gfx_til_overworld" 128 192 64 64
+3 49 "frm_obj_sign" "gfx_til_overworld" 192 192 64 64
+3 50 "frm_obj_chest_closed" "gfx_til_overworld" 256 192 64 64
 3 51 "null" "gfx_til_overworld" 320 192 64 64
 3 52 "null" "gfx_til_overworld" 384 192 64 64
 3 53 "null" "gfx_til_overworld" 448 192 64 64
-3 54 "gfx_frame_til_stone_wall_bl" "gfx_til_overworld" 0 256 64 64
-3 55 "gfx_frame_til_stone_wall_bc" "gfx_til_overworld" 64 256 64 64
-3 56 "gfx_frame_til_stone_wall_br" "gfx_til_overworld" 128 256 64 64
-3 57 "gfx_frame_itm_poop" "gfx_til_overworld" 192 256 64 64
+3 54 "frm_til_stone_wall_bl" "gfx_til_overworld" 0 256 64 64
+3 55 "frm_til_stone_wall_bc" "gfx_til_overworld" 64 256 64 64
+3 56 "frm_til_stone_wall_br" "gfx_til_overworld" 128 256 64 64
+3 57 "frm_itm_poop" "gfx_til_overworld" 192 256 64 64
 3 58 "null" "gfx_til_overworld" 256 256 64 64
 3 59 "null" "gfx_til_overworld" 320 256 64 64
 3 60 "null" "gfx_til_overworld" 384 256 64 64
 3 61 "null" "gfx_til_overworld" 448 256 64 64
-3 62 "gfx_frame_obj_lever_unpowered" "gfx_til_overworld" 0 320 64 64
-3 63 "gfx_frame_obj_lever_powered_0" "gfx_til_overworld" 64 320 64 64
-3 64 "gfx_frame_obj_lever_powered_1" "gfx_til_overworld" 128 320 64 64
-3 65 "gfx_frame_obj_door_closed" "gfx_til_overworld" 192 320 64 64
-3 66 "gfx_frame_obj_door_open" "gfx_til_overworld" 256 320 64 64
+3 62 "frm_obj_lever_unpowered" "gfx_til_overworld" 0 320 64 64
+3 63 "frm_obj_lever_powered_0" "gfx_til_overworld" 64 320 64 64
+3 64 "frm_obj_lever_powered_1" "gfx_til_overworld" 128 320 64 64
+3 65 "frm_obj_door_closed" "gfx_til_overworld" 192 320 64 64
+3 66 "frm_obj_door_open" "gfx_til_overworld" 256 320 64 64
 3 67 "null" "gfx_til_overworld" 320 320 64 64
 3 68 "null" "gfx_til_overworld" 384 320 64 64
 3 69 "null" "gfx_til_overworld" 448 320 64 64
+3 70 "frm_gfx_til_cave_0_0" "gfx_til_cave" 0 0 64 64
+3 71 "frm_gfx_til_cave_64_0" "gfx_til_cave" 64 0 64 64
+3 72 "frm_gfx_til_cave_128_0" "gfx_til_cave" 128 0 64 64
+3 73 "frm_gfx_til_cave_192_0" "gfx_til_cave" 192 0 64 64
+3 74 "frm_gfx_til_cave_256_0" "gfx_til_cave" 256 0 64 64
+3 75 "frm_gfx_til_cave_320_0" "gfx_til_cave" 320 0 64 64
+3 76 "frm_gfx_til_cave_384_0" "gfx_til_cave" 384 0 64 64
+3 77 "frm_gfx_til_cave_448_0" "gfx_til_cave" 448 0 64 64
+3 78 "frm_gfx_til_cave_512_0" "gfx_til_cave" 512 0 64 64
+3 79 "frm_gfx_til_cave_576_0" "gfx_til_cave" 576 0 64 64
+3 80 "frm_gfx_til_cave_640_0" "gfx_til_cave" 640 0 64 64
+3 81 "frm_gfx_til_cave_704_0" "gfx_til_cave" 704 0 64 64
+3 82 "frm_gfx_til_cave_768_0" "gfx_til_cave" 768 0 64 64
+3 83 "frm_gfx_til_cave_832_0" "gfx_til_cave" 832 0 64 64
+3 84 "frm_gfx_til_cave_896_0" "gfx_til_cave" 896 0 64 64
+3 85 "frm_gfx_til_cave_960_0" "gfx_til_cave" 960 0 64 64
+3 86 "frm_gfx_til_cave_0_64" "gfx_til_cave" 0 64 64 64
+3 87 "frm_gfx_til_cave_64_64" "gfx_til_cave" 64 64 64 64
+3 88 "frm_gfx_til_cave_128_64" "gfx_til_cave" 128 64 64 64
+3 89 "frm_gfx_til_cave_192_64" "gfx_til_cave" 192 64 64 64
+3 90 "frm_gfx_til_cave_256_64" "gfx_til_cave" 256 64 64 64
+3 91 "frm_gfx_til_cave_320_64" "gfx_til_cave" 320 64 64 64
+3 92 "frm_gfx_til_cave_384_64" "gfx_til_cave" 384 64 64 64
+3 93 "frm_gfx_til_cave_448_64" "gfx_til_cave" 448 64 64 64
+3 94 "frm_gfx_til_cave_512_64" "gfx_til_cave" 512 64 64 64
+3 95 "frm_gfx_til_cave_576_64" "gfx_til_cave" 576 64 64 64
+3 96 "frm_gfx_til_cave_640_64" "gfx_til_cave" 640 64 64 64
+3 97 "frm_gfx_til_cave_704_64" "gfx_til_cave" 704 64 64 64
+3 98 "frm_gfx_til_cave_768_64" "gfx_til_cave" 768 64 64 64
+3 99 "frm_gfx_til_cave_832_64" "gfx_til_cave" 832 64 64 64
+3 100 "frm_gfx_til_cave_896_64" "gfx_til_cave" 896 64 64 64
+3 101 "frm_gfx_til_cave_960_64" "gfx_til_cave" 960 64 64 64
+3 102 "frm_gfx_til_cave_0_128" "gfx_til_cave" 0 128 64 64
+3 103 "frm_gfx_til_cave_64_128" "gfx_til_cave" 64 128 64 64
+3 104 "frm_gfx_til_cave_128_128" "gfx_til_cave" 128 128 64 64
+3 105 "frm_gfx_til_cave_192_128" "gfx_til_cave" 192 128 64 64
+3 106 "frm_gfx_til_cave_256_128" "gfx_til_cave" 256 128 64 64
+3 107 "frm_gfx_til_cave_320_128" "gfx_til_cave" 320 128 64 64
+3 108 "frm_gfx_til_cave_384_128" "gfx_til_cave" 384 128 64 64
+3 109 "frm_gfx_til_cave_448_128" "gfx_til_cave" 448 128 64 64
+3 110 "frm_gfx_til_cave_512_128" "gfx_til_cave" 512 128 64 64
+3 111 "frm_gfx_til_cave_576_128" "gfx_til_cave" 576 128 64 64
+3 112 "frm_gfx_til_cave_640_128" "gfx_til_cave" 640 128 64 64
+3 113 "frm_gfx_til_cave_704_128" "gfx_til_cave" 704 128 64 64
+3 114 "frm_gfx_til_cave_768_128" "gfx_til_cave" 768 128 64 64
+3 115 "frm_gfx_til_cave_832_128" "gfx_til_cave" 832 128 64 64
+3 116 "frm_gfx_til_cave_896_128" "gfx_til_cave" 896 128 64 64
+3 117 "frm_gfx_til_cave_960_128" "gfx_til_cave" 960 128 64 64
+3 118 "frm_gfx_til_cave_0_192" "gfx_til_cave" 0 192 64 64
+3 119 "frm_gfx_til_cave_64_192" "gfx_til_cave" 64 192 64 64
+3 120 "frm_gfx_til_cave_128_192" "gfx_til_cave" 128 192 64 64
+3 121 "frm_gfx_til_cave_192_192" "gfx_til_cave" 192 192 64 64
+3 122 "frm_gfx_til_cave_256_192" "gfx_til_cave" 256 192 64 64
+3 123 "frm_gfx_til_cave_320_192" "gfx_til_cave" 320 192 64 64
+3 124 "frm_gfx_til_cave_384_192" "gfx_til_cave" 384 192 64 64
+3 125 "frm_gfx_til_cave_448_192" "gfx_til_cave" 448 192 64 64
+3 126 "frm_gfx_til_cave_512_192" "gfx_til_cave" 512 192 64 64
+3 127 "frm_gfx_til_cave_576_192" "gfx_til_cave" 576 192 64 64
+3 128 "frm_gfx_til_cave_640_192" "gfx_til_cave" 640 192 64 64
+3 129 "frm_gfx_til_cave_704_192" "gfx_til_cave" 704 192 64 64
+3 130 "frm_gfx_til_cave_768_192" "gfx_til_cave" 768 192 64 64
+3 131 "frm_gfx_til_cave_832_192" "gfx_til_cave" 832 192 64 64
+3 132 "frm_gfx_til_cave_896_192" "gfx_til_cave" 896 192 64 64
+3 133 "frm_gfx_til_cave_960_192" "gfx_til_cave" 960 192 64 64
+3 134 "frm_gfx_til_cave_0_256" "gfx_til_cave" 0 256 64 64
+3 135 "frm_gfx_til_cave_64_256" "gfx_til_cave" 64 256 64 64
+3 136 "frm_gfx_til_cave_128_256" "gfx_til_cave" 128 256 64 64
+3 137 "frm_gfx_til_cave_192_256" "gfx_til_cave" 192 256 64 64
+3 138 "frm_gfx_til_cave_256_256" "gfx_til_cave" 256 256 64 64
+3 139 "frm_gfx_til_cave_320_256" "gfx_til_cave" 320 256 64 64
+3 140 "frm_gfx_til_cave_384_256" "gfx_til_cave" 384 256 64 64
+3 141 "frm_gfx_til_cave_448_256" "gfx_til_cave" 448 256 64 64
+3 142 "frm_gfx_til_cave_512_256" "gfx_til_cave" 512 256 64 64
+3 143 "frm_gfx_til_cave_576_256" "gfx_til_cave" 576 256 64 64
+3 144 "frm_gfx_til_cave_640_256" "gfx_til_cave" 640 256 64 64
+3 145 "frm_gfx_til_cave_704_256" "gfx_til_cave" 704 256 64 64
+3 146 "frm_gfx_til_cave_768_256" "gfx_til_cave" 768 256 64 64
+3 147 "frm_gfx_til_cave_832_256" "gfx_til_cave" 832 256 64 64
+3 148 "frm_gfx_til_cave_896_256" "gfx_til_cave" 896 256 64 64
+3 149 "frm_gfx_til_cave_960_256" "gfx_til_cave" 960 256 64 64
+3 150 "frm_gfx_til_cave_0_320" "gfx_til_cave" 0 320 64 64
+3 151 "frm_gfx_til_cave_64_320" "gfx_til_cave" 64 320 64 64
+3 152 "frm_gfx_til_cave_128_320" "gfx_til_cave" 128 320 64 64
+3 153 "frm_gfx_til_cave_192_320" "gfx_til_cave" 192 320 64 64
+3 154 "frm_gfx_til_cave_256_320" "gfx_til_cave" 256 320 64 64
+3 155 "frm_gfx_til_cave_320_320" "gfx_til_cave" 320 320 64 64
+3 156 "frm_gfx_til_cave_384_320" "gfx_til_cave" 384 320 64 64
+3 157 "frm_gfx_til_cave_448_320" "gfx_til_cave" 448 320 64 64
+3 158 "frm_gfx_til_cave_512_320" "gfx_til_cave" 512 320 64 64
+3 159 "frm_gfx_til_cave_576_320" "gfx_til_cave" 576 320 64 64
+3 160 "frm_gfx_til_cave_640_320" "gfx_til_cave" 640 320 64 64
+3 161 "frm_gfx_til_cave_704_320" "gfx_til_cave" 704 320 64 64
+3 162 "frm_gfx_til_cave_768_320" "gfx_til_cave" 768 320 64 64
+3 163 "frm_gfx_til_cave_832_320" "gfx_til_cave" 832 320 64 64
+3 164 "frm_gfx_til_cave_896_320" "gfx_til_cave" 896 320 64 64
+3 165 "frm_gfx_til_cave_960_320" "gfx_til_cave" 960 320 64 64
+3 166 "frm_gfx_til_cave_0_384" "gfx_til_cave" 0 384 64 64
+3 167 "frm_gfx_til_cave_64_384" "gfx_til_cave" 64 384 64 64
+3 168 "frm_gfx_til_cave_128_384" "gfx_til_cave" 128 384 64 64
+3 169 "frm_gfx_til_cave_192_384" "gfx_til_cave" 192 384 64 64
+3 170 "frm_gfx_til_cave_256_384" "gfx_til_cave" 256 384 64 64
+3 171 "frm_gfx_til_cave_320_384" "gfx_til_cave" 320 384 64 64
+3 172 "frm_gfx_til_cave_384_384" "gfx_til_cave" 384 384 64 64
+3 173 "frm_gfx_til_cave_448_384" "gfx_til_cave" 448 384 64 64
+3 174 "frm_gfx_til_cave_512_384" "gfx_til_cave" 512 384 64 64
+3 175 "frm_gfx_til_cave_576_384" "gfx_til_cave" 576 384 64 64
+3 176 "frm_gfx_til_cave_640_384" "gfx_til_cave" 640 384 64 64
+3 177 "frm_gfx_til_cave_704_384" "gfx_til_cave" 704 384 64 64
+3 178 "frm_gfx_til_cave_768_384" "gfx_til_cave" 768 384 64 64
+3 179 "frm_gfx_til_cave_832_384" "gfx_til_cave" 832 384 64 64
+3 180 "frm_gfx_til_cave_896_384" "gfx_til_cave" 896 384 64 64
+3 181 "frm_gfx_til_cave_960_384" "gfx_til_cave" 960 384 64 64
+3 182 "frm_gfx_til_cave_0_448" "gfx_til_cave" 0 448 64 64
+3 183 "frm_gfx_til_cave_64_448" "gfx_til_cave" 64 448 64 64
+3 184 "frm_gfx_til_cave_128_448" "gfx_til_cave" 128 448 64 64
+3 185 "frm_gfx_til_cave_192_448" "gfx_til_cave" 192 448 64 64
+3 186 "frm_gfx_til_cave_256_448" "gfx_til_cave" 256 448 64 64
+3 187 "frm_gfx_til_cave_320_448" "gfx_til_cave" 320 448 64 64
+3 188 "frm_gfx_til_cave_384_448" "gfx_til_cave" 384 448 64 64
+3 189 "frm_gfx_til_cave_448_448" "gfx_til_cave" 448 448 64 64
+3 190 "frm_gfx_til_cave_512_448" "gfx_til_cave" 512 448 64 64
+3 191 "frm_gfx_til_cave_576_448" "gfx_til_cave" 576 448 64 64
+3 192 "frm_gfx_til_cave_640_448" "gfx_til_cave" 640 448 64 64
+3 193 "frm_gfx_til_cave_704_448" "gfx_til_cave" 704 448 64 64
+3 194 "frm_gfx_til_cave_768_448" "gfx_til_cave" 768 448 64 64
+3 195 "frm_gfx_til_cave_832_448" "gfx_til_cave" 832 448 64 64
+3 196 "frm_gfx_til_cave_896_448" "gfx_til_cave" 896 448 64 64
+3 197 "frm_gfx_til_cave_960_448" "gfx_til_cave" 960 448 64 64
+3 198 "frm_gfx_til_cave_0_512" "gfx_til_cave" 0 512 64 64
+3 199 "frm_gfx_til_cave_64_512" "gfx_til_cave" 64 512 64 64
+3 200 "frm_gfx_til_cave_128_512" "gfx_til_cave" 128 512 64 64
+3 201 "frm_gfx_til_cave_192_512" "gfx_til_cave" 192 512 64 64
+3 202 "frm_gfx_til_cave_256_512" "gfx_til_cave" 256 512 64 64
+3 203 "frm_gfx_til_cave_320_512" "gfx_til_cave" 320 512 64 64
+3 204 "frm_gfx_til_cave_384_512" "gfx_til_cave" 384 512 64 64
+3 205 "frm_gfx_til_cave_448_512" "gfx_til_cave" 448 512 64 64
+3 206 "frm_gfx_til_cave_512_512" "gfx_til_cave" 512 512 64 64
+3 207 "frm_gfx_til_cave_576_512" "gfx_til_cave" 576 512 64 64
+3 208 "frm_gfx_til_cave_640_512" "gfx_til_cave" 640 512 64 64
+3 209 "frm_gfx_til_cave_704_512" "gfx_til_cave" 704 512 64 64
+3 210 "frm_gfx_til_cave_768_512" "gfx_til_cave" 768 512 64 64
+3 211 "frm_gfx_til_cave_832_512" "gfx_til_cave" 832 512 64 64
+3 212 "frm_gfx_til_cave_896_512" "gfx_til_cave" 896 512 64 64
+3 213 "frm_gfx_til_cave_960_512" "gfx_til_cave" 960 512 64 64
+3 214 "frm_gfx_til_cave_0_576" "gfx_til_cave" 0 576 64 64
+3 215 "frm_gfx_til_cave_64_576" "gfx_til_cave" 64 576 64 64
+3 216 "frm_gfx_til_cave_128_576" "gfx_til_cave" 128 576 64 64
+3 217 "frm_gfx_til_cave_192_576" "gfx_til_cave" 192 576 64 64
+3 218 "frm_gfx_til_cave_256_576" "gfx_til_cave" 256 576 64 64
+3 219 "frm_gfx_til_cave_320_576" "gfx_til_cave" 320 576 64 64
+3 220 "frm_gfx_til_cave_384_576" "gfx_til_cave" 384 576 64 64
+3 221 "frm_gfx_til_cave_448_576" "gfx_til_cave" 448 576 64 64
+3 222 "frm_gfx_til_cave_512_576" "gfx_til_cave" 512 576 64 64
+3 223 "frm_gfx_til_cave_576_576" "gfx_til_cave" 576 576 64 64
+3 224 "frm_gfx_til_cave_640_576" "gfx_til_cave" 640 576 64 64
+3 225 "frm_gfx_til_cave_704_576" "gfx_til_cave" 704 576 64 64
+3 226 "frm_gfx_til_cave_768_576" "gfx_til_cave" 768 576 64 64
+3 227 "frm_gfx_til_cave_832_576" "gfx_til_cave" 832 576 64 64
+3 228 "frm_gfx_til_cave_896_576" "gfx_til_cave" 896 576 64 64
+3 229 "frm_gfx_til_cave_960_576" "gfx_til_cave" 960 576 64 64
+3 230 "frm_gfx_til_cave_0_640" "gfx_til_cave" 0 640 64 64
+3 231 "frm_gfx_til_cave_64_640" "gfx_til_cave" 64 640 64 64
+3 232 "frm_gfx_til_cave_128_640" "gfx_til_cave" 128 640 64 64
+3 233 "frm_gfx_til_cave_192_640" "gfx_til_cave" 192 640 64 64
+3 234 "frm_gfx_til_cave_256_640" "gfx_til_cave" 256 640 64 64
+3 235 "frm_gfx_til_cave_320_640" "gfx_til_cave" 320 640 64 64
+3 236 "frm_gfx_til_cave_384_640" "gfx_til_cave" 384 640 64 64
+3 237 "frm_gfx_til_cave_448_640" "gfx_til_cave" 448 640 64 64
+3 238 "frm_gfx_til_cave_512_640" "gfx_til_cave" 512 640 64 64
+3 239 "frm_gfx_til_cave_576_640" "gfx_til_cave" 576 640 64 64
+3 240 "frm_gfx_til_cave_640_640" "gfx_til_cave" 640 640 64 64
+3 241 "frm_gfx_til_cave_704_640" "gfx_til_cave" 704 640 64 64
+3 242 "frm_gfx_til_cave_768_640" "gfx_til_cave" 768 640 64 64
+3 243 "frm_gfx_til_cave_832_640" "gfx_til_cave" 832 640 64 64
+3 244 "frm_gfx_til_cave_896_640" "gfx_til_cave" 896 640 64 64
+3 245 "frm_gfx_til_cave_960_640" "gfx_til_cave" 960 640 64 64
+3 246 "frm_gfx_til_cave_0_704" "gfx_til_cave" 0 704 64 64
+3 247 "frm_gfx_til_cave_64_704" "gfx_til_cave" 64 704 64 64
+3 248 "frm_gfx_til_cave_128_704" "gfx_til_cave" 128 704 64 64
+3 249 "frm_gfx_til_cave_192_704" "gfx_til_cave" 192 704 64 64
+3 250 "frm_gfx_til_cave_256_704" "gfx_til_cave" 256 704 64 64
+3 251 "frm_gfx_til_cave_320_704" "gfx_til_cave" 320 704 64 64
+3 252 "frm_gfx_til_cave_384_704" "gfx_til_cave" 384 704 64 64
+3 253 "frm_gfx_til_cave_448_704" "gfx_til_cave" 448 704 64 64
+3 254 "frm_gfx_til_cave_512_704" "gfx_til_cave" 512 704 64 64
+3 255 "frm_gfx_til_cave_576_704" "gfx_til_cave" 576 704 64 64
+3 256 "frm_gfx_til_cave_640_704" "gfx_til_cave" 640 704 64 64
+3 257 "frm_gfx_til_cave_704_704" "gfx_til_cave" 704 704 64 64
+3 258 "frm_gfx_til_cave_768_704" "gfx_til_cave" 768 704 64 64
+3 259 "frm_gfx_til_cave_832_704" "gfx_til_cave" 832 704 64 64
+3 260 "frm_gfx_til_cave_896_704" "gfx_til_cave" 896 704 64 64
+3 261 "frm_gfx_til_cave_960_704" "gfx_til_cave" 960 704 64 64
+3 262 "frm_gfx_til_cave_0_768" "gfx_til_cave" 0 768 64 64
+3 263 "frm_gfx_til_cave_64_768" "gfx_til_cave" 64 768 64 64
+3 264 "frm_gfx_til_cave_128_768" "gfx_til_cave" 128 768 64 64
+3 265 "frm_gfx_til_cave_192_768" "gfx_til_cave" 192 768 64 64
+3 266 "frm_gfx_til_cave_256_768" "gfx_til_cave" 256 768 64 64
+3 267 "frm_gfx_til_cave_320_768" "gfx_til_cave" 320 768 64 64
+3 268 "frm_gfx_til_cave_384_768" "gfx_til_cave" 384 768 64 64
+3 269 "frm_gfx_til_cave_448_768" "gfx_til_cave" 448 768 64 64
+3 270 "frm_gfx_til_cave_512_768" "gfx_til_cave" 512 768 64 64
+3 271 "frm_gfx_til_cave_576_768" "gfx_til_cave" 576 768 64 64
+3 272 "frm_gfx_til_cave_640_768" "gfx_til_cave" 640 768 64 64
+3 273 "frm_gfx_til_cave_704_768" "gfx_til_cave" 704 768 64 64
+3 274 "frm_gfx_til_cave_768_768" "gfx_til_cave" 768 768 64 64
+3 275 "frm_gfx_til_cave_832_768" "gfx_til_cave" 832 768 64 64
+3 276 "frm_gfx_til_cave_896_768" "gfx_til_cave" 896 768 64 64
+3 277 "frm_gfx_til_cave_960_768" "gfx_til_cave" 960 768 64 64
+3 278 "frm_gfx_til_cave_0_832" "gfx_til_cave" 0 832 64 64
+3 279 "frm_gfx_til_cave_64_832" "gfx_til_cave" 64 832 64 64
+3 280 "frm_gfx_til_cave_128_832" "gfx_til_cave" 128 832 64 64
+3 281 "frm_gfx_til_cave_192_832" "gfx_til_cave" 192 832 64 64
+3 282 "frm_gfx_til_cave_256_832" "gfx_til_cave" 256 832 64 64
+3 283 "frm_gfx_til_cave_320_832" "gfx_til_cave" 320 832 64 64
+3 284 "frm_gfx_til_cave_384_832" "gfx_til_cave" 384 832 64 64
+3 285 "frm_gfx_til_cave_448_832" "gfx_til_cave" 448 832 64 64
+3 286 "frm_gfx_til_cave_512_832" "gfx_til_cave" 512 832 64 64
+3 287 "frm_gfx_til_cave_576_832" "gfx_til_cave" 576 832 64 64
+3 288 "frm_gfx_til_cave_640_832" "gfx_til_cave" 640 832 64 64
+3 289 "frm_gfx_til_cave_704_832" "gfx_til_cave" 704 832 64 64
+3 290 "frm_gfx_til_cave_768_832" "gfx_til_cave" 768 832 64 64
+3 291 "frm_gfx_til_cave_832_832" "gfx_til_cave" 832 832 64 64
+3 292 "frm_gfx_til_cave_896_832" "gfx_til_cave" 896 832 64 64
+3 293 "frm_gfx_til_cave_960_832" "gfx_til_cave" 960 832 64 64
+3 294 "frm_gfx_til_cave_0_896" "gfx_til_cave" 0 896 64 64
+3 295 "frm_gfx_til_cave_64_896" "gfx_til_cave" 64 896 64 64
+3 296 "frm_gfx_til_cave_128_896" "gfx_til_cave" 128 896 64 64
+3 297 "frm_gfx_til_cave_192_896" "gfx_til_cave" 192 896 64 64
+3 298 "frm_gfx_til_cave_256_896" "gfx_til_cave" 256 896 64 64
+3 299 "frm_gfx_til_cave_320_896" "gfx_til_cave" 320 896 64 64
+3 300 "frm_gfx_til_cave_384_896" "gfx_til_cave" 384 896 64 64
+3 301 "frm_gfx_til_cave_448_896" "gfx_til_cave" 448 896 64 64
+3 302 "frm_gfx_til_cave_512_896" "gfx_til_cave" 512 896 64 64
+3 303 "frm_gfx_til_cave_576_896" "gfx_til_cave" 576 896 64 64
+3 304 "frm_gfx_til_cave_640_896" "gfx_til_cave" 640 896 64 64
+3 305 "frm_gfx_til_cave_704_896" "gfx_til_cave" 704 896 64 64
+3 306 "frm_gfx_til_cave_768_896" "gfx_til_cave" 768 896 64 64
+3 307 "frm_gfx_til_cave_832_896" "gfx_til_cave" 832 896 64 64
+3 308 "frm_gfx_til_cave_896_896" "gfx_til_cave" 896 896 64 64
+3 309 "frm_gfx_til_cave_960_896" "gfx_til_cave" 960 896 64 64
+3 310 "frm_gfx_til_cave_0_960" "gfx_til_cave" 0 960 64 64
+3 311 "frm_gfx_til_cave_64_960" "gfx_til_cave" 64 960 64 64
+3 312 "frm_gfx_til_cave_128_960" "gfx_til_cave" 128 960 64 64
+3 313 "frm_gfx_til_cave_192_960" "gfx_til_cave" 192 960 64 64
+3 314 "frm_gfx_til_cave_256_960" "gfx_til_cave" 256 960 64 64
+3 315 "frm_gfx_til_cave_320_960" "gfx_til_cave" 320 960 64 64
+3 316 "frm_gfx_til_cave_384_960" "gfx_til_cave" 384 960 64 64
+3 317 "frm_gfx_til_cave_448_960" "gfx_til_cave" 448 960 64 64
+3 318 "frm_gfx_til_cave_512_960" "gfx_til_cave" 512 960 64 64
+3 319 "frm_gfx_til_cave_576_960" "gfx_til_cave" 576 960 64 64
+3 320 "frm_gfx_til_cave_640_960" "gfx_til_cave" 640 960 64 64
+3 321 "frm_gfx_til_cave_704_960" "gfx_til_cave" 704 960 64 64
+3 322 "frm_gfx_til_cave_768_960" "gfx_til_cave" 768 960 64 64
+3 323 "frm_gfx_til_cave_832_960" "gfx_til_cave" 832 960 64 64
+3 324 "frm_gfx_til_cave_896_960" "gfx_til_cave" 896 960 64 64
+3 325 "frm_gfx_til_cave_960_960" "gfx_til_cave" 960 960 64 64
 
 # GfxAnim id name sound frame_count frame_delay frames
-4 0 "gfx_anim_missing" "null" 0 0
+4 0 "anim_missing" "null" 0 0
  1
- "gfx_frame_missing"
-4 1 "gfx_anim_chr_mage_e" "null" 0 0
+ "frm_missing"
+4 1 "anim_chr_mage_e" "null" 0 0
  1
- "gfx_frame_chr_mage_e_0"
-4 2 "gfx_anim_chr_mage_w" "null" 0 0
+ "frm_chr_mage_e_0"
+4 2 "anim_chr_mage_w" "null" 0 0
  1
- "gfx_frame_chr_mage_w_0"
-4 3 "gfx_anim_npc_lily_e" "null" 0 0
+ "frm_chr_mage_w_0"
+4 3 "anim_npc_lily_e" "null" 0 0
  1
- "gfx_frame_npc_lily_e_0"
-4 4 "gfx_anim_npc_lily_w" "null" 0 0
+ "frm_npc_lily_e_0"
+4 4 "anim_npc_lily_w" "null" 0 0
  1
- "gfx_frame_npc_lily_w_0"
-4 5 "gfx_anim_npc_freye_e" "null" 0 0
+ "frm_npc_lily_w_0"
+4 5 "anim_npc_freye_e" "null" 0 0
  1
- "gfx_frame_npc_freye_e_0"
-4 6 "gfx_anim_npc_freye_w" "null" 0 0
+ "frm_npc_freye_e_0"
+4 6 "anim_npc_freye_w" "null" 0 0
  1
- "gfx_frame_npc_freye_w_0"
-4 7 "gfx_anim_npc_nessa_e" "null" 0 0
+ "frm_npc_freye_w_0"
+4 7 "anim_npc_nessa_e" "null" 0 0
  1
- "gfx_frame_npc_nessa_e_0"
-4 8 "gfx_anim_npc_nessa_w" "null" 0 0
+ "frm_npc_nessa_e_0"
+4 8 "anim_npc_nessa_w" "null" 0 0
  1
- "gfx_frame_npc_nessa_w_0"
-4 9 "gfx_anim_npc_elane_e" "null" 0 0
+ "frm_npc_nessa_w_0"
+4 9 "anim_npc_elane_e" "null" 0 0
  1
- "gfx_frame_npc_elane_e_0"
-4 10 "gfx_anim_npc_elane_w" "null" 0 0
+ "frm_npc_elane_e_0"
+4 10 "anim_npc_elane_w" "null" 0 0
  1
- "gfx_frame_npc_elane_w_0"
-4 11 "gfx_anim_npc_chicken_e" "null" 0 0
+ "frm_npc_elane_w_0"
+4 11 "anim_npc_chicken_e" "null" 0 0
  1
- "gfx_frame_npc_chicken_e_0"
-4 12 "gfx_anim_npc_chicken_w" "null" 0 0
+ "frm_npc_chicken_e_0"
+4 12 "anim_npc_chicken_w" "null" 0 0
  1
- "gfx_frame_npc_chicken_w_0"
-4 13 "gfx_anim_obj_campfire" "sfx_campfire" 0 4
+ "frm_npc_chicken_w_0"
+4 13 "anim_obj_campfire" "sfx_campfire" 0 4
  8
- "gfx_frame_obj_campfire_0"
- "gfx_frame_obj_campfire_1"
- "gfx_frame_obj_campfire_2"
- "gfx_frame_obj_campfire_3"
- "gfx_frame_obj_campfire_4"
- "gfx_frame_obj_campfire_5"
- "gfx_frame_obj_campfire_6"
- "gfx_frame_obj_campfire_7"
-4 14 "gfx_anim_prj_fireball" "sfx_fireball" 0 0
+ "frm_obj_campfire_0"
+ "frm_obj_campfire_1"
+ "frm_obj_campfire_2"
+ "frm_obj_campfire_3"
+ "frm_obj_campfire_4"
+ "frm_obj_campfire_5"
+ "frm_obj_campfire_6"
+ "frm_obj_campfire_7"
+4 14 "anim_prj_fireball" "sfx_fireball" 0 0
  1
- "gfx_frame_prj_fireball_0"
-4 15 "gfx_anim_til_void" "null" 0 0
+ "frm_prj_fireball_0"
+4 15 "anim_til_void" "null" 0 0
  1
- "gfx_frame_til_void"
-4 16 "gfx_anim_til_stone_path" "null" 0 0
+ "frm_til_void"
+4 16 "anim_til_stone_path" "null" 0 0
  1
- "gfx_frame_til_stone_path"
-4 17 "gfx_anim_til_water_dark" "null" 0 30
+ "frm_til_stone_path"
+4 17 "anim_til_water_dark" "null" 0 30
  4
- "gfx_frame_til_water_dark_0"
- "gfx_frame_til_water_dark_1"
- "gfx_frame_til_water_dark_2"
- "gfx_frame_til_water_dark_1"
-4 18 "gfx_anim_til_grass_weeds" "null" 0 20
+ "frm_til_water_dark_0"
+ "frm_til_water_dark_1"
+ "frm_til_water_dark_2"
+ "frm_til_water_dark_1"
+4 18 "anim_til_grass_weeds" "null" 0 20
  2
- "gfx_frame_til_grass_weeds_0"
- "gfx_frame_til_grass_weeds_1"
-4 19 "gfx_anim_til_grass_flowers" "null" 0 30
+ "frm_til_grass_weeds_0"
+ "frm_til_grass_weeds_1"
+4 19 "anim_til_grass_flowers" "null" 0 30
  2
- "gfx_frame_til_grass_flowers_0"
- "gfx_frame_til_grass_flowers_1"
-4 20 "gfx_anim_til_stone_wall_tl" "null" 0 0
+ "frm_til_grass_flowers_0"
+ "frm_til_grass_flowers_1"
+4 20 "anim_til_stone_wall_tl" "null" 0 0
  1
- "gfx_frame_til_stone_wall_tl"
-4 21 "gfx_anim_til_stone_wall_tc" "null" 0 0
+ "frm_til_stone_wall_tl"
+4 21 "anim_til_stone_wall_tc" "null" 0 0
  1
- "gfx_frame_til_stone_wall_tc"
-4 22 "gfx_anim_til_stone_wall_tr" "null" 0 0
+ "frm_til_stone_wall_tc"
+4 22 "anim_til_stone_wall_tr" "null" 0 0
  1
- "gfx_frame_til_stone_wall_tr"
-4 23 "gfx_anim_til_stone_wall_cl" "null" 0 0
+ "frm_til_stone_wall_tr"
+4 23 "anim_til_stone_wall_cl" "null" 0 0
  1
- "gfx_frame_til_stone_wall_cl"
-4 24 "gfx_anim_til_stone_wall_cc" "null" 0 0
+ "frm_til_stone_wall_cl"
+4 24 "anim_til_stone_wall_cc" "null" 0 0
  1
- "gfx_frame_til_stone_wall_cc"
-4 25 "gfx_anim_til_stone_wall_cr" "null" 0 0
+ "frm_til_stone_wall_cc"
+4 25 "anim_til_stone_wall_cr" "null" 0 0
  1
- "gfx_frame_til_stone_wall_cr"
-4 26 "gfx_anim_til_stone_wall_bl" "null" 0 0
+ "frm_til_stone_wall_cr"
+4 26 "anim_til_stone_wall_bl" "null" 0 0
  1
- "gfx_frame_til_stone_wall_bl"
-4 27 "gfx_anim_til_stone_wall_bc" "null" 0 0
+ "frm_til_stone_wall_bl"
+4 27 "anim_til_stone_wall_bc" "null" 0 0
  1
- "gfx_frame_til_stone_wall_bc"
-4 28 "gfx_anim_til_stone_wall_br" "null" 0 0
+ "frm_til_stone_wall_bc"
+4 28 "anim_til_stone_wall_br" "null" 0 0
  1
- "gfx_frame_til_stone_wall_br"
-4 29 "gfx_anim_itm_poop" "null" 0 0
+ "frm_til_stone_wall_br"
+4 29 "anim_itm_poop" "null" 0 0
  1
- "gfx_frame_itm_poop"
-4 30 "gfx_anim_obj_bush" "null" 0 0
+ "frm_itm_poop"
+4 30 "anim_obj_bush" "null" 0 0
  1
- "gfx_frame_obj_bush"
-4 31 "gfx_anim_obj_chest_closed" "null" 0 0
+ "frm_obj_bush"
+4 31 "anim_obj_chest_closed" "null" 0 0
  1
- "gfx_frame_obj_chest_closed"
-4 32 "gfx_anim_obj_portal" "null" 0 6
+ "frm_obj_chest_closed"
+4 32 "anim_obj_portal" "null" 0 6
  3
- "gfx_frame_obj_portal_0"
- "gfx_frame_obj_portal_1"
- "gfx_frame_obj_portal_2"
-4 33 "gfx_anim_obj_sign" "null" 0 0
+ "frm_obj_portal_0"
+ "frm_obj_portal_1"
+ "frm_obj_portal_2"
+4 33 "anim_obj_sign" "null" 0 0
  1
- "gfx_frame_obj_sign"
-4 34 "gfx_anim_obj_lever_unpowered" "null" 0 0
+ "frm_obj_sign"
+4 34 "anim_obj_lever_unpowered" "null" 0 0
  1
- "gfx_frame_obj_lever_unpowered"
-4 35 "gfx_anim_obj_lever_powered" "null" 0 15
+ "frm_obj_lever_unpowered"
+4 35 "anim_obj_lever_powered" "null" 0 15
  4
- "gfx_frame_obj_lever_powered_0"
- "gfx_frame_obj_lever_powered_0"
- "gfx_frame_obj_lever_powered_0"
- "gfx_frame_obj_lever_powered_1"
-4 36 "gfx_anim_obj_door_closed" "null" 0 0
+ "frm_obj_lever_powered_0"
+ "frm_obj_lever_powered_0"
+ "frm_obj_lever_powered_0"
+ "frm_obj_lever_powered_1"
+4 36 "anim_obj_door_closed" "null" 0 0
  1
- "gfx_frame_obj_door_closed"
-4 37 "gfx_anim_obj_door_open" "null" 0 0
+ "frm_obj_door_closed"
+4 37 "anim_obj_door_open" "null" 0 0
  1
- "gfx_frame_obj_door_open"
+ "frm_obj_door_open"
 
 # Sprite id name anims
 5 0 "sprite_missing" 8 "null" "null" "null" "null" "null" "null" "null" "null"
-5 1 "sprite_chr_mage" 8 "null" "gfx_anim_chr_mage_e" "null" "gfx_anim_chr_mage_w" "null" "null" "null" "null"
-5 2 "sprite_npc_lily" 8 "null" "gfx_anim_npc_lily_e" "null" "gfx_anim_npc_lily_w" "null" "null" "null" "null"
-5 3 "sprite_npc_freye" 8 "null" "gfx_anim_npc_freye_e" "null" "gfx_anim_npc_freye_w" "null" "null" "null" "null"
-5 4 "sprite_npc_nessa" 8 "null" "gfx_anim_npc_nessa_e" "null" "gfx_anim_npc_nessa_w" "null" "null" "null" "null"
-5 5 "sprite_npc_elane" 8 "null" "gfx_anim_npc_elane_e" "null" "gfx_anim_npc_elane_w" "null" "null" "null" "null"
-5 6 "sprite_npc_chicken" 8 "null" "gfx_anim_npc_chicken_e" "null" "gfx_anim_npc_chicken_w" "null" "null" "null" "null"
-5 7 "sprite_obj_campfire" 8 "gfx_anim_obj_campfire" "null" "null" "null" "null" "null" "null" "null"
-5 8 "sprite_prj_fireball" 8 "gfx_anim_prj_fireball" "null" "null" "null" "null" "null" "null" "null"
-5 9 "sprite_itm_poop" 8 "gfx_anim_itm_poop" "null" "null" "null" "null" "null" "null" "null"
+5 1 "sprite_chr_mage" 8 "null" "anim_chr_mage_e" "null" "anim_chr_mage_w" "null" "null" "null" "null"
+5 2 "sprite_npc_lily" 8 "null" "anim_npc_lily_e" "null" "anim_npc_lily_w" "null" "null" "null" "null"
+5 3 "sprite_npc_freye" 8 "null" "anim_npc_freye_e" "null" "anim_npc_freye_w" "null" "null" "null" "null"
+5 4 "sprite_npc_nessa" 8 "null" "anim_npc_nessa_e" "null" "anim_npc_nessa_w" "null" "null" "null" "null"
+5 5 "sprite_npc_elane" 8 "null" "anim_npc_elane_e" "null" "anim_npc_elane_w" "null" "null" "null" "null"
+5 6 "sprite_npc_chicken" 8 "null" "anim_npc_chicken_e" "null" "anim_npc_chicken_w" "null" "null" "null" "null"
+5 7 "sprite_obj_campfire" 8 "anim_obj_campfire" "null" "null" "null" "null" "null" "null" "null"
+5 8 "sprite_prj_fireball" 8 "anim_prj_fireball" "null" "null" "null" "null" "null" "null" "null"
+5 9 "sprite_itm_poop" 8 "anim_itm_poop" "null" "null" "null" "null" "null" "null" "null"
 
 # TileDef id name anim material_id flags auto_tile_mask
-6 0 "til_missing" "gfx_anim_missing" 0 0 0
-6 1 "til_void" "gfx_anim_til_void" 1 1 0
-6 2 "til_stone_path" "gfx_anim_til_stone_path" 2 0 0
-6 3 "til_water_dark" "gfx_anim_til_water_dark" 3 3 0
-6 4 "til_grass_weeds" "gfx_anim_til_grass_weeds" 4 0 0
-6 5 "til_grass_flowers" "gfx_anim_til_grass_flowers" 4 0 0
-6 6 "til_stone_wall_tl" "gfx_anim_til_stone_wall_tl" 2 1 0
-6 7 "til_stone_wall_tc" "gfx_anim_til_stone_wall_tc" 2 1 0
-6 8 "til_stone_wall_tr" "gfx_anim_til_stone_wall_tr" 2 1 0
-6 9 "til_stone_wall_cl" "gfx_anim_til_stone_wall_cl" 2 1 0
-6 10 "til_stone_wall_cc" "gfx_anim_til_stone_wall_cc" 2 1 0
-6 11 "til_stone_wall_cr" "gfx_anim_til_stone_wall_cr" 2 1 0
-6 12 "til_stone_wall_bl" "gfx_anim_til_stone_wall_bl" 2 1 0
-6 13 "til_stone_wall_bc" "gfx_anim_til_stone_wall_bc" 2 1 0
-6 14 "til_stone_wall_br" "gfx_anim_til_stone_wall_br" 2 1 0
-6 15 "obj_bush" "gfx_anim_obj_bush" 4 1 0
-6 16 "obj_chest_basic" "gfx_anim_obj_chest_closed" 5 1 0
-6 17 "obj_portal" "gfx_anim_obj_portal" 1 0 0
-6 18 "obj_sign" "gfx_anim_obj_sign" 5 0 0
-6 19 "obj_lever_unpowered" "gfx_anim_obj_lever_unpowered" 2 0 0
-6 20 "obj_lever_powered" "gfx_anim_obj_lever_powered" 2 0 0
-6 21 "obj_door_closed" "gfx_anim_obj_door_closed" 5 1 0
-6 22 "obj_door_open" "gfx_anim_obj_door_open" 5 0 0
+6 0 "til_missing" "anim_missing" 0 0 0
+6 1 "til_void" "anim_til_void" 1 1 0
+6 2 "til_stone_path" "anim_til_stone_path" 2 0 0
+6 3 "til_water_dark" "anim_til_water_dark" 3 3 0
+6 4 "til_grass_weeds" "anim_til_grass_weeds" 4 0 0
+6 5 "til_grass_flowers" "anim_til_grass_flowers" 4 0 0
+6 6 "til_stone_wall_tl" "anim_til_stone_wall_tl" 2 1 0
+6 7 "til_stone_wall_tc" "anim_til_stone_wall_tc" 2 1 0
+6 8 "til_stone_wall_tr" "anim_til_stone_wall_tr" 2 1 0
+6 9 "til_stone_wall_cl" "anim_til_stone_wall_cl" 2 1 0
+6 10 "til_stone_wall_cc" "anim_til_stone_wall_cc" 2 1 0
+6 11 "til_stone_wall_cr" "anim_til_stone_wall_cr" 2 1 0
+6 12 "til_stone_wall_bl" "anim_til_stone_wall_bl" 2 1 0
+6 13 "til_stone_wall_bc" "anim_til_stone_wall_bc" 2 1 0
+6 14 "til_stone_wall_br" "anim_til_stone_wall_br" 2 1 0
+6 15 "obj_bush" "anim_obj_bush" 4 1 0
+6 16 "obj_chest_basic" "anim_obj_chest_closed" 5 1 0
+6 17 "obj_portal" "anim_obj_portal" 1 0 0
+6 18 "obj_sign" "anim_obj_sign" 5 0 0
+6 19 "obj_lever_unpowered" "anim_obj_lever_unpowered" 2 0 0
+6 20 "obj_lever_powered" "anim_obj_lever_powered" 2 0 0
+6 21 "obj_door_closed" "anim_obj_door_closed" 5 1 0
+6 22 "obj_door_open" "anim_obj_door_open" 5 0 0
 
 # TileMat id name footstep_sound
 7 0 "mat_missing" "null"

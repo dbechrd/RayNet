@@ -40,6 +40,7 @@ void Editor::HandleInput(Camera2D &camera)
     if (io.KeyPressed(KEY_GRAVE)) {
         if (io.KeyDown(KEY_LEFT_SHIFT)) {
             dock_left = !dock_left;
+            dock_dirty = true;
             active = true;
         } else {
             active = !active;
@@ -452,78 +453,33 @@ void Editor::DrawEntityOverlay_Collision(Camera2D &camera, double now)
     }
 }
 
-struct ScrollPanel {
-    Rectangle panelRect        {};
-    float scrollOffsetMax      {};
-    float scrollOffset         {};
-    float scrollOffsetTarget   {};
-    float scrollVelocity       {};
-    float scrollAccel          {};
-    float panelHeightLastFrame {};
-};
-
-void BeginScrollPanel(UI &ui, ScrollPanel &scrollPanel, float width)
+void Editor::CenterCameraOnMap(Camera2D &camera)
 {
-    const Vector2 panelTopLeft = ui.CursorScreen();
-    scrollPanel.panelRect = { panelTopLeft.x, panelTopLeft.y, width, GetRenderHeight() - panelTopLeft.y };
+    // Reset camera when map changes
+    auto &new_editor_map = pack_maps.FindById<Tilemap>(map_id);
 
-    scrollPanel.scrollOffsetMax = MAX(0, scrollPanel.panelHeightLastFrame - scrollPanel.panelRect.height + 8);
-
-    float &scrollOffset = scrollPanel.scrollOffset;
-    float &scrollOffsetTarget = scrollPanel.scrollOffsetTarget;
-    float &scrollVelocity = scrollPanel.scrollVelocity;
-    scrollPanel.scrollAccel = 0;
-    if (dlb_CheckCollisionPointRec(GetMousePosition(), scrollPanel.panelRect)) {
-        const float mouseWheel = io.MouseWheelMove();
-        if (mouseWheel) {
-            scrollPanel.scrollAccel += fabsf(mouseWheel);
-            float impulse = 4 * scrollPanel.scrollAccel;
-            impulse *= impulse;
-            if (mouseWheel < 0) impulse *= -1;
-            scrollVelocity += impulse;
-            //printf("wheel: %f, target: %f\n", mouseWheel, scrollOffsetTarget);
-        } else {
-            scrollPanel.scrollAccel = 0;
-        }
-    }
-
-    if (scrollVelocity) {
-        scrollOffsetTarget -= scrollVelocity;
-        scrollVelocity *= 0.8f;
-    }
-
-    scrollOffsetTarget = CLAMP(scrollOffsetTarget, 0, scrollPanel.scrollOffsetMax);
-    scrollOffset = LERP(scrollOffset, scrollOffsetTarget, 0.1);
-    scrollOffset = CLAMP(scrollOffset, 0, scrollPanel.scrollOffsetMax);
-
-    ui.Space({ 0, -scrollOffset });
-    BeginScissorMode(
-        scrollPanel.panelRect.x,
-        scrollPanel.panelRect.y,
-        scrollPanel.panelRect.width,
-        scrollPanel.panelRect.height
-    );
-}
-void EndScrollPanel(UI &ui, ScrollPanel &scrollPanel)
-{
-    EndScissorMode();
-    ui.Space({ 0, scrollPanel.scrollOffset });
-    const float contentEndY = ui.CursorScreen().y;
-    scrollPanel.panelHeightLastFrame = contentEndY - scrollPanel.panelRect.y;
-
-    const float scrollRatio = scrollPanel.panelRect.height / scrollPanel.panelHeightLastFrame;
-    const float scrollbarWidth = 8;
-    const float scrollbarHeight = scrollPanel.panelRect.height * scrollRatio;
-    const float scrollbarSpace = scrollPanel.panelRect.height * (1 - scrollRatio);
-    const float scrollPct = scrollPanel.scrollOffset / scrollPanel.scrollOffsetMax;
-    Rectangle scrollbar{
-        scrollPanel.panelRect.x + scrollPanel.panelRect.width - 2 - scrollbarWidth,
-        scrollPanel.panelRect.y + scrollbarSpace * scrollPct,
-        scrollbarWidth,
-        scrollbarHeight
+    Vector2 viewportSize{
+        (float)(GetRenderWidth() - width),
+        (float)GetRenderHeight()
     };
-    DrawRectangleRec(scrollbar, LIGHTGRAY);
-    //DrawRectangleLinesEx(scrollPanel.panelRect, 2, WHITE);
+    Vector2 mapSize{
+        (float)new_editor_map.width * TILE_W,
+        (float)new_editor_map.height * TILE_W,
+    };
+
+    camera.offset = {
+        viewportSize.x / 2.0f,
+        viewportSize.y / 2.0f
+    };
+    camera.zoom = MIN(
+        viewportSize.x / mapSize.x,
+        viewportSize.y / mapSize.y
+    );
+    camera.zoom = CLAMP(camera.zoom, 0.1f, 2.0f);
+    camera.target = {
+        mapSize.x / 2.0f,
+        mapSize.y / 2.0f
+    };
 }
 
 UIState Editor::DrawUI(Camera2D &camera, double now)
@@ -532,58 +488,41 @@ UIState Editor::DrawUI(Camera2D &camera, double now)
 
     UIState state{};
     if (active) {
-        Vector2 pos{};
-        if (!dock_left) {
-            pos.x = GetRenderWidth() - width;
-        }
+        state = DrawUI_ActionBar(now);
+        state = DrawUI_TileDefEditor();
 
-        state = DrawUI_ActionBar(pos, now);
-        if (state.hover) {
-            io.CaptureMouse();
-        }
-
-        // Reset camera when map changes
         static uint16_t editor_map_id = map_id;
         if (map_id != editor_map_id) {
-            auto &new_editor_map = pack_maps.FindById<Tilemap>(map_id);
-
-            Vector2 viewportSize{
-                (float)(GetRenderWidth() - width),
-                (float)GetRenderHeight()
-            };
-            Vector2 mapSize{
-                (float)new_editor_map.width * TILE_W,
-                (float)new_editor_map.height * TILE_W,
-            };
-
-            camera.offset = {
-                viewportSize.x / 2.0f,
-                viewportSize.y / 2.0f
-            };
-            camera.zoom = MIN(
-                viewportSize.x / mapSize.x,
-                viewportSize.y / mapSize.y
-            );
-            camera.zoom = CLAMP(camera.zoom, 0.1f, 2.0f);
-            camera.target = {
-                mapSize.x / 2.0f,
-                mapSize.y / 2.0f
-            };
+            CenterCameraOnMap(camera);
             editor_map_id = map_id;
         }
+
+        dock_dirty = false;
+        showTileDefEditorDirty = false;
+        showGfxFrameEditorDirty = false;
     }
 
     io.PopScope();
-    return state;
+    return {};  // todo: combine all states if we care about e.g. any editor window being hovered. I think IO takes care of this.
 }
-UIState Editor::DrawUI_ActionBar(Vector2 position, double now)
+UIState Editor::DrawUI_ActionBar(double now)
 {
+    static Vector2 uiPosition{};
+    if (dock_dirty) {
+        if (dock_left) {
+            uiPosition = { 0, 0 };
+        } else {
+            uiPosition = { GetRenderWidth() - width, 0 };
+        }
+    }
+
     UIStyle uiActionBarStyle{};
-    UI uiActionBar{ position, uiActionBarStyle };
+    UI uiActionBar{ uiPosition, uiActionBarStyle };
 
     // TODO: UI::Panel
+    //BeginScrollPanel(uiActionBar, scrollPanel);
     UIState uiState{};
-    const Rectangle actionBarRect{ position.x, position.y, width, (float)GetRenderHeight() };
+    const Rectangle actionBarRect{ uiPosition.x, uiPosition.y, width, (float)GetRenderHeight() };
 #if 0
     DrawRectangleRounded(actionBarRect, 0.15f, 8, ASESPRITE_BEIGE);
     DrawRectangleRoundedLines(actionBarRect, 0.15f, 8, 2.0f, BLACK);
@@ -593,6 +532,9 @@ UIState Editor::DrawUI_ActionBar(Vector2 position, double now)
     DrawRectangleLinesEx(actionBarRect, 2.0f, BLACK);
 #endif
     uiState.hover = dlb_CheckCollisionPointRec(GetMousePosition(), actionBarRect);
+    if (uiState.hover) {
+        io.CaptureMouse();
+    }
 
     const char *mapFileFilter[1] = { "*.mdesk" };
     static std::string openRequest;
@@ -1306,7 +1248,8 @@ void Editor::DrawUI_WangTile(double now)
         uiWangTileStyle.scale = 0.5f;
         uiWangTileStyle.margin = 0;
         uiWangTileStyle.imageBorderThickness = 1;
-        UI uiWangTile{ { wangBg.x + 8, wangBg.y + 8 }, uiWangTileStyle };
+        Vector2 uiPosition{ wangBg.x + 8, wangBg.y + 8 };
+        UI uiWangTile{ uiPosition, uiWangTileStyle };
 
         uint8_t *imgData = (uint8_t *)wangTileset.ts.img.data;
 
@@ -1410,7 +1353,8 @@ void Editor::DrawUI_WangTile(double now)
             ts.h_tiles.push_back(h_tile);
             ts.v_tiles.push_back(v_tile);
 
-            UI uiWangNew{ { wangBg.x + wangBg.width + 8 , wangBg.y }, {} };
+            Vector2 uiPosition{ wangBg.x + wangBg.width + 8 , wangBg.y };
+            UI uiWangNew{ uiPosition, {} };
             Vector2 cursor = uiWangNew.CursorScreen();
             Rectangle tile1{};
             tile1.x = cursor.x;
@@ -1731,8 +1675,10 @@ void Editor::DrawUI_PackFiles(UI &uiActionBar, double now)
 
         uiActionBar.Space({ 0, 4 });
 
-        static ScrollPanel scrollPanel{};
-        BeginScrollPanel(uiActionBar, scrollPanel, width);
+        static ScrollPanel scrollPanel{{}};
+        const Vector2 panelTopLeft = uiActionBar.CursorScreen();
+        scrollPanel.rect = { panelTopLeft.x, panelTopLeft.y, width, GetRenderHeight() - panelTopLeft.y };
+        uiActionBar.BeginScrollPanel(scrollPanel);
 
         // Defer changing selection until after the loop has rendered every item
         int newSelectedOffset = 0;
@@ -1980,7 +1926,7 @@ void Editor::DrawUI_PackFiles(UI &uiActionBar, double now)
             state.packFiles.selectedPackEntryOffset = newSelectedOffset;
         }
 
-        EndScrollPanel(uiActionBar, scrollPanel);
+        uiActionBar.EndScrollPanel(scrollPanel);
     }
 }
 void Editor::DrawUI_Debug(UI &uiActionBar, double now)
@@ -1992,99 +1938,48 @@ void Editor::DrawUI_Debug(UI &uiActionBar, double now)
     }
     uiActionBar.Newline();
 
-#if 0
-    uiActionBar.Text("^^^ ignore all this stuff ^^^");
-    uiActionBar.Space({ 0, 50 });
-    uiActionBar.Newline();
-
-    struct Element {
-        bool built;
-        bool selected;
-    };
-
-    const Element elements_default[]{
-        { true, false },
-        { true, false },
-        { false, false },
-        { false, false },
-    };
-
-    static Element elements []{
-        { true, false },
-        { true, false },
-        { false, false },
-        { false, false },
-    };
-
-    if (uiActionBar.Button("Reset").pressed) {
-        for (int i = 0; i < ARRAY_SIZE(elements); i++) {
-            elements[i] = elements_default[i];
-        }
+    if (uiActionBar.Button("TileDef Editor").pressed) {
+        showTileDefEditor = !showTileDefEditor;
+        showTileDefEditorDirty = true;
     }
     uiActionBar.Newline();
 
-    const bool *built = 0;
-    bool multi = false;
-    int selected_count = 0;
-
-    uiActionBar.Text("_____________________________________________", GRAY);
-    uiActionBar.Newline();
-    uiActionBar.Text("Elements:", LIGHTGRAY);
-    uiActionBar.Newline();
-    for (int i = 0; i < ARRAY_SIZE(elements); i++) {
-        uiActionBar.Text(elements[i].selected ? "[x]" : "[   ]");
-        Color bgColor = elements[i].built ? DARKGRAY : LIGHTGRAY;
-        Color fgColor = elements[i].built ? WHITE : BLACK;
-        uiActionBar.PushFgColor(fgColor);
-        if (uiActionBar.Button(
-                TextFormat("Element #%d - %s", i, elements[i].built ? "Built" : "Not Built"),
-                elements[i].selected,
-                bgColor,
-                ColorBrightness(bgColor, -0.3f)
-            )
-            .pressed)
-        {
-            elements[i].selected = !elements[i].selected;
-        }
-        if (elements[i].selected) {
-            if (!built) {
-                built = &elements[i].built;
-            } else if (elements[i].built != *built) {
-                multi = true;
-            }
-            selected_count++;
-        }
-        uiActionBar.PopStyle();
-        uiActionBar.Newline();
-    }
-
-    if (multi) {
-        uiActionBar.Button("Various Statuses", true, PURPLE, PURPLE);
+    if (uiActionBar.Button("GfxAnim Editor").pressed) {
+        showGfxFrameEditor = !showGfxFrameEditor;
+        showGfxFrameEditorDirty = true;
     }
     uiActionBar.Newline();
+}
 
-    uiActionBar.Text("_____________________________________________", GRAY);
-    uiActionBar.Newline();
-    uiActionBar.Text("Element Inspector:", LIGHTGRAY);
-    uiActionBar.Newline();
-    if (selected_count) {
-        //uiActionBar.PushFgColor(BLACK);
-        if (uiActionBar.Button(multi ? "Mark all Not Built" : "Not Built", !multi && !*built, GRAY, ColorBrightness(ORANGE, -0.3f)).pressed) {
-            for (int i = 0; i < ARRAY_SIZE(elements); i++) {
-                if (elements[i].selected) elements[i].built = false;
-            }
-        }
-        //uiActionBar.PopStyle();
-        if (uiActionBar.Button(multi ? "Mark all Built" : "Built", !multi && *built, GRAY, ColorBrightness(ORANGE, -0.3f)).pressed) {
-            for (int i = 0; i < ARRAY_SIZE(elements); i++) {
-                if (elements[i].selected) elements[i].built = true;
-            }
-        }
-    } else {
-        uiActionBar.Text("Select some elements to see their status.");
+UIState Editor::DrawUI_TileDefEditor(void)
+{
+    if (!showTileDefEditor) {
+        return {};
     }
-    uiActionBar.Newline();
-    uiActionBar.Text("_____________________________________________", GRAY);
-    uiActionBar.Newline();
-#endif
+
+    const Rectangle defaultRect{ 0, 0, 800, 800 };
+    static ScrollPanel scrollPanel{ defaultRect, true };
+
+    if (showTileDefEditorDirty && io.KeyDown(KEY_LEFT_CONTROL)) {
+        scrollPanel.rect = defaultRect;
+    }
+
+    Vector2 uiPosition = { scrollPanel.rect.x, scrollPanel.rect.y };
+    UIStyle uiStyle{};
+    UI ui{ uiPosition, uiStyle };
+
+    ui.BeginScrollPanel(scrollPanel);
+
+    ui.Button("Test 1"); ui.Newline();
+    ui.Button("Test 2"); ui.Newline();
+    ui.Button("Test 3"); ui.Newline();
+    ui.Button("Test 4"); ui.Newline();
+    ui.Button("Test 5"); ui.Newline();
+    ui.Button("Test 6"); ui.Newline();
+    ui.Button("Test 7"); ui.Newline();
+    ui.Button("Test 8"); ui.Newline();
+    ui.Button("Test 9"); ui.Newline();
+
+    ui.EndScrollPanel(scrollPanel);
+    return scrollPanel.uiState;
 }

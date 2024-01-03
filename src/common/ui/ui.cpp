@@ -10,6 +10,10 @@ bool UI::tabHandledThisFrame{};
 uint32_t UI::lastDrawnEditor{};
 uint32_t UI::tabToPrevEditor{};
 
+ScrollPanel *UI::dragPanel{};
+Vector2 UI::dragPanelOffset{};
+DragMode UI::dragPanelMode{};
+
 bool UI::IsActiveEditor(uint32_t ctrlid)
 {
     return ctrlid == activeEditor;
@@ -25,9 +29,9 @@ bool UI::UnfocusActiveEditor(void)
     return false;
 }
 
-UI::UI(Vector2 position, UIStyle style)
+UI::UI(Vector2 &position, UIStyle style)
 {
-    this->position = position;
+    this->position = &position;
     styleStack.push(style);
     tabHandledThisFrame = false;
 }
@@ -203,6 +207,155 @@ void UI::Space(Vector2 space)
     cursor = Vector2Add(cursor, space);
 }
 
+void UI::BeginScrollPanel(ScrollPanel &scrollPanel)
+{
+    assert(scrollPanel.rect.width);
+
+    // Draw background color
+    const float panelBorderWidth = 2.0f;
+    DrawRectangleRec(scrollPanel.rect, GRAYISH_BLUE);
+    DrawRectangleLinesEx(scrollPanel.rect, panelBorderWidth, BLACK);
+
+    // Calculate scrolling
+    scrollPanel.scrollOffsetMax = MAX(0, scrollPanel.panelHeightLastFrame - scrollPanel.rect.height + 8);
+
+    float &scrollOffset = scrollPanel.scrollOffset;
+    float &scrollOffsetTarget = scrollPanel.scrollOffsetTarget;
+    float &scrollVelocity = scrollPanel.scrollVelocity;
+    scrollPanel.scrollAccel = 0;
+    if (dlb_CheckCollisionPointRec(GetMousePosition(), scrollPanel.rect)) {
+        const float mouseWheel = io.MouseWheelMove();
+        if (mouseWheel) {
+            scrollPanel.scrollAccel += fabsf(mouseWheel);
+            float impulse = 4 * scrollPanel.scrollAccel;
+            impulse *= impulse;
+            if (mouseWheel < 0) impulse *= -1;
+            scrollVelocity += impulse;
+            //printf("wheel: %f, target: %f\n", mouseWheel, scrollOffsetTarget);
+        } else {
+            scrollPanel.scrollAccel = 0;
+        }
+    }
+
+    if (scrollVelocity) {
+        scrollOffsetTarget -= scrollVelocity;
+        scrollVelocity *= 0.8f;
+    }
+
+    scrollOffsetTarget = CLAMP(scrollOffsetTarget, 0, scrollPanel.scrollOffsetMax);
+    scrollOffset = LERP(scrollOffset, scrollOffsetTarget, 0.1);
+    scrollOffset = CLAMP(scrollOffset, 0, scrollPanel.scrollOffsetMax);
+
+    Space({0, -scrollOffset });
+
+    Rectangle scissorRect = RectShrink(scrollPanel.rect, panelBorderWidth);
+    BeginScissorMode(
+        scissorRect.x,
+        scissorRect.y,
+        scissorRect.width,
+        scissorRect.height
+    );
+}
+void UI::EndScrollPanel(ScrollPanel &scrollPanel)
+{
+    EndScissorMode();
+    Space({ 0, scrollPanel.scrollOffset });
+    const float contentEndY = CursorScreen().y;
+    scrollPanel.panelHeightLastFrame = contentEndY - scrollPanel.rect.y;
+
+    const float scrollRatio = scrollPanel.rect.height / scrollPanel.panelHeightLastFrame;
+    const float scrollbarWidth = 8;
+    const float scrollbarHeight = scrollPanel.rect.height * scrollRatio;
+    const float scrollbarSpace = scrollPanel.rect.height * (1 - scrollRatio);
+    const float scrollPct = scrollPanel.scrollOffset / scrollPanel.scrollOffsetMax;
+    Rectangle scrollbar{
+        scrollPanel.rect.x + scrollPanel.rect.width - 2 - scrollbarWidth,
+        scrollPanel.rect.y + scrollbarSpace * scrollPct,
+        scrollbarWidth,
+        scrollbarHeight
+    };
+    DrawRectangleRec(scrollbar, LIGHTGRAY);
+    //DrawRectangleLinesEx(scrollPanel.rect, 2, WHITE);
+
+    const Vector2 mousePos = GetMousePosition();
+    scrollPanel.uiState.hover = dlb_CheckCollisionPointRec(mousePos, scrollPanel.rect);
+
+    // Draw resize handle in bottom-right corner
+    const int handleSize = 16;
+    const int minSize = 80;
+
+    Rectangle handleRect{
+        scrollPanel.rect.x + scrollPanel.rect.width  - handleSize,
+        scrollPanel.rect.y + scrollPanel.rect.height - handleSize,
+        handleSize,
+        handleSize
+    };
+    bool handleHovered = dlb_CheckCollisionPointRec(mousePos, handleRect);
+
+    if (!dragPanel || dragPanel == &scrollPanel) {
+        if (scrollPanel.uiState.hover) {
+            io.CaptureMouse();
+        }
+
+        if (!dragPanel) {
+            if (io.MouseButtonPressed(MOUSE_BUTTON_LEFT)) {
+                if (io.KeyDown(KEY_LEFT_CONTROL)) {
+                    dragPanel = &scrollPanel;
+                    dragPanelOffset = Vector2Subtract(mousePos, { scrollPanel.rect.x, scrollPanel.rect.y });
+                    dragPanelMode = DragMode_Move;
+                } else if (scrollPanel.resizable && handleHovered) {
+                    const Vector2 panelBR{
+                        scrollPanel.rect.x + scrollPanel.rect.width,
+                        scrollPanel.rect.y + scrollPanel.rect.height
+                    };
+
+                    dragPanel = &scrollPanel;
+                    dragPanelOffset = Vector2Subtract(panelBR, mousePos);
+                    dragPanelMode = DragMode_Resize;
+                }
+            }
+        }
+
+        if (dragPanel == &scrollPanel) {
+            if (io.MouseButtonDown(MOUSE_BUTTON_LEFT)) {
+                switch (dragPanelMode) {
+                    case DragMode_Move: {
+                        Vector2 newPanelPos = Vector2Subtract(mousePos, dragPanelOffset);
+                        scrollPanel.rect.x = newPanelPos.x;
+                        scrollPanel.rect.y = newPanelPos.y;
+                        break;
+                    }
+                    case DragMode_Resize: {
+                        Vector2 mousePosRel = Vector2Subtract(mousePos, { scrollPanel.rect.x, scrollPanel.rect.y });
+                        mousePosRel = Vector2Add(mousePosRel, dragPanelOffset);
+                        scrollPanel.rect.width = MAX(minSize, mousePosRel.x);
+                        scrollPanel.rect.height = MAX(minSize, mousePosRel.y);
+                        break;
+                    }
+                }
+            } else {
+                dragPanel = 0;
+                dragPanelOffset = {};
+                dragPanelMode = DragMode_None;
+            }
+        }
+    }
+
+    if (scrollPanel.resizable) {
+        Color handleColor = handleHovered ? SKYBLUE : GRAY;
+        if (dragPanel == &scrollPanel && dragPanelMode == DragMode_Resize) {
+            handleColor = ORANGE;
+        }
+        handleColor = ColorBrightness(handleColor, -0.5f);
+        DrawRectangleRec(handleRect, Fade(handleColor, 0.5f));
+        DrawRectangleLinesEx(handleRect, 2.0f, handleColor);
+    }
+
+    // Minimum panel size / distance from edge of screen
+    scrollPanel.rect.x = CLAMP(scrollPanel.rect.x, -scrollPanel.rect.width + minSize, GetRenderWidth() - minSize);
+    scrollPanel.rect.y = CLAMP(scrollPanel.rect.y, -scrollPanel.rect.height + minSize, GetRenderHeight() - minSize);
+}
+
 UIState UI::Text(const char *text, size_t textLen)
 {
     if (!textLen) {
@@ -215,8 +368,8 @@ UIState UI::Text(const char *text, size_t textLen)
     const UIStyle &style = GetStyle();
 
     Vector2 ctrlPosition{
-        position.x + cursor.x + style.margin.left,
-        position.y + cursor.y + style.margin.top
+        position->x + cursor.x + style.margin.left,
+        position->y + cursor.y + style.margin.top
     };
 
     Vector2 contentSize = style.size;
@@ -330,8 +483,8 @@ UIState UI::Image(const Texture &texture, Rectangle srcRect)
     const UIStyle &style = GetStyle();
 
     Vector2 ctrlPosition{
-        position.x + cursor.x + style.margin.left,
-        position.y + cursor.y + style.margin.top
+        position->x + cursor.x + style.margin.left,
+        position->y + cursor.y + style.margin.top
     };
 
     Vector2 ctrlSize{
@@ -378,8 +531,8 @@ UIState UI::Button(const std::string &text)
     const UIStyle &style = GetStyle();
 
     Vector2 ctrlPosition{
-        position.x + cursor.x + style.margin.left,
-        position.y + cursor.y + style.margin.top
+        position->x + cursor.x + style.margin.left,
+        position->y + cursor.y + style.margin.top
     };
 
     const float cornerRoundness = 0.2f;
@@ -550,8 +703,8 @@ UIState UI::Textbox(uint32_t ctrlid, std::string &text, bool multiline, KeyPreCa
     StbString str{ style.font, text };
 
     Vector2 ctrlPosition{
-        position.x + cursor.x + style.margin.left,
-        position.y + cursor.y + style.margin.top
+        position->x + cursor.x + style.margin.left,
+        position->y + cursor.y + style.margin.top
     };
 
     Vector2 contentSize = style.size;

@@ -854,7 +854,8 @@ void ClientWorld::DrawHUDMenu(void)
     IO::Scoped scope(IO::IO_HUDMenu);
 
     UIStyle uiHUDMenuStyle{};
-    UI uiHUDMenu{ {}, uiHUDMenuStyle };
+    Vector2 uiPosition{};
+    UI uiHUDMenu{ uiPosition, uiHUDMenuStyle };
 
     // TODO: Add Quit button to the menu at the very least
     uiHUDMenu.Button("Menu");

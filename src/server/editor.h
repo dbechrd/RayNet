@@ -128,12 +128,18 @@ struct EditModeState {
 };
 
 struct Editor {
-    bool          active    {};
-    float         width     = 430.0f;
-    bool          dock_left {};
-    EditMode      mode      {};
-    EditModeState state     {};
-    uint16_t      map_id    {};
+    bool          active     {};
+    float         width      { 430.0f };
+    bool          dock_left  {};
+    bool          dock_dirty { true };
+    EditMode      mode       {};
+    EditModeState state      {};
+    uint16_t      map_id     {};
+
+    bool showTileDefEditor       {};
+    bool showTileDefEditorDirty  {};
+    bool showGfxFrameEditor      {};
+    bool showGfxFrameEditorDirty {};
 
     Editor(uint16_t map_id) : map_id(map_id) {}
     Err Init(void);
@@ -143,6 +149,8 @@ struct Editor {
     UIState DrawUI(Camera2D &camera, double now);
 
 private:
+    void CenterCameraOnMap(Camera2D &camera);
+
     // Ground overlays (above tiles, below entities)
     void DrawGroundOverlay_Tiles(Camera2D &camera, double now);
     void DrawGroundOverlay_Objects(Camera2D &camera, double now);
@@ -153,7 +161,7 @@ private:
     void DrawEntityOverlay_Collision(Camera2D &camera, double now);
 
     // Action bar and mode tabs
-    UIState DrawUI_ActionBar(Vector2 position, double now);
+    UIState DrawUI_ActionBar(double now);
     void DrawUI_MapActions(UI &uiActionBar, double now);
     void DrawUI_TileActions(UI &uiActionBar, double now);
     void DrawUI_ObjectActions(UI &uiActionBar, double now);
@@ -165,4 +173,6 @@ private:
     void DrawUI_EntityActions(UI &uiActionBar, double now);
     void DrawUI_PackFiles(UI &uiActionBar, double now);
     void DrawUI_Debug(UI &uiActionBar, double now);
+
+    UIState DrawUI_TileDefEditor(void);
 };

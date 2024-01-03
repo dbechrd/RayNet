@@ -714,6 +714,24 @@ Err LoadResources(Pack &pack)
                 LoadSoundVariant(sfx_file, sfx_file.path.c_str());
             }
         }
+
+#if _DEBUG
+        // HACK(dlb): auto-generate tile ids for newly added tile defs
+        uint16_t next_frame_id = 0;
+        for (GfxFrame &gfx_frame : pack.gfx_frames) {
+            if (gfx_frame.id < UINT16_MAX) {
+                next_frame_id = MAX(next_frame_id, gfx_frame.id + 1);
+            }
+        }
+        for (GfxFrame &gfx_frame : pack.gfx_frames) {
+            if (gfx_frame.id == UINT16_MAX) {
+                gfx_frame.id = next_frame_id++;
+            }
+            if (!gfx_frame.name.size()) {
+                gfx_frame.name = TextFormat("frm_%s_%u_%u", gfx_frame.gfx.c_str(), gfx_frame.x, gfx_frame.y);
+            }
+        }
+#endif
     }
 
     return err;
