@@ -1200,7 +1200,9 @@ void UI::HAQFieldValue(uint32_t ctrlid, const std::string &name, T &value, int f
 
 #define HAQ_UI_FIELD(c_type, c_name, c_init, flags, condition, userdata) \
     if (condition) { \
-        HAQField(__COUNTER__, #c_name, userdata.c_name, (flags), labelWidth); \
+        size_t hash{}; \
+        hash_combine(hash, __COUNTER__, ctrlid, name, #c_name); \
+        HAQField(hash, #c_name, userdata.c_name, (flags), labelWidth); \
     }
 
 #define HAQ_UI_DAT(c_type, hqt) \
@@ -1231,12 +1233,14 @@ void UI::HAQFieldValueArray(uint32_t ctrlid, const std::string &name, T *data, s
 
     for (int i = 0; i < count; i++) {
         std::string name_i = TextFormat("%s[%d]", name.c_str(), i);
-        size_t hash{};
-        hash_combine(hash, __COUNTER__, name_i);
+
         PushFgColor(GRAY);
         Label(name_i, labelWidth);
         PopStyle();
         Newline();
+
+        size_t hash{};
+        hash_combine(hash, __COUNTER__, ctrlid, name, i);
         HAQField(hash, "#" + name_i, data[i], flags, labelWidth);
     }
 
@@ -1335,7 +1339,7 @@ void UI::HAQFieldEditor(uint32_t ctrlid, const std::string &name, ObjType &value
     const float pad = style.pad.left + style.pad.right;
     const float margin = style.margin.left + style.margin.right;
     const float typeStrSpace = typeStrWidth + pad + margin;
-    HAQFieldEditor(__COUNTER__, "", vint, flags, labelWidth + typeStrSpace);
+    HAQFieldEditor(ctrlid, "", vint, flags, labelWidth + typeStrSpace);
 
     value = (ObjType)CLAMP(vint, 1, OBJ_COUNT - 1);
 }
