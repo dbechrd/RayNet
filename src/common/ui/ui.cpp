@@ -188,6 +188,18 @@ void UI::UpdateCursor(const UIStyle &style, Rectangle &ctrlRect)
     cursor.x += ctrlSpaceUsed.x;
 }
 
+bool UI::ShouldCull(Rectangle ctrlRect)
+{
+    if (ctrlRect.x + ctrlRect.width < 0 ||
+        ctrlRect.y + ctrlRect.height < 0 ||
+        ctrlRect.x > GetRenderWidth() ||
+        ctrlRect.y > GetRenderHeight())
+    {
+        return true;
+    }
+    return false;
+}
+
 void UI::Newline(void)
 {
     cursor.x = 0;
@@ -394,14 +406,18 @@ UIState UI::Text(const char *text, size_t textLen)
         ctrlSize.x,
         ctrlSize.y
     };
+    UpdateCursor(style, ctrlRect);
+
+    static HoverHash prevHoverHash{};
+    UIState state = CalcState(ctrlRect, prevHoverHash);
 
     Vector2 contentPos = {
         ctrlPosition.x + style.pad.left,
         ctrlPosition.y + style.pad.top
     };
+    state.contentRect = { contentPos.x, contentPos.y, contentSize.x, contentSize.y };
 
-    static HoverHash prevHoverHash{};
-    UIState state = CalcState(ctrlRect, prevHoverHash);
+    if (ShouldCull(ctrlRect)) return state;
 
     if (style.bgColor[UI_CtrlTypeDefault].a) {
         DrawRectangleRec(ctrlRect, style.bgColor[UI_CtrlTypeDefault]);
@@ -413,9 +429,6 @@ UIState UI::Text(const char *text, size_t textLen)
     // Draw text
     dlb_DrawTextShadowEx(*style.font, text, textLen, contentPos, style.fgColor);
 
-    //state.contentRect = ctrlRect;
-    state.contentRect = { contentPos.x, contentPos.y, contentSize.x, contentSize.y };
-    UpdateCursor(style, ctrlRect);
     return state;
 }
 
@@ -500,15 +513,19 @@ UIState UI::Image(const Texture &texture, Rectangle srcRect)
         ctrlSize.x + style.imageBorderThickness * 2,
         ctrlSize.y + style.imageBorderThickness * 2
     };
+    UpdateCursor(style, ctrlRect);
+
+    static HoverHash prevHoverHash{};
+    UIState state = CalcState(ctrlRect, prevHoverHash);
 
     Rectangle contentRect = ctrlRect;
     contentRect.x += style.imageBorderThickness;
     contentRect.y += style.imageBorderThickness;
     contentRect.width -= style.imageBorderThickness * 2;
     contentRect.height -= style.imageBorderThickness * 2;
+    state.contentRect = contentRect;
 
-    static HoverHash prevHoverHash{};
-    UIState state = CalcState(ctrlRect, prevHoverHash);
+    if (ShouldCull(ctrlRect)) return state;
 
     // Draw border
     Color borderColor = state.hover ? YELLOW : BLACK;
@@ -520,9 +537,7 @@ UIState UI::Image(const Texture &texture, Rectangle srcRect)
     // Draw image
     DrawTexturePro(texture, srcRect, contentRect, {}, 0, WHITE);
 
-    state.contentRect = contentRect;
     UpdateAudio(state);
-    UpdateCursor(style, ctrlRect);
     return state;
 }
 
@@ -557,9 +572,21 @@ UIState UI::Button(const std::string &text)
         ctrlSize.x + style.buttonBorderThickness * 2,
         ctrlSize.y + style.buttonBorderThickness * 2
     };
+    UpdateCursor(style, ctrlRect);
 
     static HoverHash prevHoverHash{};
     UIState state = CalcState(ctrlRect, prevHoverHash);
+
+    const float downOffset = (style.buttonPressed || state.down) ? 1 : -1;
+    Rectangle contentRect{
+        ctrlPosition.x + style.buttonBorderThickness,
+        ctrlPosition.y + style.buttonBorderThickness * downOffset,
+        ctrlSize.x,
+        ctrlSize.y
+    };
+    state.contentRect = contentRect;
+
+    if (ShouldCull(ctrlRect)) return state;
 
     Color bgColorFx = style.bgColor[UI_CtrlTypeButton];
     Color fgColorFx = style.fgColor;
@@ -580,14 +607,6 @@ UIState UI::Button(const std::string &text)
         DrawRectangleRounded(ctrlRect, cornerRoundness, cornerSegments, BLACK);
     }
 
-    const float downOffset = (style.buttonPressed || state.down) ? 1 : -1;
-    Rectangle contentRect{
-        ctrlPosition.x + style.buttonBorderThickness,
-        ctrlPosition.y + style.buttonBorderThickness * downOffset,
-        ctrlSize.x,
-        ctrlSize.y
-    };
-
     // Draw button
     DrawRectangleRounded(contentRect, cornerRoundness, cornerSegments, bgColorFx);
 
@@ -600,9 +619,7 @@ UIState UI::Button(const std::string &text)
         fgColorFx
     );
 
-    state.contentRect = contentRect;
     UpdateAudio(state);
-    UpdateCursor(style, ctrlRect);
     return state;
 }
 

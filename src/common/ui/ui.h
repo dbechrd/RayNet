@@ -193,6 +193,7 @@ private:
     UIState CalcState(Rectangle &ctrlRect, HoverHash &prevHoverHash);
     void UpdateAudio(const UIState &uiState);
     void UpdateCursor(const UIStyle &style, Rectangle &ctrlRect);
+    bool ShouldCull(Rectangle ctrlRect);
 
     template <typename T>
     void HAQFieldValue(uint32_t ctrlid, const std::string &name, T &value, int flags, int labelWidth);
