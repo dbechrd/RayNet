@@ -18,7 +18,6 @@ bool UI::IsActiveEditor(uint32_t ctrlid)
 {
     return ctrlid == activeEditor;
 }
-
 bool UI::UnfocusActiveEditor(void)
 {
     if (activeEditor) {
@@ -36,87 +35,75 @@ UI::UI(Vector2 &position, UIStyle style)
     tabHandledThisFrame = false;
 }
 
+const UIStyle &UI::GetStyle(void)
+{
+    assert(styleStack.size());  // did you PopStyle too many times?
+    return styleStack.top();
+}
 void UI::PushStyle(UIStyle style)
 {
     styleStack.push(style);
 }
-
 void UI::PushMargin(UIMargin margin)
 {
     UIStyle style = GetStyle();
     style.margin = margin;
     PushStyle(style);
 }
-
 void UI::PushPadding(UIPad padding)
 {
     UIStyle style = GetStyle();
     style.pad = padding;
     PushStyle(style);
 }
-
 void UI::PushScale(float scale)
 {
     UIStyle style = GetStyle();
     style.scale = scale;
     PushStyle(style);
 }
-
 void UI::PushWidth(float width)
 {
     UIStyle style = GetStyle();
     style.size.x = width;
     PushStyle(style);
 }
-
 void UI::PushHeight(float height)
 {
     UIStyle style = GetStyle();
     style.size.y = height;
     PushStyle(style);
 }
-
 void UI::PushSize(Vector2 size)
 {
     UIStyle style = GetStyle();
     style.size = size;
     PushStyle(style);
 }
-
 void UI::PushBgColor(Color color, UI_CtrlType ctrlType)
 {
     UIStyle style = GetStyle();
     style.bgColor[ctrlType] = color;
     PushStyle(style);
 }
-
 void UI::PushFgColor(Color color)
 {
     UIStyle style = GetStyle();
     style.fgColor = color;
     PushStyle(style);
 }
-
 void UI::PushFont(Font &font)
 {
     UIStyle style = GetStyle();
     style.font = &font;
     PushStyle(style);
 }
-
 void UI::PushIndent(int indent)
 {
     UIStyle style = GetStyle();
     style.indent += indent;
     PushStyle(style);
 }
-
-const UIStyle &UI::GetStyle(void)
-{
-    assert(styleStack.size());  // did you PopStyle too many times?
-    return styleStack.top();
-}
-
 void UI::PopStyle(void)
 {
     assert(styleStack.size());  // did you PopStyle too many times?
@@ -189,7 +176,6 @@ void UI::UpdateAudio(const UIState &uiState)
         PlaySound("sfx_soft_tick", false);
     }
 }
-
 void UI::UpdateCursor(const Rectangle &ctrlRect)
 {
     const UIStyle &style = GetStyle();
@@ -203,7 +189,6 @@ void UI::UpdateCursor(const Rectangle &ctrlRect)
     lineSize.y = MAX(ctrlSpaceUsed.y, lineSize.y);
     cursor.x += ctrlSpaceUsed.x;
 }
-
 bool UI::ShouldCull(const Rectangle &ctrlRect)
 {
     return false;
@@ -220,18 +205,18 @@ bool UI::ShouldCull(const Rectangle &ctrlRect)
 
 void UI::Newline(void)
 {
-    cursor.x = 0;
+    const UIStyle &style = GetStyle();
+
+    cursor.x = style.pad.left;
     cursor.y += lineSize.y;
     lineSize = {};
 
-    UIStyle style = GetStyle();
     float indentSize = style.indentSize;
     if (indentSize == 0) {
         indentSize = style.font->baseSize;
     }
     Space({ (float)style.indent * indentSize, 0 });
 }
-
 void UI::Space(Vector2 space)
 {
     cursor = Vector2Add(cursor, space);
@@ -262,9 +247,9 @@ void UI::BeginScrollPanel(ScrollPanel &scrollPanel, IO::Scope scope)
         ctrlSize.y
     };
 
-    //UpdateCursor(ctrlRect);
-    cursor.x += style.margin.left;
-    cursor.y += style.margin.top;
+    // This sorta works for the first child, but requires a stack to work fully.
+    //cursor.x += style.margin.left;
+    //cursor.y += style.margin.top;
 
     Rectangle contentRect = RectShrink(ctrlRect, style.panelBorderWidth);
 
@@ -430,29 +415,6 @@ void UI::EndScrollPanel(ScrollPanel &scrollPanel)
     io.PopScope();
 }
 
-void UI::BeginSearchBox(std::string &filter)
-{
-    UIStyle searchStyle = GetStyle();
-    searchStyle.size.x = 400;
-    searchStyle.pad = UIPad(8, 2);
-    searchStyle.margin = UIMargin(0, 0, 4, 6);
-    PushStyle(searchStyle);
-
-    Textbox(hash_combine(__COUNTER__, &filter), filter);
-    Newline();
-    PushWidth(0);
-    if (Button("Clear").pressed) filter = "";
-    if (Button("All").pressed) filter = "*";
-    PopStyle();
-    Newline();
-}
-
-void UI::EndSearchBox(void)
-{
-    PopStyle();
-    Newline();
-}
-
 UIState UI::Text(const char *text, size_t textLen)
 {
     if (!textLen) {
@@ -516,7 +478,6 @@ UIState UI::Text(const char *text, size_t textLen)
 
     return state;
 }
-
 UIState UI::Text(const std::string &text, Color fgColor, Color bgColor)
 {
     UIStyle style = GetStyle();
@@ -529,31 +490,26 @@ UIState UI::Text(const std::string &text, Color fgColor, Color bgColor)
     PopStyle();
     return state;
 }
-
 UIState UI::Text(uint8_t value)
 {
     const char *text = TextFormat("%" PRIu8, value);
     return Text(text);
 }
-
 UIState UI::Text(uint16_t value)
 {
     const char *text = TextFormat("%" PRIu16, value);
     return Text(text);
 }
-
 UIState UI::Text(uint32_t value)
 {
     const char *text = TextFormat("%" PRIu32, value);
     return Text(text);
 }
-
 UIState UI::Text(uint64_t value)
 {
     const char *text = TextFormat("%" PRIu64, value);
     return Text(text);
 }
-
 template <typename T>
 UIState UI::Text(T value)
 {
@@ -563,7 +519,6 @@ UIState UI::Text(T value)
     PopStyle();
     return result;
 }
-
 UIState UI::Label(const std::string &text, int width)
 {
     if (width) PushWidth(width);
@@ -707,7 +662,6 @@ UIState UI::Button(const std::string &text)
     UpdateAudio(state);
     return state;
 }
-
 UIState UI::Button(const std::string &text, Color bgColor)
 {
     UIStyle style = GetStyle();
@@ -717,7 +671,6 @@ UIState UI::Button(const std::string &text, Color bgColor)
     PopStyle();
     return state;
 }
-
 UIState UI::Button(const std::string &text, bool pressed, Color bgColor, Color bgColorPressed)
 {
     UIStyle style = GetStyle();
@@ -753,14 +706,12 @@ void RN_stb_layout_row(StbTexteditRow *row, StbString *str, int startIndex)
     row->ymax = str->font->baseSize;
     row->num_chars = str->data.size() - startIndex; // TODO: Word wrap if multi-line is needed
 }
-
 int RN_stb_get_char_width(StbString *str, int startIndex, int offset) {
     std::string oneChar = str->data.substr((size_t)startIndex + offset, 1);
     Vector2 charSize = dlb_MeasureTextEx(*str->font, CSTRS(oneChar));
     // NOTE(dlb): Wtf? Raylib probably doing int truncation bullshit.
     return charSize.x + 1;
 }
-
 int RN_stb_key_to_char(int key)
 {
     if (isascii(key)) {
@@ -771,23 +722,19 @@ int RN_stb_key_to_char(int key)
         return -1;
     }
 }
-
 int RN_stb_get_char(StbString *str, int index)
 {
     return str->data[index];
 }
-
 void RN_stb_delete_chars(StbString *str, int index, int count)
 {
     str->data.erase(index, count);
 }
-
 bool RN_stb_insert_chars(StbString *str, int index, char *chars, int charCount)
 {
     str->data.insert(index, chars, charCount);
     return true;
 }
-
 bool RN_stb_is_space(char ch)
 {
     return isspace(ch);
@@ -962,71 +909,6 @@ UIState UI::Textbox(uint32_t ctrlid, std::string &text, bool multiline, KeyPreCa
         }
 
         if (!io.KeyboardCaptured() && !keyHandled) {
-#if 0
-            int key = GetKeyPressed();
-            while (key) {
-                printf("key_pressed: %c\n", (char)key);
-                if (keyCallback) {
-                    const char *newStr = keyCallback(key, userData);
-                    if (newStr) {
-                        str.data = newStr;
-                        key = GetKeyPressed();
-                        continue;
-                    }
-                }
-
-                if (io.KeyDown(KEY_LEFT_CONTROL) || io.KeyDown(KEY_RIGHT_CONTROL)) {
-                    key |= STB_TEXTEDIT_K_CTRL;
-                }
-                if (io.KeyDown(KEY_LEFT_SHIFT) || io.KeyDown(KEY_RIGHT_SHIFT)) {
-                    key |= STB_TEXTEDIT_K_SHIFT;
-                }
-                if (RN_stb_key_to_char(key) == -1) {
-                    stb_textedit_key(&str, &stbState, key);
-                }
-                if (key == (STB_TEXTEDIT_K_CTRL | KEY_A)) {
-                    stbState.cursor = text.size();
-                    stbState.select_start = 0;
-                    stbState.select_end = text.size();
-                }
-                if (key == (STB_TEXTEDIT_K_CTRL | KEY_X)) {
-                    int selectLeft = MIN(stbState.select_start, stbState.select_end);
-                    int selectRight = MAX(stbState.select_start, stbState.select_end);
-                    int selectLen = selectRight - selectLeft;
-                    if (selectLen) {
-                        std::string selectedText = str.data.substr(selectLeft, selectLen);
-                        SetClipboardText(selectedText.c_str());
-                        stb_textedit_cut(&str, &stbState);
-                    }
-                }
-                if (key == (STB_TEXTEDIT_K_CTRL | KEY_C)) {
-                    int selectLeft = MIN(stbState.select_start, stbState.select_end);
-                    int selectRight = MAX(stbState.select_start, stbState.select_end);
-                    int selectLen = selectRight - selectLeft;
-                    if (selectLen) {
-                        std::string selectedText = str.data.substr(selectLeft, selectLen);
-                        SetClipboardText(selectedText.c_str());
-                    }
-                }
-                if (key == (STB_TEXTEDIT_K_CTRL | KEY_V)) {
-                    const char *clipboard = GetClipboardText();
-                    if (clipboard) {
-                        size_t clipboardLen = strlen(clipboard);
-                        if (clipboardLen) {
-                            stb_textedit_paste(&str, &stbState, clipboard, clipboardLen);
-                        }
-                    }
-                }
-                if (key == KEY_TAB) {
-                    // tell next textbox that draws to active
-                    tabToNextEditor = true;
-                } else if (key == (STB_TEXTEDIT_K_SHIFT | KEY_TAB)) {
-                    // tell previously drawn textbox to activate next frame
-                    tabToPrevEditor = lastDrawnEditor;
-                }
-                key = GetKeyPressed();
-            }
-#else
             bool ctrl = io.KeyDown(KEY_LEFT_CONTROL) || io.KeyDown(KEY_RIGHT_CONTROL);
             bool shift = io.KeyDown(KEY_LEFT_SHIFT) || io.KeyDown(KEY_RIGHT_SHIFT);
 
@@ -1093,7 +975,6 @@ UIState UI::Textbox(uint32_t ctrlid, std::string &text, bool multiline, KeyPreCa
                 }
                 tabHandledThisFrame = true;
             }
-#endif
 
             int ch = GetCharPressed();
             while (ch) {
@@ -1133,9 +1014,11 @@ UIState UI::Textbox(uint32_t ctrlid, std::string &text, bool multiline, KeyPreCa
     }
 
     // Border
-    if (style.borderColor.a) {
-        DrawRectangleLinesEx(ctrlRect, 1, style.borderColor);
+    Color borderColor = style.borderColor;
+    if (!borderColor.a) {
+        borderColor = BLACK;
     }
+    DrawRectangleLinesEx(ctrlRect, 1, borderColor);
 
     // Text
     dlb_DrawTextShadowEx(*style.font, text.c_str(), text.size(),
@@ -1275,6 +1158,22 @@ void LimitStringLength(std::string &str, void *userData)
     if (str.size() > maxLength) {
         str.resize(maxLength, 0);
     }
+}
+
+void UI::SearchBox(std::string &filter)
+{
+    UIStyle searchStyle = GetStyle();
+    searchStyle.size.x = 400;
+    //searchStyle.pad = UIPad(4, 2);
+    //searchStyle.margin = UIMargin(0, 0, 4, 6);
+    PushStyle(searchStyle);
+    Textbox(hash_combine(__COUNTER__, &filter), filter);
+    PopStyle();
+    Newline();
+
+    if (Button("Clear").pressed) filter = "";
+    if (Button("All").pressed) filter = "*";
+    Newline();
 }
 
 template <typename T>

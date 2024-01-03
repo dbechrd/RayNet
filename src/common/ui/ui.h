@@ -65,7 +65,7 @@ struct UIStyle {
     float panelBorderWidth{ 2 };
 
     Color borderColor{ BLANK };
-    UIPad pad{ 8, 2 };
+    UIPad pad{ 4, 2 };
     float scale{ 1 };
     Vector2 size{ 0, 0 };
     Color bgColor[UI_CtrlTypeCount]{ BLANK, BLUE_DESAT, DARKGRAY };
@@ -141,9 +141,6 @@ struct UI {
     void BeginScrollPanel(ScrollPanel &scrollPanel, IO::Scope scope);
     void EndScrollPanel(ScrollPanel &scrollPanel);
 
-    void BeginSearchBox(std::string &filter);
-    void EndSearchBox(void);
-
     UIState Text(const char *text, size_t textLen = 0);
     UIState Text(const std::string &text, Color fgColor = BLANK, Color bgColor = BLANK);
     UIState Text(uint8_t value);
@@ -162,6 +159,7 @@ struct UI {
 
     UIState Textbox(uint32_t ctrlid, std::string &text, bool multline = false, KeyPreCallback preCallback = 0, KeyPostCallback postCallback = 0, void *userData = 0);
     UIState Textbox(uint32_t ctrlid, float &value, const char *fmt = "%.f", float increment = 1);
+    void SearchBox(std::string &filter);
 
     template <typename T>
     void HAQField(uint32_t ctrlid, const std::string &name, T &value, int flags, int labelWidth);

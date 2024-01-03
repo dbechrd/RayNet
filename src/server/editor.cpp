@@ -1457,14 +1457,8 @@ void Editor::DrawUI_EntityActions(UI &ui, double now)
     ui.Newline();
     ui.Space({ 0, 4 });
 
-    UIStyle searchStyle = ui.GetStyle();
-    searchStyle.size.x = 400;
-    searchStyle.pad = UIPad(8, 2);
-    searchStyle.margin = UIMargin(0, 0, 4, 6);
-    ui.PushStyle(searchStyle);
-
     static std::string filter{ "*" };
-    ui.BeginSearchBox(filter);
+    ui.SearchBox(filter);
 
     for (uint32_t i = 0; i < SV_MAX_ENTITIES; i++) {
         Entity &entity = entityDb->entities[i];
@@ -1483,8 +1477,7 @@ void Editor::DrawUI_EntityActions(UI &ui, double now)
         }
         ui.Newline();
     }
-
-    ui.EndSearchBox();
+    ui.Newline();
 
     if (state.entities.selectedId) {
         Entity *entity = entityDb->FindEntity(state.entities.selectedId);
@@ -1593,15 +1586,10 @@ void Editor::DrawUI_EntityActions(UI &ui, double now)
 }
 void Editor::DrawUI_PackFiles(UI &ui, double now)
 {
-    UIStyle searchStyle = ui.GetStyle();
-    searchStyle.size.x = 400;
-    searchStyle.pad = UIPad(8, 2);
-    searchStyle.margin = UIMargin(0, 0, 4, 6);
-    ui.PushStyle(searchStyle);
-
     static std::string filter{ "*" };
-    ui.BeginSearchBox(filter);
+    ui.SearchBox(filter);
 
+    ui.PushWidth(400);
     Pack *packs[]{ &pack_assets, &pack_maps };
     for (Pack *packPtr : packs) {
         Pack &pack = *packPtr;
@@ -1620,8 +1608,8 @@ void Editor::DrawUI_PackFiles(UI &ui, double now)
         }
         ui.Newline();
     }
-
-    ui.EndSearchBox();
+    ui.PopStyle();
+    ui.Newline();
 
     if (state.packFiles.selectedPack) {
         Pack &pack = *state.packFiles.selectedPack;
@@ -1692,6 +1680,7 @@ void Editor::DrawUI_PackFiles(UI &ui, double now)
         const Vector2 panelTopLeft = ui.CursorScreen();
         ui.PushSize({ width, GetRenderHeight() - panelTopLeft.y });
         ui.BeginScrollPanel(scrollPanel, IO::IO_ScrollPanelInner);
+        ui.PopStyle();
 
         // Defer changing selection until after the loop has rendered every item
         int newSelectedOffset = 0;
@@ -1966,13 +1955,14 @@ void Editor::DrawUI_GfxAnimEditor(void)
 
     ////// search //////
     static std::string filter{ "" };
-    ui.BeginSearchBox(filter);
+    ui.SearchBox(filter);
 
     static ScrollPanel searchPanel{{}};
     ui.PushSize({ 400, 200 });
     ui.BeginScrollPanel(searchPanel, IO::IO_ScrollPanelInner);
     ui.PopStyle();
 
+    ui.PushSize({ 400, 0 });
     for (GfxAnim &gfx_anim : pack_assets.gfx_anims) {
         Color bgColor = gfx_anim.id == state.gfxAnimEditor.selectedAnimId ? SKYBLUE : BLUE_DESAT;
         const char *idStr = gfx_anim.name.c_str();
@@ -1985,10 +1975,10 @@ void Editor::DrawUI_GfxAnimEditor(void)
         }
         ui.Newline();
     }
+    ui.PopStyle();
 
     ui.EndScrollPanel(searchPanel);
     ui.Newline();
-    ui.EndSearchBox();
     ////////////////////////
 
     GfxAnim &gfx_anim = pack_assets.FindById<GfxAnim>(state.gfxAnimEditor.selectedAnimId);
