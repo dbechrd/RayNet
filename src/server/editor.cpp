@@ -894,7 +894,8 @@ void DrawRectangleRectOffset(const Rectangle &rect, Vector2 &offset, Color color
     Rectangle offsetRect = rect;
     offsetRect.x += offset.x;
     offsetRect.y += offset.y;
-    DrawRectangleRec(offsetRect, color);
+    DrawRectangleRec(offsetRect, Fade(color, 0.7f));
+    DrawRectangleLinesEx(offsetRect, 1, color);
 }
 void Editor::DrawUI_Tilesheet(UI &ui, double now)
 {
@@ -947,34 +948,30 @@ void Editor::DrawUI_Tilesheet(UI &ui, double now)
                 cursor.y++;
 
                 // TODO: Make this a loop + LUT if we start adding more flags
-                if (!tile_defs[i].flags) {
-                    DrawRectangle(cursor.x, cursor.y, tileThird, tileThird, Fade(MAROON, 0.7f));
+                struct Flag {
+                    TileDef::Flags flag;
+                    char text;
+                    Color color;
+                } flags[]{
+                    { TileDef::FLAG_SOLID , 'S', DARKGREEN },
+                    { TileDef::FLAG_LIQUID, 'L', BLUE      }
+                };
 
-                    Vector2 size = dlb_MeasureTextEx(fntSmall, "X", 1, 0);
+                for (Flag flag : flags) {
+                    Color color = flag.color;
+                    char text = flag.text;
+                    if (!(tile_defs[i].flags & flag.flag)) {
+                        //text = '_';
+                        color = Fade(GRAY, 0.7f);
+                    }
+                    Rectangle rect{ cursor.x, cursor.y, tileThird, tileThird };
+                    DrawRectangleRec(rect, color);
+                    DrawRectangleLinesEx(rect, 1, flag.color);
+                    Vector2 size = dlb_MeasureTextEx(fntSmall, &text, 1, 0);
                     Vector2 pos = cursor;
                     pos.x += tileSixth - size.x / 2.0f;
                     pos.y += tileSixth - size.y / 2.0f;
-                    dlb_DrawTextShadowEx(fntSmall, CSTR("X"), pos, WHITE);
-                } else {
-                    if (tile_defs[i].flags & TileDef::FLAG_SOLID) {
-                        DrawRectangle(cursor.x, cursor.y, tileThird, tileThird, Fade(DARKGREEN, 0.7f));
-
-                        Vector2 size = dlb_MeasureTextEx(fntSmall, "S", 1, 0);
-                        Vector2 pos = cursor;
-                        pos.x += tileSixth - size.x / 2.0f;
-                        pos.y += tileSixth - size.y / 2.0f;
-                        dlb_DrawTextShadowEx(fntSmall, CSTR("S"), pos, WHITE);
-                    }
-                    cursor.x += tileThird + 1;
-                    if (tile_defs[i].flags & TileDef::FLAG_LIQUID) {
-                        DrawRectangle(cursor.x, cursor.y, tileThird, tileThird, Fade(SKYBLUE, 0.7f));
-
-                        Vector2 size = dlb_MeasureTextEx(fntSmall, "L", 1, 0);
-                        Vector2 pos = cursor;
-                        pos.x += tileSixth - size.x / 2.0f;
-                        pos.y += tileSixth - size.y / 2.0f;
-                        dlb_DrawTextShadowEx(fntSmall, CSTR("L"), pos, WHITE);
-                    }
+                    dlb_DrawTextShadowEx(fntSmall, &text, 1, pos, WHITE);
                     cursor.x += tileThird + 1;
                 }
             }
@@ -993,7 +990,7 @@ void Editor::DrawUI_Tilesheet(UI &ui, double now)
                 tileDefRectScreen.width = tileThird;
                 tileDefRectScreen.height = tileThird;
 
-                const Color color = Fade(MAROON, 0.7f);
+                const Color color = MAROON;
 
                 Vector2 cursor{};
                 uint8_t mask = tile_defs[i].auto_tile_mask;

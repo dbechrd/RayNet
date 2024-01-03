@@ -1316,6 +1316,8 @@ void UI::HAQFieldEditor(uint32_t ctrlid, const std::string &name, T &value, int 
 
 void UI::HAQFieldEditor(uint32_t ctrlid, const std::string &name, TileDef::Flags &value, int flags, int labelWidth)
 {
+    PushWidth(60);
+
     uint8_t bitflags = value;
     if (Button("Solid", bitflags & TileDef::FLAG_SOLID, GRAY, SKYBLUE).pressed) {
         bitflags ^= TileDef::FLAG_SOLID;
@@ -1324,6 +1326,8 @@ void UI::HAQFieldEditor(uint32_t ctrlid, const std::string &name, TileDef::Flags
         bitflags ^= TileDef::FLAG_LIQUID;
     }
     value = (TileDef::Flags)bitflags;
+
+    PopStyle();
 }
 
 void UI::HAQFieldEditor(uint32_t ctrlid, const std::string &name, ObjType &value, int flags, int labelWidth)
