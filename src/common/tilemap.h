@@ -23,9 +23,7 @@ struct Tilemap {
         struct Hasher {
             size_t operator()(const Coord &coord) const
             {
-                size_t hash = 0;
-                hash_combine(hash, coord.x, coord.y);
-                return hash;
+                return hash_combine(coord.x, coord.y);
             }
         };
     };

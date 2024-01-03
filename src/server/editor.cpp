@@ -10,6 +10,8 @@
 #include "stb_herringbone_wang_tile.h"
 #include "tinyfiledialogs.h"
 
+const uint32_t unusedCounter = __COUNTER__;
+
 const char *EditModeStr(EditMode mode)
 {
     switch (mode) {
@@ -482,15 +484,14 @@ void Editor::CenterCameraOnMap(Camera2D &camera)
     };
 }
 
-UIState Editor::DrawUI(Camera2D &camera, double now)
+void Editor::DrawUI(Camera2D &camera, double now)
 {
     io.PushScope(IO::IO_EditorUI);
 
-    UIState state{};
     if (active) {
-        state = DrawUI_ActionBar(now);
-        state = DrawUI_GfxAnimEditor();
-        state = DrawUI_TileDefEditor();
+        DrawUI_ActionBar(now);
+        DrawUI_GfxAnimEditor();
+        DrawUI_TileDefEditor();
 
         static uint16_t editor_map_id = map_id;
         if (map_id != editor_map_id) {
@@ -504,9 +505,8 @@ UIState Editor::DrawUI(Camera2D &camera, double now)
     }
 
     io.PopScope();
-    return {};  // todo: combine all states if we care about e.g. any editor window being hovered. I think IO takes care of this.
 }
-UIState Editor::DrawUI_ActionBar(double now)
+void Editor::DrawUI_ActionBar(double now)
 {
     static Vector2 uiPosition{};
     if (dock_dirty) {
@@ -742,8 +742,6 @@ UIState Editor::DrawUI_ActionBar(double now)
     }
 
     ui.DrawTooltips();
-
-    return uiState;
 }
 void Editor::DrawUI_MapActions(UI &ui, double now)
 {
@@ -936,6 +934,15 @@ void Editor::DrawUI_Tilesheet(UI &ui, double now)
     // Draw collision overlay on tilesheet if we're in collision editing mode
     switch (state.tiles.tileEditMode) {
         case TileEditMode_Collision: {
+            struct Flag {
+                TileDef::Flags flag;
+                char text;
+                Color color;
+            } flags[]{
+                { TileDef::FLAG_SOLID , 'S', DARKGREEN },
+                { TileDef::FLAG_LIQUID, 'L', BLUE      }
+            };
+
             for (size_t i = 0; i < tile_defs.size(); i++) {
                 const float tileThird = TILE_W / 3;
                 const float tileSixth = tileThird / 2.0f;
@@ -947,16 +954,7 @@ void Editor::DrawUI_Tilesheet(UI &ui, double now)
                 cursor.x++;
                 cursor.y++;
 
-                // TODO: Make this a loop + LUT if we start adding more flags
-                struct Flag {
-                    TileDef::Flags flag;
-                    char text;
-                    Color color;
-                } flags[]{
-                    { TileDef::FLAG_SOLID , 'S', DARKGREEN },
-                    { TileDef::FLAG_LIQUID, 'L', BLUE      }
-                };
-
+                // TODO: Handle "y += ..." case if we have more flags
                 for (Flag flag : flags) {
                     Color color = flag.color;
                     char text = flag.text;
@@ -1466,13 +1464,7 @@ void Editor::DrawUI_EntityActions(UI &ui, double now)
     ui.PushStyle(searchStyle);
 
     static std::string filter{ "*" };
-    ui.Textbox(__COUNTER__, filter);
-    ui.Newline();
-    ui.PushWidth(0);
-    if (ui.Button("Clear").pressed) filter = "";
-    if (ui.Button("All").pressed) filter = "*";
-    ui.PopStyle();
-    ui.Newline();
+    ui.BeginSearchBox(filter);
 
     for (uint32_t i = 0; i < SV_MAX_ENTITIES; i++) {
         Entity &entity = entityDb->entities[i];
@@ -1492,7 +1484,7 @@ void Editor::DrawUI_EntityActions(UI &ui, double now)
         ui.Newline();
     }
 
-    ui.PopStyle();
+    ui.EndSearchBox();
 
     if (state.entities.selectedId) {
         Entity *entity = entityDb->FindEntity(state.entities.selectedId);
@@ -1608,16 +1600,9 @@ void Editor::DrawUI_PackFiles(UI &ui, double now)
     ui.PushStyle(searchStyle);
 
     static std::string filter{ "*" };
-    ui.Textbox(__COUNTER__, filter);
-    ui.Newline();
-    ui.PushWidth(0);
-    if (ui.Button("Clear").pressed) filter = "";
-    if (ui.Button("All").pressed) filter = "*";
-    ui.PopStyle();
-    ui.Newline();
+    ui.BeginSearchBox(filter);
 
     Pack *packs[]{ &pack_assets, &pack_maps };
-
     for (Pack *packPtr : packs) {
         Pack &pack = *packPtr;
         if (!pack.version) {
@@ -1636,7 +1621,7 @@ void Editor::DrawUI_PackFiles(UI &ui, double now)
         ui.Newline();
     }
 
-    ui.PopStyle();
+    ui.EndSearchBox();
 
     if (state.packFiles.selectedPack) {
         Pack &pack = *state.packFiles.selectedPack;
@@ -1705,8 +1690,8 @@ void Editor::DrawUI_PackFiles(UI &ui, double now)
 
         static ScrollPanel scrollPanel{{}};
         const Vector2 panelTopLeft = ui.CursorScreen();
-        scrollPanel.rect = { panelTopLeft.x, panelTopLeft.y, width, GetRenderHeight() - panelTopLeft.y };
-        ui.BeginScrollPanel(scrollPanel);
+        ui.PushSize({ width, GetRenderHeight() - panelTopLeft.y });
+        ui.BeginScrollPanel(scrollPanel, IO::IO_ScrollPanelInner);
 
         // Defer changing selection until after the loop has rendered every item
         int newSelectedOffset = 0;
@@ -1956,71 +1941,72 @@ void Editor::DrawUI_Debug(UI &ui, double now)
     ui.Newline();
 }
 
-UIState Editor::DrawUI_GfxAnimEditor(void)
+void Editor::DrawUI_GfxAnimEditor(void)
 {
     if (!showGfxAnimEditor) {
-        return {};
+        return;
     }
 
+#if 0
     const Rectangle defaultRect{ 0, 0, 800, 800 };
-    static ScrollPanel scrollPanel{ defaultRect, true };
 
     if (showGfxAnimEditorDirty && io.KeyDown(KEY_LEFT_CONTROL)) {
         scrollPanel.rect = defaultRect;
     }
 
-    Vector2 uiPosition = { scrollPanel.rect.x, scrollPanel.rect.y };
-    UIStyle uiStyle{};
-    UI ui{ uiPosition, uiStyle };
+#endif
 
-    ui.BeginScrollPanel(scrollPanel);
+    static Vector2 uiPosition = { 0, 0 };
+    UI ui{ uiPosition, {} };
+
+    static ScrollPanel scrollPanel{ true };
+    ui.PushSize({ 600, 600 });
+    ui.BeginScrollPanel(scrollPanel, IO::IO_ScrollPanelOuter);
+    ui.PopStyle();
 
     ////// search //////
-    UIStyle searchStyle = ui.GetStyle();
-    searchStyle.size.x = 400;
-    searchStyle.pad = UIPad(8, 2);
-    searchStyle.margin = UIMargin(0, 0, 4, 6);
-    ui.PushStyle(searchStyle);
-
     static std::string filter{ "" };
-    ui.Textbox(__COUNTER__, filter);
-    ui.Newline();
-    ui.PushWidth(0);
-    if (ui.Button("Clear").pressed) filter = "";
-    if (ui.Button("All").pressed) filter = "*";
+    ui.BeginSearchBox(filter);
+
+    static ScrollPanel searchPanel{{}};
+    ui.PushSize({ 400, 200 });
+    ui.BeginScrollPanel(searchPanel, IO::IO_ScrollPanelInner);
     ui.PopStyle();
-    ui.Newline();
 
     for (GfxAnim &gfx_anim : pack_assets.gfx_anims) {
-        Color bgColor = gfx_anim.id == state.gfxAnimEditor.selectedId ? SKYBLUE : BLUE_DESAT;
+        Color bgColor = gfx_anim.id == state.gfxAnimEditor.selectedAnimId ? SKYBLUE : BLUE_DESAT;
         const char *idStr = gfx_anim.name.c_str();
         if (!StrFilter(idStr, filter.c_str())) {
             continue;
         }
 
         if (ui.Text(idStr, WHITE, bgColor).down) {
-            state.gfxAnimEditor.selectedId = gfx_anim.id;
+            state.gfxAnimEditor.selectedAnimId = gfx_anim.id;
         }
         ui.Newline();
     }
 
-    ui.PopStyle();
+    ui.EndScrollPanel(searchPanel);
+    ui.Newline();
+    ui.EndSearchBox();
     ////////////////////////
 
-    GfxAnim &gfx_anim = pack_assets.FindById<GfxAnim>(state.gfxAnimEditor.selectedId);
-    if (gfx_anim.id == state.gfxAnimEditor.selectedId) {
+    GfxAnim &gfx_anim = pack_assets.FindById<GfxAnim>(state.gfxAnimEditor.selectedAnimId);
+    if (gfx_anim.id == state.gfxAnimEditor.selectedAnimId) {
         ui.HAQField(__COUNTER__, "", gfx_anim, HAQ_EDIT, 80.0f);
     }
 
+    ui.Label("----------------");
+
     ui.EndScrollPanel(scrollPanel);
-    return scrollPanel.uiState;
 }
-UIState Editor::DrawUI_TileDefEditor(void)
+void Editor::DrawUI_TileDefEditor(void)
 {
     if (!showTileDefEditor) {
-        return {};
+        return;
     }
 
+#if 0
     const Rectangle defaultRect{ 16, 16, 800, 800 };
     static ScrollPanel scrollPanel{ defaultRect, true };
 
@@ -2032,7 +2018,7 @@ UIState Editor::DrawUI_TileDefEditor(void)
     UIStyle uiStyle{};
     UI ui{ uiPosition, uiStyle };
 
-    ui.BeginScrollPanel(scrollPanel);
+    ui.BeginScrollPanel(scrollPanel, IO::IO_ScrollPanelOuter);
 
     ui.Button("TileDef Test 1"); ui.Newline();
     ui.Button("TileDef Test 2"); ui.Newline();
@@ -2045,5 +2031,5 @@ UIState Editor::DrawUI_TileDefEditor(void)
     ui.Button("TileDef Test 9"); ui.Newline();
 
     ui.EndScrollPanel(scrollPanel);
-    return scrollPanel.uiState;
+#endif
 }

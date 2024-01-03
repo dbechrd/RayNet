@@ -76,6 +76,13 @@ void UI::PushHeight(float height)
     PushStyle(style);
 }
 
+void UI::PushSize(Vector2 size)
+{
+    UIStyle style = GetStyle();
+    style.size = size;
+    PushStyle(style);
+}
+
 void UI::PushBgColor(Color color, UI_CtrlType ctrlType)
 {
     UIStyle style = GetStyle();
@@ -135,7 +142,7 @@ void Align(const UIStyle &style, Vector2 &position, const Vector2 &size)
     }
 }
 
-UIState UI::CalcState(Rectangle &ctrlRect, HoverHash &prevHoverHash)
+UIState UI::CalcState(const Rectangle &ctrlRect, HoverHash &prevHoverHash)
 {
     HoverHash hash{ { ctrlRect.x, ctrlRect.y } };
     bool prevHoveredCtrl = hash.Equals(prevHoverHash);
@@ -144,7 +151,14 @@ UIState UI::CalcState(Rectangle &ctrlRect, HoverHash &prevHoverHash)
     bool prevPressedCtrl = hash.Equals(prevPressedHash);
 
     UIState state{};
-    if (dlb_CheckCollisionPointRec(GetMousePosition(), ctrlRect)) {
+    state.ctrlRect = ctrlRect;
+
+    Rectangle scissorRect = ctrlRect;
+    if (!scissorStack.empty()) {
+        RectConstrainToRect(scissorRect, scissorStack.top());
+    }
+
+    if (dlb_CheckCollisionPointRec(GetMousePosition(), scissorRect)) {
         state.entered = !prevHoveredCtrl;
         state.hover = true;
         io.CaptureMouse();
@@ -176,8 +190,10 @@ void UI::UpdateAudio(const UIState &uiState)
     }
 }
 
-void UI::UpdateCursor(const UIStyle &style, Rectangle &ctrlRect)
+void UI::UpdateCursor(const Rectangle &ctrlRect)
 {
+    const UIStyle &style = GetStyle();
+
     // How much total space we used up (including margin)
     Vector2 ctrlSpaceUsed{
         style.margin.left + ctrlRect.width + style.margin.right,
@@ -188,8 +204,10 @@ void UI::UpdateCursor(const UIStyle &style, Rectangle &ctrlRect)
     cursor.x += ctrlSpaceUsed.x;
 }
 
-bool UI::ShouldCull(Rectangle ctrlRect)
+bool UI::ShouldCull(const Rectangle &ctrlRect)
 {
+    return false;
+
     if (ctrlRect.x + ctrlRect.width < 0 ||
         ctrlRect.y + ctrlRect.height < 0 ||
         ctrlRect.x > GetRenderWidth() ||
@@ -219,23 +237,59 @@ void UI::Space(Vector2 space)
     cursor = Vector2Add(cursor, space);
 }
 
-void UI::BeginScrollPanel(ScrollPanel &scrollPanel)
+void UI::BeginScrollPanel(ScrollPanel &scrollPanel, IO::Scope scope)
 {
-    assert(scrollPanel.rect.width);
+    io.PushScope(scope);
+
+    const UIStyle &style = GetStyle();
+
+    Vector2 ctrlPosition{
+        position->x + cursor.x + style.margin.left,
+        position->y + cursor.y + style.margin.top
+    };
+
+    Vector2 ctrlSize{
+        style.size.x * style.scale,
+        style.size.y * style.scale
+    };
+
+    Align(style, ctrlPosition, ctrlSize);
+
+    Rectangle ctrlRect = {
+        ctrlPosition.x,
+        ctrlPosition.y,
+        ctrlSize.x,
+        ctrlSize.y
+    };
+
+    //UpdateCursor(ctrlRect);
+    cursor.x += style.margin.left;
+    cursor.y += style.margin.top;
+
+    Rectangle contentRect = RectShrink(ctrlRect, style.panelBorderWidth);
+
+    static HoverHash prevHoverHash{};
+    scrollPanel.state = CalcState(ctrlRect, prevHoverHash);
+    scrollPanel.state.contentRect = contentRect;
+
+    // TODO: Cull this (idk how to
+    if (ShouldCull(ctrlRect)) {
+        scrollPanel.wasCulled = true;
+        return;
+    }
 
     // Draw background color
-    const float panelBorderWidth = 2.0f;
-    DrawRectangleRec(scrollPanel.rect, GRAYISH_BLUE);
-    DrawRectangleLinesEx(scrollPanel.rect, panelBorderWidth, BLACK);
+    DrawRectangleRec(ctrlRect, GRAYISH_BLUE);
+    DrawRectangleLinesEx(ctrlRect, style.panelBorderWidth, BLACK);
 
     // Calculate scrolling
-    scrollPanel.scrollOffsetMax = MAX(0, scrollPanel.panelHeightLastFrame - scrollPanel.rect.height + 8);
+    scrollPanel.scrollOffsetMax = MAX(0, scrollPanel.contentHeightLastFrame - contentRect.height + 8);
 
     float &scrollOffset = scrollPanel.scrollOffset;
     float &scrollOffsetTarget = scrollPanel.scrollOffsetTarget;
     float &scrollVelocity = scrollPanel.scrollVelocity;
     scrollPanel.scrollAccel = 0;
-    if (dlb_CheckCollisionPointRec(GetMousePosition(), scrollPanel.rect)) {
+    if (scrollPanel.state.hover) {
         const float mouseWheel = io.MouseWheelMove();
         if (mouseWheel) {
             scrollPanel.scrollAccel += fabsf(mouseWheel);
@@ -258,39 +312,40 @@ void UI::BeginScrollPanel(ScrollPanel &scrollPanel)
     scrollOffset = LERP(scrollOffset, scrollOffsetTarget, 0.1);
     scrollOffset = CLAMP(scrollOffset, 0, scrollPanel.scrollOffsetMax);
 
-    Space({0, -scrollOffset });
-
-    Rectangle scissorRect = RectShrink(scrollPanel.rect, panelBorderWidth);
-    BeginScissorMode(
-        scissorRect.x,
-        scissorRect.y,
-        scissorRect.width,
-        scissorRect.height
-    );
+    Space({ 0, -scrollOffset });
+    PushScissorRect(scrollPanel.state.contentRect);
 }
 void UI::EndScrollPanel(ScrollPanel &scrollPanel)
 {
-    EndScissorMode();
-    Space({ 0, scrollPanel.scrollOffset });
-    const float contentEndY = CursorScreen().y;
-    scrollPanel.panelHeightLastFrame = contentEndY - scrollPanel.rect.y;
+    if (scrollPanel.wasCulled) {
+        io.PopScope();
+        return;
+    }
 
-    const float scrollRatio = CLAMP(scrollPanel.rect.height / scrollPanel.panelHeightLastFrame, 0, 1);
+    PopScissorRect();
+    Space({ 0, scrollPanel.scrollOffset });
+
+    const Rectangle &contentRect = scrollPanel.state.contentRect;
+
+    const float contentEndY = CursorScreen().y;
+    scrollPanel.contentHeightLastFrame = contentEndY - contentRect.y;
+
+    const float scrollRatio = CLAMP(contentRect.height / scrollPanel.contentHeightLastFrame, 0, 1);
     const float scrollbarWidth = 8;
-    const float scrollbarHeight = scrollPanel.rect.height * scrollRatio;
-    const float scrollbarSpace = scrollPanel.rect.height * (1 - scrollRatio);
+    const float scrollbarHeight = contentRect.height * scrollRatio;
+    const float scrollbarSpace = contentRect.height * (1 - scrollRatio);
     const float scrollPct = scrollPanel.scrollOffset / scrollPanel.scrollOffsetMax;
     Rectangle scrollbar{
-        scrollPanel.rect.x + scrollPanel.rect.width - 2 - scrollbarWidth,
-        scrollPanel.rect.y + scrollbarSpace * scrollPct,
+        contentRect.x + contentRect.width - 2 - scrollbarWidth,
+        contentRect.y + scrollbarSpace * scrollPct,
         scrollbarWidth,
         scrollbarHeight
     };
     DrawRectangleRec(scrollbar, LIGHTGRAY);
-    //DrawRectangleLinesEx(scrollPanel.rect, 2, WHITE);
+    //DrawRectangleLinesEx(scrollbar, 2, WHITE);
 
+#if 0
     const Vector2 mousePos = GetMousePosition();
-    scrollPanel.uiState.hover = dlb_CheckCollisionPointRec(mousePos, scrollPanel.rect);
 
     // Draw resize handle in bottom-right corner
     const int handleSize = 16;
@@ -302,6 +357,7 @@ void UI::EndScrollPanel(ScrollPanel &scrollPanel)
         handleSize,
         handleSize
     };
+    // TODO: Consider scissorRect?
     bool handleHovered = dlb_CheckCollisionPointRec(mousePos, handleRect);
 
     if (!dragPanel || dragPanel == &scrollPanel) {
@@ -366,6 +422,35 @@ void UI::EndScrollPanel(ScrollPanel &scrollPanel)
     // Minimum panel size / distance from edge of screen
     scrollPanel.rect.x = CLAMP(scrollPanel.rect.x, -scrollPanel.rect.width + minSize, GetRenderWidth() - minSize);
     scrollPanel.rect.y = CLAMP(scrollPanel.rect.y, -scrollPanel.rect.height + minSize, GetRenderHeight() - minSize);
+#endif
+
+    cursor.x = scrollPanel.state.ctrlRect.x;
+    cursor.y = scrollPanel.state.ctrlRect.y;
+    UpdateCursor(scrollPanel.state.ctrlRect);
+    io.PopScope();
+}
+
+void UI::BeginSearchBox(std::string &filter)
+{
+    UIStyle searchStyle = GetStyle();
+    searchStyle.size.x = 400;
+    searchStyle.pad = UIPad(8, 2);
+    searchStyle.margin = UIMargin(0, 0, 4, 6);
+    PushStyle(searchStyle);
+
+    Textbox(hash_combine(__COUNTER__, &filter), filter);
+    Newline();
+    PushWidth(0);
+    if (Button("Clear").pressed) filter = "";
+    if (Button("All").pressed) filter = "*";
+    PopStyle();
+    Newline();
+}
+
+void UI::EndSearchBox(void)
+{
+    PopStyle();
+    Newline();
 }
 
 UIState UI::Text(const char *text, size_t textLen)
@@ -406,7 +491,7 @@ UIState UI::Text(const char *text, size_t textLen)
         ctrlSize.x,
         ctrlSize.y
     };
-    UpdateCursor(style, ctrlRect);
+    UpdateCursor(ctrlRect);
 
     static HoverHash prevHoverHash{};
     UIState state = CalcState(ctrlRect, prevHoverHash);
@@ -513,7 +598,7 @@ UIState UI::Image(const Texture &texture, Rectangle srcRect)
         ctrlSize.x + style.imageBorderThickness * 2,
         ctrlSize.y + style.imageBorderThickness * 2
     };
-    UpdateCursor(style, ctrlRect);
+    UpdateCursor(ctrlRect);
 
     static HoverHash prevHoverHash{};
     UIState state = CalcState(ctrlRect, prevHoverHash);
@@ -572,7 +657,7 @@ UIState UI::Button(const std::string &text)
         ctrlSize.x + style.buttonBorderThickness * 2,
         ctrlSize.y + style.buttonBorderThickness * 2
     };
-    UpdateCursor(style, ctrlRect);
+    UpdateCursor(ctrlRect);
 
     static HoverHash prevHoverHash{};
     UIState state = CalcState(ctrlRect, prevHoverHash);
@@ -713,6 +798,8 @@ bool RN_stb_is_space(char ch)
 
 UIState UI::Textbox(uint32_t ctrlid, std::string &text, bool multiline, KeyPreCallback preCallback, KeyPostCallback postCallback, void *userData)
 {
+    assert(ctrlid);  // if 0, tabbing will break. unfortunately __COUNTER__ starts at 0. :(
+
     static STB_TexteditState stbState{};
 
     const Vector2 textOffset{ 8, 2 };
@@ -1093,7 +1180,7 @@ UIState UI::Textbox(uint32_t ctrlid, std::string &text, bool multiline, KeyPreCa
     }
 
     state.contentRect = ctrlRect;
-    UpdateCursor(style, ctrlRect);
+    UpdateCursor(ctrlRect);
 
 #if 0
     Newline();
@@ -1200,8 +1287,7 @@ void UI::HAQFieldValue(uint32_t ctrlid, const std::string &name, T &value, int f
 
 #define HAQ_UI_FIELD(c_type, c_name, c_init, flags, condition, userdata) \
     if (condition) { \
-        size_t hash{}; \
-        hash_combine(hash, __COUNTER__, ctrlid, name, #c_name); \
+        size_t hash = hash_combine(__COUNTER__, ctrlid, name, #c_name); \
         HAQField(hash, #c_name, userdata.c_name, (flags), labelWidth); \
     }
 
@@ -1239,8 +1325,7 @@ void UI::HAQFieldValueArray(uint32_t ctrlid, const std::string &name, T *data, s
         PopStyle();
         Newline();
 
-        size_t hash{};
-        hash_combine(hash, __COUNTER__, ctrlid, name, i);
+        size_t hash = hash_combine(__COUNTER__, ctrlid, name, i);
         HAQField(hash, "#" + name_i, data[i], flags, labelWidth);
     }
 

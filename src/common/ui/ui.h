@@ -62,6 +62,8 @@ struct UIStyle {
     UIMargin margin{ 4, 0, 0, 4 };
     float buttonBorderThickness{ 1 };
     float imageBorderThickness{ 2 };
+    float panelBorderWidth{ 2 };
+
     Color borderColor{ BLANK };
     UIPad pad{ 8, 2 };
     float scale{ 1 };
@@ -81,21 +83,22 @@ struct UIState {
     bool pressed;   // mouse hovering and button down (first frame)
     bool down;      // mouse hovering and button down
     bool released;  // mouse hovering and button up (first frame, i.e. was down last frame)
+    Rectangle ctrlRect;
     Rectangle contentRect;
 };
 
 struct ScrollPanel {
-    UIState   uiState              {};
-    Rectangle rect                 {};
-    float     scrollOffsetMax      {};
-    float     scrollOffset         {};
-    float     scrollOffsetTarget   {};
-    float     scrollVelocity       {};
-    float     scrollAccel          {};
-    float     panelHeightLastFrame {};
-    bool      resizable            {};
+    UIState   state                  {};
+    float     scrollOffsetMax        {};
+    float     scrollOffset           {};
+    float     scrollOffsetTarget     {};
+    float     scrollVelocity         {};
+    float     scrollAccel            {};
+    float     contentHeightLastFrame {};
+    bool      resizable              {};
+    bool      wasCulled              {};
 
-    ScrollPanel(Rectangle rect, bool resizable = false) : rect(rect), resizable(resizable) {}
+    ScrollPanel(bool resizable = false) : resizable(resizable) {}
 };
 
 enum DragMode {
@@ -124,6 +127,7 @@ struct UI {
     void PushScale(float scale);
     void PushWidth(float width);
     void PushHeight(float height);
+    void PushSize(Vector2 size);
     void PushBgColor(Color color, UI_CtrlType ctrlType);
     void PushFgColor(Color color);
     void PushFont(Font &font);
@@ -134,8 +138,11 @@ struct UI {
     void Newline(void);
     void Space(Vector2 space);
 
-    void BeginScrollPanel(ScrollPanel &scrollPanel);
+    void BeginScrollPanel(ScrollPanel &scrollPanel, IO::Scope scope);
     void EndScrollPanel(ScrollPanel &scrollPanel);
+
+    void BeginSearchBox(std::string &filter);
+    void EndSearchBox(void);
 
     UIState Text(const char *text, size_t textLen = 0);
     UIState Text(const std::string &text, Color fgColor = BLANK, Color bgColor = BLANK);
@@ -190,10 +197,10 @@ private:
         }
     };
 
-    UIState CalcState(Rectangle &ctrlRect, HoverHash &prevHoverHash);
+    UIState CalcState(const Rectangle &ctrlRect, HoverHash &prevHoverHash);
     void UpdateAudio(const UIState &uiState);
-    void UpdateCursor(const UIStyle &style, Rectangle &ctrlRect);
-    bool ShouldCull(Rectangle ctrlRect);
+    void UpdateCursor(const Rectangle &ctrlRect);
+    bool ShouldCull(const Rectangle &ctrlRect);
 
     template <typename T>
     void HAQFieldValue(uint32_t ctrlid, const std::string &name, T &value, int flags, int labelWidth);

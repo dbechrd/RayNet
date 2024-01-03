@@ -345,6 +345,23 @@ Rectangle RectGrow(const Rectangle &rect, float pixels)
     return grown;
 }
 
+void RectConstrainToRect(Rectangle &rect, const Rectangle &boundary)
+{
+    if (rect.x < boundary.x) {
+        rect.x = boundary.x;
+    }
+    if (rect.y < boundary.y) {
+        rect.y = boundary.y;
+    }
+    if (rect.x + rect.width > boundary.x + boundary.width) {
+        rect.width = (boundary.x + boundary.width) - rect.x;
+    }
+    if (rect.y + rect.height > boundary.y + boundary.height) {
+        rect.height = (boundary.y + boundary.height) - rect.y;
+    }
+    RectConstrainToScreen(rect, 0);
+}
+
 void RectConstrainToScreen(Rectangle &rect, Vector2 *resultOffset)
 {
     Vector2 screenSize{ (float)GetRenderWidth(), (float)GetRenderHeight() };
@@ -367,6 +384,35 @@ void CircleConstrainToScreen(Vector2 &center, float radius, Vector2 *resultOffse
         *resultOffset = { newCenter.x - center.x, newCenter.y - center.y };
     }
     center = newCenter;
+}
+
+std::stack<Rectangle> scissorStack{};
+
+void PushScissorRect(const Rectangle &rect)
+{
+    rlDrawRenderBatchActive();
+
+    if (scissorStack.empty()) {
+        rlEnableScissorTest();
+    }
+
+    rlScissor(rect.x, GetRenderHeight() - (rect.y + rect.height), rect.width, rect.height);
+    scissorStack.push(rect);
+}
+
+void PopScissorRect(void)
+{
+    rlDrawRenderBatchActive();
+
+    scissorStack.pop();
+
+    // Restore previous scissor rect
+    if (!scissorStack.empty()) {
+        Rectangle &rect = scissorStack.top();
+        rlScissor(rect.x, GetRenderHeight() - (rect.y + rect.height), rect.width, rect.height);
+    } else {
+        rlDisableScissorTest();
+    }
 }
 
 // Draw a part of a texture (defined by a rectangle)

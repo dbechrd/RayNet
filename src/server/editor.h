@@ -111,7 +111,7 @@ struct EditModeDebug {
 };
 
 struct GfxAnimEditor {
-    uint16_t selectedId{};
+    uint16_t selectedAnimId{};
 };
 
 struct EditModeState {
@@ -152,7 +152,7 @@ struct Editor {
     void HandleInput(Camera2D &camera);
     void DrawGroundOverlays(Camera2D &camera, double now);
     void DrawEntityOverlays(Camera2D &camera, double now);
-    UIState DrawUI(Camera2D &camera, double now);
+    void DrawUI(Camera2D &camera, double now);
 
 private:
     void CenterCameraOnMap(Camera2D &camera);
@@ -167,7 +167,7 @@ private:
     void DrawEntityOverlay_Collision(Camera2D &camera, double now);
 
     // Action bar and mode tabs
-    UIState DrawUI_ActionBar(double now);
+    void DrawUI_ActionBar(double now);
     void DrawUI_MapActions(UI &uiActionBar, double now);
     void DrawUI_TileActions(UI &uiActionBar, double now);
     void DrawUI_ObjectActions(UI &uiActionBar, double now);
@@ -180,6 +180,6 @@ private:
     void DrawUI_PackFiles(UI &uiActionBar, double now);
     void DrawUI_Debug(UI &uiActionBar, double now);
 
-    UIState DrawUI_GfxAnimEditor(void);
-    UIState DrawUI_TileDefEditor(void);
+    void DrawUI_GfxAnimEditor(void);
+    void DrawUI_TileDefEditor(void);
 };

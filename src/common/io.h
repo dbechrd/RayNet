@@ -21,6 +21,8 @@ struct IO {
         IO_EditorGroundOverlay,
         IO_EditorEntityOverlay,
         IO_EditorUI,
+        IO_ScrollPanelOuter,
+        IO_ScrollPanelInner,
         IO_EditorDrag,
 
         IO_F3Menu,

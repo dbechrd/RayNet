@@ -180,8 +180,13 @@ void dlb_DrawTextShadowEx(Font font, const char *text, size_t textLen, Vector2 p
 Rectangle GetCameraRectWorld(Camera2D &camera);
 Rectangle RectShrink(const Rectangle &rect, float pixels);
 Rectangle RectGrow(const Rectangle &rect, float pixels);
+void RectConstrainToRect(Rectangle &rect, const Rectangle &boundary);
 void RectConstrainToScreen(Rectangle &rect, Vector2 *resultOffset = 0);
 void CircleConstrainToScreen(Vector2 &center, float radius, Vector2 *resultOffset = 0);
+
+extern std::stack<Rectangle> scissorStack;
+void PushScissorRect(const Rectangle &rect);
+void PopScissorRect(void);
 
 void dlb_DrawTextureRec(Texture2D texture, Rectangle source, Vector2 position, Color tint);
 void dlb_DrawTexturePro(Texture2D texture, Rectangle source, Rectangle dest, Vector2 origin, Color tint);
@@ -199,13 +204,20 @@ bool paws_greater(T a, T b) {
     return diff > 0 && diff < half_range;
 }
 
-inline void hash_combine(std::size_t& seed) {}
+inline void hash_combine_next(std::size_t& seed) {}
 
 template <typename T, typename... Rest>
-inline void hash_combine(std::size_t& seed, const T& v, Rest... rest) {
+inline void hash_combine_next(std::size_t& seed, const T& v, Rest... rest) {
     std::hash<T> hasher;
     seed ^= hasher(v) + 0x9e3779b9 + (seed << 6) + (seed >> 2);
-    hash_combine(seed, rest...);
+    hash_combine_next(seed, rest...);
+}
+
+template <typename T, typename... Rest>
+inline size_t hash_combine(const T& v, Rest... rest) {
+    size_t hash{};
+    hash_combine_next(hash, rest...);
+    return hash;
 }
 
 // These are drawn deferred so we need to store info for later when hovered
