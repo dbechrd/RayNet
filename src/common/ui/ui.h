@@ -196,9 +196,30 @@ private:
 
     template <typename T>
     void HAQFieldValue(uint32_t ctrlid, const std::string &name, T &value, int flags, int labelWidth);
-    void HAQFieldValue(uint32_t ctrlid, const std::string &name, ObjectData &obj, int flags, int labelWidth);
+
+#define HAQ_UI_DAT(c_type, hqt) \
+    void HAQFieldValue(uint32_t ctrlid, const std::string &name, c_type &dat, int flags, int labelWidth);
+
+    HAQ_UI_DAT(GfxFile   , HQT_GFX_FILE_FIELDS);
+    HAQ_UI_DAT(MusFile   , HQT_MUS_FILE_FIELDS);
+    HAQ_UI_DAT(SfxFile   , HQT_SFX_FILE_FIELDS);
+    HAQ_UI_DAT(GfxFrame  , HQT_GFX_FRAME_FIELDS);
+    HAQ_UI_DAT(GfxAnim   , HQT_GFX_ANIM_FIELDS);
+    HAQ_UI_DAT(ObjectData, HQT_OBJECT_DATA_FIELDS);
+    HAQ_UI_DAT(Sprite    , HQT_SPRITE_FIELDS);
+    HAQ_UI_DAT(TileDef   , HQT_TILE_DEF_FIELDS);
+    HAQ_UI_DAT(TileMat   , HQT_TILE_MAT_FIELDS);
+    HAQ_UI_DAT(Tilemap   , HQT_TILE_MAP_FIELDS);
+
+#undef HAQ_UI_DAT
+
+    template <typename T>
+    void HAQFieldValueArray(uint32_t ctrlid, const std::string &name, T *data, size_t count, int flags, int labelWidth);
+    template <typename T, size_t S>
+    void HAQFieldValue(uint32_t ctrlid, const std::string &name, std::array<T, S> &arr, int flags, int labelWidth);
     template <typename T>
     void HAQFieldValue(uint32_t ctrlid, const std::string &name, std::vector<T> &vec, int flags, int labelWidth);
+
     template <typename T>
     void HAQFieldEditor(uint32_t ctrlid, const std::string &name, T &value, int flags, int labelWidth);
     void HAQFieldEditor(uint32_t ctrlid, const std::string &name, TileDef::Flags &value, int flags, int labelWidth);

@@ -1802,19 +1802,19 @@ void Editor::DrawUI_PackFiles(UI &ui, double now)
                     case DAT_TYP_GFX_FILE:
                     {
                         GfxFile &gfx_file = pack.gfx_files[entry.index];
-                        HAQ_UI(HQT_GFX_FILE_FIELDS, gfx_file);
+                        ui.HAQField(__COUNTER__, "", gfx_file, HAQ_EDIT, labelWidth);
                         break;
                     }
                     case DAT_TYP_MUS_FILE:
                     {
                         MusFile &mus_file = pack.mus_files[entry.index];
-                        HAQ_UI(HQT_MUS_FILE_FIELDS, mus_file);
+                        ui.HAQField(__COUNTER__, "", mus_file, HAQ_EDIT, labelWidth);
                         break;
                     }
                     case DAT_TYP_SFX_FILE:
                     {
                         SfxFile &sfx_file = pack.sfx_files[entry.index];
-                        HAQ_UI(HQT_SFX_FILE_FIELDS, sfx_file);
+                        ui.HAQField(__COUNTER__, "", sfx_file, HAQ_EDIT, labelWidth);
 
                         if (!IsSoundPlaying(sfx_file.name)) {
                             if (ui.Button("Play", ColorBrightness(DARKGREEN, -0.3f)).pressed) {
@@ -1830,45 +1830,22 @@ void Editor::DrawUI_PackFiles(UI &ui, double now)
                     }
                     case DAT_TYP_GFX_FRAME:
                     {
-                        const float labelWidth = 40;
                         GfxFrame &gfx_frame = pack.gfx_frames[entry.index];
-                        HAQ_UI(HQT_GFX_FRAME_FIELDS, gfx_frame);
+                        ui.HAQField(__COUNTER__, "", gfx_frame, HAQ_EDIT, labelWidth);
                         break;
                     }
                     case DAT_TYP_GFX_ANIM:
                     {
                         GfxAnim &gfx_anim = pack.gfx_anims[entry.index];
-                        HAQ_UI(HQT_GFX_ANIM_FIELDS, gfx_anim);
-#if 0
-                        ui.Label("id", labelWidth);
-                        ui.Text(CSTRS(gfxAnim.id));
-                        ui.Newline();
-
-                        ui.Label("sound", labelWidth);
-                        ui.Text(CSTRS(gfxAnim.sound));
-                        ui.Newline();
-
-                        ui.Label("frame_delay", labelWidth);
-                        ui.Text(CSTRLEN(TextFormat("%u", gfxAnim.frame_delay)));
-                        ui.Newline();
-
-                        ui.Label("frames", labelWidth);
-                        ui.Newline();
-
-                        for (int i = 0; i < gfxAnim.frames.size(); i++) {
-                            ui.Text(CSTRLEN(TextFormat("[%d] %s", i, gfxAnim.frames[i].c_str())));
-                            ui.Newline();
-                        }
-#endif
+                        ui.HAQField(__COUNTER__, "", gfx_anim, HAQ_EDIT, labelWidth);
                         break;
                     }
                     case DAT_TYP_SPRITE:
                     {
                         const float labelWidth = 40.0f;
                         Sprite &sprite = pack.sprites[entry.index];
-#if 1
-                        HAQ_UI(HQT_SPRITE_FIELDS, sprite);
-#else
+                        ui.HAQField(__COUNTER__, "", sprite, HAQ_EDIT, labelWidth);
+#if 0
                         ui.Label("name", labelWidth);
                         ui.Text(CSTRS(sprite.name));
                         ui.Newline();
@@ -1910,19 +1887,19 @@ void Editor::DrawUI_PackFiles(UI &ui, double now)
                     case DAT_TYP_TILE_DEF:
                     {
                         TileDef &tile_def = pack.tile_defs[entry.index];
-                        HAQ_UI(HQT_TILE_DEF_FIELDS, tile_def);
+                        ui.HAQField(__COUNTER__, "", tile_def, HAQ_EDIT, labelWidth);
                         break;
                     }
                     case DAT_TYP_TILE_MAT:
                     {
                         TileMat &tile_mat = pack.tile_mats[entry.index];
-                        HAQ_UI(HQT_TILE_MAT_FIELDS, tile_mat);
+                        ui.HAQField(__COUNTER__, "", tile_mat, HAQ_EDIT, labelWidth);
                         break;
                     }
                     case DAT_TYP_TILE_MAP:
                     {
                         Tilemap &tile_map = pack.tile_maps[entry.index];
-                        HAQ_UI(HQT_TILE_MAP_FIELDS, tile_map);
+                        ui.HAQField(__COUNTER__, "", tile_map, HAQ_EDIT, labelWidth);
                         break;
                     }
                     case DAT_TYP_ENTITY:
@@ -1994,7 +1971,7 @@ UIState Editor::DrawUI_GfxAnimEditor(void)
     searchStyle.margin = UIMargin(0, 0, 4, 6);
     ui.PushStyle(searchStyle);
 
-    static std::string filter{ "*" };
+    static std::string filter{ "" };
     ui.Textbox(__COUNTER__, filter);
     ui.Newline();
     ui.PushWidth(0);
@@ -2019,22 +1996,14 @@ UIState Editor::DrawUI_GfxAnimEditor(void)
     ui.PopStyle();
     ////////////////////////
 
-    if (state.gfxAnimEditor.selectedId) {
-        ui.Button("GfxAnim Test 1"); ui.Newline();
-        ui.Button("GfxAnim Test 2"); ui.Newline();
-        ui.Button("GfxAnim Test 3"); ui.Newline();
-        ui.Button("GfxAnim Test 4"); ui.Newline();
-        ui.Button("GfxAnim Test 5"); ui.Newline();
-        ui.Button("GfxAnim Test 6"); ui.Newline();
-        ui.Button("GfxAnim Test 7"); ui.Newline();
-        ui.Button("GfxAnim Test 8"); ui.Newline();
-        ui.Button("GfxAnim Test 9"); ui.Newline();
+    GfxAnim &gfx_anim = pack_assets.FindById<GfxAnim>(state.gfxAnimEditor.selectedId);
+    if (gfx_anim.id == state.gfxAnimEditor.selectedId) {
+        ui.HAQField(__COUNTER__, "", gfx_anim, HAQ_EDIT, 80.0f);
     }
 
     ui.EndScrollPanel(scrollPanel);
     return scrollPanel.uiState;
 }
-
 UIState Editor::DrawUI_TileDefEditor(void)
 {
     if (!showTileDefEditor) {

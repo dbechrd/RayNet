@@ -1181,30 +1181,34 @@ void UI::HAQFieldValue(uint32_t ctrlid, const std::string &name, T &value, int f
     PopStyle();
 }
 
-void UI::HAQFieldValue(uint32_t ctrlid, const std::string &name, ObjectData &obj, int flags, int labelWidth)
-{
 #define HAQ_UI_FIELD(c_type, c_name, c_init, flags, condition, userdata) \
     if (condition) { \
-        size_t hash{}; \
-        hash_combine(hash, __COUNTER__, name); \
-        HAQField(hash, #c_name, userdata.c_name, (flags), labelWidth); \
+        HAQField(__COUNTER__, #c_name, userdata.c_name, (flags), labelWidth); \
     }
 
-#define HAQ_UI(hqt, userdata) \
-    hqt(HAQ_UI_FIELD, userdata)
+#define HAQ_UI_DAT(c_type, hqt) \
+    void UI::HAQFieldValue(uint32_t ctrlid, const std::string &name, c_type &dat, int flags, int labelWidth) \
+    { \
+        hqt(HAQ_UI_FIELD, dat); \
+    }
 
-    HAQ_UI(HQT_OBJECT_DATA_FIELDS, obj);
+HAQ_UI_DAT(GfxFile   , HQT_GFX_FILE_FIELDS);
+HAQ_UI_DAT(MusFile   , HQT_MUS_FILE_FIELDS);
+HAQ_UI_DAT(SfxFile   , HQT_SFX_FILE_FIELDS);
+HAQ_UI_DAT(GfxFrame  , HQT_GFX_FRAME_FIELDS);
+HAQ_UI_DAT(GfxAnim   , HQT_GFX_ANIM_FIELDS);
+HAQ_UI_DAT(ObjectData, HQT_OBJECT_DATA_FIELDS);
+HAQ_UI_DAT(Sprite    , HQT_SPRITE_FIELDS);
+HAQ_UI_DAT(TileDef   , HQT_TILE_DEF_FIELDS);
+HAQ_UI_DAT(TileMat   , HQT_TILE_MAT_FIELDS);
+HAQ_UI_DAT(Tilemap   , HQT_TILE_MAP_FIELDS);
 
+#undef HAQ_UI_DAT
 #undef HAQ_UI_FIELD
-#undef HAQ_UI
-}
 
 template <typename T>
-void UI::HAQFieldValue(uint32_t ctrlid, const std::string &name, std::vector<T> &vec, int flags, int labelWidth)
+void UI::HAQFieldValueArray(uint32_t ctrlid, const std::string &name, T *data, size_t count, int flags, int labelWidth)
 {
-    const size_t count = vec.size();
-    if (!count) return;
-
     PushIndent();
     Newline();
 
@@ -1216,10 +1220,22 @@ void UI::HAQFieldValue(uint32_t ctrlid, const std::string &name, std::vector<T> 
         Label(name_i, labelWidth);
         PopStyle();
         Newline();
-        HAQField(hash, "#" + name_i, vec[i], flags, labelWidth);
+        HAQField(hash, "#" + name_i, data[i], flags, labelWidth);
     }
 
     PopStyle();
+}
+
+template <typename T, size_t S>
+void UI::HAQFieldValue(uint32_t ctrlid, const std::string &name, std::array<T, S> &arr, int flags, int labelWidth)
+{
+    HAQFieldValueArray(ctrlid, name, arr.data(), arr.size(), flags, labelWidth);
+}
+
+template <typename T>
+void UI::HAQFieldValue(uint32_t ctrlid, const std::string &name, std::vector<T> &vec, int flags, int labelWidth)
+{
+    HAQFieldValueArray(ctrlid, name, vec.data(), vec.size(), flags, labelWidth);
 }
 
 template <typename T>
