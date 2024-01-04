@@ -84,9 +84,9 @@
 3 48 "frm_til_stone_wall_cr" "gfx_til_overworld" 128 192 64 64
 3 49 "frm_obj_sign" "gfx_til_overworld" 192 192 64 64
 3 50 "frm_obj_chest_closed" "gfx_til_overworld" 256 192 64 64
-3 51 "null" "gfx_til_overworld" 320 192 64 64
-3 52 "null" "gfx_til_overworld" 384 192 64 64
-3 53 "null" "gfx_til_overworld" 448 192 64 64
+3 51 "deleteme1" "null" 320 192 64 64
+3 52 "deleteme2" "null" 384 192 64 64
+3 53 "deleteme3" "null" 448 192 64 64
 3 54 "frm_til_stone_wall_bl" "gfx_til_overworld" 0 256 64 64
 3 55 "frm_til_stone_wall_bc" "gfx_til_overworld" 64 256 64 64
 3 56 "frm_til_stone_wall_br" "gfx_til_overworld" 128 256 64 64
