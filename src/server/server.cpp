@@ -241,9 +241,10 @@ int main(int argc, char *argv[])
         {
             PerfTimer t{ "InitWindow" };
             InitWindow(1920, 1017, "RayNet Server");
-            //SetWindowState(FLAG_VSYNC_HINT);  // KEEP THIS ENABLED it makes the room cooler
+            SetWindowState(FLAG_WINDOW_ALWAYS_RUN);
             SetWindowState(FLAG_WINDOW_RESIZABLE);
             SetWindowState(FLAG_WINDOW_MAXIMIZED);
+            SetWindowState(FLAG_VSYNC_HINT);  // KEEP THIS ENABLED it makes the room cooler
             SetExitKey(0);  // must be called after InitWindow()
 
             DrawBootScreen();

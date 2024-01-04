@@ -72,6 +72,8 @@ struct Pack {
     std::unordered_map<uint16_t, size_t> dat_by_id[DAT_TYP_COUNT]{};
     std::unordered_map<std::string, size_t> dat_by_name[DAT_TYP_COUNT]{};
 
+    std::unordered_map<std::string, std::vector<uint16_t>> gfx_frame_ids_by_gfx_file_name{};
+
     PackToc toc {};
 
     Pack(const std::string &name) : name(name) {}

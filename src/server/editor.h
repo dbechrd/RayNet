@@ -110,8 +110,12 @@ struct EditModeDebug {
     int foo{};
 };
 
+struct EditorSelections {
+    uint16_t byType [DAT_TYP_COUNT]{};
+};
+
 struct GfxAnimEditor {
-    uint16_t selectedAnimId{};
+    int foo{};
 };
 
 struct EditModeState {
@@ -130,22 +134,38 @@ struct EditModeState {
     EditModePackFiles packFiles {};
     EditModeDebug     debug     {};
 
+    EditorSelections  selections {};
     GfxAnimEditor     gfxAnimEditor {};
 };
 
 struct Editor {
     bool          active     {};
     float         width      { 430.0f };
-    bool          dock_left  {};
-    bool          dock_dirty { true };
+    bool          dock_left  { true };
     EditMode      mode       {};
     EditModeState state      {};
     uint16_t      map_id     {};
 
-    bool showTileDefEditor       {};
-    bool showTileDefEditorDirty  {};
-    bool showGfxAnimEditor      {};
-    bool showGfxAnimEditorDirty {};
+    // TODO: Make this an enum! Doh.
+    bool showGfxFrameEditor      { 1 };
+    bool showGfxFrameEditorDirty { 0 };
+    bool showGfxAnimEditor       { 0 };
+    bool showGfxAnimEditorDirty  { 0 };
+    bool showSpriteEditor        { 0 };
+    bool showSpriteEditorDirty   { 0 };
+    bool showTileDefEditor       { 0 };
+    bool showTileDefEditorDirty  { 0 };
+
+    inline void ResetEditorFlags(void) {
+        showGfxFrameEditor      = false;
+        showGfxFrameEditorDirty = false;
+        showGfxAnimEditor       = false;
+        showGfxAnimEditorDirty  = false;
+        showSpriteEditor        = false;
+        showSpriteEditorDirty   = false;
+        showTileDefEditor       = false;
+        showTileDefEditorDirty  = false;
+    }
 
     Editor(uint16_t map_id) : map_id(map_id) {}
     Err Init(void);
@@ -180,6 +200,11 @@ private:
     void DrawUI_PackFiles(UI &uiActionBar, double now);
     void DrawUI_Debug(UI &uiActionBar, double now);
 
+    template <typename T>
+    void DatSearchBox(UI &ui, SearchBox &searchBox);
+
+    void DrawUI_GfxFrameEditor(void);
     void DrawUI_GfxAnimEditor(void);
+    void DrawUI_SpriteEditor(void);
     void DrawUI_TileDefEditor(void);
 };

@@ -277,6 +277,10 @@ void Process(PackStream &stream, SfxFile &sfx_file)
 void Process(PackStream &stream, GfxFrame &gfx_frame)
 {
     HAQ_IO(HQT_GFX_FRAME_FIELDS, gfx_frame);
+
+    if (stream.mode == PACK_MODE_READ) {
+        stream.pack->gfx_frame_ids_by_gfx_file_name[gfx_frame.gfx].push_back(gfx_frame.id);
+    }
 }
 void Process(PackStream &stream, GfxAnim &gfx_anim)
 {

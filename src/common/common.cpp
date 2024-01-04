@@ -323,26 +323,36 @@ void operator delete(void *ptr) noexcept
 }
 #endif
 
+Rectangle RectShrink(const Rectangle &rect, Vector2 pixels)
+{
+    assert(pixels.x * 2 < rect.width);
+    assert(pixels.y * 2 < rect.height);
+    Rectangle shrunk = rect;
+    shrunk.x += pixels.x;
+    shrunk.y += pixels.y;
+    shrunk.width -= pixels.x * 2;
+    shrunk.height -= pixels.y * 2;
+    return shrunk;
+}
+
 Rectangle RectShrink(const Rectangle &rect, float pixels)
 {
-    assert(pixels * 2 < rect.width);
-    assert(pixels * 2 < rect.height);
-    Rectangle shrunk = rect;
-    shrunk.x += pixels;
-    shrunk.y += pixels;
-    shrunk.width -= pixels * 2;
-    shrunk.height -= pixels * 2;
-    return shrunk;
+    return RectShrink(rect, { pixels, pixels });
+}
+
+Rectangle RectGrow(const Rectangle &rect, Vector2 pixels)
+{
+    Rectangle grown = rect;
+    grown.x -= pixels.x;
+    grown.y -= pixels.y;
+    grown.width += pixels.x * 2;
+    grown.height += pixels.y * 2;
+    return grown;
 }
 
 Rectangle RectGrow(const Rectangle &rect, float pixels)
 {
-    Rectangle grown = rect;
-    grown.x -= pixels;
-    grown.y -= pixels;
-    grown.width += pixels * 2;
-    grown.height += pixels * 2;
-    return grown;
+    return RectGrow(rect, { pixels, pixels });
 }
 
 void RectConstrainToRect(Rectangle &rect, const Rectangle &boundary)

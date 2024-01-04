@@ -13,7 +13,7 @@
 0 9 "gfx_prj_fireball" "resources/graphics/fireball.png"
 0 10 "gfx_til_overworld" "resources/graphics/tiles64tm.png"
 0 11 "gfx_til_auto_grass" "resources/graphics/autotile_3x3_min.png"
-0 12 "gfx_til_cave" "resources/graphics/autotile_3x3_min.png"
+0 12 "gfx_til_cave" "resources/graphics/cave.png"
 
 # MusFile id name path
 1 0 "mus_bathroom" "resources/music/copyright/O9s5lzHl6W8.wav"
@@ -167,7 +167,7 @@
 3 131 "frm_til_cave_832_192" "gfx_til_cave" 832 192 64 64
 3 132 "frm_til_cave_896_192" "gfx_til_cave" 896 192 64 64
 3 133 "frm_til_cave_960_192" "gfx_til_cave" 960 192 64 64
-3 134 "frm_til_cave_0_256" "gfx_til_cave" 0 256 64 64
+3 134 "frm_til_cave_hole_center" "gfx_til_cave" 0 256 64 64
 3 135 "frm_til_cave_64_256" "gfx_til_cave" 64 256 64 64
 3 136 "frm_til_cave_128_256" "gfx_til_cave" 128 256 64 64
 3 137 "frm_til_cave_192_256" "gfx_til_cave" 192 256 64 64
@@ -183,7 +183,7 @@
 3 147 "frm_til_cave_832_256" "gfx_til_cave" 832 256 64 64
 3 148 "frm_til_cave_896_256" "gfx_til_cave" 896 256 64 64
 3 149 "frm_til_cave_960_256" "gfx_til_cave" 960 256 64 64
-3 150 "frm_til_cave_0_320" "gfx_til_cave" 0 320 64 64
+3 150 "frm_til_cave_torch_top" "gfx_til_cave" 0 320 64 64
 3 151 "frm_til_cave_64_320" "gfx_til_cave" 64 320 64 64
 3 152 "frm_til_cave_128_320" "gfx_til_cave" 128 320 64 64
 3 153 "frm_til_cave_192_320" "gfx_til_cave" 192 320 64 64
@@ -199,7 +199,7 @@
 3 163 "frm_til_cave_832_320" "gfx_til_cave" 832 320 64 64
 3 164 "frm_til_cave_896_320" "gfx_til_cave" 896 320 64 64
 3 165 "frm_til_cave_960_320" "gfx_til_cave" 960 320 64 64
-3 166 "frm_til_cave_0_384" "gfx_til_cave" 0 384 64 64
+3 166 "frm_til_cave_torch_bottom" "gfx_til_cave" 0 384 64 64
 3 167 "frm_til_cave_64_384" "gfx_til_cave" 64 384 64 64
 3 168 "frm_til_cave_128_384" "gfx_til_cave" 128 384 64 64
 3 169 "frm_til_cave_192_384" "gfx_til_cave" 192 384 64 64

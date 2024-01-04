@@ -140,9 +140,10 @@ int main(int argc, char *argv[])
     {
         PerfTimer t{ "InitWindow" };
         InitWindow(1920, 1017, "RayNet Client");
+        SetWindowState(FLAG_WINDOW_ALWAYS_RUN);
         SetWindowState(FLAG_WINDOW_RESIZABLE);
-        //SetWindowState(FLAG_BORDERLESS_WINDOWED_MODE);
         SetWindowState(FLAG_VSYNC_HINT);  // Gahhhhhh Windows sucks at this
+        //SetWindowState(FLAG_BORDERLESS_WINDOWED_MODE);
         //SetWindowState(FLAG_FULLSCREEN_MODE);
         SetExitKey(0);  // must be called after InitWindow()
 

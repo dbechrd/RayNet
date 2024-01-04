@@ -28,9 +28,8 @@ bool UI::UnfocusActiveEditor(void)
     return false;
 }
 
-UI::UI(Vector2 &position, UIStyle style)
+UI::UI(Vector2 &position, Vector2 &size, UIStyle style) : position(position), size(size)
 {
-    this->position = &position;
     styleStack.push(style);
     tabHandledThisFrame = false;
 }
@@ -229,8 +228,8 @@ void UI::BeginScrollPanel(ScrollPanel &scrollPanel, IO::Scope scope)
     const UIStyle &style = GetStyle();
 
     Vector2 ctrlPosition{
-        position->x + cursor.x + style.margin.left,
-        position->y + cursor.y + style.margin.top
+        position.x + cursor.x + style.margin.left,
+        position.y + cursor.y + style.margin.top
     };
 
     Vector2 ctrlSize{
@@ -297,7 +296,8 @@ void UI::BeginScrollPanel(ScrollPanel &scrollPanel, IO::Scope scope)
     scrollOffset = LERP(scrollOffset, scrollOffsetTarget, 0.1);
     scrollOffset = CLAMP(scrollOffset, 0, scrollPanel.scrollOffsetMax);
 
-    Space({ 0, -scrollOffset });
+    // HACK(dlb): "4" is probably margin, or pad, or something. layout is a bit messed up for scroll panels
+    Space({ 0, -scrollOffset + 4 });
     PushScissorRect(scrollPanel.state.contentRect);
 }
 void UI::EndScrollPanel(ScrollPanel &scrollPanel)
@@ -427,8 +427,8 @@ UIState UI::Text(const char *text, size_t textLen)
     const UIStyle &style = GetStyle();
 
     Vector2 ctrlPosition{
-        position->x + cursor.x + style.margin.left,
-        position->y + cursor.y + style.margin.top
+        position.x + cursor.x + style.margin.left,
+        position.y + cursor.y + style.margin.top
     };
 
     Vector2 contentSize = style.size;
@@ -536,8 +536,8 @@ UIState UI::Image(const Texture &texture, Rectangle srcRect)
     const UIStyle &style = GetStyle();
 
     Vector2 ctrlPosition{
-        position->x + cursor.x + style.margin.left,
-        position->y + cursor.y + style.margin.top
+        position.x + cursor.x + style.margin.left,
+        position.y + cursor.y + style.margin.top
     };
 
     Vector2 ctrlSize{
@@ -568,11 +568,15 @@ UIState UI::Image(const Texture &texture, Rectangle srcRect)
     if (ShouldCull(ctrlRect)) return state;
 
     // Draw border
+#if 0
     Color borderColor = state.hover ? YELLOW : BLACK;
     if (style.borderColor.a) {
         borderColor = style.borderColor;
     }
     DrawRectangleLinesEx(ctrlRect, style.imageBorderThickness, borderColor);
+#else
+    DrawRectangleLinesEx(ctrlRect, 1, BLACK);
+#endif
 
     // Draw image
     DrawTexturePro(texture, srcRect, contentRect, {}, 0, WHITE);
@@ -586,8 +590,8 @@ UIState UI::Button(const std::string &text)
     const UIStyle &style = GetStyle();
 
     Vector2 ctrlPosition{
-        position->x + cursor.x + style.margin.left,
-        position->y + cursor.y + style.margin.top
+        position.x + cursor.x + style.margin.left,
+        position.y + cursor.y + style.margin.top
     };
 
     const float cornerRoundness = 0.2f;
@@ -671,7 +675,7 @@ UIState UI::Button(const std::string &text, Color bgColor)
     PopStyle();
     return state;
 }
-UIState UI::Button(const std::string &text, bool pressed, Color bgColor, Color bgColorPressed)
+UIState UI::ToggleButton(const std::string &text, bool pressed, Color bgColor, Color bgColorPressed)
 {
     UIStyle style = GetStyle();
     style.bgColor[UI_CtrlTypeButton] = pressed ? bgColorPressed : bgColor;
@@ -743,7 +747,7 @@ bool RN_stb_is_space(char ch)
 #define STB_TEXTEDIT_IMPLEMENTATION
 #include "stb_textedit.h"
 
-UIState UI::Textbox(uint32_t ctrlid, std::string &text, bool multiline, KeyPreCallback preCallback, KeyPostCallback postCallback, void *userData)
+UIState UI::TextboxWithDefault(uint32_t ctrlid, std::string &text, const std::string &placeholder, bool multiline, KeyPreCallback preCallback, KeyPostCallback postCallback, void *userData)
 {
     assert(ctrlid);  // if 0, tabbing will break. unfortunately __COUNTER__ starts at 0. :(
 
@@ -754,8 +758,8 @@ UIState UI::Textbox(uint32_t ctrlid, std::string &text, bool multiline, KeyPreCa
     StbString str{ style.font, text };
 
     Vector2 ctrlPosition{
-        position->x + cursor.x + style.margin.left,
-        position->y + cursor.y + style.margin.top
+        position.x + cursor.x + style.margin.left,
+        position.y + cursor.y + style.margin.top
     };
 
     Vector2 contentSize = style.size;
@@ -1021,8 +1025,13 @@ UIState UI::Textbox(uint32_t ctrlid, std::string &text, bool multiline, KeyPreCa
     DrawRectangleLinesEx(ctrlRect, 1, borderColor);
 
     // Text
-    dlb_DrawTextShadowEx(*style.font, text.c_str(), text.size(),
-        { ctrlPosition.x + textOffset.x, ctrlPosition.y + textOffset.y }, RAYWHITE);
+    if (text.size() || isActive) {
+        dlb_DrawTextShadowEx(*style.font, text.c_str(), text.size(),
+            { ctrlPosition.x + textOffset.x, ctrlPosition.y + textOffset.y }, RAYWHITE);
+    } else {
+        dlb_DrawTextShadowEx(*style.font, placeholder.c_str(), placeholder.size(),
+            { ctrlPosition.x + textOffset.x, ctrlPosition.y + textOffset.y }, Fade(RAYWHITE, 0.6f));
+    }
 
     // Selection highlight
     if (isActive) {
@@ -1079,6 +1088,11 @@ UIState UI::Textbox(uint32_t ctrlid, std::string &text, bool multiline, KeyPreCa
 
     lastDrawnEditor = ctrlid;
     return state;
+}
+
+UIState UI::Textbox(uint32_t ctrlid, std::string &text, bool multiline, KeyPreCallback preCallback, KeyPostCallback postCallback, void *userData)
+{
+    return TextboxWithDefault(ctrlid, text, "", multiline, preCallback, postCallback, userData);
 }
 
 struct TextboxFloatCallbackData {
@@ -1160,19 +1174,14 @@ void LimitStringLength(std::string &str, void *userData)
     }
 }
 
-void UI::SearchBox(std::string &filter)
+void UI::BeginSearchBox(SearchBox &searchBox)
 {
-    UIStyle searchStyle = GetStyle();
-    searchStyle.size.x = 400;
-    //searchStyle.pad = UIPad(4, 2);
-    //searchStyle.margin = UIMargin(0, 0, 4, 6);
-    PushStyle(searchStyle);
-    Textbox(hash_combine(__COUNTER__, &filter), filter);
+    PushWidth(300);
+    TextboxWithDefault(hash_combine(__COUNTER__, &searchBox.filter), searchBox.filter, searchBox.placeholder);
     PopStyle();
-    Newline();
 
-    if (Button("Clear").pressed) filter = "";
-    if (Button("All").pressed) filter = "*";
+    if (Button("Clear").pressed) searchBox.filter = "";
+    if (Button("All"  ).pressed) searchBox.filter = "*";
     Newline();
 }
 
@@ -1303,10 +1312,10 @@ void UI::HAQFieldEditor(uint32_t ctrlid, const std::string &name, TileDef::Flags
     PushWidth(60);
 
     uint8_t bitflags = value;
-    if (Button("Solid", bitflags & TileDef::FLAG_SOLID, GRAY, SKYBLUE).pressed) {
+    if (ToggleButton("Solid", bitflags & TileDef::FLAG_SOLID, GRAY, SKYBLUE).pressed) {
         bitflags ^= TileDef::FLAG_SOLID;
     }
-    if (Button("Liquid", bitflags & TileDef::FLAG_LIQUID, GRAY, SKYBLUE).pressed) {
+    if (ToggleButton("Liquid", bitflags & TileDef::FLAG_LIQUID, GRAY, SKYBLUE).pressed) {
         bitflags ^= TileDef::FLAG_LIQUID;
     }
     value = (TileDef::Flags)bitflags;

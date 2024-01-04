@@ -126,9 +126,11 @@ void TodoList::Draw(Vector2 position)
 {
     static int textDraggingIndex = -1;
 
+    Vector2 uiSize{};
     UIStyle uiStyle{};
     uiStyle.margin = { 4, 0, 0, 4 };
-    UI ui{ position, uiStyle };
+
+    UI ui{ position, uiSize, uiStyle };
 
     UIState loadButton = ui.Button("Load");
     if (loadButton.released) {

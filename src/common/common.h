@@ -178,7 +178,9 @@ float GetRandomFloatVariance(float variance);
 
 void dlb_DrawTextShadowEx(Font font, const char *text, size_t textLen, Vector2 pos, Color color);
 Rectangle GetCameraRectWorld(Camera2D &camera);
+Rectangle RectShrink(const Rectangle &rect, Vector2 pixels);
 Rectangle RectShrink(const Rectangle &rect, float pixels);
+Rectangle RectGrow(const Rectangle &rect, Vector2 pixels);
 Rectangle RectGrow(const Rectangle &rect, float pixels);
 void RectConstrainToRect(Rectangle &rect, const Rectangle &boundary);
 void RectConstrainToScreen(Rectangle &rect, Vector2 *resultOffset = 0);

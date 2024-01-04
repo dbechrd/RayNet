@@ -42,7 +42,6 @@ void Editor::HandleInput(Camera2D &camera)
     if (io.KeyPressed(KEY_GRAVE)) {
         if (io.KeyDown(KEY_LEFT_SHIFT)) {
             dock_left = !dock_left;
-            dock_dirty = true;
             active = true;
         } else {
             active = !active;
@@ -484,14 +483,57 @@ void Editor::CenterCameraOnMap(Camera2D &camera)
     };
 }
 
+void DrawRectangleRectOffset(const Rectangle &rect, Vector2 &offset, Color color)
+{
+    Rectangle offsetRect = rect;
+    offsetRect.x += offset.x;
+    offsetRect.y += offset.y;
+    DrawRectangleRec(offsetRect, Fade(color, 0.7f));
+    DrawRectangleLinesEx(offsetRect, 1, color);
+}
+
+template <typename T>
+void Editor::DatSearchBox(UI &ui, SearchBox &searchBox)
+{
+    ui.BeginSearchBox(searchBox);
+
+    ui.PushSize({ 400, 120 });
+    ui.BeginScrollPanel(searchBox.panel, IO::IO_ScrollPanelInner);
+    ui.PopStyle();
+
+    ui.PushSize({ 400, 0 });
+    ui.PushMargin({ 0, 4, 0, 4 });
+    // HACK(dlb): This will only work for assets, how do we handle things in other packs?
+    auto &vec = *(std::vector<T> *)pack_assets.GetPool(T::dtype);
+    for (T &dat : vec) {
+        Color bgColor = dat.id == state.selections.byType[T::dtype] ? SKYBLUE : BLUE_DESAT;
+        const char *idStr = dat.name.c_str();
+        if (!StrFilter(idStr, searchBox.filter.c_str())) {
+            continue;
+        }
+
+        if (ui.Text(idStr, WHITE, bgColor).down) {
+            state.selections.byType[T::dtype] = dat.id;
+        }
+        ui.Newline();
+    }
+    ui.PopStyle();
+    ui.PopStyle();
+
+    ui.EndScrollPanel(searchBox.panel);
+    ui.Newline();
+}
+
 void Editor::DrawUI(Camera2D &camera, double now)
 {
     io.PushScope(IO::IO_EditorUI);
 
     if (active) {
         DrawUI_ActionBar(now);
-        DrawUI_GfxAnimEditor();
-        DrawUI_TileDefEditor();
+        if (showGfxFrameEditor) DrawUI_GfxFrameEditor();
+        if (showGfxAnimEditor)  DrawUI_GfxAnimEditor();
+        if (showSpriteEditor)   DrawUI_SpriteEditor();
+        if (showTileDefEditor)  DrawUI_TileDefEditor();
 
         static uint16_t editor_map_id = map_id;
         if (map_id != editor_map_id) {
@@ -499,7 +541,6 @@ void Editor::DrawUI(Camera2D &camera, double now)
             editor_map_id = map_id;
         }
 
-        dock_dirty = false;
         showTileDefEditorDirty = false;
         showGfxAnimEditorDirty = false;
     }
@@ -508,17 +549,16 @@ void Editor::DrawUI(Camera2D &camera, double now)
 }
 void Editor::DrawUI_ActionBar(double now)
 {
-    static Vector2 uiPosition{};
-    if (dock_dirty) {
-        if (dock_left) {
-            uiPosition = { 0, 0 };
-        } else {
-            uiPosition = { GetRenderWidth() - width, 0 };
-        }
+    Vector2 uiPosition{};
+    if (dock_left) {
+        uiPosition = { 0, 0 };
+    } else {
+        uiPosition = { GetRenderWidth() - width, 0 };
     }
+    Vector2 uiSize{ width, (float)GetRenderHeight() };
 
     UIStyle uiStyle{};
-    UI ui{ uiPosition, uiStyle };
+    UI ui{ uiPosition, uiSize, uiStyle };
 
     // TODO: UI::Panel
     //BeginScrollPanel(ui, scrollPanel);
@@ -670,19 +710,19 @@ void Editor::DrawUI_ActionBar(double now)
     ui.Space({ 0, 8 });
     ui.Newline();
 
-    UIState showCollidersButton = ui.Button("Collision", state.showColliders, GRAY, MAROON);
+    UIState showCollidersButton = ui.ToggleButton("Collision", state.showColliders, GRAY, MAROON);
     if (showCollidersButton.released) {
         state.showColliders = !state.showColliders;
     }
-    UIState showTileEdgesButton = ui.Button("Edges", state.showTileEdges, GRAY, MAROON);
+    UIState showTileEdgesButton = ui.ToggleButton("Edges", state.showTileEdges, GRAY, MAROON);
     if (showTileEdgesButton.released) {
         state.showTileEdges = !state.showTileEdges;
     }
-    UIState showTileIdsButton = ui.Button("Tile IDs", state.showTileIds, GRAY, LIGHTGRAY);
+    UIState showTileIdsButton = ui.ToggleButton("Tile IDs", state.showTileIds, GRAY, LIGHTGRAY);
     if (showTileIdsButton.released) {
         state.showTileIds = !state.showTileIds;
     }
-    UIState showEntityIdsButton = ui.Button("Entity IDs", state.showEntityIds, GRAY, LIGHTGRAY);
+    UIState showEntityIdsButton = ui.ToggleButton("Entity IDs", state.showEntityIds, GRAY, LIGHTGRAY);
     if (showEntityIdsButton.released) {
         state.showEntityIds = !state.showEntityIds;
     }
@@ -691,7 +731,7 @@ void Editor::DrawUI_ActionBar(double now)
     ui.Newline();
 
     for (int i = 0; i < EditMode_Count; i++) {
-        if (ui.Button(EditModeStr((EditMode)i), mode == i, BLUE_DESAT, ColorBrightness(BLUE_DESAT, -0.3f)).pressed) {
+        if (ui.ToggleButton(EditModeStr((EditMode)i), mode == i, BLUE_DESAT, ColorBrightness(BLUE_DESAT, -0.3f)).pressed) {
             mode = (EditMode)i;
         }
         if (i % 6 == 5) {
@@ -836,22 +876,22 @@ void Editor::DrawUI_TileActions(UI &ui, double now)
     ui.Text("Flag");
 
     auto &tileEditMode = state.tiles.tileEditMode;
-    if (ui.Button("Select", tileEditMode == TileEditMode_Select, GRAY, SKYBLUE).pressed) {
+    if (ui.ToggleButton("Select", tileEditMode == TileEditMode_Select, GRAY, SKYBLUE).pressed) {
         tileEditMode = TileEditMode_Select;
     }
-    if (ui.Button("Collision", tileEditMode == TileEditMode_Collision, GRAY, SKYBLUE).pressed) {
+    if (ui.ToggleButton("Collision", tileEditMode == TileEditMode_Collision, GRAY, SKYBLUE).pressed) {
         tileEditMode = TileEditMode_Collision;
     }
-    if (ui.Button("Auto-tile Mask", tileEditMode == TileEditMode_AutoTileMask, GRAY, SKYBLUE).pressed) {
+    if (ui.ToggleButton("Auto-tile Mask", tileEditMode == TileEditMode_AutoTileMask, GRAY, SKYBLUE).pressed) {
         tileEditMode = TileEditMode_AutoTileMask;
     }
     ui.Newline();
 
     ui.Text("Layer");
-    if (ui.Button("Ground", state.tiles.layer == TILE_LAYER_GROUND, GRAY, SKYBLUE).pressed) {
+    if (ui.ToggleButton("Ground", state.tiles.layer == TILE_LAYER_GROUND, GRAY, SKYBLUE).pressed) {
         state.tiles.layer = TILE_LAYER_GROUND;
     }
-    if (ui.Button("Object", state.tiles.layer == TILE_LAYER_OBJECT, GRAY, SKYBLUE).pressed) {
+    if (ui.ToggleButton("Object", state.tiles.layer == TILE_LAYER_OBJECT, GRAY, SKYBLUE).pressed) {
         state.tiles.layer = TILE_LAYER_OBJECT;
     }
     ui.Newline();
@@ -886,14 +926,6 @@ void Editor::DrawUI_ObjectActions(UI &ui, double now)
             map.object_data.push_back(obj);
         }
     }
-}
-void DrawRectangleRectOffset(const Rectangle &rect, Vector2 &offset, Color color)
-{
-    Rectangle offsetRect = rect;
-    offsetRect.x += offset.x;
-    offsetRect.y += offset.y;
-    DrawRectangleRec(offsetRect, Fade(color, 0.7f));
-    DrawRectangleLinesEx(offsetRect, 1, color);
 }
 void Editor::DrawUI_Tilesheet(UI &ui, double now)
 {
@@ -954,7 +986,7 @@ void Editor::DrawUI_Tilesheet(UI &ui, double now)
                 cursor.x++;
                 cursor.y++;
 
-                // TODO: Handle "y += ..." case if we have more flags
+                // TODO: Handle "y += .." case if we have more flags
                 for (Flag flag : flags) {
                     Color color = flag.color;
                     char text = flag.text;
@@ -1111,7 +1143,7 @@ void Editor::DrawUI_Tilesheet(UI &ui, double now)
         }
     }
 
-    // Draw highlight around currently selected tile(s)
+    // Draw highlight around currently selectedId tile(s)
     if (cursor.selection_type == SELECTION_PALETTE) {
         if (cursor.selection_tiles[layer].size()) {
             Tilemap::Region pick_region = cursor.PickRegion();
@@ -1244,8 +1276,10 @@ void Editor::DrawUI_WangTile(double now)
         uiWangTileStyle.scale = 0.5f;
         uiWangTileStyle.margin = 0;
         uiWangTileStyle.imageBorderThickness = 1;
+
         Vector2 uiPosition{ wangBg.x + 8, wangBg.y + 8 };
-        UI uiWangTile{ uiPosition, uiWangTileStyle };
+        Vector2 uiSize{ 200, 200 };
+        UI uiWangTile{ uiPosition, uiSize, uiWangTileStyle };
 
         uint8_t *imgData = (uint8_t *)wangTileset.ts.img.data;
 
@@ -1350,7 +1384,8 @@ void Editor::DrawUI_WangTile(double now)
             ts.v_tiles.push_back(v_tile);
 
             Vector2 uiPosition{ wangBg.x + wangBg.width + 8 , wangBg.y };
-            UI uiWangNew{ uiPosition, {} };
+            Vector2 uiSize{ TILE_W * 8, TILE_W * 8 };
+            UI uiWangNew{ uiPosition, uiSize, {} };
             Vector2 cursor = uiWangNew.CursorScreen();
             Rectangle tile1{};
             tile1.x = cursor.x;
@@ -1376,7 +1411,7 @@ void Editor::DrawUI_PathActions(UI &ui, double now)
 void Editor::DrawUI_DialogActions(UI &ui, double now)
 {
 #if 0
-    //if (ui.Button("Add", DARKGREEN).pressed) {
+    //if (ui.ToggleButton("Add", DARKGREEN).pressed) {
     //    //map.warps.push_back({});
     //}
     //ui.Newline();
@@ -1457,8 +1492,8 @@ void Editor::DrawUI_EntityActions(UI &ui, double now)
     ui.Newline();
     ui.Space({ 0, 4 });
 
-    static std::string filter{ "*" };
-    ui.SearchBox(filter);
+    static SearchBox searchEntities{ "Search entities...", "*" };
+    ui.BeginSearchBox(searchEntities);
 
     for (uint32_t i = 0; i < SV_MAX_ENTITIES; i++) {
         Entity &entity = entityDb->entities[i];
@@ -1467,7 +1502,7 @@ void Editor::DrawUI_EntityActions(UI &ui, double now)
         }
 
         const char *idStr = TextFormat("[%d] %s", entity.id, EntityTypeStr(entity.type));
-        if (!StrFilter(idStr, filter.c_str())) {
+        if (!StrFilter(idStr, searchEntities.filter.c_str())) {
             continue;
         }
 
@@ -1586,8 +1621,8 @@ void Editor::DrawUI_EntityActions(UI &ui, double now)
 }
 void Editor::DrawUI_PackFiles(UI &ui, double now)
 {
-    static std::string filter{ "*" };
-    ui.SearchBox(filter);
+    static SearchBox searchPacks{ "Search packs...", "*" };
+    ui.BeginSearchBox(searchPacks);
 
     ui.PushWidth(400);
     Pack *packs[]{ &pack_assets, &pack_maps };
@@ -1599,7 +1634,7 @@ void Editor::DrawUI_PackFiles(UI &ui, double now)
 
         Color bgColor = &pack == state.packFiles.selectedPack ? SKYBLUE : BLUE_DESAT;
         const char *idStr = pack.name.c_str();
-        if (!StrFilter(idStr, filter.c_str())) {
+        if (!StrFilter(idStr, searchPacks.filter.c_str())) {
             continue;
         }
 
@@ -1657,7 +1692,7 @@ void Editor::DrawUI_PackFiles(UI &ui, double now)
         ui.PushWidth(34);
         for (int i = 0; i < DAT_TYP_COUNT; i++) {
             DatTypeFilter &filter = datTypeFilter[i];
-            if (ui.Button(datTypeEnabled[i] ? filter.text : "---", filter.enabled, DARKGRAY, filter.color).pressed) {
+            if (ui.ToggleButton(datTypeEnabled[i] ? filter.text : "---", filter.enabled, DARKGRAY, filter.color).pressed) {
                 if (io.KeyDown(KEY_LEFT_SHIFT)) {
                     filter.enabled = !filter.enabled;
                 } else {
@@ -1912,114 +1947,217 @@ void Editor::DrawUI_Debug(UI &ui, double now)
 {
     static UID uid = NextUID();
     ui.Text(TextFormat("%.*s", 20, uid.bytes));
-    if (true) {// || ui.Button("NextUID").pressed) {
+    if (true) {// || ui.ToggleButton("NextUID").pressed) {
         uid = NextUID();
     }
     ui.Newline();
 
-    if (ui.Button("GfxAnim Editor").pressed) {
-        showGfxAnimEditor = !showGfxAnimEditor;
+    const Color colorOff = BLUE_DESAT;
+    const Color colorOn = ColorBrightness(BLUE_DESAT, -0.3f);
+
+    ui.PushWidth(200);
+
+    if (ui.ToggleButton("Frames", showGfxFrameEditor, colorOff, colorOn).pressed) {
+        bool show = !showGfxFrameEditor;
+        ResetEditorFlags();
+        showGfxFrameEditor = show;
+        showGfxFrameEditorDirty = true;
+    }
+    ui.Newline();
+
+    if (ui.ToggleButton("Animations", showGfxAnimEditor, colorOff, colorOn).pressed) {
+        bool show = !showGfxAnimEditor;
+        ResetEditorFlags();
+        showGfxAnimEditor = show;
         showGfxAnimEditorDirty = true;
     }
     ui.Newline();
 
-    if (ui.Button("TileDef Editor").pressed) {
-        showTileDefEditor = !showTileDefEditor;
+    if (ui.ToggleButton("Sprites", showSpriteEditor, colorOff, colorOn).pressed) {
+        bool show = !showSpriteEditor;
+        ResetEditorFlags();
+        showSpriteEditor = show;
+        showSpriteEditorDirty = true;
+    }
+    ui.Newline();
+
+    if (ui.ToggleButton("Tile Defs", showTileDefEditor, colorOff, colorOn).pressed) {
+        bool show = !showTileDefEditor;
+        ResetEditorFlags();
+        showTileDefEditor = show;
         showTileDefEditorDirty = true;
     }
     ui.Newline();
+
+    ui.PopStyle();
+
+    ///////////////////////////////////////////////////////////////////////////////////////////
+
+    if (showGfxFrameEditor) {
+        static SearchBox searchGfxFiles{ "Search graphics..." };
+        DatSearchBox<GfxFile>(ui, searchGfxFiles);
+
+        GfxFile &gfx_file = pack_assets.FindById<GfxFile>(state.selections.byType[GfxFile::dtype]);
+        if (gfx_file.id == state.selections.byType[GfxFile::dtype]) {
+            ui.HAQField(__COUNTER__, "", gfx_file, HAQ_EDIT, 80.0f);
+        }
+
+        ui.Text("------------------------------------------------------------");
+        ui.Newline();
+
+        // TODO: This should have a custom filter that only shows frames in the selected GfxFile
+        static SearchBox searchGfxFrames{ "Search frames..." };
+        DatSearchBox<GfxFrame>(ui, searchGfxFrames);
+
+        GfxFrame &gfx_frame = pack_assets.FindById<GfxFrame>(state.selections.byType[GfxFrame::dtype]);
+        if (gfx_frame.id == state.selections.byType[GfxFrame::dtype]) {
+            ui.HAQField(__COUNTER__, "", gfx_frame, HAQ_EDIT, 80.0f);
+        }
+    }
+
+    if (showGfxAnimEditor) {
+        static SearchBox searchGfxAnims{ "Search animations..." };
+        DatSearchBox<GfxAnim>(ui, searchGfxAnims);
+
+        GfxAnim &gfx_anim = pack_assets.FindById<GfxAnim>(state.selections.byType[GfxAnim::dtype]);
+        if (gfx_anim.id == state.selections.byType[GfxAnim::dtype]) {
+            ui.HAQField(__COUNTER__, "", gfx_anim, HAQ_EDIT, 80.0f);
+        }
+
+        ui.Text("------------------------------------------------------------");
+        ui.Newline();
+
+        static SearchBox searchGfxFrame{ "Search frames..." };
+        DatSearchBox<GfxFrame>(ui, searchGfxFrame);
+
+        GfxFrame &gfx_frame = pack_assets.FindById<GfxFrame>(state.selections.byType[GfxFrame::dtype]);
+        if (gfx_frame.id == state.selections.byType[GfxFrame::dtype]) {
+            ui.HAQField(__COUNTER__, "", gfx_frame, HAQ_EDIT, 80.0f);
+        }
+    }
 }
 
-void Editor::DrawUI_GfxAnimEditor(void)
+void Editor::DrawUI_GfxFrameEditor(void)
 {
-    if (!showGfxAnimEditor) {
-        return;
+    Vector2 uiPosition{};
+    if (dock_left) {
+        uiPosition = { width, 0 };
+    } else {
+        uiPosition = { 0, 0 };
     }
+    Vector2 uiSize{ (float)GetRenderWidth() - width, (float)GetRenderHeight() };
 
-#if 0
-    const Rectangle defaultRect{ 0, 0, 800, 800 };
-
-    if (showGfxAnimEditorDirty && io.KeyDown(KEY_LEFT_CONTROL)) {
-        scrollPanel.rect = defaultRect;
-    }
-
-#endif
-
-    static Vector2 uiPosition = { 0, 0 };
-    UI ui{ uiPosition, {} };
+    UI ui{ uiPosition, uiSize, {} };
 
     static ScrollPanel scrollPanel{ true };
-    ui.PushSize({ 600, 600 });
+    ui.PushMargin({});
+    ui.PushSize(uiSize);
     ui.BeginScrollPanel(scrollPanel, IO::IO_ScrollPanelOuter);
     ui.PopStyle();
-
-    ////// search //////
-    static std::string filter{ "" };
-    ui.SearchBox(filter);
-
-    static ScrollPanel searchPanel{{}};
-    ui.PushSize({ 400, 200 });
-    ui.BeginScrollPanel(searchPanel, IO::IO_ScrollPanelInner);
     ui.PopStyle();
 
-    ui.PushSize({ 400, 0 });
-    for (GfxAnim &gfx_anim : pack_assets.gfx_anims) {
-        Color bgColor = gfx_anim.id == state.gfxAnimEditor.selectedAnimId ? SKYBLUE : BLUE_DESAT;
-        const char *idStr = gfx_anim.name.c_str();
-        if (!StrFilter(idStr, filter.c_str())) {
-            continue;
-        }
+    static Texture checkerTex{};
+    if (!checkerTex.width) {
+        const float alpha = 0.7f;
+        Image checkerImg = GenImageChecked(32, 32, 16, 16, Fade(GRAY, alpha), Fade(DARKGRAY, alpha));
+        // NOTE(dlb): Intentional memory leak, maybe clean it up one day by moving this to common Init() or wutevs
+        checkerTex = LoadTextureFromImage(checkerImg);
+        UnloadImage(checkerImg);
+    }
 
-        if (ui.Text(idStr, WHITE, bgColor).down) {
-            state.gfxAnimEditor.selectedAnimId = gfx_anim.id;
-        }
+    const GfxFile &gfx_file = pack_assets.FindById<GfxFile>(state.selections.byType[GfxFile::dtype]);
+    if (gfx_file.id == state.selections.byType[GfxFile::dtype]) {
+        const Vector2 cursor = ui.CursorScreen();
+        Vector2 imageTL = cursor;
+        const UIStyle style = ui.GetStyle();
+        imageTL.x += style.margin.left + style.imageBorderThickness;
+        imageTL.y += style.margin.top  + style.imageBorderThickness;
+
+        const Rectangle imgRect{ 0, 0, (float)gfx_file.texture.width, (float)gfx_file.texture.height };
+        dlb_DrawTextureRec(checkerTex, imgRect, imageTL, WHITE);
+
+        UIState imgState = ui.Image(gfx_file.texture);
         ui.Newline();
+
+        const GfxFrame *hoveredFrame = 0;
+
+        const auto &frames = pack_assets.gfx_frame_ids_by_gfx_file_name.find(gfx_file.name);
+        if (frames != pack_assets.gfx_frame_ids_by_gfx_file_name.end()) {
+            for (uint16_t &gfx_frame_id : frames->second) {
+                const GfxFrame &gfx_frame = pack_assets.FindById<GfxFrame>(gfx_frame_id);
+                Rectangle frame_rect{
+                    imageTL.x + gfx_frame.x,
+                    imageTL.y + gfx_frame.y,
+                    (float)gfx_frame.w,
+                    (float)gfx_frame.h
+                };
+
+                const bool selected = gfx_frame.id == state.selections.byType[GfxFrame::dtype];
+                if (selected) {
+                    DrawRectangleLinesEx(frame_rect, 2, MAGENTA);
+                } else {
+                    DrawRectangleLinesEx(frame_rect, 1, Fade(LIGHTGRAY, 0.7f));
+                }
+
+                const bool hover = !io.MouseCaptured() && dlb_CheckCollisionPointRec(GetMousePosition(), frame_rect);
+                if (hover) {
+                    hoveredFrame = &gfx_frame;
+                    frame_rect = RectShrink(frame_rect, 2);
+                    DrawRectangleLinesEx(frame_rect, 2, YELLOW);
+                }
+            }
+        }
+
+        if (hoveredFrame) {
+            // Draw tooltip
+            const Vector2 tipPos = Vector2Add(GetMousePosition(), { 16, 16 });
+            const Vector2 tipSize = dlb_MeasureTextEx(fntSmall, hoveredFrame->name.data(), hoveredFrame->name.size(), 0);
+            Rectangle tipRect{ tipPos.x, tipPos.y, tipSize.x, tipSize.y };
+            tipRect = RectGrow(tipRect, { 6, 2 });
+
+            DrawRectangleRec(tipRect, Fade(ColorBrightness(DARKGRAY, -0.5f), 0.8f));
+            DrawRectangleLinesEx(tipRect, 1, BLACK);
+
+            dlb_DrawTextShadowEx(fntSmall, hoveredFrame->name.data(), hoveredFrame->name.size(), tipPos, WHITE);
+
+            // Select frame
+            if (io.MouseButtonDown(MOUSE_BUTTON_LEFT)) {
+                state.selections.byType[GfxFrame::dtype] = hoveredFrame->id;
+            }
+        }
     }
-    ui.PopStyle();
-
-    ui.EndScrollPanel(searchPanel);
-    ui.Newline();
-    ////////////////////////
-
-    GfxAnim &gfx_anim = pack_assets.FindById<GfxAnim>(state.gfxAnimEditor.selectedAnimId);
-    if (gfx_anim.id == state.gfxAnimEditor.selectedAnimId) {
-        ui.HAQField(__COUNTER__, "", gfx_anim, HAQ_EDIT, 80.0f);
-    }
-
-    ui.Label("----------------");
 
     ui.EndScrollPanel(scrollPanel);
+}
+void Editor::DrawUI_GfxAnimEditor(void)
+{
+    Vector2 uiPosition{};
+    if (dock_left) {
+        uiPosition = { width, 0 };
+    } else {
+        uiPosition = { 0, 0 };
+    }
+    Vector2 uiSize{ (float)GetRenderWidth() - width, (float)GetRenderHeight() };
+
+    UI ui{ uiPosition, uiSize, {} };
+
+    static ScrollPanel scrollPanel{ true };
+    ui.PushMargin({});
+    ui.PushSize(uiSize);
+    ui.BeginScrollPanel(scrollPanel, IO::IO_ScrollPanelOuter);
+    ui.PopStyle();
+    ui.PopStyle();
+
+    GfxAnim &gfx_anim = pack_assets.FindById<GfxAnim>(state.selections.byType[GfxAnim::dtype]);
+    if (gfx_anim.id == state.selections.byType[GfxAnim::dtype]) {
+        ui.Text("TODO: GfxAnim editor goes here");
+    }
+
+    ui.EndScrollPanel(scrollPanel);
+}
+void Editor::DrawUI_SpriteEditor(void)
+{
 }
 void Editor::DrawUI_TileDefEditor(void)
 {
-    if (!showTileDefEditor) {
-        return;
-    }
-
-#if 0
-    const Rectangle defaultRect{ 16, 16, 800, 800 };
-    static ScrollPanel scrollPanel{ defaultRect, true };
-
-    if (showTileDefEditorDirty && io.KeyDown(KEY_LEFT_CONTROL)) {
-        scrollPanel.rect = defaultRect;
-    }
-
-    Vector2 uiPosition = { scrollPanel.rect.x, scrollPanel.rect.y };
-    UIStyle uiStyle{};
-    UI ui{ uiPosition, uiStyle };
-
-    ui.BeginScrollPanel(scrollPanel, IO::IO_ScrollPanelOuter);
-
-    ui.Button("TileDef Test 1"); ui.Newline();
-    ui.Button("TileDef Test 2"); ui.Newline();
-    ui.Button("TileDef Test 3"); ui.Newline();
-    ui.Button("TileDef Test 4"); ui.Newline();
-    ui.Button("TileDef Test 5"); ui.Newline();
-    ui.Button("TileDef Test 6"); ui.Newline();
-    ui.Button("TileDef Test 7"); ui.Newline();
-    ui.Button("TileDef Test 8"); ui.Newline();
-    ui.Button("TileDef Test 9"); ui.Newline();
-
-    ui.EndScrollPanel(scrollPanel);
-#endif
 }

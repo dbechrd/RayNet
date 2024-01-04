@@ -101,6 +101,14 @@ struct ScrollPanel {
     ScrollPanel(bool resizable = false) : resizable(resizable) {}
 };
 
+struct SearchBox {
+    std::string placeholder {};
+    std::string filter      {};
+    ScrollPanel panel       {};
+
+    SearchBox(const std::string &placeholder, const std::string &filter = "") : placeholder(placeholder), filter(filter) {}
+};
+
 enum DragMode {
     DragMode_None,
     DragMode_Move,
@@ -111,10 +119,10 @@ struct UI {
     static bool IsActiveEditor(uint32_t ctrlid);
     static bool UnfocusActiveEditor(void);
 
-    UI(Vector2 &position, UIStyle style);
+    UI(Vector2 &position, Vector2 &size, UIStyle style);
 
     inline Vector2 CursorScreen(void) {
-        return Vector2Add(*position, cursor);
+        return Vector2Add(position, cursor);
     }
 
     void SetCursor(Vector2 cursor) {
@@ -152,14 +160,16 @@ struct UI {
     UIState Image(const Texture &texture, Rectangle srcRect = {});
     UIState Button(const std::string &text);
     UIState Button(const std::string &text, Color bgColor);
-    UIState Button(const std::string &text, bool pressed, Color bgColor, Color bgColorPressed);
+    UIState ToggleButton(const std::string &text, bool pressed, Color bgColor, Color bgColorPressed);
 
     typedef void (*KeyPreCallback)(std::string &str, void *userData, bool &keyHandled);
     typedef void (*KeyPostCallback)(std::string &str, void *userData);
 
+    UIState TextboxWithDefault(uint32_t ctrlid, std::string &text, const std::string &placeholder = "", bool multline = false, KeyPreCallback preCallback = 0, KeyPostCallback postCallback = 0, void *userData = 0);
     UIState Textbox(uint32_t ctrlid, std::string &text, bool multline = false, KeyPreCallback preCallback = 0, KeyPostCallback postCallback = 0, void *userData = 0);
     UIState Textbox(uint32_t ctrlid, float &value, const char *fmt = "%.f", float increment = 1);
-    void SearchBox(std::string &filter);
+
+    void BeginSearchBox(SearchBox &searchBox);
 
     template <typename T>
     void HAQField(uint32_t ctrlid, const std::string &name, T &value, int flags, int labelWidth);
@@ -167,7 +177,9 @@ struct UI {
     void DrawTooltips(void);
     void HandleEvents(void);
 private:
-    Vector2 *position{}; // top left of this UI
+    Vector2 &position;
+    Vector2 &size;
+
     Vector2 cursor{};   // where to draw next element
     Vector2 lineSize{}; // total size of current row of UI elements
     std::stack<UIStyle> styleStack{};

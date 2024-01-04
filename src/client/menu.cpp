@@ -52,6 +52,9 @@ void MenuMain::Draw(GameClient &client, bool &back)
 
     Vector2 uiPosition{ floorf(GetRenderWidth() / 2.0f), floorf(GetRenderHeight() / 2.0f) };
     uiPosition.y -= 115;
+
+    Vector2 uiSize{};
+
     UIStyle uiStyleMenu {};
     uiStyleMenu.margin = {};
     uiStyleMenu.pad = { 16, 4 };
@@ -59,7 +62,8 @@ void MenuMain::Draw(GameClient &client, bool &back)
     uiStyleMenu.fgColor = RAYWHITE;
     uiStyleMenu.font = &fntBig;
     uiStyleMenu.alignH = TextAlign_Center;
-    UI uiMenu{ uiPosition, uiStyleMenu };
+
+    UI uiMenu{ uiPosition, uiSize, uiStyleMenu };
 
 #if 0
     // Draw weird squares animation
@@ -128,7 +132,8 @@ void MenuConnecting::Draw(GameClient &client, bool &back)
     uiStyleMenu.alignH = TextAlign_Center;
 
     Vector2 uiPosition{ floorf(GetRenderWidth() / 2.0f), floorf(GetRenderHeight() - uiStyleMenu.font->baseSize * 4) };
-    UI uiMenu{ uiPosition, uiStyleMenu };
+    Vector2 uiSize{};
+    UI uiMenu{ uiPosition, uiSize, uiStyleMenu };
 
     const Vector2 cursorScreen = uiMenu.CursorScreen();
     const Vector2 campfirePos = cursorScreen; //Vector2Subtract(cursorScreen, { (float)(campfireFrame.w / 2), 0 });

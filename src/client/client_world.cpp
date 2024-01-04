@@ -815,7 +815,7 @@ void ClientWorld::DrawHUDSignEditor(void)
         UIStyle uiSignEditorStyle{};
         uiSignEditorStyle.borderColor = BLANK;
         uiSignEditorStyle.size.x = uiSignEditorSize.x;
-        UI uiSignEditor{ uiSignEditorPos, uiSignEditorStyle };
+        UI uiSignEditor{ uiSignEditorPos, uiSignEditorSize, uiSignEditorStyle };
 
         const Rectangle uiSignedEditorRect{
             uiSignEditorPos.x,
@@ -854,8 +854,9 @@ void ClientWorld::DrawHUDMenu(void)
     IO::Scoped scope(IO::IO_HUDMenu);
 
     UIStyle uiHUDMenuStyle{};
-    Vector2 uiPosition{};
-    UI uiHUDMenu{ uiPosition, uiHUDMenuStyle };
+    static Vector2 uiPosition{};
+    static Vector2 uiSize{};
+    UI uiHUDMenu{ uiPosition, uiSize, uiHUDMenuStyle };
 
     // TODO: Add Quit button to the menu at the very least
     uiHUDMenu.Button("Menu");
