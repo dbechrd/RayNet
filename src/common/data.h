@@ -286,6 +286,8 @@ void PlaySound(const std::string &id, float pitchVariance = 0.0f);
 bool IsSoundPlaying(const std::string &id);
 void StopSound(const std::string &id);
 
+void UpdateGfxAnim(const GfxAnim &anim, double dt, GfxAnimState &anim_state);
+
 void UpdateSprite(Entity &entity, double dt, bool newlySpawned);
 void ResetSprite(Entity &entity);
 void DrawSprite(const Entity &entity, DrawCmdQueue *sortedDraws, bool highlight = false);

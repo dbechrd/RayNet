@@ -10,8 +10,6 @@
 #include "stb_herringbone_wang_tile.h"
 #include "tinyfiledialogs.h"
 
-const uint32_t unusedCounter = __COUNTER__;
-
 const char *EditModeStr(EditMode mode)
 {
     switch (mode) {
@@ -538,6 +536,8 @@ void Editor::DrawUI(Camera2D &camera)
         if (showSpriteEditor)   DrawUI_SpriteEditor();
         if (showTileDefEditor)  DrawUI_TileDefEditor();
 
+        UI::DrawTooltips();
+
         static uint16_t editor_map_id = map_id;
         if (map_id != editor_map_id) {
             CenterCameraOnMap(camera);
@@ -790,7 +790,6 @@ void Editor::DrawUI_ActionBar(void)
     }
 
     ui.EndScrollPanel(scrollPanel);
-    ui.DrawTooltips();
 }
 void Editor::DrawUI_MapActions(UI &ui)
 {
@@ -947,20 +946,12 @@ void Editor::DrawUI_Tilesheet(UI &ui)
 
     int tiles_x = 6;
     int tiles_y = tile_defs.size() / 6 + (tile_defs.size() % 6 > 0);
-    int checker_w = TILE_W * tiles_x;
-    int checker_h = TILE_W * tiles_y;
-
-    static Texture checkerTex{};
-    if (checkerTex.width != checker_w || checkerTex.height != checker_h) {
-        Image checkerImg = GenImageChecked(checker_w, checker_h, 8, 8, GRAY, LIGHTGRAY);
-        checkerTex = LoadTextureFromImage(GenImageChecked(checker_w, checker_h, 8, 8, GRAY, LIGHTGRAY));
-    }
 
     UIStyle blackBorderStyle{};
     blackBorderStyle.borderColor = BLACK;
     ui.PushStyle(blackBorderStyle);
 
-    UIState sheet = ui.Image(checkerTex);
+    UIState sheet = ui.Checkerboard({ 0, 0, (float)TILE_W * tiles_x, (float)TILE_W * tiles_y });
     Vector2 imgTL{ sheet.contentRect.x, sheet.contentRect.y };
 
     // Draw tiledefs
@@ -2064,30 +2055,17 @@ void Editor::DrawUI_GfxFrameEditor(void)
     ui.PopStyle();
     ui.PopStyle();
 
-    static Texture checkerTex{};
-    if (!checkerTex.width) {
-        const float alpha = 0.7f;
-        Image checkerImg = GenImageChecked(32, 32, 16, 16, Fade(GRAY, alpha), Fade(DARKGRAY, alpha));
-        // NOTE(dlb): Intentional memory leak, maybe clean it up one day by moving this to common Init() or wutevs
-        checkerTex = LoadTextureFromImage(checkerImg);
-        UnloadImage(checkerImg);
-    }
-
     const GfxFile &gfx_file = pack_assets.FindById<GfxFile>(state.selections.byType[GfxFile::dtype]);
     if (gfx_file.id == state.selections.byType[GfxFile::dtype]) {
         const Vector2 cursor = ui.CursorScreen();
         Vector2 imageTL = cursor;
+
         const UIStyle style = ui.GetStyle();
         imageTL.x += style.margin.left + style.imageBorderThickness;
         imageTL.y += style.margin.top  + style.imageBorderThickness;
 
-        const Rectangle imgRect{ 0, 0, (float)gfx_file.texture.width, (float)gfx_file.texture.height };
-        dlb_DrawTextureRec(checkerTex, imgRect, imageTL, WHITE);
-
-        UIState imgState = ui.Image(gfx_file.texture);
+        UIState imgState = ui.Image(gfx_file.texture, {}, true);
         ui.Newline();
-
-        const GfxFrame *hoveredFrame = 0;
 
         const auto &frames = pack_assets.gfx_frame_ids_by_gfx_file_name.find(gfx_file.name);
         if (frames != pack_assets.gfx_frame_ids_by_gfx_file_name.end()) {
@@ -2109,28 +2087,16 @@ void Editor::DrawUI_GfxFrameEditor(void)
 
                 const bool hover = !io.MouseCaptured() && dlb_CheckCollisionPointRec(GetMousePosition(), frame_rect);
                 if (hover) {
-                    hoveredFrame = &gfx_frame;
                     frame_rect = RectShrink(frame_rect, 2);
                     DrawRectangleLinesEx(frame_rect, 2, YELLOW);
+
+                    ui.Tooltip(gfx_frame.name, { frame_rect.x + 10, frame_rect.y + 6 });
+
+                    // Select frame
+                    if (io.MouseButtonDown(MOUSE_BUTTON_LEFT)) {
+                        state.selections.byType[GfxFrame::dtype] = gfx_frame.id;
+                    }
                 }
-            }
-        }
-
-        if (hoveredFrame) {
-            // Draw tooltip
-            const Vector2 tipPos = Vector2Add(GetMousePosition(), { 16, 16 });
-            const Vector2 tipSize = dlb_MeasureTextEx(fntSmall, hoveredFrame->name.data(), hoveredFrame->name.size(), 0);
-            Rectangle tipRect{ tipPos.x, tipPos.y, tipSize.x, tipSize.y };
-            tipRect = RectGrow(tipRect, { 6, 2 });
-
-            DrawRectangleRec(tipRect, Fade(ColorBrightness(DARKGRAY, -0.5f), 0.8f));
-            DrawRectangleLinesEx(tipRect, 1, BLACK);
-
-            dlb_DrawTextShadowEx(fntSmall, hoveredFrame->name.data(), hoveredFrame->name.size(), tipPos, WHITE);
-
-            // Select frame
-            if (io.MouseButtonDown(MOUSE_BUTTON_LEFT)) {
-                state.selections.byType[GfxFrame::dtype] = hoveredFrame->id;
             }
         }
     }
@@ -2164,6 +2130,7 @@ void Editor::DrawUI_GfxAnimEditor(void)
         static uint16_t anim_id{};
         static GfxAnimState anim_state{};
         static bool anim_paused{};
+        static uint16_t frame_selected{};
 
         if (gfx_anim.id != anim_id) {
             anim_state = {};
@@ -2172,6 +2139,7 @@ void Editor::DrawUI_GfxAnimEditor(void)
 
         // In case # of frames changed via editor, we clamp
         anim_state.frame = CLAMP(anim_state.frame, 0, gfx_anim.frames.size() - 1);
+        frame_selected = CLAMP(frame_selected, 0, gfx_anim.frames.size() - 1);
         if (!anim_paused) {
             UpdateGfxAnim(gfx_anim, dt, anim_state);
         }
@@ -2179,7 +2147,8 @@ void Editor::DrawUI_GfxAnimEditor(void)
         GfxFrame &gfx_frame = pack_assets.FindByName<GfxFrame>(gfx_anim.frames[anim_state.frame]);
         Rectangle rect{ (float)gfx_frame.x, (float)gfx_frame.y, (float)gfx_frame.w, (float)gfx_frame.h };
         GfxFile &gfx_file = pack_assets.FindByName<GfxFile>(gfx_frame.gfx);
-        ui.Image(gfx_file.texture, rect);
+
+        ui.Image(gfx_file.texture, rect, true);
         ui.Newline();
 
         ui.Label(TextFormat("Frame %u of %u", anim_state.frame + 1, gfx_anim.frames.size()));
@@ -2190,6 +2159,8 @@ void Editor::DrawUI_GfxAnimEditor(void)
         bool play = io.KeyPressed(KEY_SPACE);
         bool next = io.KeyPressed(KEY_RIGHT, true);
         bool end  = io.KeyPressed(KEY_END);
+        bool add  = io.KeyPressed(KEY_KP_ADD);
+        bool del  = io.KeyPressed(KEY_KP_SUBTRACT);
 
         home |= ui.Button("|<", home ? SKYBLUE : GRAY).pressed;
         prev |= ui.Button("< ", prev ? SKYBLUE : GRAY).pressed;
@@ -2229,6 +2200,7 @@ void Editor::DrawUI_GfxAnimEditor(void)
         ui.Text("Frames");
         ui.Newline();
 
+        uint16_t frame_idx = 0;
         for (const std::string &frame : gfx_anim.frames) {
             GfxFrame &gfx_frame = pack_assets.FindByName<GfxFrame>(frame);
             Rectangle rect{ (float)gfx_frame.x, (float)gfx_frame.y, (float)gfx_frame.w, (float)gfx_frame.h };
@@ -2239,7 +2211,25 @@ void Editor::DrawUI_GfxAnimEditor(void)
                 ui.Newline();
             }
 
-            ui.Image(gfx_file.texture, rect);
+            UIState state = ui.Image(gfx_file.texture, rect, true);
+
+            if (state.pressed) {
+                frame_selected = frame_idx;
+            } else if (state.released) {
+                std::swap(gfx_anim.frames[frame_selected], gfx_anim.frames[frame_idx]);
+            }
+
+            if (frame_idx == frame_selected) {
+                DrawRectangleLinesEx(state.contentRect, 2, MAGENTA);
+            } else if (state.hover) {
+                DrawRectangleLinesEx(state.contentRect, 2, YELLOW);
+            }
+
+            if (state.hover) {
+                ui.Tooltip(gfx_frame.name, { state.contentRect.x + 10, state.contentRect.y + 6 });
+            }
+
+            frame_idx++;
         }
         ui.Newline();
     }

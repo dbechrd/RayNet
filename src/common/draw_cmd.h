@@ -5,6 +5,7 @@ enum DrawCmdType {
     DRAW_CMD_RECT_SOLID,
     DRAW_CMD_RECT_OUTLINE,
     DRAW_CMD_TEXTURE,
+    DRAW_CMD_TOOLTIP,
 };
 
 struct DrawCmd {
@@ -13,9 +14,10 @@ struct DrawCmd {
     Rectangle   rect      {};
     Color       color     {};
     union {
-        Texture2D texture;
-        int       thickness;
+        Texture2D   texture;
+        int         thickness;
     };
+    std::string text;
 
     static DrawCmd RectSolid(Rectangle rect, Color color)
     {
@@ -46,6 +48,15 @@ struct DrawCmd {
         cmd.rect = rect;
         cmd.color = color;
         cmd.texture = tex;
+        return cmd;
+    }
+
+    static DrawCmd Tooltip(const std::string &text, Vector2 position)
+    {
+        DrawCmd cmd{};
+        cmd.type = DRAW_CMD_TOOLTIP;
+        cmd.position = { position.x, position.y };
+        cmd.text = text;
         return cmd;
     }
 

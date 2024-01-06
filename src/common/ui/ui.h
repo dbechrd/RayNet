@@ -161,7 +161,8 @@ struct UI {
     UIState Text(uint64_t value);
     template <typename T> UIState Text(T value);
     UIState Label(const std::string &text, int width = 0);
-    UIState Image(const Texture &texture, Rectangle srcRect = {});
+    UIState Image(const Texture &texture, Rectangle srcRect = {}, bool checkerboard = false);
+    UIState Checkerboard(Rectangle rect);
     UIState Button(const std::string &text);
     UIState Button(const std::string &text, Color bgColor);
     UIState ToggleButton(const std::string &text, bool pressed, Color bgColor, Color bgColorPressed);
@@ -178,7 +179,10 @@ struct UI {
     template <typename T>
     void HAQField(uint32_t ctrlid, const std::string &name, T &value, int flags, int labelWidth);
 
-    void DrawTooltips(void);
+    static void Tooltip(const std::string &text, Vector2 position);
+    static void Tooltip(const std::string &text);
+    static void DrawTooltips(void);
+
     void HandleEvents(void);
 private:
     Vector2 &position;
@@ -194,11 +198,13 @@ private:
     static bool tabHandledThisFrame;  // to de-dupe
     static uint32_t lastDrawnEditor;  // for shift-tab (1 frame delay)
     static uint32_t tabToPrevEditor;  // for shift-tab (1 frame delay)
+
     static ScrollPanel *dragPanel;
     static Vector2 dragPanelOffset;
     static DragMode dragPanelMode;
 
-    DrawCmdQueue tooltips;
+    static DrawCmdQueue tooltips;
+    static Texture checkerTex;
 
     struct HoverHash {
         Vector2 position{};

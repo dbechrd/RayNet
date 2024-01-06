@@ -14,6 +14,9 @@ ScrollPanel *UI::dragPanel{};
 Vector2 UI::dragPanelOffset{};
 DragMode UI::dragPanelMode{};
 
+DrawCmdQueue UI::tooltips{};
+Texture UI::checkerTex{};
+
 bool UI::IsActiveEditor(uint32_t ctrlid)
 {
     return ctrlid == activeEditor;
@@ -30,6 +33,14 @@ bool UI::UnfocusActiveEditor(void)
 
 UI::UI(Vector2 &position, Vector2 &size, UIStyle style) : position(position), size(size)
 {
+    if (!checkerTex.width) {
+        const float alpha = 1.0f;
+        ::Image checkerImg = GenImageChecked(16, 16, 8, 8, Fade(GRAY, alpha), Fade(LIGHTGRAY, alpha));
+        // NOTE(dlb): Intentional memory leak, maybe clean it up one day by moving this to common Init() or wutevs
+        checkerTex = LoadTextureFromImage(checkerImg);
+        UnloadImage(checkerImg);
+    }
+
     cursor = { style.pad.left, style.pad.top };
     styleStack.push(style);
     tabHandledThisFrame = false;
@@ -526,7 +537,7 @@ UIState UI::Label(const std::string &text, int width)
     return state;
 }
 
-UIState UI::Image(const Texture &texture, Rectangle srcRect)
+UIState UI::Image(const Texture &texture, Rectangle srcRect, bool checkerboard)
 {
     if (!srcRect.width) {
         srcRect = { 0, 0, (float)texture.width, (float)texture.height };
@@ -577,11 +588,20 @@ UIState UI::Image(const Texture &texture, Rectangle srcRect)
     DrawRectangleLinesEx(ctrlRect, 1, BLACK);
 #endif
 
+    // Draw checkerboard background
+    if (checkerboard) {
+        DrawTexturePro(checkerTex, srcRect, contentRect, {}, 0, WHITE);
+    }
+
     // Draw image
     DrawTexturePro(texture, srcRect, contentRect, {}, 0, WHITE);
 
     UpdateAudio(state);
     return state;
+}
+UIState UI::Checkerboard(Rectangle rect)
+{
+    return Image(checkerTex, rect, false);
 }
 
 UIState UI::Button(const std::string &text)
@@ -1358,6 +1378,16 @@ void UI::HAQField(uint32_t ctrlid, const std::string &name, T &value, int flags,
     }
 
     Newline();
+}
+
+void UI::Tooltip(const std::string &text, Vector2 position)
+{
+    tooltips.push(DrawCmd::Tooltip(text, position));
+}
+
+void UI::Tooltip(const std::string &text)
+{
+    Tooltip(text, Vector2Add(GetMousePosition(), { 16, 16 }));
 }
 
 void UI::DrawTooltips(void)
