@@ -35,8 +35,11 @@ Err Editor::Init(void)
     return err;
 }
 
-void Editor::HandleInput(Camera2D &camera)
+void Editor::HandleInput(Camera2D &camera, double now, double dt)
 {
+    this->now = now;
+    this->dt = dt;
+
     io.PushScope(IO::IO_Editor);
 
     if (io.KeyPressed(KEY_GRAVE)) {
@@ -68,7 +71,7 @@ void Editor::HandleInput(Camera2D &camera)
     io.PopScope();
 }
 
-void Editor::DrawGroundOverlays(Camera2D &camera, double now)
+void Editor::DrawGroundOverlays(Camera2D &camera)
 {
     io.PushScope(IO::IO_EditorGroundOverlay);
 
@@ -87,16 +90,16 @@ void Editor::DrawGroundOverlays(Camera2D &camera, double now)
 
     if (active) {
         switch (mode) {
-            case EditMode_Tiles:   DrawGroundOverlay_Tiles   (camera, now); break;
-            case EditMode_Objects: DrawGroundOverlay_Objects (camera, now); break;
-            case EditMode_Wang:    DrawGroundOverlay_Wang    (camera, now); break;
-            case EditMode_Paths:   DrawGroundOverlay_Paths   (camera, now); break;
+            case EditMode_Tiles:   DrawGroundOverlay_Tiles   (camera); break;
+            case EditMode_Objects: DrawGroundOverlay_Objects (camera); break;
+            case EditMode_Wang:    DrawGroundOverlay_Wang    (camera); break;
+            case EditMode_Paths:   DrawGroundOverlay_Paths   (camera); break;
         }
     }
 
     io.PopScope();
 }
-void Editor::DrawGroundOverlay_Tiles(Camera2D &camera, double now)
+void Editor::DrawGroundOverlay_Tiles(Camera2D &camera)
 {
     if (!io.MouseCaptured()) {
         // Draw hover highlight
@@ -193,7 +196,7 @@ void Editor::DrawGroundOverlay_Tiles(Camera2D &camera, double now)
         }
     }
 }
-void Editor::DrawGroundOverlay_Objects(Camera2D &camera, double now)
+void Editor::DrawGroundOverlay_Objects(Camera2D &camera)
 {
     if (!io.MouseCaptured()) {
         // Draw hover highlight
@@ -238,10 +241,10 @@ void Editor::DrawGroundOverlay_Objects(Camera2D &camera, double now)
     DrawRectangleRec(selectRect, Fade(YELLOW, 0.2f));
     DrawRectangleLinesEx(selectRect, 2, YELLOW);
 }
-void Editor::DrawGroundOverlay_Wang(Camera2D &camera, double now)
+void Editor::DrawGroundOverlay_Wang(Camera2D &camera)
 {
 }
-void Editor::DrawGroundOverlay_Paths(Camera2D &camera, double now)
+void Editor::DrawGroundOverlay_Paths(Camera2D &camera)
 {
     auto &cursor = state.pathNodes.cursor;
     const Vector2 cursorWorldPos = GetScreenToWorld2D({ (float)GetMouseX(), (float)GetMouseY() }, camera);
@@ -348,7 +351,7 @@ void Editor::DrawGroundOverlay_Paths(Camera2D &camera, double now)
     }
 }
 
-void Editor::DrawEntityOverlays(Camera2D &camera, double now)
+void Editor::DrawEntityOverlays(Camera2D &camera)
 {
     io.PushScope(IO::IO_EditorEntityOverlay);
 
@@ -385,7 +388,7 @@ void Editor::DrawEntityOverlays(Camera2D &camera, double now)
                 break;
             }
             case EditMode_Entities: {
-                DrawEntityOverlay_Collision(camera, now);
+                DrawEntityOverlay_Collision(camera);
                 break;
             }
         }
@@ -393,7 +396,7 @@ void Editor::DrawEntityOverlays(Camera2D &camera, double now)
 
     io.PopScope();
 }
-void Editor::DrawEntityOverlay_Collision(Camera2D &camera, double now)
+void Editor::DrawEntityOverlay_Collision(Camera2D &camera)
 {
     auto &map = pack_maps.FindById<Tilemap>(map_id);
     for (Entity &entity : entityDb->entities) {
@@ -524,12 +527,12 @@ void Editor::DatSearchBox(UI &ui, SearchBox &searchBox)
     ui.Newline();
 }
 
-void Editor::DrawUI(Camera2D &camera, double now)
+void Editor::DrawUI(Camera2D &camera)
 {
     io.PushScope(IO::IO_EditorUI);
 
     if (active) {
-        DrawUI_ActionBar(now);
+        DrawUI_ActionBar();
         if (showGfxFrameEditor) DrawUI_GfxFrameEditor();
         if (showGfxAnimEditor)  DrawUI_GfxAnimEditor();
         if (showSpriteEditor)   DrawUI_SpriteEditor();
@@ -547,7 +550,7 @@ void Editor::DrawUI(Camera2D &camera, double now)
 
     io.PopScope();
 }
-void Editor::DrawUI_ActionBar(double now)
+void Editor::DrawUI_ActionBar(void)
 {
     Vector2 uiPosition{};
     if (dock_left) {
@@ -560,8 +563,13 @@ void Editor::DrawUI_ActionBar(double now)
     UIStyle uiStyle{};
     UI ui{ uiPosition, uiSize, uiStyle };
 
-    // TODO: UI::Panel
-    //BeginScrollPanel(ui, scrollPanel);
+    static ScrollPanel scrollPanel{ true };
+    ui.PushMargin({});
+    ui.PushSize(uiSize);
+    ui.BeginScrollPanel(scrollPanel, IO::IO_ScrollPanelOuter);
+    ui.PopStyle();
+    ui.PopStyle();
+
     UIState uiState{};
     const Rectangle actionBarRect{ uiPosition.x, uiPosition.y, width, (float)GetRenderHeight() };
 #if 0
@@ -744,46 +752,47 @@ void Editor::DrawUI_ActionBar(double now)
 
     switch (mode) {
         case EditMode_Maps: {
-            DrawUI_MapActions(ui, now);
+            DrawUI_MapActions(ui);
             break;
         }
         case EditMode_Tiles: {
-            DrawUI_TileActions(ui, now);
+            DrawUI_TileActions(ui);
             break;
         }
         case EditMode_Objects: {
-            DrawUI_ObjectActions(ui, now);
+            DrawUI_ObjectActions(ui);
             break;
         }
         case EditMode_Wang: {
-            DrawUI_Wang(ui, now);
+            DrawUI_Wang(ui);
             break;
         }
         case EditMode_Paths: {
-            DrawUI_PathActions(ui, now);
+            DrawUI_PathActions(ui);
             break;
         }
         case EditMode_Dialog: {
-            DrawUI_DialogActions(ui, now);
+            DrawUI_DialogActions(ui);
             break;
         }
         case EditMode_Entities: {
-            DrawUI_EntityActions(ui, now);
+            DrawUI_EntityActions(ui);
             break;
         }
         case EditMode_PackFiles: {
-            DrawUI_PackFiles(ui, now);
+            DrawUI_PackFiles(ui);
             break;
         }
         case EditMode_Debug: {
-            DrawUI_Debug(ui, now);
+            DrawUI_Debug(ui);
             break;
         }
     }
 
+    ui.EndScrollPanel(scrollPanel);
     ui.DrawTooltips();
 }
-void Editor::DrawUI_MapActions(UI &ui, double now)
+void Editor::DrawUI_MapActions(UI &ui)
 {
     for (const Tilemap &map : pack_maps.tile_maps) {
         if (ui.Button(TextFormat("%s", map.name.c_str())).pressed) {
@@ -792,7 +801,7 @@ void Editor::DrawUI_MapActions(UI &ui, double now)
         ui.Newline();
     }
 }
-void Editor::DrawUI_TileActions(UI &ui, double now)
+void Editor::DrawUI_TileActions(UI &ui)
 {
     const char *mapFileFilter[1] = { "*.png" };
     static const char *openRequest = 0;
@@ -896,9 +905,9 @@ void Editor::DrawUI_TileActions(UI &ui, double now)
     }
     ui.Newline();
 
-    DrawUI_Tilesheet(ui, now);
+    DrawUI_Tilesheet(ui);
 }
-void Editor::DrawUI_ObjectActions(UI &ui, double now)
+void Editor::DrawUI_ObjectActions(UI &ui)
 {
     auto &map = pack_maps.FindById<Tilemap>(map_id);
     Tilemap::Coord coord = state.objects.selected_coord;
@@ -927,7 +936,7 @@ void Editor::DrawUI_ObjectActions(UI &ui, double now)
         }
     }
 }
-void Editor::DrawUI_Tilesheet(UI &ui, double now)
+void Editor::DrawUI_Tilesheet(UI &ui)
 {
     // TODO(dlb): Support multi-select (big rectangle?), and figure out where this lives
 
@@ -1163,9 +1172,9 @@ void Editor::DrawUI_Tilesheet(UI &ui, double now)
         }
     }
 
-    DrawUI_WangTile(now);
+    DrawUI_WangTile();
 }
-void Editor::DrawUI_Wang(UI &ui, double now)
+void Editor::DrawUI_Wang(UI &ui)
 {
     if (ui.Button("Generate template").pressed) {
         Err err = WangTileset::GenerateTemplate("resources/wang/template.png");
@@ -1253,9 +1262,9 @@ void Editor::DrawUI_Wang(UI &ui, double now)
         map.SetFromWangMap(wangMap, now);
     }
 
-    DrawUI_WangTile(now);
+    DrawUI_WangTile();
 }
-void Editor::DrawUI_WangTile(double now)
+void Editor::DrawUI_WangTile(void)
 {
     WangTileset &wangTileset = state.wang.wangTileset;
     auto &map = pack_maps.FindById<Tilemap>(map_id);
@@ -1396,7 +1405,7 @@ void Editor::DrawUI_WangTile(double now)
         }
     }
 }
-void Editor::DrawUI_PathActions(UI &ui, double now)
+void Editor::DrawUI_PathActions(UI &ui)
 {
     if (state.pathNodes.cursor.dragging) {
         printf("dragging\n");
@@ -1408,7 +1417,7 @@ void Editor::DrawUI_PathActions(UI &ui, double now)
         state.pathNodes.cursor.dragPathNodeIndex
     ));
 }
-void Editor::DrawUI_DialogActions(UI &ui, double now)
+void Editor::DrawUI_DialogActions(UI &ui)
 {
 #if 0
     //if (ui.ToggleButton("Add", DARKGREEN).pressed) {
@@ -1476,7 +1485,7 @@ void Editor::DrawUI_DialogActions(UI &ui, double now)
     ui.PopStyle();
 #endif
 }
-void Editor::DrawUI_EntityActions(UI &ui, double now)
+void Editor::DrawUI_EntityActions(UI &ui)
 {
     auto &map = pack_maps.FindById<Tilemap>(map_id);
     if (ui.Button("Despawn all", ColorBrightness(MAROON, -0.3f)).pressed) {
@@ -1619,7 +1628,7 @@ void Editor::DrawUI_EntityActions(UI &ui, double now)
         }
     }
 }
-void Editor::DrawUI_PackFiles(UI &ui, double now)
+void Editor::DrawUI_PackFiles(UI &ui)
 {
     static SearchBox searchPacks{ "Search packs...", "*" };
     ui.BeginSearchBox(searchPacks);
@@ -1943,19 +1952,21 @@ void Editor::DrawUI_PackFiles(UI &ui, double now)
         ui.EndScrollPanel(scrollPanel);
     }
 }
-void Editor::DrawUI_Debug(UI &ui, double now)
+void Editor::DrawUI_Debug(UI &ui)
 {
+#if 0
     static UID uid = NextUID();
     ui.Text(TextFormat("%.*s", 20, uid.bytes));
     if (true) {// || ui.ToggleButton("NextUID").pressed) {
         uid = NextUID();
     }
     ui.Newline();
+#endif
 
     const Color colorOff = BLUE_DESAT;
     const Color colorOn = ColorBrightness(BLUE_DESAT, -0.3f);
 
-    ui.PushWidth(200);
+    ui.PushWidth(80);
 
     if (ui.ToggleButton("Frames", showGfxFrameEditor, colorOff, colorOn).pressed) {
         bool show = !showGfxFrameEditor;
@@ -1963,7 +1974,6 @@ void Editor::DrawUI_Debug(UI &ui, double now)
         showGfxFrameEditor = show;
         showGfxFrameEditorDirty = true;
     }
-    ui.Newline();
 
     if (ui.ToggleButton("Animations", showGfxAnimEditor, colorOff, colorOn).pressed) {
         bool show = !showGfxAnimEditor;
@@ -1971,7 +1981,6 @@ void Editor::DrawUI_Debug(UI &ui, double now)
         showGfxAnimEditor = show;
         showGfxAnimEditorDirty = true;
     }
-    ui.Newline();
 
     if (ui.ToggleButton("Sprites", showSpriteEditor, colorOff, colorOn).pressed) {
         bool show = !showSpriteEditor;
@@ -1979,7 +1988,6 @@ void Editor::DrawUI_Debug(UI &ui, double now)
         showSpriteEditor = show;
         showSpriteEditorDirty = true;
     }
-    ui.Newline();
 
     if (ui.ToggleButton("Tile Defs", showTileDefEditor, colorOff, colorOn).pressed) {
         bool show = !showTileDefEditor;
@@ -2150,7 +2158,90 @@ void Editor::DrawUI_GfxAnimEditor(void)
 
     GfxAnim &gfx_anim = pack_assets.FindById<GfxAnim>(state.selections.byType[GfxAnim::dtype]);
     if (gfx_anim.id == state.selections.byType[GfxAnim::dtype]) {
-        ui.Text("TODO: GfxAnim editor goes here");
+        ui.Text("Preview");
+        ui.Newline();
+
+        static uint16_t anim_id{};
+        static GfxAnimState anim_state{};
+        static bool anim_paused{};
+
+        if (gfx_anim.id != anim_id) {
+            anim_state = {};
+            anim_id = gfx_anim.id;
+        }
+
+        // In case # of frames changed via editor, we clamp
+        anim_state.frame = CLAMP(anim_state.frame, 0, gfx_anim.frames.size() - 1);
+        if (!anim_paused) {
+            UpdateGfxAnim(gfx_anim, dt, anim_state);
+        }
+
+        GfxFrame &gfx_frame = pack_assets.FindByName<GfxFrame>(gfx_anim.frames[anim_state.frame]);
+        Rectangle rect{ (float)gfx_frame.x, (float)gfx_frame.y, (float)gfx_frame.w, (float)gfx_frame.h };
+        GfxFile &gfx_file = pack_assets.FindByName<GfxFile>(gfx_frame.gfx);
+        ui.Image(gfx_file.texture, rect);
+        ui.Newline();
+
+        ui.Label(TextFormat("Frame %u of %u", anim_state.frame + 1, gfx_anim.frames.size()));
+        ui.Newline();
+
+        bool home = io.KeyPressed(KEY_HOME);
+        bool prev = io.KeyPressed(KEY_LEFT, true);
+        bool play = io.KeyPressed(KEY_SPACE);
+        bool next = io.KeyPressed(KEY_RIGHT, true);
+        bool end  = io.KeyPressed(KEY_END);
+
+        home |= ui.Button("|<", home ? SKYBLUE : GRAY).pressed;
+        prev |= ui.Button("< ", prev ? SKYBLUE : GRAY).pressed;
+        play |= ui.Button(anim_paused ? "|>" : "||", anim_paused ? LIME : MAROON).pressed;
+        next |= ui.Button(" >", next ? SKYBLUE : GRAY).pressed;
+        end  |= ui.Button(">|", end  ? SKYBLUE : GRAY).pressed;
+
+        if (home) {
+            anim_paused = true;
+            anim_state.frame = 0;
+        }
+        if (prev) {
+            anim_paused = true;
+            if (anim_state.frame) {
+                anim_state.frame--;
+            } else {
+                anim_state.frame = gfx_anim.frames.size() - 1;
+            }
+        }
+        if (play) {
+            anim_paused = !anim_paused;
+        }
+        if (next) {
+            anim_paused = true;
+            if (anim_state.frame < gfx_anim.frames.size() - 1) {
+                anim_state.frame++;
+            } else {
+                anim_state.frame = 0;
+            }
+        }
+        if (end) {
+            anim_paused = true;
+            anim_state.frame = gfx_anim.frames.size() - 1;
+        }
+        ui.Newline();
+
+        ui.Text("Frames");
+        ui.Newline();
+
+        for (const std::string &frame : gfx_anim.frames) {
+            GfxFrame &gfx_frame = pack_assets.FindByName<GfxFrame>(frame);
+            Rectangle rect{ (float)gfx_frame.x, (float)gfx_frame.y, (float)gfx_frame.w, (float)gfx_frame.h };
+            GfxFile &gfx_file = pack_assets.FindByName<GfxFile>(gfx_frame.gfx);
+
+            const Rectangle &uiRect = ui.Rect();
+            if (ui.CursorScreen().x + rect.width > uiRect.x + uiRect.width) {
+                ui.Newline();
+            }
+
+            ui.Image(gfx_file.texture, rect);
+        }
+        ui.Newline();
     }
 
     ui.EndScrollPanel(scrollPanel);

@@ -30,6 +30,7 @@ bool UI::UnfocusActiveEditor(void)
 
 UI::UI(Vector2 &position, Vector2 &size, UIStyle style) : position(position), size(size)
 {
+    cursor = { style.pad.left, style.pad.top };
     styleStack.push(style);
     tabHandledThisFrame = false;
 }
@@ -140,9 +141,7 @@ UIState UI::CalcState(const Rectangle &ctrlRect, HoverHash &prevHoverHash)
     state.ctrlRect = ctrlRect;
 
     Rectangle scissorRect = ctrlRect;
-    if (!scissorStack.empty()) {
-        RectConstrainToRect(scissorRect, scissorStack.top());
-    }
+    RectConstrainToRect(scissorRect, GetScissorRect());
 
     if (dlb_CheckCollisionPointRec(GetMousePosition(), scissorRect)) {
         state.entered = !prevHoveredCtrl;
@@ -297,7 +296,7 @@ void UI::BeginScrollPanel(ScrollPanel &scrollPanel, IO::Scope scope)
     scrollOffset = CLAMP(scrollOffset, 0, scrollPanel.scrollOffsetMax);
 
     // HACK(dlb): "4" is probably margin, or pad, or something. layout is a bit messed up for scroll panels
-    Space({ 0, -scrollOffset + 4 });
+    Space({ 0, -floorf(scrollOffset) + 4 });
     PushScissorRect(scrollPanel.state.contentRect);
 }
 void UI::EndScrollPanel(ScrollPanel &scrollPanel)
@@ -308,7 +307,7 @@ void UI::EndScrollPanel(ScrollPanel &scrollPanel)
     }
 
     PopScissorRect();
-    Space({ 0, scrollPanel.scrollOffset });
+    Space({ 0, floorf(scrollPanel.scrollOffset) });
 
     const Rectangle &contentRect = scrollPanel.state.contentRect;
 
@@ -316,15 +315,15 @@ void UI::EndScrollPanel(ScrollPanel &scrollPanel)
     scrollPanel.contentHeightLastFrame = contentEndY - contentRect.y;
 
     const float scrollRatio = CLAMP(contentRect.height / scrollPanel.contentHeightLastFrame, 0, 1);
+    const float scrollbarSpace = contentRect.height * (1 - scrollRatio);
     const float scrollbarWidth = 8;
     const float scrollbarHeight = contentRect.height * scrollRatio;
-    const float scrollbarSpace = contentRect.height * (1 - scrollRatio);
     const float scrollPct = scrollPanel.scrollOffset / scrollPanel.scrollOffsetMax;
     Rectangle scrollbar{
-        contentRect.x + contentRect.width - 2 - scrollbarWidth,
-        contentRect.y + scrollbarSpace * scrollPct,
-        scrollbarWidth,
-        scrollbarHeight
+        floorf(contentRect.x + contentRect.width - 2 - scrollbarWidth),
+        floorf(contentRect.y + scrollbarSpace * scrollPct),
+        floorf(scrollbarWidth),
+        floorf(scrollbarHeight)
     };
     DrawRectangleRec(scrollbar, LIGHTGRAY);
     //DrawRectangleLinesEx(scrollbar, 2, WHITE);

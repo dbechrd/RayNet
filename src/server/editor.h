@@ -146,6 +146,9 @@ struct Editor {
     EditModeState state      {};
     uint16_t      map_id     {};
 
+    double now;
+    double dt;
+
     // TODO: Make this an enum! Doh.
     bool showGfxFrameEditor      { 1 };
     bool showGfxFrameEditorDirty { 0 };
@@ -169,36 +172,36 @@ struct Editor {
 
     Editor(uint16_t map_id) : map_id(map_id) {}
     Err Init(void);
-    void HandleInput(Camera2D &camera);
-    void DrawGroundOverlays(Camera2D &camera, double now);
-    void DrawEntityOverlays(Camera2D &camera, double now);
-    void DrawUI(Camera2D &camera, double now);
+    void HandleInput(Camera2D &camera, double now, double dt);
+    void DrawGroundOverlays(Camera2D &camera);
+    void DrawEntityOverlays(Camera2D &camera);
+    void DrawUI(Camera2D &camera);
 
 private:
     void CenterCameraOnMap(Camera2D &camera);
 
     // Ground overlays (above tiles, below entities)
-    void DrawGroundOverlay_Tiles(Camera2D &camera, double now);
-    void DrawGroundOverlay_Objects(Camera2D &camera, double now);
-    void DrawGroundOverlay_Wang(Camera2D &camera, double now);
-    void DrawGroundOverlay_Paths(Camera2D &camera, double now);
+    void DrawGroundOverlay_Tiles(Camera2D &camera);
+    void DrawGroundOverlay_Objects(Camera2D &camera);
+    void DrawGroundOverlay_Wang(Camera2D &camera);
+    void DrawGroundOverlay_Paths(Camera2D &camera);
 
     // Entity overlays (above entities)
-    void DrawEntityOverlay_Collision(Camera2D &camera, double now);
+    void DrawEntityOverlay_Collision(Camera2D &camera);
 
     // Action bar and mode tabs
-    void DrawUI_ActionBar(double now);
-    void DrawUI_MapActions(UI &uiActionBar, double now);
-    void DrawUI_TileActions(UI &uiActionBar, double now);
-    void DrawUI_ObjectActions(UI &uiActionBar, double now);
-    void DrawUI_Tilesheet(UI &uiActionBar, double now);
-    void DrawUI_WangTile(double now);
-    void DrawUI_Wang(UI &uiActionBar, double now);
-    void DrawUI_PathActions(UI &uiActionBar, double now);
-    void DrawUI_DialogActions(UI &uiActionBar, double now);
-    void DrawUI_EntityActions(UI &uiActionBar, double now);
-    void DrawUI_PackFiles(UI &uiActionBar, double now);
-    void DrawUI_Debug(UI &uiActionBar, double now);
+    void DrawUI_ActionBar(void);
+    void DrawUI_MapActions(UI &uiActionBar);
+    void DrawUI_TileActions(UI &uiActionBar);
+    void DrawUI_ObjectActions(UI &uiActionBar);
+    void DrawUI_Tilesheet(UI &uiActionBar);
+    void DrawUI_WangTile(void);
+    void DrawUI_Wang(UI &uiActionBar);
+    void DrawUI_PathActions(UI &uiActionBar);
+    void DrawUI_DialogActions(UI &uiActionBar);
+    void DrawUI_EntityActions(UI &uiActionBar);
+    void DrawUI_PackFiles(UI &uiActionBar);
+    void DrawUI_Debug(UI &uiActionBar);
 
     template <typename T>
     void DatSearchBox(UI &ui, SearchBox &searchBox);

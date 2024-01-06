@@ -121,6 +121,10 @@ struct UI {
 
     UI(Vector2 &position, Vector2 &size, UIStyle style);
 
+    Rectangle Rect(void) {
+        return { position.x, position.y, size.x, size.y };
+    }
+
     inline Vector2 CursorScreen(void) {
         return Vector2Add(position, cursor);
     }

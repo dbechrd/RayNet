@@ -186,8 +186,8 @@ void RectConstrainToRect(Rectangle &rect, const Rectangle &boundary);
 void RectConstrainToScreen(Rectangle &rect, Vector2 *resultOffset = 0);
 void CircleConstrainToScreen(Vector2 &center, float radius, Vector2 *resultOffset = 0);
 
-extern std::stack<Rectangle> scissorStack;
 void PushScissorRect(const Rectangle &rect);
+Rectangle GetScissorRect(void);
 void PopScissorRect(void);
 
 void dlb_DrawTextureRec(Texture2D texture, Rectangle source, Vector2 position, Color tint);

@@ -396,7 +396,7 @@ void CircleConstrainToScreen(Vector2 &center, float radius, Vector2 *resultOffse
     center = newCenter;
 }
 
-std::stack<Rectangle> scissorStack{};
+static std::stack<Rectangle> scissorStack{};
 
 void PushScissorRect(const Rectangle &rect)
 {
@@ -408,6 +408,16 @@ void PushScissorRect(const Rectangle &rect)
 
     rlScissor(rect.x, GetRenderHeight() - (rect.y + rect.height), rect.width, rect.height);
     scissorStack.push(rect);
+}
+
+Rectangle GetScissorRect(void)
+{
+    if (!scissorStack.empty()) {
+        Rectangle &rect = scissorStack.top();
+        return rect;
+    } else {
+        return { 0, 0, (float)GetRenderWidth(), (float)GetRenderHeight() };
+    }
 }
 
 void PopScissorRect(void)

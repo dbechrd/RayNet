@@ -361,46 +361,46 @@
 3 325 "frm_til_cave_960_960" "gfx_til_cave" 960 960 64 64
 
 # GfxAnim id name sound frame_count frame_delay frames
-4 0 "anim_missing" "null" 0 0
+4 0 "anim_missing" "null" 0
  1
  "frm_missing"
-4 1 "anim_chr_mage_e" "null" 0 0
+4 1 "anim_chr_mage_e" "null" 0
  1
  "frm_chr_mage_e_0"
-4 2 "anim_chr_mage_w" "null" 0 0
+4 2 "anim_chr_mage_w" "null" 0
  1
  "frm_chr_mage_w_0"
-4 3 "anim_npc_lily_e" "null" 0 0
+4 3 "anim_npc_lily_e" "null" 0
  1
  "frm_npc_lily_e_0"
-4 4 "anim_npc_lily_w" "null" 0 0
+4 4 "anim_npc_lily_w" "null" 0
  1
  "frm_npc_lily_w_0"
-4 5 "anim_npc_freye_e" "null" 0 0
+4 5 "anim_npc_freye_e" "null" 0
  1
  "frm_npc_freye_e_0"
-4 6 "anim_npc_freye_w" "null" 0 0
+4 6 "anim_npc_freye_w" "null" 0
  1
  "frm_npc_freye_w_0"
-4 7 "anim_npc_nessa_e" "null" 0 0
+4 7 "anim_npc_nessa_e" "null" 0
  1
  "frm_npc_nessa_e_0"
-4 8 "anim_npc_nessa_w" "null" 0 0
+4 8 "anim_npc_nessa_w" "null" 0
  1
  "frm_npc_nessa_w_0"
-4 9 "anim_npc_elane_e" "null" 0 0
+4 9 "anim_npc_elane_e" "null" 0
  1
  "frm_npc_elane_e_0"
-4 10 "anim_npc_elane_w" "null" 0 0
+4 10 "anim_npc_elane_w" "null" 0
  1
  "frm_npc_elane_w_0"
-4 11 "anim_npc_chicken_e" "null" 0 0
+4 11 "anim_npc_chicken_e" "null" 0
  1
  "frm_npc_chicken_e_0"
-4 12 "anim_npc_chicken_w" "null" 0 0
+4 12 "anim_npc_chicken_w" "null" 0
  1
  "frm_npc_chicken_w_0"
-4 13 "anim_obj_campfire" "sfx_campfire" 0 4
+4 13 "anim_obj_campfire" "sfx_campfire" 4
  8
  "frm_obj_campfire_0"
  "frm_obj_campfire_1"
@@ -410,86 +410,86 @@
  "frm_obj_campfire_5"
  "frm_obj_campfire_6"
  "frm_obj_campfire_7"
-4 14 "anim_prj_fireball" "sfx_fireball" 0 0
+4 14 "anim_prj_fireball" "sfx_fireball" 0
  1
  "frm_prj_fireball_0"
-4 15 "anim_til_void" "null" 0 0
+4 15 "anim_til_void" "null" 0
  1
  "frm_til_void"
-4 16 "anim_til_stone_path" "null" 0 0
+4 16 "anim_til_stone_path" "null" 0
  1
  "frm_til_stone_path"
-4 17 "anim_til_water_dark" "null" 0 30
+4 17 "anim_til_water_dark" "null" 30
  4
  "frm_til_water_dark_0"
  "frm_til_water_dark_1"
  "frm_til_water_dark_2"
  "frm_til_water_dark_1"
-4 18 "anim_til_grass_weeds" "null" 0 20
+4 18 "anim_til_grass_weeds" "null" 20
  2
  "frm_til_grass_weeds_0"
  "frm_til_grass_weeds_1"
-4 19 "anim_til_grass_flowers" "null" 0 30
+4 19 "anim_til_grass_flowers" "null" 30
  2
  "frm_til_grass_flowers_0"
  "frm_til_grass_flowers_1"
-4 20 "anim_til_stone_wall_tl" "null" 0 0
+4 20 "anim_til_stone_wall_tl" "null" 0
  1
  "frm_til_stone_wall_tl"
-4 21 "anim_til_stone_wall_tc" "null" 0 0
+4 21 "anim_til_stone_wall_tc" "null" 0
  1
  "frm_til_stone_wall_tc"
-4 22 "anim_til_stone_wall_tr" "null" 0 0
+4 22 "anim_til_stone_wall_tr" "null" 0
  1
  "frm_til_stone_wall_tr"
-4 23 "anim_til_stone_wall_cl" "null" 0 0
+4 23 "anim_til_stone_wall_cl" "null" 0
  1
  "frm_til_stone_wall_cl"
-4 24 "anim_til_stone_wall_cc" "null" 0 0
+4 24 "anim_til_stone_wall_cc" "null" 0
  1
  "frm_til_stone_wall_cc"
-4 25 "anim_til_stone_wall_cr" "null" 0 0
+4 25 "anim_til_stone_wall_cr" "null" 0
  1
  "frm_til_stone_wall_cr"
-4 26 "anim_til_stone_wall_bl" "null" 0 0
+4 26 "anim_til_stone_wall_bl" "null" 0
  1
  "frm_til_stone_wall_bl"
-4 27 "anim_til_stone_wall_bc" "null" 0 0
+4 27 "anim_til_stone_wall_bc" "null" 0
  1
  "frm_til_stone_wall_bc"
-4 28 "anim_til_stone_wall_br" "null" 0 0
+4 28 "anim_til_stone_wall_br" "null" 0
  1
  "frm_til_stone_wall_br"
-4 29 "anim_itm_poop" "null" 0 0
+4 29 "anim_itm_poop" "null" 0
  1
  "frm_itm_poop"
-4 30 "anim_obj_bush" "null" 0 0
+4 30 "anim_obj_bush" "null" 0
  1
  "frm_obj_bush"
-4 31 "anim_obj_chest_closed" "null" 0 0
+4 31 "anim_obj_chest_closed" "null" 0
  1
  "frm_obj_chest_closed"
-4 32 "anim_obj_portal" "null" 0 6
+4 32 "anim_obj_portal" "null" 6
  3
  "frm_obj_portal_0"
  "frm_obj_portal_1"
  "frm_obj_portal_2"
-4 33 "anim_obj_sign" "null" 0 0
+4 33 "anim_obj_sign" "null" 0
  1
  "frm_obj_sign"
-4 34 "anim_obj_lever_unpowered" "null" 0 0
+4 34 "anim_obj_lever_unpowered" "null" 0
  1
  "frm_obj_lever_unpowered"
-4 35 "anim_obj_lever_powered" "null" 0 15
+4 35 "anim_obj_lever_powered" "null" 15
  4
  "frm_obj_lever_powered_0"
  "frm_obj_lever_powered_0"
  "frm_obj_lever_powered_0"
  "frm_obj_lever_powered_1"
-4 36 "anim_obj_door_closed" "null" 0 0
+4 36 "anim_obj_door_closed" "null" 0
  1
  "frm_obj_door_closed"
-4 37 "anim_obj_door_open" "null" 0 0
+4 37 "anim_obj_door_open" "null" 0
  1
  "frm_obj_door_open"
 

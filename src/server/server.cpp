@@ -139,7 +139,7 @@ Err Play(GameServer &server)
             //server.map =
         }
 
-        editor.HandleInput(camera);
+        editor.HandleInput(camera, server.now, server.frameDt);
 
         UpdateCamera(camera);
 
@@ -185,7 +185,7 @@ Err Play(GameServer &server)
                 sortedDraws.Draw();
 
                 // [Editor] Overlays
-                editor.DrawGroundOverlays(camera, server.now);
+                editor.DrawGroundOverlays(camera);
 
                 // [Debug] Last collision
                 DrawRectangleLinesEx(server.lastCollisionA, 1, RED);
@@ -193,10 +193,10 @@ Err Play(GameServer &server)
             EndMode2D();
 
             // [Editor] Overlays
-            editor.DrawEntityOverlays(camera, server.now);
+            editor.DrawEntityOverlays(camera);
 
             // [Editor] Menus, action bar, etc.
-            editor.DrawUI(camera, server.now);
+            editor.DrawUI(camera);
 
             // [Debug] FPS, clock, etc.
             if (server.showF3Menu) {
