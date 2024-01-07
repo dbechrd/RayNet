@@ -88,15 +88,14 @@ struct UIState {
 };
 
 struct ScrollPanel {
-    UIState   state                  {};
-    float     scrollOffsetMax        {};
-    float     scrollOffset           {};
-    float     scrollOffsetTarget     {};
-    float     scrollVelocity         {};
-    float     scrollAccel            {};
-    float     contentHeightLastFrame {};
-    bool      resizable              {};
-    bool      wasCulled              {};
+    IO::Scope scope              {};
+    UIState   state              {};
+    Vector2   scrollOffset       {};  // pixels
+    Vector2   scrollOffsetTarget {};  // pixels
+    Vector2   scrollVelocity     {};
+    Vector2   maxCursor          {};
+    bool      resizable          {};
+    bool      wasCulled          {};
 
     ScrollPanel(bool resizable = false) : resizable(resizable) {}
 };
@@ -191,6 +190,8 @@ private:
     Vector2 cursor{};   // where to draw next element
     Vector2 lineSize{}; // total size of current row of UI elements
     std::stack<UIStyle> styleStack{};
+    std::stack<ScrollPanel *> panelStack;
+
     static uint32_t prevActiveEditor;
     static uint32_t activeEditor;
 

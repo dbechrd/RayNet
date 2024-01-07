@@ -502,8 +502,8 @@ void Editor::DatSearchBox(UI &ui, SearchBox &searchBox)
     ui.BeginScrollPanel(searchBox.panel, IO::IO_ScrollPanelInner);
     ui.PopStyle();
 
-    ui.PushSize({ 400, 0 });
-    ui.PushMargin({ 0, 4, 0, 4 });
+    ui.PushSize({ 378, 0 });
+    ui.PushMargin({ 0, 0, 0, 6 });
     // HACK(dlb): This will only work for assets, how do we handle things in other packs?
     auto &vec = *(std::vector<T> *)pack_assets.GetPool(T::dtype);
     for (T &dat : vec) {
@@ -565,8 +565,10 @@ void Editor::DrawUI_ActionBar(void)
 
     static ScrollPanel scrollPanel{ true };
     ui.PushMargin({});
+    ui.PushPadding({});
     ui.PushSize(uiSize);
     ui.BeginScrollPanel(scrollPanel, IO::IO_ScrollPanelOuter);
+    ui.PopStyle();
     ui.PopStyle();
     ui.PopStyle();
 
@@ -1492,7 +1494,7 @@ void Editor::DrawUI_EntityActions(UI &ui)
     ui.Newline();
     ui.Space({ 0, 4 });
 
-    static SearchBox searchEntities{ "Search entities...", "*" };
+    static SearchBox searchEntities{ "Search entities..." };
     ui.BeginSearchBox(searchEntities);
 
     for (uint32_t i = 0; i < SV_MAX_ENTITIES; i++) {
@@ -1621,7 +1623,7 @@ void Editor::DrawUI_EntityActions(UI &ui)
 }
 void Editor::DrawUI_PackFiles(UI &ui)
 {
-    static SearchBox searchPacks{ "Search packs...", "*" };
+    static SearchBox searchPacks{ "Search packs..." };
     ui.BeginSearchBox(searchPacks);
 
     ui.PushWidth(400);
@@ -2001,7 +2003,7 @@ void Editor::DrawUI_Debug(UI &ui)
             ui.HAQField(__COUNTER__, "", gfx_file, HAQ_EDIT, 80.0f);
         }
 
-        ui.Text("------------------------------------------------------------");
+        ui.Text("--------------------------------------------------");
         ui.Newline();
 
         // TODO: This should have a custom filter that only shows frames in the selected GfxFile
@@ -2023,7 +2025,7 @@ void Editor::DrawUI_Debug(UI &ui)
             ui.HAQField(__COUNTER__, "", gfx_anim, HAQ_EDIT, 80.0f);
         }
 
-        ui.Text("------------------------------------------------------------");
+        ui.Text("--------------------------------------------------");
         ui.Newline();
 
         static SearchBox searchGfxFrame{ "Search frames..." };

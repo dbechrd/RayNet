@@ -504,12 +504,21 @@ void dlb_DrawNPatch(Rectangle rec)
 
 bool StrFilter(const char *str, const char *filter)
 {
+#if 0
     if (!filter || !*filter) {
         return false;
     }
     if (!strcmp(filter, "*")) {
         return true;
     }
+#else
+    if (!filter) {
+        return false;
+    }
+    if (!*filter) {
+        return true;
+    }
+#endif
     if (!str) {
         return false;
     }

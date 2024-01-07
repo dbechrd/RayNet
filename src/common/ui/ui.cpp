@@ -1,4 +1,5 @@
 #include "ui.h"
+#include "io.h"
 #include "../collision.h"
 #include "../common.h"
 
@@ -41,7 +42,7 @@ UI::UI(Vector2 &position, Vector2 &size, UIStyle style) : position(position), si
         UnloadImage(checkerImg);
     }
 
-    cursor = { style.pad.left, style.pad.top };
+    //cursor = { style.pad.left, style.pad.top };
     styleStack.push(style);
     tabHandledThisFrame = false;
 }
@@ -197,6 +198,12 @@ void UI::UpdateCursor(const Rectangle &ctrlRect)
     lineSize.x += ctrlSpaceUsed.x;
     lineSize.y = MAX(ctrlSpaceUsed.y, lineSize.y);
     cursor.x += ctrlSpaceUsed.x;
+
+    if (panelStack.size()) {
+        ScrollPanel &panel = *panelStack.top();
+        panel.maxCursor.x = MAX(panel.maxCursor.x, cursor.x + panelStack.top()->scrollOffset.x);
+        panel.maxCursor.y = MAX(panel.maxCursor.y, cursor.y + panelStack.top()->scrollOffset.y + lineSize.y);
+    }
 }
 bool UI::ShouldCull(const Rectangle &ctrlRect)
 {
@@ -217,6 +224,10 @@ void UI::Newline(void)
     const UIStyle &style = GetStyle();
 
     cursor.x = style.pad.left;
+    if (panelStack.size()) {
+        cursor.x -= panelStack.top()->scrollOffset.x;
+    }
+
     cursor.y += lineSize.y;
     lineSize = {};
 
@@ -234,6 +245,7 @@ void UI::Space(Vector2 space)
 void UI::BeginScrollPanel(ScrollPanel &scrollPanel, IO::Scope scope)
 {
     io.PushScope(scope);
+    scrollPanel.scope = scope;
 
     const UIStyle &style = GetStyle();
 
@@ -265,8 +277,8 @@ void UI::BeginScrollPanel(ScrollPanel &scrollPanel, IO::Scope scope)
     static HoverHash prevHoverHash{};
     scrollPanel.state = CalcState(ctrlRect, prevHoverHash);
     scrollPanel.state.contentRect = contentRect;
+    scrollPanel.maxCursor = {};
 
-    // TODO: Cull this (idk how to
     if (ShouldCull(ctrlRect)) {
         scrollPanel.wasCulled = true;
         return;
@@ -276,68 +288,121 @@ void UI::BeginScrollPanel(ScrollPanel &scrollPanel, IO::Scope scope)
     DrawRectangleRec(ctrlRect, GRAYISH_BLUE);
     DrawRectangleLinesEx(ctrlRect, style.panelBorderWidth, BLACK);
 
-    // Calculate scrolling
-    scrollPanel.scrollOffsetMax = MAX(0, scrollPanel.contentHeightLastFrame - contentRect.height + 8);
-
-    float &scrollOffset = scrollPanel.scrollOffset;
-    float &scrollOffsetTarget = scrollPanel.scrollOffsetTarget;
-    float &scrollVelocity = scrollPanel.scrollVelocity;
-    scrollPanel.scrollAccel = 0;
-    if (scrollPanel.state.hover) {
-        const float mouseWheel = io.MouseWheelMove();
-        if (mouseWheel) {
-            scrollPanel.scrollAccel += fabsf(mouseWheel);
-            float impulse = 4 * scrollPanel.scrollAccel;
-            impulse *= impulse;
-            if (mouseWheel < 0) impulse *= -1;
-            scrollVelocity += impulse;
-            //printf("wheel: %f, target: %f\n", mouseWheel, scrollOffsetTarget);
-        } else {
-            scrollPanel.scrollAccel = 0;
-        }
-    }
-
-    if (scrollVelocity) {
-        scrollOffsetTarget -= scrollVelocity;
-        scrollVelocity *= 0.8f;
-    }
-
-    scrollOffsetTarget = CLAMP(scrollOffsetTarget, 0, scrollPanel.scrollOffsetMax);
-    scrollOffset = LERP(scrollOffset, scrollOffsetTarget, 0.1);
-    scrollOffset = CLAMP(scrollOffset, 0, scrollPanel.scrollOffsetMax);
-
     // HACK(dlb): "4" is probably margin, or pad, or something. layout is a bit messed up for scroll panels
-    Space({ 0, -floorf(scrollOffset) + 4 });
+    Space({
+        -floorf(scrollPanel.scrollOffset.x),
+        -floorf(scrollPanel.scrollOffset.y) + 4
+    });
     PushScissorRect(scrollPanel.state.contentRect);
+
+    panelStack.push(&scrollPanel);
 }
 void UI::EndScrollPanel(ScrollPanel &scrollPanel)
 {
+    panelStack.pop();
+
     if (scrollPanel.wasCulled) {
         io.PopScope();
         return;
     }
 
     PopScissorRect();
-    Space({ 0, floorf(scrollPanel.scrollOffset) });
+    Space({
+        floorf(scrollPanel.scrollOffset.x),
+        floorf(scrollPanel.scrollOffset.y)
+    });
 
-    const Rectangle &contentRect = scrollPanel.state.contentRect;
+    Vector2 &scrollOffsetTarget = scrollPanel.scrollOffsetTarget;
+    Vector2 &scrollOffset = scrollPanel.scrollOffset;
+    Vector2 &scrollVelocity = scrollPanel.scrollVelocity;
 
-    const float contentEndY = CursorScreen().y;
-    scrollPanel.contentHeightLastFrame = contentEndY - contentRect.y;
+    const Rectangle &panelRect = scrollPanel.state.contentRect;
 
-    const float scrollRatio = CLAMP(contentRect.height / scrollPanel.contentHeightLastFrame, 0, 1);
-    const float scrollbarSpace = contentRect.height * (1 - scrollRatio);
-    const float scrollbarWidth = 8;
-    const float scrollbarHeight = contentRect.height * scrollRatio;
-    const float scrollPct = scrollPanel.scrollOffset / scrollPanel.scrollOffsetMax;
-    Rectangle scrollbar{
-        floorf(contentRect.x + contentRect.width - 2 - scrollbarWidth),
-        floorf(contentRect.y + scrollbarSpace * scrollPct),
-        floorf(scrollbarWidth),
-        floorf(scrollbarHeight)
+    const Vector2 fullSize{
+        MAX(0, scrollPanel.maxCursor.x - (scrollPanel.scope == IO::IO_ScrollPanelInner ? panelRect.x : 0) + 8),
+        MAX(0, scrollPanel.maxCursor.y - panelRect.y + 8)
     };
-    DrawRectangleRec(scrollbar, LIGHTGRAY);
-    //DrawRectangleLinesEx(scrollbar, 2, WHITE);
+
+    const Vector2 maxScrollOffset{
+        MAX(0, fullSize.x - panelRect.width ),
+        MAX(0, fullSize.y - panelRect.height)
+    };
+
+    const float scrollHandleThickness = 8.0f;
+    const float scrollHandleFade = 0.3f;
+
+    if (maxScrollOffset.x > 0) {
+        if (scrollPanel.state.hover) {
+            const float wheel = io.KeyDown(KEY_LEFT_SHIFT) ? io.MouseWheelMove() : 0;
+            if (wheel) {
+                float impulse = 4 * fabsf(wheel);
+                impulse *= impulse;
+                if (wheel < 0) impulse *= -1;
+                scrollVelocity.x += impulse;
+                //printf("wheel: %f, target: %f\n", wheel, scrollOffsetTarget);
+            }
+        }
+
+        if (scrollVelocity.x) {
+            scrollOffsetTarget.x -= scrollVelocity.x;  // * dt
+            scrollVelocity.x *= 0.8f;
+        }
+
+        scrollOffsetTarget.x = CLAMP(scrollOffsetTarget.x, 0, maxScrollOffset.x);
+        scrollOffset.x = LERP(scrollOffset.x, scrollOffsetTarget.x, 0.1);  // * dt ?
+        scrollOffset.x = CLAMP(scrollOffset.x, 0, maxScrollOffset.x);
+
+        const float scrollPct = scrollOffset.x / maxScrollOffset.x;
+        const float scrollbarSize = MAX(scrollHandleThickness, panelRect.width * (panelRect.width / fullSize.x) - scrollHandleThickness);
+        const float scrollbarSpace = panelRect.width - scrollHandleThickness - scrollbarSize;
+        Rectangle scrollbarH{
+            floorf(panelRect.x + scrollbarSpace * scrollPct),
+            floorf(panelRect.y + panelRect.height - scrollHandleThickness),
+            floorf(scrollbarSize),
+            floorf(scrollHandleThickness)
+        };
+        DrawRectangleRec(scrollbarH, Fade(LIGHTGRAY, scrollHandleFade));
+        DrawRectangleLinesEx(scrollbarH, 2, Fade(GRAY, scrollHandleFade));
+    } else {
+        scrollOffset.x = 0;
+        scrollOffsetTarget.x = 0;
+    }
+    if (maxScrollOffset.y > 0) {
+        if (scrollPanel.state.hover) {
+            const float wheel = !io.KeyDown(KEY_LEFT_SHIFT) ? io.MouseWheelMove() : 0;
+            if (wheel) {
+                float impulse = 4 * fabsf(wheel);
+                impulse *= impulse;
+                if (wheel < 0) impulse *= -1;
+                scrollVelocity.y += impulse;
+                //printf("wheel: %f, target: %f\n", wheel, scrollOffsetTarget);
+            }
+        }
+
+        if (scrollVelocity.y) {
+            scrollOffsetTarget.y -= scrollVelocity.y;  // * dt
+            scrollVelocity.y *= 0.8f;
+        }
+
+        scrollOffsetTarget.y = CLAMP(scrollOffsetTarget.y, 0, maxScrollOffset.y);
+        scrollOffset.y = LERP(scrollOffset.y, scrollOffsetTarget.y, 0.1);  // * dt ?
+        scrollOffset.y = CLAMP(scrollOffset.y, 0, maxScrollOffset.y);
+
+        const float scrollPct = scrollOffset.y / maxScrollOffset.y;
+        const float scrollbarSize = MAX(scrollHandleThickness, panelRect.height * (panelRect.height / fullSize.y) - scrollHandleThickness);
+        const float scrollbarSpace = panelRect.height - scrollHandleThickness - scrollbarSize;
+        Rectangle scrollbarV{
+            floorf(panelRect.x + panelRect.width - scrollHandleThickness),
+            floorf(panelRect.y + scrollbarSpace * scrollPct),
+            floorf(scrollHandleThickness),
+            floorf(scrollbarSize)
+        };
+        DrawRectangleRec(scrollbarV, Fade(LIGHTGRAY, scrollHandleFade));
+        DrawRectangleLinesEx(scrollbarV, 2, Fade(GRAY, scrollHandleFade));
+    } else {
+        scrollOffset.y = 0;
+        scrollOffsetTarget.y = 0;
+    }
 
 #if 0
     const Vector2 mousePos = GetMousePosition();
@@ -1195,12 +1260,12 @@ void LimitStringLength(std::string &str, void *userData)
 
 void UI::BeginSearchBox(SearchBox &searchBox)
 {
-    PushWidth(300);
+    PushWidth(340);
     TextboxWithDefault(hash_combine(__COUNTER__, &searchBox.filter), searchBox.filter, searchBox.placeholder);
     PopStyle();
 
     if (Button("Clear").pressed) searchBox.filter = "";
-    if (Button("All"  ).pressed) searchBox.filter = "*";
+    //if (Button("All"  ).pressed) searchBox.filter = "*";
     Newline();
 }
 

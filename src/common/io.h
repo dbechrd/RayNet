@@ -143,6 +143,12 @@ struct IO {
         }
         return GetMouseWheelMove();
     }
+    Vector2 MouseWheelMoveV(void) {
+        if (MouseCaptured()) {
+            return {};
+        }
+        return GetMouseWheelMoveV();
+    }
 
 private:
     // NOTE: This default value prevents all input on the first frame (as opposed
