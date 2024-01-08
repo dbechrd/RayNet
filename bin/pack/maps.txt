@@ -8,7 +8,7 @@
 
 # GfxFrame id name gfx x y w h
 
-# GfxAnim id name sound frame_count frame_delay frames
+# GfxAnim id name sound frame_delay frames
 
 # Sprite id name anims
 

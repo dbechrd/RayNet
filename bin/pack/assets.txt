@@ -63,22 +63,22 @@
 3 24 "frm_til_water_dark_0" "gfx_til_overworld" 128 0 64 64
 3 25 "frm_til_water_dark_1" "gfx_til_overworld" 192 0 64 64
 3 26 "frm_til_water_dark_2" "gfx_til_overworld" 256 0 64 64
-3 27 "" "gfx_til_overworld" 320 0 64 64
-3 28 "" "gfx_til_overworld" 384 0 64 64
-3 29 "" "gfx_til_overworld" 448 0 64 64
+3 27 "frm_gfx_til_overworld_320_0" "gfx_til_overworld" 320 0 64 64
+3 28 "frm_gfx_til_overworld_384_0" "gfx_til_overworld" 384 0 64 64
+3 29 "frm_gfx_til_overworld_448_0" "gfx_til_overworld" 448 0 64 64
 3 30 "frm_til_grass_weeds_0" "gfx_til_overworld" 0 64 64 64
 3 31 "frm_til_grass_weeds_1" "gfx_til_overworld" 64 64 64 64
 3 32 "frm_til_grass_flowers_0" "gfx_til_overworld" 128 64 64 64
 3 33 "frm_til_grass_flowers_1" "gfx_til_overworld" 192 64 64 64
-3 34 "" "gfx_til_overworld" 256 64 64 64
-3 35 "" "gfx_til_overworld" 320 64 64 64
-3 36 "" "gfx_til_overworld" 384 64 64 64
-3 37 "" "gfx_til_overworld" 448 64 64 64
+3 34 "frm_gfx_til_overworld_256_64" "gfx_til_overworld" 256 64 64 64
+3 35 "frm_gfx_til_overworld_320_64" "gfx_til_overworld" 320 64 64 64
+3 36 "frm_gfx_til_overworld_384_64" "gfx_til_overworld" 384 64 64 64
+3 37 "frm_gfx_til_overworld_448_64" "gfx_til_overworld" 448 64 64 64
 3 38 "frm_til_stone_wall_tl" "gfx_til_overworld" 0 128 64 64
 3 39 "frm_til_stone_wall_tc" "gfx_til_overworld" 64 128 64 64
 3 40 "frm_til_stone_wall_tr" "gfx_til_overworld" 128 128 64 64
 3 41 "frm_obj_bush" "gfx_til_overworld" 192 128 64 64
-3 42 "" "gfx_til_overworld" 256 128 64 64
+3 42 "frm_gfx_til_overworld_256_128" "gfx_til_overworld" 256 128 64 64
 3 43 "frm_obj_portal_0" "gfx_til_overworld" 320 128 64 128
 3 44 "frm_obj_portal_1" "gfx_til_overworld" 384 128 64 128
 3 45 "frm_obj_portal_2" "gfx_til_overworld" 448 128 64 128
@@ -94,18 +94,18 @@
 3 55 "frm_til_stone_wall_bc" "gfx_til_overworld" 64 256 64 64
 3 56 "frm_til_stone_wall_br" "gfx_til_overworld" 128 256 64 64
 3 57 "frm_itm_poop" "gfx_til_overworld" 192 256 64 64
-3 58 "" "gfx_til_overworld" 256 256 64 64
-3 59 "" "gfx_til_overworld" 320 256 64 64
-3 60 "" "gfx_til_overworld" 384 256 64 64
-3 61 "" "gfx_til_overworld" 448 256 64 64
+3 58 "frm_gfx_til_overworld_256_256" "gfx_til_overworld" 256 256 64 64
+3 59 "frm_gfx_til_overworld_320_256" "gfx_til_overworld" 320 256 64 64
+3 60 "frm_gfx_til_overworld_384_256" "gfx_til_overworld" 384 256 64 64
+3 61 "frm_gfx_til_overworld_448_256" "gfx_til_overworld" 448 256 64 64
 3 62 "frm_obj_lever_unpowered" "gfx_til_overworld" 0 320 64 64
 3 63 "frm_obj_lever_powered_0" "gfx_til_overworld" 64 320 64 64
 3 64 "frm_obj_lever_powered_1" "gfx_til_overworld" 128 320 64 64
 3 65 "frm_obj_door_closed" "gfx_til_overworld" 192 320 64 64
 3 66 "frm_obj_door_open" "gfx_til_overworld" 256 320 64 64
-3 67 "" "gfx_til_overworld" 320 320 64 64
-3 68 "" "gfx_til_overworld" 384 320 64 64
-3 69 "" "gfx_til_overworld" 448 320 64 64
+3 67 "frm_gfx_til_overworld_320_320" "gfx_til_overworld" 320 320 64 64
+3 68 "frm_gfx_til_overworld_384_320" "gfx_til_overworld" 384 320 64 64
+3 69 "frm_gfx_til_overworld_448_320" "gfx_til_overworld" 448 320 64 64
 3 70 "frm_til_cave_0_0" "gfx_til_cave" 0 0 64 64
 3 71 "frm_til_cave_64_0" "gfx_til_cave" 64 0 64 64
 3 72 "frm_til_cave_128_0" "gfx_til_cave" 128 0 64 64
@@ -363,7 +363,7 @@
 3 324 "frm_til_cave_896_960" "gfx_til_cave" 896 960 64 64
 3 325 "frm_til_cave_960_960" "gfx_til_cave" 960 960 64 64
 
-# GfxAnim id name sound frame_count frame_delay frames
+# GfxAnim id name sound frame_delay frames
 4 0 "anim_missing" "null" 0
  1
  "frm_missing"
