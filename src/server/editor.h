@@ -191,20 +191,23 @@ private:
 
     // Action bar and mode tabs
     void DrawUI_ActionBar(void);
-    void DrawUI_MapActions(UI &uiActionBar);
-    void DrawUI_TileActions(UI &uiActionBar);
-    void DrawUI_ObjectActions(UI &uiActionBar);
-    void DrawUI_Tilesheet(UI &uiActionBar);
+    void DrawUI_MapActions(UI &ui);
+    void DrawUI_TileActions(UI &ui);
+    void DrawUI_ObjectActions(UI &ui);
+    void DrawUI_Tilesheet(UI &ui);
     void DrawUI_WangTile(void);
-    void DrawUI_Wang(UI &uiActionBar);
-    void DrawUI_PathActions(UI &uiActionBar);
-    void DrawUI_DialogActions(UI &uiActionBar);
-    void DrawUI_EntityActions(UI &uiActionBar);
-    void DrawUI_PackFiles(UI &uiActionBar);
-    void DrawUI_Debug(UI &uiActionBar);
+    void DrawUI_Wang(UI &ui);
+    void DrawUI_PathActions(UI &ui);
+    void DrawUI_DialogActions(UI &ui);
+    void DrawUI_EntityActions(UI &ui);
+    void DrawUI_PackFiles(UI &ui);
+    void DrawUI_Debug(UI &ui);
 
+    void BeginSearchBox(UI &ui, SearchBox &searchBox);
+
+    typedef bool SearchFilterFn(Editor &editor, Pack &pack, const void *dat);
     template <typename T>
-    void DatSearchBox(UI &ui, SearchBox &searchBox);
+    void PackSearchBox(UI &ui, Pack &pack, SearchBox &searchBox, SearchFilterFn *customFilter = 0);
 
     void DrawUI_GfxFrameEditor(void);
     void DrawUI_GfxAnimEditor(void);

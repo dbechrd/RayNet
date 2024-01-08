@@ -221,9 +221,12 @@ void UI::Newline(void)
 {
     const UIStyle &style = GetStyle();
 
-    cursor.x = style.pad.left;
-    for (ScrollPanel *panel : panelStack) {
-        cursor.x -= floorf(panel->scrollOffset.x);
+    cursor.x = 0;
+    if (panelStack.size()) {
+        for (ScrollPanel *panel : panelStack) {
+            cursor.x += panel->style.margin.left + panel->style.panelBorderWidth + panel->style.pad.left;
+            cursor.x -= floorf(panel->scrollOffset.x);
+        }
     }
 
     cursor.y += lineSize.y;
@@ -274,6 +277,7 @@ void UI::BeginScrollPanel(ScrollPanel &scrollPanel, IO::Scope scope)
     Rectangle contentRect = RectShrink(ctrlRect, style.panelBorderWidth);
 
     static HoverHash prevHoverHash{};
+    scrollPanel.style = style;
     scrollPanel.state = CalcState(ctrlRect, prevHoverHash);
     scrollPanel.state.contentRect = contentRect;
     scrollPanel.maxCursor = {};
@@ -287,16 +291,16 @@ void UI::BeginScrollPanel(ScrollPanel &scrollPanel, IO::Scope scope)
     DrawRectangleRec(ctrlRect, GRAYISH_BLUE);
     DrawRectangleLinesEx(ctrlRect, style.panelBorderWidth, BLACK);
 
-    // HACK(dlb): "4" is probably margin, or pad, or something. layout is a bit messed up for scroll panels
     Space({
-        0, //-floorf(scrollPanel.scrollOffset.x),
-        -floorf(scrollPanel.scrollOffset.y) + 4
+        // NOTE: Newline() calculates x because of scrollOffset complexity
+        0,  // style.margin.left + style.panelBorderWidth + style.pad.left,
+        style.margin.top + style.panelBorderWidth + style.pad.top - floorf(scrollPanel.scrollOffset.y)
     });
-    // HACK: X cursor reset happens differently than y
     Newline();
 
+#if !DBG_UI_NO_SCISSOR
     PushScissorRect(scrollPanel.state.contentRect);
-
+#endif
 }
 void UI::EndScrollPanel(ScrollPanel &scrollPanel)
 {
@@ -307,7 +311,10 @@ void UI::EndScrollPanel(ScrollPanel &scrollPanel)
         return;
     }
 
+#if !DBG_UI_NO_SCISSOR
     PopScissorRect();
+#endif
+
     Space({
         floorf(scrollPanel.scrollOffset.x),
         floorf(scrollPanel.scrollOffset.y)
@@ -320,8 +327,8 @@ void UI::EndScrollPanel(ScrollPanel &scrollPanel)
     const Rectangle &panelRect = scrollPanel.state.contentRect;
 
     const Vector2 fullSize{
-        MAX(0, scrollPanel.maxCursor.x - (scrollPanel.scope == IO::IO_ScrollPanelInner ? panelRect.x : 0) + 8),
-        MAX(0, scrollPanel.maxCursor.y - panelRect.y + 8)
+        MAX(0, scrollPanel.maxCursor.x - (scrollPanel.scope == IO::IO_ScrollPanelInner ? panelRect.x : 0)),
+        MAX(0, scrollPanel.maxCursor.y - panelRect.y)
     };
 
     const Vector2 maxScrollOffset{
@@ -332,7 +339,10 @@ void UI::EndScrollPanel(ScrollPanel &scrollPanel)
     const float scrollHandleThickness = 8.0f;
     const float scrollHandleFade = 0.3f;
 
-    if (maxScrollOffset.x > 0) {
+    const bool showScrollX = maxScrollOffset.x > 0;
+    const bool showScrollY = maxScrollOffset.y > 0;
+
+    if (showScrollX) {
         if (scrollPanel.state.hover) {
             const float wheel = io.KeyDown(KEY_LEFT_SHIFT) ? io.MouseWheelMove() : 0;
             if (wheel) {
@@ -352,6 +362,9 @@ void UI::EndScrollPanel(ScrollPanel &scrollPanel)
         scrollOffsetTarget.x = CLAMP(scrollOffsetTarget.x, 0, maxScrollOffset.x);
         scrollOffset.x = LERP(scrollOffset.x, scrollOffsetTarget.x, 0.1);  // * dt ?
         scrollOffset.x = CLAMP(scrollOffset.x, 0, maxScrollOffset.x);
+        if (maxScrollOffset.x - scrollOffset.x < 0.5f) {
+            scrollOffset.x = maxScrollOffset.x;
+        }
 
         const float scrollPct = scrollOffset.x / maxScrollOffset.x;
         const float scrollbarSize = MAX(scrollHandleThickness, panelRect.width * (panelRect.width / fullSize.x) - scrollHandleThickness);
@@ -368,7 +381,7 @@ void UI::EndScrollPanel(ScrollPanel &scrollPanel)
         scrollOffset.x = 0;
         scrollOffsetTarget.x = 0;
     }
-    if (maxScrollOffset.y > 0) {
+    if (showScrollY) {
         if (scrollPanel.state.hover) {
             const float wheel = !io.KeyDown(KEY_LEFT_SHIFT) ? io.MouseWheelMove() : 0;
             if (wheel) {
@@ -388,10 +401,15 @@ void UI::EndScrollPanel(ScrollPanel &scrollPanel)
         scrollOffsetTarget.y = CLAMP(scrollOffsetTarget.y, 0, maxScrollOffset.y);
         scrollOffset.y = LERP(scrollOffset.y, scrollOffsetTarget.y, 0.1);  // * dt ?
         scrollOffset.y = CLAMP(scrollOffset.y, 0, maxScrollOffset.y);
+        if (maxScrollOffset.y - scrollOffset.y < 0.5f) {
+            scrollOffset.y = maxScrollOffset.y;
+        }
+
+        const float scrollYBottomMargin = scrollPanel.resizable ? scrollHandleThickness : 0;
 
         const float scrollPct = scrollOffset.y / maxScrollOffset.y;
-        const float scrollbarSize = MAX(scrollHandleThickness, panelRect.height * (panelRect.height / fullSize.y) - scrollHandleThickness);
-        const float scrollbarSpace = panelRect.height - scrollHandleThickness - scrollbarSize;
+        const float scrollbarSize = ceilf(MAX(scrollHandleThickness, panelRect.height * (panelRect.height / fullSize.y) - scrollYBottomMargin));
+        const float scrollbarSpace = panelRect.height - scrollYBottomMargin - scrollbarSize;
         Rectangle scrollbarV{
             floorf(panelRect.x + panelRect.width - scrollHandleThickness),
             floorf(panelRect.y + scrollbarSpace * scrollPct),
@@ -496,7 +514,8 @@ UIState UI::Text(const char *text, size_t textLen)
     if (!textLen) {
         textLen = strlen(text);
         if (!textLen) {
-            return {};
+            text = "<null>";
+            textLen = strlen(text);
         }
     }
 
@@ -509,7 +528,7 @@ UIState UI::Text(const char *text, size_t textLen)
 
     Vector2 contentSize = style.size;
     if (contentSize.x <= 0 || contentSize.y <= 0) {
-        Vector2 textSize = dlb_MeasureTextEx(*style.font, text, textLen);
+        Vector2 textSize = dlb_MeasureTextShadowEx(*style.font, text, textLen);
         if (contentSize.x <= 0) {
             contentSize.x = textSize.x;
         }
@@ -684,7 +703,7 @@ UIState UI::Button(const std::string &text)
 
     Vector2 size = style.size;
     if (!size.x || !size.y) {
-        Vector2 textSize = dlb_MeasureTextEx(*style.font, text.data(), text.size());
+        Vector2 textSize = dlb_MeasureTextShadowEx(*style.font, text.data(), text.size());
         if (!size.x) size.x = textSize.x;
         if (!size.y) size.y = textSize.y;
     }
@@ -783,7 +802,7 @@ void RN_stb_layout_row(StbTexteditRow *row, StbString *str, int startIndex)
 {
     assert(startIndex == 0); // We're not handling multi-line for now
 
-    Vector2 textSize = dlb_MeasureTextEx(*str->font, CSTRLEN(str->data.c_str() + startIndex));
+    Vector2 textSize = dlb_MeasureTextShadowEx(*str->font, CSTRLEN(str->data.c_str() + startIndex));
 
     // TODO: Handle multiline
     //assert(textSize.y == str->font->baseSize);
@@ -797,7 +816,7 @@ void RN_stb_layout_row(StbTexteditRow *row, StbString *str, int startIndex)
 }
 int RN_stb_get_char_width(StbString *str, int startIndex, int offset) {
     std::string oneChar = str->data.substr((size_t)startIndex + offset, 1);
-    Vector2 charSize = dlb_MeasureTextEx(*str->font, CSTRS(oneChar));
+    Vector2 charSize = dlb_MeasureTextShadowEx(*str->font, CSTRS(oneChar));
     // NOTE(dlb): Wtf? Raylib probably doing int truncation bullshit.
     return charSize.x + 1;
 }
@@ -838,7 +857,6 @@ UIState UI::TextboxWithDefault(uint32_t ctrlid, std::string &text, const std::st
 
     static STB_TexteditState stbState{};
 
-    const Vector2 textOffset{ 8, 2 };
     const UIStyle &style = GetStyle();
     StbString str{ style.font, text };
 
@@ -850,7 +868,7 @@ UIState UI::TextboxWithDefault(uint32_t ctrlid, std::string &text, const std::st
     Vector2 contentSize = style.size;
     if (contentSize.x <= 0 || contentSize.y <= 0) {
         const std::string &tmp = text.size() ? text : " ";
-        Vector2 textSize = dlb_MeasureTextEx(*style.font, CSTRS(tmp));
+        Vector2 textSize = dlb_MeasureTextShadowEx(*style.font, CSTRS(tmp));
         if (contentSize.x <= 0) {
             contentSize.x = textSize.x;
         }
@@ -892,8 +910,8 @@ UIState UI::TextboxWithDefault(uint32_t ctrlid, std::string &text, const std::st
         // Mouse
         //--------------------------------------------------------------------------
         Vector2 mousePosRel{
-            GetMouseX() - (ctrlPosition.x + textOffset.x),
-            GetMouseY() - (ctrlPosition.y + textOffset.y)
+            GetMouseX() - (ctrlPosition.x + style.pad.left),
+            GetMouseY() - (ctrlPosition.y + style.pad.top)
         };
 
         static double lastClickTime{};
@@ -1067,7 +1085,6 @@ UIState UI::TextboxWithDefault(uint32_t ctrlid, std::string &text, const std::st
 
             int ch = GetCharPressed();
             while (ch) {
-                printf("char_pressed: %c\n", (char)ch);
                 /*if (keyCallback) {
                     const char *newStr = keyCallback(ch, userData);
                     if (newStr) {
@@ -1112,10 +1129,10 @@ UIState UI::TextboxWithDefault(uint32_t ctrlid, std::string &text, const std::st
     // Text
     if (text.size() || isActive) {
         dlb_DrawTextShadowEx(*style.font, text.c_str(), text.size(),
-            { ctrlPosition.x + textOffset.x, ctrlPosition.y + textOffset.y }, RAYWHITE);
+            { ctrlPosition.x + style.pad.left, ctrlPosition.y + style.pad.top }, RAYWHITE);
     } else {
         dlb_DrawTextShadowEx(*style.font, placeholder.c_str(), placeholder.size(),
-            { ctrlPosition.x + textOffset.x, ctrlPosition.y + textOffset.y }, Fade(RAYWHITE, 0.6f));
+            { ctrlPosition.x + style.pad.left, ctrlPosition.y + style.pad.top }, Fade(RAYWHITE, 0.6f));
     }
 
     // Selection highlight
@@ -1126,15 +1143,15 @@ UIState UI::TextboxWithDefault(uint32_t ctrlid, std::string &text, const std::st
             float selectOffsetX = 0;
             if (selectLeft) {
                 std::string textBeforeSelection = text.substr(0, selectLeft);
-                Vector2 textBeforeSelectionSize = dlb_MeasureTextEx(*style.font, CSTRS(textBeforeSelection));
+                Vector2 textBeforeSelectionSize = dlb_MeasureTextShadowEx(*style.font, CSTRS(textBeforeSelection));
                 selectOffsetX = textBeforeSelectionSize.x + 1;
             }
             std::string selectedText = text.substr(selectLeft, (size_t)selectRight - selectLeft);
-            Vector2 selectedTextSize = dlb_MeasureTextEx(*style.font, CSTRS(selectedText));
+            Vector2 selectedTextSize = dlb_MeasureTextShadowEx(*style.font, CSTRS(selectedText));
             float selectWidth = selectedTextSize.x;
             Rectangle selectionRect{
-                ctrlRect.x + textOffset.x + selectOffsetX,
-                ctrlRect.y + textOffset.y,
+                ctrlRect.x + style.pad.left + selectOffsetX,
+                ctrlRect.y + style.pad.top,
                 selectWidth,
                 (float)style.font->baseSize
             };
@@ -1144,9 +1161,9 @@ UIState UI::TextboxWithDefault(uint32_t ctrlid, std::string &text, const std::st
         Vector2 measureCursor{};
         if (stbState.cursor) {
             std::string textBeforeCursor = text.substr(0, stbState.cursor);
-            dlb_MeasureTextEx(*style.font, CSTRS(textBeforeCursor), &measureCursor);
+            dlb_MeasureTextShadowEx(*style.font, CSTRS(textBeforeCursor), &measureCursor);
         }
-        Vector2 cursorPos = Vector2Add(ctrlPosition, Vector2Add(textOffset, measureCursor));
+        Vector2 cursorPos = Vector2Add(ctrlPosition, Vector2Add({ style.pad.left, style.pad.top }, measureCursor));
         Rectangle cursorRect{
             cursorPos.x,
             cursorPos.y,
@@ -1257,17 +1274,6 @@ void LimitStringLength(std::string &str, void *userData)
     if (str.size() > maxLength) {
         str.resize(maxLength, 0);
     }
-}
-
-void UI::BeginSearchBox(SearchBox &searchBox)
-{
-    PushWidth(340);
-    TextboxWithDefault(hash_combine(__COUNTER__, &searchBox.filter), searchBox.filter, searchBox.placeholder);
-    PopStyle();
-
-    if (Button("Clear").pressed) searchBox.filter = "";
-    //if (Button("All"  ).pressed) searchBox.filter = "*";
-    Newline();
 }
 
 template <typename T>

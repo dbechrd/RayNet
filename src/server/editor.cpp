@@ -358,7 +358,7 @@ void Editor::DrawEntityOverlays(Camera2D &camera)
     if (selectedEntity && selectedEntity->map_id == map.id) {
         const char *text = TextFormat("[selected]");
         Vector2 tc = GetWorldToScreen2D(selectedEntity->TopCenter(), camera);
-        Vector2 textSize = dlb_MeasureTextEx(fntMedium, CSTRLEN(text));
+        Vector2 textSize = dlb_MeasureTextShadowEx(fntMedium, CSTRLEN(text));
         Vector2 textPos{
             floorf(tc.x - textSize.x / 2.0f),
             tc.y - textSize.y
@@ -493,31 +493,73 @@ void DrawRectangleRectOffset(const Rectangle &rect, Vector2 &offset, Color color
     DrawRectangleLinesEx(offsetRect, 1, color);
 }
 
-template <typename T>
-void Editor::DatSearchBox(UI &ui, SearchBox &searchBox)
+void Editor::BeginSearchBox(UI &ui, SearchBox &searchBox)
 {
-    ui.BeginSearchBox(searchBox);
+    ui.TextboxWithDefault(hash_combine(&searchBox), searchBox.filter, searchBox.placeholder);
+}
 
-    ui.PushSize({ 400, 120 });
-    ui.BeginScrollPanel(searchBox.panel, IO::IO_ScrollPanelInner);
+bool FilterGfxFrameByGfxFile(Editor &editor, Pack &pack, const void *dat)
+{
+    GfxFrame *gfx_frame = (GfxFrame *)dat;
+    uint16_t gfx_file_id = editor.state.selections.byType[GfxFile::dtype];
+    return gfx_frame->gfx == pack.FindById<GfxFile>(gfx_file_id).name;
+}
+
+template <typename T>
+void Editor::PackSearchBox(UI &ui, Pack &pack, SearchBox &searchBox, SearchFilterFn *customFilter)
+{
+    auto &vec = *(std::vector<T> *)pack.GetPool(T::dtype);
+
+    ui.PushWidth(width - 112);
+    BeginSearchBox(ui, searchBox);
     ui.PopStyle();
 
-    ui.PushSize({ 378, 0 });
-    ui.PushMargin({ 0, 0, 0, 6 });
-    // HACK(dlb): This will only work for assets, how do we handle things in other packs?
-    auto &vec = *(std::vector<T> *)pack_assets.GetPool(T::dtype);
+    if (ui.Button("Clear", searchBox.filter.size() ? ColorBrightness(MAROON, -0.3f) : GRAY).pressed) {
+        searchBox.filter = "";
+    }
+    UIState add = ui.Button("Add", searchBox.hasMatches ? GRAY : LIME);
+    if (add.pressed && !searchBox.hasMatches) {
+        T dat{};
+        dat.name = searchBox.filter;
+        pack.Add<T>(dat);
+    }
+    searchBox.hasMatches = false;
+    ui.Newline();
+
+    ui.PushSize({ width - 12, 120 });
+    ui.PushPadding({});
+    ui.BeginScrollPanel(searchBox.panel, IO::IO_ScrollPanelInner);
+    ui.PopStyle();
+    ui.PopStyle();
+
+    ui.PushSize({ width - 18, 0 });
+    ui.PushMargin({});
+    ui.PushPadding({ 0, 0, 0, 4 });
+
+    int i = 0;
+
     for (T &dat : vec) {
-        Color bgColor = dat.id == state.selections.byType[T::dtype] ? SKYBLUE : BLUE_DESAT;
+        i++;
+        if (i == 325) {
+            printf("");
+        }
         const char *idStr = dat.name.c_str();
         if (!StrFilter(idStr, searchBox.filter.c_str())) {
             continue;
         }
+        if (customFilter && !(*customFilter)(*this, pack, &dat)) {
+            continue;
+        }
+        searchBox.hasMatches = true;
 
+        Color bgColor = dat.id == state.selections.byType[T::dtype] ? SKYBLUE : BLUE_DESAT;
         if (ui.Text(idStr, WHITE, bgColor).down) {
             state.selections.byType[T::dtype] = dat.id;
         }
         ui.Newline();
     }
+
+    ui.PopStyle();
     ui.PopStyle();
     ui.PopStyle();
 
@@ -562,15 +604,6 @@ void Editor::DrawUI_ActionBar(void)
 
     UIStyle uiStyle{};
     UI ui{ uiPosition, uiSize, uiStyle };
-
-    static ScrollPanel scrollPanel{ true };
-    ui.PushMargin({});
-    ui.PushPadding({});
-    ui.PushSize(uiSize);
-    ui.BeginScrollPanel(scrollPanel, IO::IO_ScrollPanelOuter);
-    ui.PopStyle();
-    ui.PopStyle();
-    ui.PopStyle();
 
     UIState uiState{};
     const Rectangle actionBarRect{ uiPosition.x, uiPosition.y, width, (float)GetRenderHeight() };
@@ -751,6 +784,15 @@ void Editor::DrawUI_ActionBar(void)
 
     ui.Space({ 0, 8 });
     ui.Newline();
+
+    static ScrollPanel scrollPanel{};
+    UIStyle scrollStyle = ui.GetStyle();
+    scrollStyle.margin = {};
+    scrollStyle.pad = {};
+    scrollStyle.size = { width, (float)GetRenderHeight() - ui.CursorScreen().y };
+    ui.PushStyle(scrollStyle);
+    ui.BeginScrollPanel(scrollPanel, IO::IO_ScrollPanelOuter);
+    ui.PopStyle();
 
     switch (mode) {
         case EditMode_Maps: {
@@ -999,7 +1041,7 @@ void Editor::DrawUI_Tilesheet(UI &ui)
                     Rectangle rect{ cursor.x, cursor.y, tileThird, tileThird };
                     DrawRectangleRec(rect, color);
                     DrawRectangleLinesEx(rect, 1, flag.color);
-                    Vector2 size = dlb_MeasureTextEx(fntSmall, &text, 1, 0);
+                    Vector2 size = dlb_MeasureTextShadowEx(fntSmall, &text, 1, 0);
                     Vector2 pos = cursor;
                     pos.x += tileSixth - size.x / 2.0f;
                     pos.y += tileSixth - size.y / 2.0f;
@@ -1495,7 +1537,10 @@ void Editor::DrawUI_EntityActions(UI &ui)
     ui.Space({ 0, 4 });
 
     static SearchBox searchEntities{ "Search entities..." };
-    ui.BeginSearchBox(searchEntities);
+    ui.PushWidth(400);
+    BeginSearchBox(ui, searchEntities);
+    ui.PopStyle();
+    ui.Newline();
 
     for (uint32_t i = 0; i < SV_MAX_ENTITIES; i++) {
         Entity &entity = entityDb->entities[i];
@@ -1623,10 +1668,26 @@ void Editor::DrawUI_EntityActions(UI &ui)
 }
 void Editor::DrawUI_PackFiles(UI &ui)
 {
-    static SearchBox searchPacks{ "Search packs..." };
-    ui.BeginSearchBox(searchPacks);
+    static SearchBox searchBox{ "Search packs..." };
+    ui.PushWidth(width - 74);
+    BeginSearchBox(ui, searchBox);
+    ui.PopStyle();
 
-    ui.PushWidth(400);
+    if (ui.Button("Clear", searchBox.filter.size() ? ColorBrightness(MAROON, -0.3f) : GRAY).pressed) {
+        searchBox.filter = "";
+    }
+    ui.Newline();
+
+    ui.PushSize({ width - 12, 120 });
+    ui.PushPadding({});
+    ui.BeginScrollPanel(searchBox.panel, IO::IO_ScrollPanelInner);
+    ui.PopStyle();
+    ui.PopStyle();
+
+    ui.PushSize({ width - 30, 0 });
+    ui.PushMargin({});
+    ui.PushPadding({ 0, 0, 0, 4 });
+
     Pack *packs[]{ &pack_assets, &pack_maps };
     for (Pack *packPtr : packs) {
         Pack &pack = *packPtr;
@@ -1636,7 +1697,7 @@ void Editor::DrawUI_PackFiles(UI &ui)
 
         Color bgColor = &pack == state.packFiles.selectedPack ? SKYBLUE : BLUE_DESAT;
         const char *idStr = pack.name.c_str();
-        if (!StrFilter(idStr, searchPacks.filter.c_str())) {
+        if (!StrFilter(idStr, searchBox.filter.c_str())) {
             continue;
         }
 
@@ -1645,21 +1706,28 @@ void Editor::DrawUI_PackFiles(UI &ui)
         }
         ui.Newline();
     }
+
     ui.PopStyle();
+    ui.PopStyle();
+    ui.PopStyle();
+
+    ui.EndScrollPanel(searchBox.panel);
     ui.Newline();
 
     if (state.packFiles.selectedPack) {
         Pack &pack = *state.packFiles.selectedPack;
 
-        const int labelWidth = 100;
+        ui.PushWidth(100);
 
-        ui.Label("version", labelWidth);
+        ui.Label("version");
         ui.Text(TextFormat("%d", pack.version));
         ui.Newline();
 
-        ui.Label("tocEntries", labelWidth);
+        ui.Label("tocEntries");
         ui.Text(TextFormat("%zu", pack.toc.entries.size()));
         ui.Newline();
+
+        ui.PopStyle();
 
         static struct DatTypeFilter {
             bool enabled;
@@ -1710,14 +1778,7 @@ void Editor::DrawUI_PackFiles(UI &ui)
             }
         }
         ui.PopStyle();
-
         ui.Space({ 0, 4 });
-
-        static ScrollPanel scrollPanel{{}};
-        const Vector2 panelTopLeft = ui.CursorScreen();
-        ui.PushSize({ width - 16, 400 }); //GetRenderHeight() - panelTopLeft.y });
-        ui.BeginScrollPanel(scrollPanel, IO::IO_ScrollPanelInner);
-        ui.PopStyle();
 
         // Defer changing selection until after the loop has rendered every item
         int newSelectedOffset = 0;
@@ -1795,8 +1856,7 @@ void Editor::DrawUI_PackFiles(UI &ui)
                 }
             }
 
-            ui.PushWidth(400);
-            ui.PushMargin({ 1, 3, 1, 3 });
+            ui.PushMargin({ 1, 0, 0, 4 });
 
             const char *text = TextFormat("[%s] %s", selected ? "-" : "+", desc);
             if (ui.Text(text, WHITE, ColorBrightness(filter.color, -0.2f)).pressed) {
@@ -1807,7 +1867,6 @@ void Editor::DrawUI_PackFiles(UI &ui)
                 }
             }
 
-            ui.PopStyle();
             ui.PopStyle();
             ui.Newline();
 
@@ -1820,6 +1879,7 @@ void Editor::DrawUI_PackFiles(UI &ui)
                 #define HAQ_UI(hqt, parent) \
                     hqt(HAQ_UI_FIELD, parent)
 
+                const int labelWidth = 100;
                 switch (entry.dtype) {
                     case DAT_TYP_GFX_FILE:
                     {
@@ -1941,8 +2001,6 @@ void Editor::DrawUI_PackFiles(UI &ui)
         if (newSelectedOffset) {
             state.packFiles.selectedPackEntryOffset = newSelectedOffset;
         }
-
-        ui.EndScrollPanel(scrollPanel);
     }
 }
 void Editor::DrawUI_Debug(UI &ui)
@@ -1996,7 +2054,7 @@ void Editor::DrawUI_Debug(UI &ui)
 
     if (showGfxFrameEditor) {
         static SearchBox searchGfxFiles{ "Search graphics..." };
-        DatSearchBox<GfxFile>(ui, searchGfxFiles);
+        PackSearchBox<GfxFile>(ui, pack_assets, searchGfxFiles);
 
         GfxFile &gfx_file = pack_assets.FindById<GfxFile>(state.selections.byType[GfxFile::dtype]);
         if (gfx_file.id == state.selections.byType[GfxFile::dtype]) {
@@ -2006,9 +2064,49 @@ void Editor::DrawUI_Debug(UI &ui)
         ui.Text("--------------------------------------------------");
         ui.Newline();
 
+        // TODO: Toggle only showing frames for selected gfx file
+        // TODO: Enter x/y and have frames auto-generated for gfx file
+
+        static float frames_x{ 1 };
+        static float frames_y{ 1 };
+        ui.Label("X");
+        ui.Textbox(__COUNTER__, frames_x);
+        ui.Label("Y");
+        ui.Textbox(__COUNTER__, frames_y);
+        frames_x = MAX(1, frames_x);
+        frames_y = MAX(1, frames_y);
+        if (ui.Button("Split frames!").pressed) {
+            int x_max = roundf(frames_x);
+            int y_max = roundf(frames_y);
+            int frame_w = gfx_file.texture.width / x_max;
+            int frame_h = gfx_file.texture.height / y_max;
+            for (int y = 0; y < y_max; y++) {
+                for (int x = 0; x < x_max; x++) {
+                    GfxFrame gfx_frame{};
+                    gfx_frame.gfx = gfx_file.name;
+                    gfx_frame.x = x * frame_w;
+                    gfx_frame.y = y * frame_h;
+                    gfx_frame.w = frame_w;
+                    gfx_frame.h = frame_h;
+                    pack_assets.Add<GfxFrame>(gfx_frame);
+                }
+            }
+        }
+        ui.Newline();
+
+        static bool filterByGfxFile = true;
+        const char *filterByGfxText = TextFormat("[%s] Filter by GfxFile", filterByGfxFile ? "X" : " ");
+        if (ui.ToggleButton(filterByGfxText, filterByGfxFile, BLUE_DESAT, BLUE).pressed) {
+            filterByGfxFile = !filterByGfxFile;
+        }
+        ui.Newline();
+
+        ui.Text("--------------------------------------------------");
+        ui.Newline();
+
         // TODO: This should have a custom filter that only shows frames in the selected GfxFile
         static SearchBox searchGfxFrames{ "Search frames..." };
-        DatSearchBox<GfxFrame>(ui, searchGfxFrames);
+        PackSearchBox<GfxFrame>(ui, pack_assets, searchGfxFrames, filterByGfxFile ? FilterGfxFrameByGfxFile : 0);
 
         GfxFrame &gfx_frame = pack_assets.FindById<GfxFrame>(state.selections.byType[GfxFrame::dtype]);
         if (gfx_frame.id == state.selections.byType[GfxFrame::dtype]) {
@@ -2017,10 +2115,11 @@ void Editor::DrawUI_Debug(UI &ui)
     }
 
     if (showGfxAnimEditor) {
-        static SearchBox searchGfxAnims{ "Search animations..." };
-        DatSearchBox<GfxAnim>(ui, searchGfxAnims);
-
         GfxAnim &gfx_anim = pack_assets.FindById<GfxAnim>(state.selections.byType[GfxAnim::dtype]);
+        GfxFrame &gfx_frame = pack_assets.FindById<GfxFrame>(state.selections.byType[GfxFrame::dtype]);
+
+        static SearchBox searchGfxAnims{ "Search animations..." };
+        PackSearchBox<GfxAnim>(ui, pack_assets, searchGfxAnims);
         if (gfx_anim.id == state.selections.byType[GfxAnim::dtype]) {
             ui.HAQField(__COUNTER__, "", gfx_anim, HAQ_EDIT, 80.0f);
         }
@@ -2028,10 +2127,20 @@ void Editor::DrawUI_Debug(UI &ui)
         ui.Text("--------------------------------------------------");
         ui.Newline();
 
-        static SearchBox searchGfxFrame{ "Search frames..." };
-        DatSearchBox<GfxFrame>(ui, searchGfxFrame);
+        if (gfx_frame.id) {
+            if (ui.Button("Add frame").pressed) {
+                gfx_anim.frames.push_back(gfx_frame.name);
+            }
+        } else {
+            ui.Label("Select a frame to add it to the animation");
+        }
+        ui.Newline();
 
-        GfxFrame &gfx_frame = pack_assets.FindById<GfxFrame>(state.selections.byType[GfxFrame::dtype]);
+        ui.Text("--------------------------------------------------");
+        ui.Newline();
+
+        static SearchBox searchGfxFrame{ "Search frames..." };
+        PackSearchBox<GfxFrame>(ui, pack_assets, searchGfxFrame);
         if (gfx_frame.id == state.selections.byType[GfxFrame::dtype]) {
             ui.HAQField(__COUNTER__, "", gfx_frame, HAQ_EDIT, 80.0f);
         }
@@ -2040,13 +2149,14 @@ void Editor::DrawUI_Debug(UI &ui)
 
 void Editor::DrawUI_GfxFrameEditor(void)
 {
+    const float borderWidth = 2;  // hack to prevent double borders
     Vector2 uiPosition{};
     if (dock_left) {
-        uiPosition = { width, 0 };
+        uiPosition = { width - borderWidth, 0 };
     } else {
         uiPosition = { 0, 0 };
     }
-    Vector2 uiSize{ (float)GetRenderWidth() - width, (float)GetRenderHeight() };
+    Vector2 uiSize{ (float)GetRenderWidth() - (width - borderWidth), (float)GetRenderHeight() };
 
     UI ui{ uiPosition, uiSize, {} };
 
@@ -2107,13 +2217,14 @@ void Editor::DrawUI_GfxFrameEditor(void)
 }
 void Editor::DrawUI_GfxAnimEditor(void)
 {
+    const float borderWidth = 2;  // hack to prevent double borders
     Vector2 uiPosition{};
     if (dock_left) {
-        uiPosition = { width, 0 };
+        uiPosition = { width - borderWidth, 0 };
     } else {
         uiPosition = { 0, 0 };
     }
-    Vector2 uiSize{ (float)GetRenderWidth() - width, (float)GetRenderHeight() };
+    Vector2 uiSize{ (float)GetRenderWidth() - (width - borderWidth), (float)GetRenderHeight() };
 
     UI ui{ uiPosition, uiSize, {} };
 
@@ -2139,101 +2250,106 @@ void Editor::DrawUI_GfxAnimEditor(void)
             anim_id = gfx_anim.id;
         }
 
-        // In case # of frames changed via editor, we clamp
-        anim_state.frame = CLAMP(anim_state.frame, 0, gfx_anim.frames.size() - 1);
-        frame_selected = CLAMP(frame_selected, 0, gfx_anim.frames.size() - 1);
-        if (!anim_paused) {
-            UpdateGfxAnim(gfx_anim, dt, anim_state);
-        }
-
-        GfxFrame &gfx_frame = pack_assets.FindByName<GfxFrame>(gfx_anim.frames[anim_state.frame]);
-        Rectangle rect{ (float)gfx_frame.x, (float)gfx_frame.y, (float)gfx_frame.w, (float)gfx_frame.h };
-        GfxFile &gfx_file = pack_assets.FindByName<GfxFile>(gfx_frame.gfx);
-
-        ui.Image(gfx_file.texture, rect, true);
-        ui.Newline();
-
-        ui.Label(TextFormat("Frame %u of %u", anim_state.frame + 1, gfx_anim.frames.size()));
-        ui.Newline();
-
-        bool home = io.KeyPressed(KEY_HOME);
-        bool prev = io.KeyPressed(KEY_LEFT, true);
-        bool play = io.KeyPressed(KEY_SPACE);
-        bool next = io.KeyPressed(KEY_RIGHT, true);
-        bool end  = io.KeyPressed(KEY_END);
-        bool add  = io.KeyPressed(KEY_KP_ADD);
-        bool del  = io.KeyPressed(KEY_KP_SUBTRACT);
-
-        home |= ui.Button("|<", home ? SKYBLUE : GRAY).pressed;
-        prev |= ui.Button("< ", prev ? SKYBLUE : GRAY).pressed;
-        play |= ui.Button(anim_paused ? "|>" : "||", anim_paused ? LIME : MAROON).pressed;
-        next |= ui.Button(" >", next ? SKYBLUE : GRAY).pressed;
-        end  |= ui.Button(">|", end  ? SKYBLUE : GRAY).pressed;
-
-        if (home) {
-            anim_paused = true;
-            anim_state.frame = 0;
-        }
-        if (prev) {
-            anim_paused = true;
-            if (anim_state.frame) {
-                anim_state.frame--;
-            } else {
-                anim_state.frame = gfx_anim.frames.size() - 1;
+        if (gfx_anim.frames.size()) {
+            // In case # of frames changed via editor, we clamp
+            anim_state.frame = CLAMP(anim_state.frame, 0, gfx_anim.frames.size() - 1);
+            frame_selected = CLAMP(frame_selected, 0, gfx_anim.frames.size() - 1);
+            if (!anim_paused) {
+                UpdateGfxAnim(gfx_anim, dt, anim_state);
             }
-        }
-        if (play) {
-            anim_paused = !anim_paused;
-        }
-        if (next) {
-            anim_paused = true;
-            if (anim_state.frame < gfx_anim.frames.size() - 1) {
-                anim_state.frame++;
-            } else {
-                anim_state.frame = 0;
-            }
-        }
-        if (end) {
-            anim_paused = true;
-            anim_state.frame = gfx_anim.frames.size() - 1;
-        }
-        ui.Newline();
 
-        ui.Text("Frames");
-        ui.Newline();
-
-        uint16_t frame_idx = 0;
-        for (const std::string &frame : gfx_anim.frames) {
-            GfxFrame &gfx_frame = pack_assets.FindByName<GfxFrame>(frame);
+            GfxFrame &gfx_frame = pack_assets.FindByName<GfxFrame>(gfx_anim.frames[anim_state.frame]);
             Rectangle rect{ (float)gfx_frame.x, (float)gfx_frame.y, (float)gfx_frame.w, (float)gfx_frame.h };
             GfxFile &gfx_file = pack_assets.FindByName<GfxFile>(gfx_frame.gfx);
 
-            const Rectangle &uiRect = ui.Rect();
-            if (ui.CursorScreen().x + rect.width > uiRect.x + uiRect.width) {
-                ui.Newline();
+            ui.Image(gfx_file.texture, rect, true);
+
+            ui.Newline();
+
+            ui.Label(TextFormat("Frame %u of %u", anim_state.frame + 1, gfx_anim.frames.size()));
+            ui.Newline();
+
+            bool home = io.KeyPressed(KEY_HOME);
+            bool prev = io.KeyPressed(KEY_LEFT, true);
+            bool play = io.KeyPressed(KEY_SPACE);
+            bool next = io.KeyPressed(KEY_RIGHT, true);
+            bool end  = io.KeyPressed(KEY_END);
+            bool add  = io.KeyPressed(KEY_KP_ADD);
+            bool del  = io.KeyPressed(KEY_KP_SUBTRACT);
+
+            home |= ui.Button("|<", home ? SKYBLUE : GRAY).pressed;
+            prev |= ui.Button("< ", prev ? SKYBLUE : GRAY).pressed;
+            play |= ui.Button(anim_paused ? "|>" : "||", anim_paused ? LIME : MAROON).pressed;
+            next |= ui.Button(" >", next ? SKYBLUE : GRAY).pressed;
+            end  |= ui.Button(">|", end  ? SKYBLUE : GRAY).pressed;
+
+            if (home) {
+                anim_paused = true;
+                anim_state.frame = 0;
             }
-
-            UIState state = ui.Image(gfx_file.texture, rect, true);
-
-            if (state.pressed) {
-                frame_selected = frame_idx;
-            } else if (state.released) {
-                std::swap(gfx_anim.frames[frame_selected], gfx_anim.frames[frame_idx]);
+            if (prev) {
+                anim_paused = true;
+                if (anim_state.frame) {
+                    anim_state.frame--;
+                } else {
+                    anim_state.frame = gfx_anim.frames.size() - 1;
+                }
             }
-
-            if (frame_idx == frame_selected) {
-                DrawRectangleLinesEx(state.contentRect, 2, MAGENTA);
-            } else if (state.hover) {
-                DrawRectangleLinesEx(state.contentRect, 2, YELLOW);
+            if (play) {
+                anim_paused = !anim_paused;
             }
-
-            if (state.hover) {
-                ui.Tooltip(gfx_frame.name, { state.contentRect.x + 10, state.contentRect.y + 6 });
+            if (next) {
+                anim_paused = true;
+                if (anim_state.frame < gfx_anim.frames.size() - 1) {
+                    anim_state.frame++;
+                } else {
+                    anim_state.frame = 0;
+                }
             }
+            if (end) {
+                anim_paused = true;
+                anim_state.frame = gfx_anim.frames.size() - 1;
+            }
+            ui.Newline();
 
-            frame_idx++;
+            ui.Text("Frames");
+            ui.Newline();
+
+            uint16_t frame_idx = 0;
+            for (const std::string &frame : gfx_anim.frames) {
+                GfxFrame &gfx_frame = pack_assets.FindByName<GfxFrame>(frame);
+                Rectangle rect{ (float)gfx_frame.x, (float)gfx_frame.y, (float)gfx_frame.w, (float)gfx_frame.h };
+                GfxFile &gfx_file = pack_assets.FindByName<GfxFile>(gfx_frame.gfx);
+
+                const Rectangle &uiRect = ui.Rect();
+                if (ui.CursorScreen().x + rect.width > uiRect.x + uiRect.width) {
+                    ui.Newline();
+                }
+
+                UIState state = ui.Image(gfx_file.texture, rect, true);
+
+                if (state.pressed) {
+                    frame_selected = frame_idx;
+                } else if (state.released) {
+                    std::swap(gfx_anim.frames[frame_selected], gfx_anim.frames[frame_idx]);
+                }
+
+                if (frame_idx == frame_selected) {
+                    DrawRectangleLinesEx(state.contentRect, 2, MAGENTA);
+                } else if (state.hover) {
+                    DrawRectangleLinesEx(state.contentRect, 2, YELLOW);
+                }
+
+                if (state.hover) {
+                    ui.Tooltip(gfx_frame.name, { state.contentRect.x + 10, state.contentRect.y + 6 });
+                }
+
+                frame_idx++;
+            }
+            ui.Newline();
+        } else {
+            ui.Label("No frames");
         }
-        ui.Newline();
     }
 
     ui.EndScrollPanel(scrollPanel);

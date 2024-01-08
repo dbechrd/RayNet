@@ -62,7 +62,7 @@ struct UIStyle {
     UIMargin margin{ 4, 0, 0, 4 };
     float buttonBorderThickness{ 1 };
     float imageBorderThickness{ 2 };
-    float panelBorderWidth{ 2 };
+    float panelBorderWidth{ 1 };
 
     Color borderColor{ BLANK };
     UIPad pad{ 4, 2 };
@@ -89,6 +89,7 @@ struct UIState {
 
 struct ScrollPanel {
     IO::Scope scope              {};
+    UIStyle   style              {};
     UIState   state              {};
     Vector2   scrollOffset       {};  // pixels
     Vector2   scrollOffsetTarget {};  // pixels
@@ -103,6 +104,7 @@ struct ScrollPanel {
 struct SearchBox {
     std::string placeholder {};
     std::string filter      {};
+    bool        hasMatches  {};  // true if filter matched anything last frame
     ScrollPanel panel       {};
 
     SearchBox(const std::string &placeholder, const std::string &filter = "") : placeholder(placeholder), filter(filter) {}

@@ -71,6 +71,15 @@ Font dlb_LoadFontEx(const char *fileName, int fontSize, int *fontChars, int glyp
     return font;
 }
 
+Vector2 dlb_MeasureTextShadowOffset(Font font)
+{
+    Vector2 shadowOffset{ 1, 1 };
+    if (font.baseSize > 32) {
+        shadowOffset = Vector2AddValue(shadowOffset, 2);
+    }
+    return shadowOffset;
+}
+
 Vector2 dlb_MeasureTextEx(Font font, const char *text, size_t textLen, Vector2 *cursor)
 {
     Vector2 textSize{};
@@ -138,6 +147,14 @@ Vector2 dlb_MeasureTextEx(Font font, const char *text, size_t textLen, Vector2 *
     textSize.y = textHeight;
 
     return textSize;
+}
+
+Vector2 dlb_MeasureTextShadowEx(Font font, const char *text, size_t textLen, Vector2 *cursor)
+{
+    Vector2 size = dlb_MeasureTextEx(font, text, textLen, cursor);
+    Vector2 shadowOffset = dlb_MeasureTextShadowOffset(font);
+    size = Vector2Add(size, shadowOffset);
+    return size;
 }
 
 void dlb_DrawTextEx(Font font, const char *text, size_t textLen, Vector2 position, Color tint, Vector2 *cursor, bool *hovered)
@@ -226,6 +243,20 @@ void dlb_DrawTextEx(Font font, const char *text, size_t textLen, Vector2 positio
     }
 }
 
+void dlb_DrawTextShadowEx(Font font, const char *text, size_t textLen, Vector2 pos, Color color)
+{
+    //BeginShaderMode(shdSdfText);
+    Vector2 shadowOffset = dlb_MeasureTextShadowOffset(font);
+    Vector2 shadowPos = Vector2Add(pos, shadowOffset);
+
+    if (color.r || color.g || color.b) {
+        // Don't draw shadows on black text
+        dlb_DrawTextEx(font, text, textLen, shadowPos, { 0, 0, 0, color.a });
+    }
+    dlb_DrawTextEx(font, text, textLen, pos, color);
+    //EndShaderMode();
+}
+
 float GetRandomFloatZeroToOne(void)
 {
     return (float)rand() / RAND_MAX;
@@ -269,22 +300,6 @@ void RandTests(void)
         cMax = MAX(cMax, f);
     }
     printf("GetRandomFloatVariance(0.2f): %.2f - %.2f\n", cMin, cMax);
-}
-
-void dlb_DrawTextShadowEx(Font font, const char *text, size_t textLen, Vector2 pos, Color color)
-{
-    //BeginShaderMode(shdSdfText);
-    Vector2 shadowPos = Vector2Add(pos, { 1, 1 });
-    if (font.baseSize > 32) {
-        shadowPos = Vector2AddValue(pos, 2);
-    }
-
-    if (color.r || color.g || color.b) {
-        // Don't draw shadows on black text
-        dlb_DrawTextEx(font, text, textLen, shadowPos, { 0, 0, 0, color.a });
-    }
-    dlb_DrawTextEx(font, text, textLen, pos, color);
-    //EndShaderMode();
 }
 
 Rectangle GetCameraRectWorld(Camera2D &camera)
@@ -540,6 +555,9 @@ bool StrFilter(const char *str, const char *filter)
 #endif
     if (!str) {
         return false;
+    }
+    if (!*str) {
+        return true;
     }
 
     const char *s = str;

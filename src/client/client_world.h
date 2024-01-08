@@ -116,7 +116,7 @@ struct Spinner {
             size_t menuTextLen = strlen(menuText);
 
             //DrawCircle(iconCenter.x, iconCenter.y, 2, BLACK);
-            Vector2 textSize = dlb_MeasureTextEx(fntMedium, menuText, menuTextLen);
+            Vector2 textSize = dlb_MeasureTextShadowEx(fntMedium, menuText, menuTextLen);
             Vector2 textPos{
                 iconCenter.x - textSize.x / 2.0f,
                 iconCenter.y - textSize.y / 2.0f
@@ -143,7 +143,7 @@ struct Title {
     void Show(std::string text, double now)
     {
         this->text = text;
-        this->text_size = dlb_MeasureTextEx(fntBig, text.c_str(), text.size());
+        this->text_size = dlb_MeasureTextShadowEx(fntBig, text.c_str(), text.size());
         this->shown_at = now;
     };
 

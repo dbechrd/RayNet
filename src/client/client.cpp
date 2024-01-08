@@ -30,7 +30,7 @@ void draw_f3_menu(GameClient &client)
         snprintf(buf, sizeof(buf), "%-12s : " fmt, label, __VA_ARGS__); \
         dlb_DrawTextShadowEx(fntSmall, CSTRLEN(buf), hudCursor, RAYWHITE); \
         if (measureRect) { \
-            Vector2 measure = dlb_MeasureTextEx(fntSmall, CSTRLEN(buf)); \
+            Vector2 measure = dlb_MeasureTextShadowEx(fntSmall, CSTRLEN(buf)); \
             *measureRect = { hudCursor.x, hudCursor.y, measure.x, measure.y }; \
         } \
         hudCursor.y += fntSmall.baseSize; \

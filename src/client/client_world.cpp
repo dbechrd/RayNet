@@ -777,7 +777,7 @@ void ClientWorld::DrawHUDEntityHoverInfo(void)
         DrawRectangleRec(hpBar, ColorBrightness(MAROON, -0.4));
     }
 
-    Vector2 labelSize = dlb_MeasureTextEx(fntMedium, CSTRS(e_hovered.name));
+    Vector2 labelSize = dlb_MeasureTextShadowEx(fntMedium, CSTRS(e_hovered.name));
     Vector2 labelPos{
         floorf(hpBarBg.x + hpBarBg.width / 2 - labelSize.x / 2),
         floorf(hpBarBg.y + hpBarBg.height / 2 - labelSize.y / 2)

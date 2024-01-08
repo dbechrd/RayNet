@@ -17,6 +17,7 @@
 0 13 "gfx_menu_main_bg" "resources/graphics/menu_main_bg.png"
 0 14 "gfx_menu_main_scrolls" "resources/graphics/menu_main_scrolls.png"
 0 15 "gfx_menu_connecting_bg" "resources/graphics/menu_connecting_bg.png"
+0 16 "gfx_obj_flag" "resources/graphics/flag.png"
 
 # MusFile id name path
 1 0 "mus_bathroom" "resources/music/copyright/O9s5lzHl6W8.wav"
@@ -362,6 +363,11 @@
 3 323 "frm_til_cave_832_960" "gfx_til_cave" 832 960 64 64
 3 324 "frm_til_cave_896_960" "gfx_til_cave" 896 960 64 64
 3 325 "frm_til_cave_960_960" "gfx_til_cave" 960 960 64 64
+3 326 "frm_gfx_obj_flag_0_0" "gfx_obj_flag" 0 0 32 55
+3 327 "frm_gfx_obj_flag_32_0" "gfx_obj_flag" 32 0 32 55
+3 328 "frm_gfx_obj_flag_64_0" "gfx_obj_flag" 64 0 32 55
+3 329 "frm_gfx_obj_flag_96_0" "gfx_obj_flag" 96 0 32 55
+3 330 "frm_gfx_obj_flag_128_0" "gfx_obj_flag" 128 0 32 55
 
 # GfxAnim id name sound frame_delay frames
 4 0 "anim_missing" "null" 0
@@ -495,6 +501,13 @@
 4 37 "anim_obj_door_open" "null" 0
  1
  "frm_obj_door_open"
+4 38 "anim_obj_flag" "" 7
+ 5
+ "frm_gfx_obj_flag_0_0"
+ "frm_gfx_obj_flag_32_0"
+ "frm_gfx_obj_flag_64_0"
+ "frm_gfx_obj_flag_96_0"
+ "frm_gfx_obj_flag_128_0"
 
 # Sprite id name anims
 5 0 "sprite_missing" 8 "null" "null" "null" "null" "null" "null" "null" "null"

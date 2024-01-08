@@ -102,6 +102,46 @@ struct Pack {
     }
 
     template <typename T>
+    bool AddToIndex(T &dat, size_t index)
+    {
+        auto &by_id = dat_by_id[T::dtype];
+        if (by_id.find(dat.id) != by_id.end()) {
+            TraceLog(LOG_ERROR, "pack already contains type %s with id %u", DataTypeStr(T::dtype), dat.id);
+            return false;
+        }
+
+        auto &by_name = dat_by_name[T::dtype];
+        if (dat.name.size() && by_name.find(dat.name) != by_name.end()) {
+            TraceLog(LOG_ERROR, "pack already contains type %s with name '%s'", DataTypeStr(T::dtype), dat.name.c_str());
+            return false;
+        }
+
+        if constexpr (dat.dtype == GfxFrame::dtype) {
+            gfx_frame_ids_by_gfx_file_name[dat.gfx].push_back(dat.id);
+        }
+
+        by_id[dat.id] = index;
+        by_name[dat.name] = index;
+        return true;
+    }
+
+    template <typename T>
+    T *Add(T &dat)
+    {
+        auto &vec = *(std::vector<T> *)GetPool(T::dtype);
+        uint16_t max_id = 0;
+        for (T &dat : vec) max_id = MAX(max_id, dat.id);
+
+        size_t index = vec.size();
+        dat.id = max_id + 1;
+        if (AddToIndex(dat, index)) {
+            vec.push_back(dat);
+            return &vec.back();
+        }
+        return 0;
+    }
+
+    template <typename T>
     T *FindByIdTry(uint16_t id) {
         auto &vec = *(std::vector<T> *)GetPool(T::dtype);
         const auto &map = dat_by_id[T::dtype];

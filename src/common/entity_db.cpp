@@ -148,7 +148,7 @@ void EntityDB::DrawEntityId(Entity &entity, Camera2D &camera)
 {
     const char *text = TextFormat("%u", entity.id);
     Vector2 pos = GetWorldToScreen2D(entity.Position2D(), camera);
-    Vector2 textSize = dlb_MeasureTextEx(fntMedium, CSTRLEN(text));
+    Vector2 textSize = dlb_MeasureTextShadowEx(fntMedium, CSTRLEN(text));
     Vector2 textPos{
         floorf(pos.x - textSize.x / 2.0f),
         pos.y

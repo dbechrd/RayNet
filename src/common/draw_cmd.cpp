@@ -22,7 +22,7 @@ void DrawCmd::Draw(void) const
         case DRAW_CMD_TOOLTIP: {
             // TODO: ui.Tooltip(string) that pushes into drawcmdqueue
             // Draw tooltip
-            const Vector2 tipSize = dlb_MeasureTextEx(fntSmall, text.data(), text.size(), 0);
+            const Vector2 tipSize = dlb_MeasureTextShadowEx(fntSmall, text.data(), text.size(), 0);
             Rectangle tipRect{ position.x, position.y, tipSize.x, tipSize.y };
             Vector2 grow{ 6, 2 };
             tipRect = RectGrow(tipRect, grow);

@@ -57,6 +57,7 @@
 // Developer macros
 
 #define DEV_BUILD_PACK_FILE 1
+#define DBG_UI_NO_SCISSOR   0
 
 // Helper macros
 
@@ -170,13 +171,14 @@
 Font dlb_LoadFontFromMemory(const char *fileType, const unsigned char *fileData, int dataSize, int fontSize, int *fontChars, int glyphCount, int type);
 Font dlb_LoadFontEx(const char *fileName, int fontSize, int *fontChars, int glyphCount, int type);
 Vector2 dlb_MeasureTextEx(Font font, const char *text, size_t textLen, Vector2 *cursor = 0);
+Vector2 dlb_MeasureTextShadowEx(Font font, const char *text, size_t textLen, Vector2 *cursor = 0);
 void dlb_DrawTextEx(Font font, const char *text, size_t textLen, Vector2 position, Color tint, Vector2 *cursor = 0, bool *hovered = 0);
+void dlb_DrawTextShadowEx(Font font, const char *text, size_t textLen, Vector2 pos, Color color);
 
 float GetRandomFloatZeroToOne(void);
 float GetRandomFloatMinusOneToOne(void);
 float GetRandomFloatVariance(float variance);
 
-void dlb_DrawTextShadowEx(Font font, const char *text, size_t textLen, Vector2 pos, Color color);
 Rectangle GetCameraRectWorld(Camera2D &camera);
 Rectangle RectShrink(const Rectangle &rect, Vector2 pixels);
 Rectangle RectShrink(const Rectangle &rect, float pixels);
@@ -220,7 +222,7 @@ inline void hash_combine_next(std::size_t& seed, const T& v, Rest... rest) {
 template <typename T, typename... Rest>
 inline size_t hash_combine(const T& v, Rest... rest) {
     size_t hash{};
-    hash_combine_next(hash, rest...);
+    hash_combine_next(hash, v, rest...);
     return hash;
 }
 
