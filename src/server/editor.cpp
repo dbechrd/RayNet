@@ -2119,11 +2119,9 @@ void Editor::DrawUI_Debug(UI &ui)
     }
 
     if (showGfxAnimEditor) {
-        GfxAnim &gfx_anim = pack_assets.FindById<GfxAnim>(state.selections.byType[GfxAnim::dtype]);
-        GfxFrame &gfx_frame = pack_assets.FindById<GfxFrame>(state.selections.byType[GfxFrame::dtype]);
-
         static SearchBox searchGfxAnims{ "Search animations..." };
         PackSearchBox<GfxAnim>(ui, pack_assets, searchGfxAnims);
+        GfxAnim &gfx_anim = pack_assets.FindById<GfxAnim>(state.selections.byType[GfxAnim::dtype]);
         if (gfx_anim.id == state.selections.byType[GfxAnim::dtype]) {
             ui.HAQField(__COUNTER__, "", gfx_anim, HAQ_EDIT, 80.0f);
         }
@@ -2131,12 +2129,12 @@ void Editor::DrawUI_Debug(UI &ui)
         ui.Text("--------------------------------------------------");
         ui.Newline();
 
-        if (gfx_frame.id) {
-            if (ui.Button("Add frame").pressed) {
-                gfx_anim.frames.push_back(gfx_frame.name);
-            }
+        bool addFrame = false;
+        if (state.selections.byType[GfxFrame::dtype]) {
+            addFrame = ui.Button("Add frame").pressed;
         } else {
             ui.Label("Select a frame to add it to the animation");
+            ui.Space({ 0, 2 });
         }
         ui.Newline();
 
@@ -2145,8 +2143,11 @@ void Editor::DrawUI_Debug(UI &ui)
 
         static SearchBox searchGfxFrame{ "Search frames..." };
         PackSearchBox<GfxFrame>(ui, pack_assets, searchGfxFrame);
-        if (gfx_frame.id == state.selections.byType[GfxFrame::dtype]) {
-            ui.HAQField(__COUNTER__, "", gfx_frame, HAQ_EDIT, 80.0f);
+        GfxFrame &gfx_frame = pack_assets.FindById<GfxFrame>(state.selections.byType[GfxFrame::dtype]);
+        ui.HAQField(__COUNTER__, "", gfx_frame, HAQ_EDIT, 80.0f);
+
+        if (addFrame && gfx_anim.id && gfx_frame.id) {
+            gfx_anim.frames.push_back(gfx_frame.name);
         }
     }
 }

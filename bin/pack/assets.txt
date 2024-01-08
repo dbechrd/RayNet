@@ -501,7 +501,7 @@
 4 37 "anim_obj_door_open" "null" 0
  1
  "frm_obj_door_open"
-4 38 "anim_obj_flag" "" 7
+4 38 "anim_obj_flag" "" 8
  5
  "frm_gfx_obj_flag_0_0"
  "frm_gfx_obj_flag_32_0"

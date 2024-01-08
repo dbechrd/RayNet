@@ -133,7 +133,7 @@ struct GfxAnim {
     FIELD(std::string             , sound      , {}, HAQ_SERIALIZE | HAQ_EDIT, true, userdata) \
     /*FIELD(uint8_t                 , frame_count, {}, HAQ_SERIALIZE | HAQ_EDIT, true, userdata)*/ \
     FIELD(uint8_t                 , frame_delay, {}, HAQ_SERIALIZE | HAQ_EDIT, true, userdata) \
-    FIELD(std::vector<std::string>, frames     , {}, HAQ_SERIALIZE | HAQ_EDIT, true, userdata)
+    FIELD(std::vector<std::string>, frames     , {}, HAQ_SERIALIZE /*| HAQ_EDIT*/, true, userdata)
     HQT_GFX_ANIM_FIELDS(HAQ_C_FIELD, 0);
 
     bool soundPlayed{};
