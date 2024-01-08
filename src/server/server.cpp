@@ -198,6 +198,8 @@ Err Play(GameServer &server)
             // [Editor] Menus, action bar, etc.
             editor.DrawUI(camera);
 
+            assert(scissorStack.empty());
+
             // [Debug] FPS, clock, etc.
             if (server.showF3Menu) {
                 Vector2 f3_pos{
@@ -211,7 +213,6 @@ Err Play(GameServer &server)
         BeginDrawing();
         EndDrawing();
 #endif
-
         yojimbo_sleep(0.001);
 
         if (WindowShouldClose() || io.KeyPressed(KEY_ESCAPE)) {

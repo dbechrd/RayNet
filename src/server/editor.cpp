@@ -1678,7 +1678,7 @@ void Editor::DrawUI_PackFiles(UI &ui)
     }
     ui.Newline();
 
-    ui.PushSize({ width - 12, 120 });
+    ui.PushSize({ width - 12, 60 });
     ui.PushPadding({});
     ui.BeginScrollPanel(searchBox.panel, IO::IO_ScrollPanelInner);
     ui.PopStyle();
@@ -1779,6 +1779,8 @@ void Editor::DrawUI_PackFiles(UI &ui)
         }
         ui.PopStyle();
         ui.Space({ 0, 4 });
+
+        ui.PushWidth(width - 20);
 
         // Defer changing selection until after the loop has rendered every item
         int newSelectedOffset = 0;
@@ -1997,6 +1999,8 @@ void Editor::DrawUI_PackFiles(UI &ui)
                 #undef HAQ_UI
             }
         }
+
+        ui.PopStyle();
 
         if (newSelectedOffset) {
             state.packFiles.selectedPackEntryOffset = newSelectedOffset;

@@ -370,7 +370,7 @@ Rectangle RectGrow(const Rectangle &rect, float pixels)
     return RectGrow(rect, { pixels, pixels });
 }
 
-void RectConstrainToRect(Rectangle &rect, const Rectangle &boundary)
+void RectConstrainToRect(Rectangle &rect, Rectangle boundary)
 {
     if (rect.x < boundary.x) {
         rect.x = boundary.x;
@@ -411,15 +411,17 @@ void CircleConstrainToScreen(Vector2 &center, float radius, Vector2 *resultOffse
     center = newCenter;
 }
 
-static std::stack<Rectangle> scissorStack{};
+std::stack<Rectangle> scissorStack{};
 
-void PushScissorRect(const Rectangle &rect)
+void PushScissorRect(Rectangle rect)
 {
     rlDrawRenderBatchActive();
 
     if (scissorStack.empty()) {
         rlEnableScissorTest();
     }
+
+    RectConstrainToRect(rect, GetScissorRect());
 
     rlScissor(rect.x, GetRenderHeight() - (rect.y + rect.height), rect.width, rect.height);
     scissorStack.push(rect);

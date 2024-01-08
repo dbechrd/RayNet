@@ -207,14 +207,15 @@ void UI::UpdateCursor(const Rectangle &ctrlRect)
 }
 bool UI::ShouldCull(const Rectangle &ctrlRect)
 {
-    if (ctrlRect.x + ctrlRect.width < 0 ||
-        ctrlRect.y + ctrlRect.height < 0 ||
-        ctrlRect.x > GetRenderWidth() ||
-        ctrlRect.y > GetRenderHeight())
-    {
-        return true;
-    }
+    // NOTE: This is broken, srollsbars don't calculate content height correctly when culling
+#if 1
     return false;
+#else
+    if (CheckCollisionRecs(ctrlRect, GetScissorRect())) {
+        return false;
+    }
+    return true;
+#endif
 }
 
 void UI::Newline(void)
@@ -282,8 +283,8 @@ void UI::BeginScrollPanel(ScrollPanel &scrollPanel, IO::Scope scope)
     scrollPanel.state.contentRect = contentRect;
     scrollPanel.maxCursor = {};
 
-    if (ShouldCull(ctrlRect)) {
-        scrollPanel.wasCulled = true;
+    scrollPanel.wasCulled = ShouldCull(ctrlRect);
+    if (scrollPanel.wasCulled) {
         return;
     }
 
