@@ -19,13 +19,13 @@ struct Menu {
 };
 
 struct MenuMain : public Menu {
-    MenuMain(void);
-    ~MenuMain(void);
+    MenuMain(void) : Menu(Menu::MENU_MAIN) {}
 
     void Draw(GameClient &client, bool &back) override;
 
 private:
-    Texture background{};
+    const char *background = "gfx_menu_main_bg";
+    const char *scrolls = "gfx_menu_main_scrolls";
 };
 
 struct MenuConnecting : public Menu {
@@ -36,6 +36,7 @@ struct MenuConnecting : public Menu {
     void Draw(GameClient &client, bool &back) override;
 
 private:
+    const char *background = "gfx_menu_connecting_bg";
     const char *connecting_msgs[4] = {
         "Connecting",
         ". Connecting .",

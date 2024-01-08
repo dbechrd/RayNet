@@ -14,6 +14,9 @@
 0 10 "gfx_til_overworld" "resources/graphics/tiles64tm.png"
 0 11 "gfx_til_auto_grass" "resources/graphics/autotile_3x3_min.png"
 0 12 "gfx_til_cave" "resources/graphics/cave.png"
+0 13 "gfx_menu_main_bg" "resources/graphics/menu_main_bg.png"
+0 14 "gfx_menu_main_scrolls" "resources/graphics/menu_main_scrolls.png"
+0 14 "gfx_menu_connecting_bg" "resources/graphics/menu_connecting_bg.png"
 
 # MusFile id name path
 1 0 "mus_bathroom" "resources/music/copyright/O9s5lzHl6W8.wav"

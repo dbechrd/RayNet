@@ -32,21 +32,18 @@ void MenuSystem::Draw(GameClient &client, bool &back) {
     }
 }
 
-MenuMain::MenuMain(void) : Menu(Menu::MENU_MAIN)
-{
-    background = LoadTexture("resources/graphics/title.png");
-}
-
-MenuMain::~MenuMain(void)
-{
-    UnloadTexture(background);
-}
-
 void MenuMain::Draw(GameClient &client, bool &back)
 {
-    DrawTexture(background,
-        floorf(GetRenderWidth() / 2.0f - background.width / 2.0f),
-        floorf(GetRenderHeight() / 2.0f - background.height / 2.0f),
+    const GfxFile &gfx_background = pack_assets.FindByName<GfxFile>(background);
+    dlb_DrawTexturePro(gfx_background.texture,
+        { 0, 0, (float)gfx_background.texture.width, (float)gfx_background.texture.height },
+        { 0, 0, (float)GetRenderWidth(), (float)GetRenderHeight() },
+        {}, WHITE
+    );
+
+    const GfxFile &gfx_scrolls = pack_assets.FindByName<GfxFile>(scrolls);
+    dlb_DrawTextureCenteredFull(gfx_scrolls.texture,
+        { floorf(GetRenderWidth() / 2.0f), floorf(GetRenderHeight() / 2.0f) },
         WHITE
     );
 
@@ -113,6 +110,13 @@ void MenuConnecting::OnLeave(void) {
 
 void MenuConnecting::Draw(GameClient &client, bool &back)
 {
+    const GfxFile &gfx_background = pack_assets.FindByName<GfxFile>(background);
+    dlb_DrawTexturePro(gfx_background.texture,
+        { 0, 0, (float)gfx_background.texture.width, (float)gfx_background.texture.height },
+        { 0, 0, (float)GetRenderWidth(), (float)GetRenderHeight() },
+        {}, WHITE
+    );
+
     UpdateSprite(campfire, client.frameDt, !msg_last_updated);
     if (!msg_last_updated) {
         msg_last_updated = client.now;

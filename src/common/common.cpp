@@ -488,6 +488,25 @@ void dlb_DrawTexturePro(Texture2D texture, Rectangle source, Rectangle dest, Vec
         rlSetTexture(0);
     }
 }
+void dlb_DrawTextureCentered(Texture2D texture, Rectangle source, Rectangle dest, Color tint)
+{
+    const Vector2 origin{
+        floorf(source.width / 2.0f),
+        floorf(source.height / 2.0f)
+    };
+    dlb_DrawTexturePro(texture, source, dest, origin, tint);
+}
+void dlb_DrawTextureCenteredFull(Texture2D texture, Vector2 center, Color tint)
+{
+    const Rectangle source{ 0, 0, (float)texture.width, (float)texture.height };
+    const Rectangle destRect{
+        center.x,
+        center.y,
+        (float)texture.width,
+        (float)texture.height
+    };
+    dlb_DrawTextureCentered(texture, source, destRect, tint);
+}
 
 void dlb_DrawNPatch(Rectangle rec)
 {

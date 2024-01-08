@@ -192,6 +192,8 @@ void PopScissorRect(void);
 
 void dlb_DrawTextureRec(Texture2D texture, Rectangle source, Vector2 position, Color tint);
 void dlb_DrawTexturePro(Texture2D texture, Rectangle source, Rectangle dest, Vector2 origin, Color tint);
+void dlb_DrawTextureCentered(Texture2D texture, Rectangle source, Rectangle dest, Color tint);
+void dlb_DrawTextureCenteredFull(Texture2D texture, Vector2 center, Color tint);
 void dlb_DrawNPatch(Rectangle rec);
 
 bool StrFilter(const char *str, const char *filter);

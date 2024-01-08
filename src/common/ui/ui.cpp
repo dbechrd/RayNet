@@ -207,8 +207,6 @@ void UI::UpdateCursor(const Rectangle &ctrlRect)
 }
 bool UI::ShouldCull(const Rectangle &ctrlRect)
 {
-    return false;
-
     if (ctrlRect.x + ctrlRect.width < 0 ||
         ctrlRect.y + ctrlRect.height < 0 ||
         ctrlRect.x > GetRenderWidth() ||
