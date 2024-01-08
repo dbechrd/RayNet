@@ -3,16 +3,16 @@
 
 // DO NOT re-order these! They are hard-coded in the TOC
 #define DATA_TYPES(gen) \
-    gen(DAT_TYP_GFX_FILE,  "GFXFILE ") \
-    gen(DAT_TYP_MUS_FILE,  "MUSFILE ") \
-    gen(DAT_TYP_SFX_FILE,  "SFXFILE ") \
-    gen(DAT_TYP_GFX_FRAME, "GFXFRAME") \
-    gen(DAT_TYP_GFX_ANIM,  "GFXANIM ") \
-    gen(DAT_TYP_SPRITE,    "SPRITE  ") \
-    gen(DAT_TYP_TILE_DEF,  "TILEDEF ") \
-    gen(DAT_TYP_TILE_MAT,  "TILEMAT ") \
-    gen(DAT_TYP_TILE_MAP,  "TILEMAP ") \
-    gen(DAT_TYP_ENTITY,    "ENTITY  ")
+    gen(DAT_TYP_GFX_FILE,  "GFX_FILE") \
+    gen(DAT_TYP_MUS_FILE,  "MUS_FILE") \
+    gen(DAT_TYP_SFX_FILE,  "SFX_FILE") \
+    gen(DAT_TYP_GFX_FRAME, "GFX_FRAME") \
+    gen(DAT_TYP_GFX_ANIM,  "GFX_ANIM") \
+    gen(DAT_TYP_SPRITE,    "SPRITE") \
+    gen(DAT_TYP_TILE_DEF,  "TILE_DEF") \
+    gen(DAT_TYP_TILE_MAT,  "TILE_MAT") \
+    gen(DAT_TYP_TILE_MAP,  "TILEMAP") \
+    gen(DAT_TYP_ENTITY,    "ENTITY")
 
 enum DataType : uint8_t {
     DATA_TYPES(ENUM_VD_VALUE)

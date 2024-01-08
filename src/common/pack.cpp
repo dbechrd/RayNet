@@ -394,11 +394,20 @@ void Process(PackStream &stream, Entity &entity)
 template <typename T>
 void AddToIndex(Pack &pack, T &dat, size_t index)
 {
-    const auto &by_id = pack.dat_by_id[T::dtype];
-    pack.dat_by_id[T::dtype][dat.id] = index;
+    auto &by_id = pack.dat_by_id[T::dtype];
+    if (by_id.find(dat.id) != by_id.end()) {
+        TraceLog(LOG_ERROR, "pack already contains type %s with id %u", DataTypeStr(T::dtype), dat.id);
+        return;
+    }
 
-    const auto &by_name = pack.dat_by_name[T::dtype];
-    pack.dat_by_name[T::dtype][dat.name] = index;
+    auto &by_name = pack.dat_by_name[T::dtype];
+    if (dat.name.size() && by_name.find(dat.name) != by_name.end()) {
+        TraceLog(LOG_ERROR, "pack already contains type %s with name '%s'", DataTypeStr(T::dtype), dat.name.c_str());
+        return;
+    }
+
+    by_id[dat.id] = index;
+    by_name[dat.name] = index;
 }
 
 template <typename T>
