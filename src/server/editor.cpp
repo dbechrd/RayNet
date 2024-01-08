@@ -1715,7 +1715,7 @@ void Editor::DrawUI_PackFiles(UI &ui)
 
         static ScrollPanel scrollPanel{{}};
         const Vector2 panelTopLeft = ui.CursorScreen();
-        ui.PushSize({ width, GetRenderHeight() - panelTopLeft.y });
+        ui.PushSize({ width - 16, 400 }); //GetRenderHeight() - panelTopLeft.y });
         ui.BeginScrollPanel(scrollPanel, IO::IO_ScrollPanelInner);
         ui.PopStyle();
 

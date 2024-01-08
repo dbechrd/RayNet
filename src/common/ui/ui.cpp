@@ -200,9 +200,9 @@ void UI::UpdateCursor(const Rectangle &ctrlRect)
     cursor.x += ctrlSpaceUsed.x;
 
     if (panelStack.size()) {
-        ScrollPanel &panel = *panelStack.top();
-        panel.maxCursor.x = MAX(panel.maxCursor.x, cursor.x + panelStack.top()->scrollOffset.x);
-        panel.maxCursor.y = MAX(panel.maxCursor.y, cursor.y + panelStack.top()->scrollOffset.y + lineSize.y);
+        ScrollPanel &panel = *panelStack.back();
+        panel.maxCursor.x = MAX(panel.maxCursor.x, cursor.x + floorf(panel.scrollOffset.x));
+        panel.maxCursor.y = MAX(panel.maxCursor.y, cursor.y + floorf(panel.scrollOffset.y) + lineSize.y);
     }
 }
 bool UI::ShouldCull(const Rectangle &ctrlRect)
@@ -222,8 +222,8 @@ void UI::Newline(void)
     const UIStyle &style = GetStyle();
 
     cursor.x = style.pad.left;
-    if (panelStack.size()) {
-        cursor.x -= panelStack.top()->scrollOffset.x;
+    for (ScrollPanel *panel : panelStack) {
+        cursor.x -= floorf(panel->scrollOffset.x);
     }
 
     cursor.y += lineSize.y;
@@ -242,6 +242,7 @@ void UI::Space(Vector2 space)
 
 void UI::BeginScrollPanel(ScrollPanel &scrollPanel, IO::Scope scope)
 {
+    panelStack.push_back(&scrollPanel);
     io.PushScope(scope);
     scrollPanel.scope = scope;
 
@@ -288,16 +289,18 @@ void UI::BeginScrollPanel(ScrollPanel &scrollPanel, IO::Scope scope)
 
     // HACK(dlb): "4" is probably margin, or pad, or something. layout is a bit messed up for scroll panels
     Space({
-        -floorf(scrollPanel.scrollOffset.x),
+        0, //-floorf(scrollPanel.scrollOffset.x),
         -floorf(scrollPanel.scrollOffset.y) + 4
     });
+    // HACK: X cursor reset happens differently than y
+    Newline();
+
     PushScissorRect(scrollPanel.state.contentRect);
 
-    panelStack.push(&scrollPanel);
 }
 void UI::EndScrollPanel(ScrollPanel &scrollPanel)
 {
-    panelStack.pop();
+    panelStack.pop_back();
 
     if (scrollPanel.wasCulled) {
         io.PopScope();

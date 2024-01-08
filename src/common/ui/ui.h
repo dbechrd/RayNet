@@ -190,7 +190,7 @@ private:
     Vector2 cursor{};   // where to draw next element
     Vector2 lineSize{}; // total size of current row of UI elements
     std::stack<UIStyle> styleStack{};
-    std::stack<ScrollPanel *> panelStack;
+    std::vector<ScrollPanel *> panelStack;
 
     static uint32_t prevActiveEditor;
     static uint32_t activeEditor;
