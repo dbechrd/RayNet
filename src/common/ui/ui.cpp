@@ -1389,7 +1389,7 @@ void UI::HAQFieldEditor(uint32_t ctrlid, const std::string &name, T &value, int 
         float valueFloat = (float)value;
         UIState state = Textbox(ctrlid, valueFloat, "%.f");
         if (flags & HAQ_HOVER_SHOW_TILE && state.hover) {
-            Tilemap::DrawTile(value, GetMousePosition(), &tooltips);
+            DrawTile(value, GetMousePosition(), &tooltips);
         }
         value = CLAMP(valueFloat, std::numeric_limits<T>::min(), std::numeric_limits<T>::max());
     } else {

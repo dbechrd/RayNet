@@ -86,11 +86,6 @@ struct Tilemap {
     void SetFromWangMap(WangMap &wangMap, double now);
     void Fill(TileLayerType layer, uint16_t x, uint16_t y, uint16_t new_tile_id, double now);
 
-    static TileDef &GetTileDef(uint16_t tile_id);
-    static const GfxFrame &GetTileGfxFrame(uint16_t tile_id);
-    Rectangle TileDefRect(uint16_t tile_id);
-    Color TileDefAvgColor(uint16_t tile_id);
-
     // Objects
     ObjectData *GetObjectData(uint16_t x, uint16_t y);
 
@@ -103,7 +98,6 @@ struct Tilemap {
     void ResolveEntityCollisionsEdges(Entity &entity);
     void ResolveEntityCollisionsTriggers(Entity &entity);
 
-    static void DrawTile(uint16_t tile_id, Vector2 position, DrawCmdQueue *sortedDraws, Color color = WHITE);
     void Draw(Camera2D &camera, DrawCmdQueue &sortedDraws);
     void DrawColliders(Camera2D &camera);
     void DrawEdges(void);

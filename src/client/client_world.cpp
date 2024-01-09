@@ -514,7 +514,7 @@ void ClientWorld::DrawHoveredObjectIndicator(GameClient &client, Tilemap &map)
         uint16_t object_id = 0;
         map.AtTry(TILE_LAYER_OBJECT, client.controller.tile_x, client.controller.tile_y, object_id);
         if (object_id) {
-            const GfxFrame &gfx_frame = map.GetTileGfxFrame(object_id);
+            const GfxFrame &gfx_frame = GetTileGfxFrame(object_id);
             const GfxFile &gfx_file = pack_assets.FindByName<GfxFile>(gfx_frame.gfx);
             const Rectangle texRect{ (float)gfx_frame.x, (float)gfx_frame.y, (float)gfx_frame.w, (float)gfx_frame.h };
 

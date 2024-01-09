@@ -1177,7 +1177,7 @@ void GameServer::ProcessMsg(int clientIdx, Msg_C_TileInteract &msg)
             SendEntitySay(clientIdx, player.entityId, 0, "Warp", warpInfo);
         }
     } else if (msg.primary) {
-        const TileDef &tile_def = map.GetTileDef(tile_id);
+        const TileDef &tile_def = GetTileDef(tile_id);
         const char *new_tile_def_name = 0;
         if (tile_def.name == "til_water_dark") {
             new_tile_def_name = "til_stone_path";

@@ -408,3 +408,48 @@ void UpdateTileDefAnimations(double dt)
         UpdateGfxAnim(anim, dt, tile_def.anim_state);
     }
 }
+
+TileDef &GetTileDef(uint16_t tile_id)
+{
+    if (tile_id < pack_assets.tile_defs.size()) {
+        return pack_assets.tile_defs[tile_id];
+    }
+    return pack_assets.tile_defs[0];
+}
+const GfxFrame &GetTileGfxFrame(uint16_t tile_id)
+{
+    const TileDef &tile_def = GetTileDef(tile_id);
+    const GfxAnim &gfx_anim = pack_assets.FindByName<GfxAnim>(tile_def.anim);
+    const std::string &gfx_frame_id = gfx_anim.GetFrame(tile_def.anim_state.frame);
+    const GfxFrame &gfx_frame = pack_assets.FindByName<GfxFrame>(gfx_frame_id);
+    return gfx_frame;
+}
+Rectangle TileDefRect(uint16_t tile_id)
+{
+    const GfxFrame &gfx_frame = GetTileGfxFrame(tile_id);
+    const Rectangle rect{ (float)gfx_frame.x, (float)gfx_frame.y, (float)gfx_frame.w, (float)gfx_frame.h };
+    return rect;
+}
+Color TileDefAvgColor(uint16_t tile_id)
+{
+    const TileDef &tile_def = GetTileDef(tile_id);
+    return tile_def.color;
+}
+void DrawTile(uint16_t tile_id, Vector2 position, DrawCmdQueue *sortedDraws, Color color)
+{
+    // TODO: Yikes.. that's a lot of lookups in a tight loop. Memoize some pointers or something man.
+    const GfxFrame &gfx_frame = GetTileGfxFrame(tile_id);
+    const GfxFile &gfx_file = pack_assets.FindByName<GfxFile>(gfx_frame.gfx);
+    Rectangle texRect{ (float)gfx_frame.x, (float)gfx_frame.y, (float)gfx_frame.w, (float)gfx_frame.h };
+    if (gfx_frame.h > TILE_W) {
+        position.y -= gfx_frame.h - TILE_W;
+    }
+
+    if (sortedDraws) {
+        Vector3 pos = { position.x, position.y, 0 };
+        DrawCmd cmd = DrawCmd::Texture(gfx_file.texture, texRect, pos, color);
+        sortedDraws->push(cmd);
+    } else {
+        dlb_DrawTextureRec(gfx_file.texture, texRect, position, color);
+    }
+}

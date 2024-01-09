@@ -172,7 +172,7 @@ struct TileDef {
     FIELD(std::string , anim          , {}, HAQ_SERIALIZE | HAQ_EDIT, true, userdata) \
     FIELD(uint16_t    , material_id   , {}, HAQ_SERIALIZE | HAQ_EDIT, true, userdata) \
     FIELD(Flags       , flags         , {}, HAQ_SERIALIZE | HAQ_EDIT, true, userdata) \
-    FIELD(uint8_t     , auto_tile_mask, {}, HAQ_SERIALIZE | HAQ_EDIT, true, userdata)
+    FIELD(uint8_t     , auto_tile_mask, {}, HAQ_SERIALIZE /*| HAQ_EDIT*/, true, userdata)
     HQT_TILE_DEF_FIELDS(HAQ_C_FIELD, 0);
 
     // color for minimap/wang tile editor (top left pixel of tile)
@@ -293,6 +293,12 @@ void ResetSprite(Entity &entity);
 void DrawSprite(const Entity &entity, DrawCmdQueue *sortedDraws, bool highlight = false);
 
 void UpdateTileDefAnimations(double dt);
+
+TileDef &GetTileDef(uint16_t tile_id);
+const GfxFrame &GetTileGfxFrame(uint16_t tile_id);
+Rectangle TileDefRect(uint16_t tile_id);
+Color TileDefAvgColor(uint16_t tile_id);
+void DrawTile(uint16_t tile_id, Vector2 position, DrawCmdQueue *sortedDraws, Color color = WHITE);
 
 // Shaders
 extern Shader shdSdfText;

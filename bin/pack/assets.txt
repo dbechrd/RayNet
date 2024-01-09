@@ -363,11 +363,11 @@
 3 323 "frm_til_cave_832_960" "gfx_til_cave" 832 960 64 64
 3 324 "frm_til_cave_896_960" "gfx_til_cave" 896 960 64 64
 3 325 "frm_til_cave_960_960" "gfx_til_cave" 960 960 64 64
-3 326 "frm_gfx_obj_flag_0_0" "gfx_obj_flag" 0 0 32 55
-3 327 "frm_gfx_obj_flag_32_0" "gfx_obj_flag" 32 0 32 55
-3 328 "frm_gfx_obj_flag_64_0" "gfx_obj_flag" 64 0 32 55
-3 329 "frm_gfx_obj_flag_96_0" "gfx_obj_flag" 96 0 32 55
-3 330 "frm_gfx_obj_flag_128_0" "gfx_obj_flag" 128 0 32 55
+3 326 "frm_obj_flag_0" "gfx_obj_flag" 0 0 64 110
+3 327 "frm_obj_flag_1" "gfx_obj_flag" 64 0 64 110
+3 328 "frm_obj_flag_2" "gfx_obj_flag" 128 0 64 110
+3 329 "frm_obj_flag_3" "gfx_obj_flag" 192 0 64 110
+3 330 "frm_obj_flag_4" "gfx_obj_flag" 256 0 64 110
 
 # GfxAnim id name sound frame_delay frames
 4 0 "anim_missing" "null" 0
@@ -503,11 +503,11 @@
  "frm_obj_door_open"
 4 38 "anim_obj_flag" "" 8
  5
- "frm_gfx_obj_flag_0_0"
- "frm_gfx_obj_flag_32_0"
- "frm_gfx_obj_flag_64_0"
- "frm_gfx_obj_flag_96_0"
- "frm_gfx_obj_flag_128_0"
+ "frm_obj_flag_0"
+ "frm_obj_flag_1"
+ "frm_obj_flag_2"
+ "frm_obj_flag_3"
+ "frm_obj_flag_4"
 
 # Sprite id name anims
 5 0 "sprite_missing" 8 "null" "null" "null" "null" "null" "null" "null" "null"
@@ -545,6 +545,7 @@
 6 20 "obj_lever_powered" "anim_obj_lever_powered" 2 0 0
 6 21 "obj_door_closed" "anim_obj_door_closed" 5 1 0
 6 22 "obj_door_open" "anim_obj_door_open" 5 0 0
+6 23 "obj_flag" "anim_obj_flag" 0 1 0
 
 # TileMat id name footstep_sound
 7 0 "mat_missing" "null"

@@ -176,7 +176,7 @@ void Editor::DrawGroundOverlay_Tiles(Camera2D &camera)
                         brush_tile_pos.y += y;
                         brush_tile_pos = Vector2Scale(brush_tile_pos, TILE_W);
 
-                        map.DrawTile(tile, brush_tile_pos, 0, Fade(WHITE, 0.8f));
+                        DrawTile(tile, brush_tile_pos, 0, Fade(WHITE, 0.8f));
                     }
                     i++;
                 }
@@ -983,7 +983,6 @@ void Editor::DrawUI_Tilesheet(UI &ui)
 {
     // TODO(dlb): Support multi-select (big rectangle?), and figure out where this lives
 
-    auto &map = pack_maps.FindById<Tilemap>(map_id);
     auto &tile_defs = pack_assets.tile_defs;
     TileLayerType layer = state.tiles.layer;
     auto &cursor = state.tiles.cursor;
@@ -996,13 +995,14 @@ void Editor::DrawUI_Tilesheet(UI &ui)
     ui.PushStyle(blackBorderStyle);
 
     UIState sheet = ui.Checkerboard({ 0, 0, (float)TILE_W * tiles_x, (float)TILE_W * tiles_y });
-    Vector2 imgTL{ sheet.contentRect.x, sheet.contentRect.y };
+    ui.Newline();
 
     // Draw tiledefs
+    Vector2 imgTL{ sheet.contentRect.x, sheet.contentRect.y };
     for (size_t i = 0; i < tile_defs.size(); i++) {
         int tile_x = TILE_W * (i % tiles_x);
         int tile_y = TILE_W * (i / tiles_x);
-        map.DrawTile(tile_defs[i].id, { imgTL.x + tile_x, imgTL.y + tile_y }, 0);
+        DrawTile(tile_defs[i].id, { imgTL.x + tile_x, imgTL.y + tile_y }, 0);
     }
 
     ui.PopStyle();
@@ -1187,9 +1187,9 @@ void Editor::DrawUI_Tilesheet(UI &ui)
         }
     }
 
-    // Draw highlight around currently selectedId tile(s)
     if (cursor.selection_type == SELECTION_PALETTE) {
         if (cursor.selection_tiles[layer].size()) {
+            // Draw highlight around currently selectedId tile(s)
             Tilemap::Region pick_region = cursor.PickRegion();
             Vector2 brush_tl{};
             brush_tl.x = pick_region.tl.x;
@@ -1207,7 +1207,20 @@ void Editor::DrawUI_Tilesheet(UI &ui)
         }
     }
 
-    DrawUI_WangTile();
+    if (ui.Button("Add New Tile").pressed) {
+        TileDef dat{};
+        pack_assets.Add<TileDef>(dat);
+    }
+    ui.Newline();
+
+    // Draw editor info at bottom
+    if (cursor.selection_tiles[layer].size() == 1) {
+        uint16_t tile_def_id = cursor.selection_tiles[layer][0];
+        if (tile_def_id) {
+            TileDef &tile_def = pack_assets.FindById<TileDef>(tile_def_id);
+            ui.HAQField(__COUNTER__, "", tile_def, HAQ_EDIT, 110.0f);
+        }
+    }
 }
 void Editor::DrawUI_Wang(UI &ui)
 {
@@ -1302,7 +1315,6 @@ void Editor::DrawUI_Wang(UI &ui)
 void Editor::DrawUI_WangTile(void)
 {
     WangTileset &wangTileset = state.wang.wangTileset;
-    auto &map = pack_maps.FindById<Tilemap>(map_id);
     auto &tile_defs = pack_assets.tile_defs;
 
     Rectangle wangBg{ 434, 4, 560, 560 };
@@ -1337,9 +1349,9 @@ void Editor::DrawUI_WangTile(void)
                     uint8_t *pixel = &imgData[templateOffset];
                     uint8_t tile = pixel[0] < tile_defs.size() ? pixel[0] : 0;
 
-                    const GfxFrame &gfx_frame = map.GetTileGfxFrame(selectedTile);
+                    const GfxFrame &gfx_frame = GetTileGfxFrame(selectedTile);
                     const GfxFile &gfx_file = pack_assets.FindByName<GfxFile>(gfx_frame.gfx);
-                    const Rectangle tileRect = map.TileDefRect(tile);
+                    const Rectangle tileRect = TileDefRect(tile);
                     if (uiWangTile.Image(gfx_file.texture, tileRect).down) {
                         pixel[0] = selectedTile; //^ (selectedTile*55);
                         pixel[1] = selectedTile; //^ (selectedTile*55);
@@ -1359,9 +1371,9 @@ void Editor::DrawUI_WangTile(void)
                     uint8_t *pixel = &imgData[templateOffset];
                     uint8_t tile = pixel[0] < tile_defs.size() ? pixel[0] : 0;
 
-                    const GfxFrame &gfx_frame = map.GetTileGfxFrame(selectedTile);
+                    const GfxFrame &gfx_frame = GetTileGfxFrame(selectedTile);
                     const GfxFile &gfx_file = pack_assets.FindByName<GfxFile>(gfx_frame.gfx);
-                    const Rectangle tileRect = map.TileDefRect(tile);
+                    const Rectangle tileRect = TileDefRect(tile);
                     if (uiWangTile.Image(gfx_file.texture, tileRect).down) {
                         pixel[0] = selectedTile; //^ (selectedTile*55);
                         pixel[1] = selectedTile; //^ (selectedTile*55);
@@ -2255,6 +2267,16 @@ void Editor::DrawUI_GfxAnimEditor(void)
             anim_id = gfx_anim.id;
         }
 
+        bool add = io.KeyPressed(KEY_INSERT);
+        if (add) {
+            if (state.selections.byType[GfxFrame::dtype]) {
+                GfxFrame &gfx_frame = pack_assets.FindById<GfxFrame>(state.selections.byType[GfxFrame::dtype]);
+                if (gfx_frame.id) {
+                    gfx_anim.frames.push_back(gfx_frame.name);
+                }
+            }
+        }
+
         if (gfx_anim.frames.size()) {
             // In case # of frames changed via editor, we clamp
             anim_state.frame = CLAMP(anim_state.frame, 0, gfx_anim.frames.size() - 1);
@@ -2268,7 +2290,6 @@ void Editor::DrawUI_GfxAnimEditor(void)
             GfxFile &gfx_file = pack_assets.FindByName<GfxFile>(gfx_frame.gfx);
 
             ui.Image(gfx_file.texture, rect, true);
-
             ui.Newline();
 
             ui.Label(TextFormat("Frame %u of %u", anim_state.frame + 1, gfx_anim.frames.size()));
@@ -2279,14 +2300,17 @@ void Editor::DrawUI_GfxAnimEditor(void)
             bool play = io.KeyPressed(KEY_SPACE);
             bool next = io.KeyPressed(KEY_RIGHT, true);
             bool end  = io.KeyPressed(KEY_END);
-            bool add  = io.KeyPressed(KEY_KP_ADD);
-            bool del  = io.KeyPressed(KEY_KP_SUBTRACT);
+            bool del  = io.KeyPressed(KEY_DELETE);
+
+            if (add) printf("add\n");
+            if (del) printf("del\n");
 
             home |= ui.Button("|<", home ? SKYBLUE : GRAY).pressed;
             prev |= ui.Button("< ", prev ? SKYBLUE : GRAY).pressed;
             play |= ui.Button(anim_paused ? "|>" : "||", anim_paused ? LIME : MAROON).pressed;
             next |= ui.Button(" >", next ? SKYBLUE : GRAY).pressed;
             end  |= ui.Button(">|", end  ? SKYBLUE : GRAY).pressed;
+            ui.Newline();
 
             if (home) {
                 anim_paused = true;
@@ -2315,10 +2339,13 @@ void Editor::DrawUI_GfxAnimEditor(void)
                 anim_paused = true;
                 anim_state.frame = gfx_anim.frames.size() - 1;
             }
-            ui.Newline();
 
             ui.Text("Frames");
             ui.Newline();
+
+            if (del) {
+                gfx_anim.frames.erase(gfx_anim.frames.begin() + frame_selected);
+            }
 
             uint16_t frame_idx = 0;
             for (const std::string &frame : gfx_anim.frames) {
