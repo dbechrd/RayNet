@@ -313,10 +313,12 @@ void Tilemap::ResolveEntityCollisionsEdges(Entity &entity)
     for (Edge &edge : edges) {
         Manifold manifold{};
         if (dlb_CheckCollisionCircleEdge(entity.Position2D(), entity.radius, edge, &manifold)) {
-            Collision collision{};
-            collision.edge = &edge;
-            collision.manifold = manifold;
-            collisions.push_back(collision);
+            if (Vector2DotProduct(manifold.normal, edge.normal) > 0) {
+                Collision collision{};
+                collision.edge = &edge;
+                collision.manifold = manifold;
+                collisions.push_back(collision);
+            }
         }
     }
 

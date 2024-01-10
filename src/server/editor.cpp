@@ -2141,6 +2141,7 @@ void Editor::DrawUI_Debug(UI &ui)
         ui.Text("--------------------------------------------------");
         ui.Newline();
 
+#if 0
         bool addFrame = false;
         if (state.selections.byType[GfxFrame::dtype]) {
             addFrame = ui.Button("Add frame").pressed;
@@ -2152,15 +2153,18 @@ void Editor::DrawUI_Debug(UI &ui)
 
         ui.Text("--------------------------------------------------");
         ui.Newline();
+#endif
 
         static SearchBox searchGfxFrame{ "Search frames..." };
         PackSearchBox<GfxFrame>(ui, pack_assets, searchGfxFrame);
         GfxFrame &gfx_frame = pack_assets.FindById<GfxFrame>(state.selections.byType[GfxFrame::dtype]);
         ui.HAQField(__COUNTER__, "", gfx_frame, HAQ_EDIT, 80.0f);
 
+#if 0
         if (addFrame && gfx_anim.id && gfx_frame.id) {
             gfx_anim.frames.push_back(gfx_frame.name);
         }
+#endif
     }
 }
 
@@ -2340,7 +2344,7 @@ void Editor::DrawUI_GfxAnimEditor(void)
                 anim_state.frame = gfx_anim.frames.size() - 1;
             }
 
-            ui.Text("Frames");
+            ui.Text("Frames (Ins = add, Del = remove, Drag = swap)");
             ui.Newline();
 
             if (del) {

@@ -302,7 +302,8 @@ int main(int argc, char *argv[])
                 const bool button_left = io.KeyDown(KEY_A);
                 const bool button_down = io.KeyDown(KEY_S);
                 const bool button_right = io.KeyDown(KEY_D);
-                const bool button_primary = io.MouseButtonDown(MOUSE_BUTTON_LEFT);
+                const bool button_primary_down = io.MouseButtonDown(MOUSE_BUTTON_LEFT);
+                const bool button_primary_press = io.MouseButtonPressed(MOUSE_BUTTON_LEFT);
                 const bool button_secondary = io.MouseButtonPressed(MOUSE_BUTTON_RIGHT);
 
                 // TODO: Use this for dismissing dialogs, updating player facing dir, etc.?
@@ -359,10 +360,10 @@ int main(int argc, char *argv[])
                 }
 
                 const char *holdingItem = client->world->spinner.ItemName();
-                if (button_primary) {
+                if (button_primary_down) {
                     if (holdingItem == "Fireball") {
                         input.fire = true;
-                    } else if (holdingItem == "Shovel" && controller.tile_hovered) {
+                    } else if (holdingItem == "Shovel" && controller.tile_hovered && button_primary_press) {
                         client->SendTileInteract(map->id, controller.tile_x, controller.tile_y, true);
                     }
                 }
