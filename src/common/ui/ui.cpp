@@ -225,7 +225,7 @@ void UI::Newline(void)
     cursor.x = 0;
     if (panelStack.size()) {
         for (ScrollPanel *panel : panelStack) {
-            cursor.x += panel->style.margin.left + panel->style.panelBorderWidth + panel->style.pad.left;
+            cursor.x += panel->style.margin.left + panel->style.borderWidth[UI_CtrlTypePanel] + panel->style.pad.left;
             cursor.x -= floorf(panel->scrollOffset.x);
         }
     }
@@ -275,7 +275,7 @@ void UI::BeginScrollPanel(ScrollPanel &scrollPanel, IO::Scope scope)
     //cursor.x += style.margin.left;
     //cursor.y += style.margin.top;
 
-    Rectangle contentRect = RectShrink(ctrlRect, style.panelBorderWidth);
+    Rectangle contentRect = RectShrink(ctrlRect, style.borderWidth[UI_CtrlTypePanel]);
 
     static HoverHash prevHoverHash{};
     scrollPanel.style = style;
@@ -289,13 +289,13 @@ void UI::BeginScrollPanel(ScrollPanel &scrollPanel, IO::Scope scope)
     }
 
     // Draw background color
-    DrawRectangleRec(ctrlRect, GRAYISH_BLUE);
-    DrawRectangleLinesEx(ctrlRect, style.panelBorderWidth, BLACK);
+    DrawRectangleRec(ctrlRect, style.bgColor[UI_CtrlTypePanel]);
+    DrawRectangleLinesEx(ctrlRect, style.borderWidth[UI_CtrlTypePanel], style.borderColor[UI_CtrlTypePanel]);
 
     Space({
         // NOTE: Newline() calculates x because of scrollOffset complexity
         0,  // style.margin.left + style.panelBorderWidth + style.pad.left,
-        style.margin.top + style.panelBorderWidth + style.pad.top - floorf(scrollPanel.scrollOffset.y)
+        style.margin.top + style.borderWidth[UI_CtrlTypePanel] + style.pad.top - floorf(scrollPanel.scrollOffset.y)
     });
     Newline();
 
@@ -565,8 +565,8 @@ UIState UI::Text(const char *text, size_t textLen)
     if (style.bgColor[UI_CtrlTypeDefault].a) {
         DrawRectangleRec(ctrlRect, style.bgColor[UI_CtrlTypeDefault]);
     }
-    if (style.borderColor.a) {
-        DrawRectangleLinesEx(ctrlRect, 1, style.borderColor);
+    if (style.borderColor[UI_CtrlTypeDefault].a) {
+        DrawRectangleLinesEx(ctrlRect, 1, style.borderColor[UI_CtrlTypeDefault]);
     }
 
     // Draw text
@@ -646,8 +646,8 @@ UIState UI::Image(const Texture &texture, Rectangle srcRect, bool checkerboard)
     Rectangle ctrlRect = {
         ctrlPosition.x,
         ctrlPosition.y,
-        ctrlSize.x + style.imageBorderThickness * 2,
-        ctrlSize.y + style.imageBorderThickness * 2
+        ctrlSize.x + style.borderWidth[UI_CtrlTypeDefault] * 2,
+        ctrlSize.y + style.borderWidth[UI_CtrlTypeDefault] * 2
     };
     UpdateCursor(ctrlRect);
 
@@ -655,24 +655,16 @@ UIState UI::Image(const Texture &texture, Rectangle srcRect, bool checkerboard)
     UIState state = CalcState(ctrlRect, prevHoverHash);
 
     Rectangle contentRect = ctrlRect;
-    contentRect.x += style.imageBorderThickness;
-    contentRect.y += style.imageBorderThickness;
-    contentRect.width -= style.imageBorderThickness * 2;
-    contentRect.height -= style.imageBorderThickness * 2;
+    contentRect.x += style.borderWidth[UI_CtrlTypeDefault];
+    contentRect.y += style.borderWidth[UI_CtrlTypeDefault];
+    contentRect.width -= style.borderWidth[UI_CtrlTypeDefault] * 2;
+    contentRect.height -= style.borderWidth[UI_CtrlTypeDefault] * 2;
     state.contentRect = contentRect;
 
     if (ShouldCull(ctrlRect)) return state;
 
     // Draw border
-#if 0
-    Color borderColor = state.hover ? YELLOW : BLACK;
-    if (style.borderColor.a) {
-        borderColor = style.borderColor;
-    }
-    DrawRectangleLinesEx(ctrlRect, style.imageBorderThickness, borderColor);
-#else
-    DrawRectangleLinesEx(ctrlRect, 1, BLACK);
-#endif
+    DrawRectangleLinesEx(ctrlRect, style.borderWidth[UI_CtrlTypeDefault], style.borderColor[UI_CtrlTypeDefault]);
 
     // Draw checkerboard background
     if (checkerboard) {
@@ -718,8 +710,8 @@ UIState UI::Button(const std::string &text)
     Rectangle ctrlRect{
         ctrlPosition.x,
         ctrlPosition.y,
-        ctrlSize.x + style.buttonBorderThickness * 2,
-        ctrlSize.y + style.buttonBorderThickness * 2
+        ctrlSize.x + style.borderWidth[UI_CtrlTypeButton] * 2,
+        ctrlSize.y + style.borderWidth[UI_CtrlTypeButton] * 2
     };
     UpdateCursor(ctrlRect);
 
@@ -728,8 +720,8 @@ UIState UI::Button(const std::string &text)
 
     const float downOffset = (style.buttonPressed || state.down) ? 1 : -1;
     Rectangle contentRect{
-        ctrlPosition.x + style.buttonBorderThickness,
-        ctrlPosition.y + style.buttonBorderThickness * downOffset,
+        ctrlPosition.x + style.borderWidth[UI_CtrlTypeButton],
+        ctrlPosition.y + style.borderWidth[UI_CtrlTypeButton] * downOffset,
         ctrlSize.x,
         ctrlSize.y
     };
@@ -1121,7 +1113,7 @@ UIState UI::TextboxWithDefault(uint32_t ctrlid, std::string &text, const std::st
     }
 
     // Border
-    Color borderColor = style.borderColor;
+    Color borderColor = style.borderColor[UI_CtrlTypeTextbox];
     if (!borderColor.a) {
         borderColor = BLACK;
     }

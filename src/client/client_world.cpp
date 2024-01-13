@@ -813,7 +813,7 @@ void ClientWorld::DrawHUDSignEditor(void)
         uiSignEditorPos.y = floorf(uiSignEditorPos.y);
 
         UIStyle uiSignEditorStyle{};
-        uiSignEditorStyle.borderColor = BLANK;
+        //uiSignEditorStyle.borderColor = BLANK;
         uiSignEditorStyle.size.x = uiSignEditorSize.x;
         UI uiSignEditor{ uiSignEditorPos, uiSignEditorSize, uiSignEditorStyle };
 

@@ -612,8 +612,8 @@ void Editor::DrawUI_ActionBar(void)
     DrawRectangleRoundedLines(actionBarRect, 0.15f, 8, 2.0f, BLACK);
 #else
     //DrawRectangleRec(actionBarRect, ColorBrightness(ASESPRITE_BEIGE, -0.1f));
-    DrawRectangleRec(actionBarRect, GRAYISH_BLUE);
-    DrawRectangleLinesEx(actionBarRect, 2.0f, BLACK);
+    DrawRectangleRec(actionBarRect, uiStyle.bgColor[UI_CtrlTypePanel]);
+    DrawRectangleLinesEx(actionBarRect, uiStyle.borderWidth[UI_CtrlTypePanel], uiStyle.borderColor[UI_CtrlTypePanel]);
 #endif
     uiState.hover = dlb_CheckCollisionPointRec(GetMousePosition(), actionBarRect);
     if (uiState.hover) {
@@ -991,7 +991,7 @@ void Editor::DrawUI_Tilesheet(UI &ui)
     int tiles_y = tile_defs.size() / 6 + (tile_defs.size() % 6 > 0);
 
     UIStyle blackBorderStyle{};
-    blackBorderStyle.borderColor = BLACK;
+    //blackBorderStyle.borderColor = BLACK;
     ui.PushStyle(blackBorderStyle);
 
     UIState sheet = ui.Checkerboard({ 0, 0, (float)TILE_W * tiles_x, (float)TILE_W * tiles_y });
@@ -1238,10 +1238,13 @@ void Editor::DrawUI_Wang(UI &ui)
 
     UIStyle uiWangStyle4x{};
     uiWangStyle4x.scale = 2;
+    uiWangStyle4x.borderColor[UI_CtrlTypeDefault] = BLACK;
+    uiWangStyle4x.borderWidth[UI_CtrlTypeDefault] = 1;
     ui.PushStyle(uiWangStyle4x);
 
     UIStyle styleSelected{ uiWangStyle4x };
-    styleSelected.borderColor = WHITE;
+    styleSelected.borderColor[UI_CtrlTypeDefault] = WHITE;
+    styleSelected.borderWidth[UI_CtrlTypeDefault] = 1;
 
     for (int i = 0; i < wangTileset.ts.num_h_tiles; i++) {
         stbhw_tile *wangTile = wangTileset.ts.h_tiles[i];
@@ -1331,7 +1334,6 @@ void Editor::DrawUI_WangTile(void)
         UIStyle uiWangTileStyle{};
         uiWangTileStyle.scale = 0.5f;
         uiWangTileStyle.margin = 0;
-        uiWangTileStyle.imageBorderThickness = 1;
 
         Vector2 uiPosition{ wangBg.x + 8, wangBg.y + 8 };
         Vector2 uiSize{ 200, 200 };
@@ -2085,10 +2087,17 @@ void Editor::DrawUI_Debug(UI &ui)
 
         static float frames_x{ 1 };
         static float frames_y{ 1 };
+
         ui.Label("X");
+        ui.PushWidth(24);
         ui.Textbox(__COUNTER__, frames_x);
+        ui.PopStyle();
+
         ui.Label("Y");
+        ui.PushWidth(24);
         ui.Textbox(__COUNTER__, frames_y);
+        ui.PopStyle();
+
         frames_x = MAX(1, frames_x);
         frames_y = MAX(1, frames_y);
         if (ui.Button("Split frames!").pressed) {
@@ -2194,8 +2203,8 @@ void Editor::DrawUI_GfxFrameEditor(void)
         Vector2 imageTL = cursor;
 
         const UIStyle style = ui.GetStyle();
-        imageTL.x += style.margin.left + style.imageBorderThickness;
-        imageTL.y += style.margin.top  + style.imageBorderThickness;
+        imageTL.x += style.margin.left + style.borderWidth[UI_CtrlTypeDefault];
+        imageTL.y += style.margin.top  + style.borderWidth[UI_CtrlTypeDefault];
 
         UIState imgState = ui.Image(gfx_file.texture, {}, true);
         ui.Newline();

@@ -3,6 +3,7 @@
 
 enum UI_CtrlType {
     UI_CtrlTypeDefault,
+    UI_CtrlTypePanel,
     UI_CtrlTypeButton,
     UI_CtrlTypeTextbox,
     UI_CtrlTypeCount,
@@ -59,17 +60,16 @@ enum UIElementType {
 #endif
 
 struct UIStyle {
-    UIMargin margin{ 4, 0, 0, 4 };
-    float buttonBorderThickness{ 1 };
-    float imageBorderThickness{ 2 };
-    float panelBorderWidth{ 1 };
-
-    Color borderColor{ BLANK };
-    UIPad pad{ 4, 2 };
-    float scale{ 1 };
-    Vector2 size{ 0, 0 };
-    Color bgColor[UI_CtrlTypeCount]{ BLANK, BLUE_DESAT, DARKGRAY };
+    Color bgColor[UI_CtrlTypeCount]{ BLANK, Fade(GRAYISH_BLUE, 0.7f), BLUE_DESAT, DARKGRAY };
     Color fgColor{ WHITE };
+    Color borderColor[UI_CtrlTypeCount]{ BLANK, BLACK, BLACK, BLACK };
+
+    Vector2 size{ 0, 0 };
+    float scale{ 1 };
+    UIMargin margin{ 4, 0, 0, 4 };
+    float borderWidth[UI_CtrlTypeCount]{ 0, 1, 1, 1 };
+    UIPad pad{ 4, 2 };
+
     Font *font{ &fntSmall };
     bool buttonPressed{};
     UIStyle_TextAlignH alignH{ TextAlign_Left };
