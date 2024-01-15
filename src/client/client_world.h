@@ -118,8 +118,8 @@ struct Spinner {
             //DrawCircle(iconCenter.x, iconCenter.y, 2, BLACK);
             Vector2 textSize = dlb_MeasureTextShadowEx(fntMedium, menuText, menuTextLen);
             Vector2 textPos{
-                iconCenter.x - textSize.x / 2.0f,
-                iconCenter.y - textSize.y / 2.0f
+                floorf(iconCenter.x - textSize.x / 2.0f),
+                floorf(iconCenter.y - textSize.y / 2.0f)
             };
             //DrawTextShadowEx(fntMedium, TextFormat("%d %.2f", i, iconPieAlpha), iconCenter, RED);
             dlb_DrawTextShadowEx(fntMedium, menuText, menuTextLen, textPos, WHITE);
