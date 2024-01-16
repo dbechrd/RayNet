@@ -295,6 +295,7 @@ void DrawSprite(const Entity &entity, DrawCmdQueue *sortedDraws, bool highlight 
 void UpdateTileDefAnimations(double dt);
 
 TileDef &GetTileDef(uint16_t tile_id);
+TileDef *FindTileDefByMask(uint16_t material_id, int mask);
 const GfxFrame &GetTileGfxFrame(uint16_t tile_id);
 Rectangle TileDefRect(uint16_t tile_id);
 Color TileDefAvgColor(uint16_t tile_id);

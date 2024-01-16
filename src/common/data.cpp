@@ -416,6 +416,16 @@ TileDef &GetTileDef(uint16_t tile_id)
     }
     return pack_assets.tile_defs[0];
 }
+TileDef *FindTileDefByMask(uint16_t material_id, int mask)
+{
+    // TODO(perf): Hash table (also, match materials somehow?)
+    for (auto &foo : pack_assets.tile_defs) {
+        if (foo.id && foo.material_id == material_id && foo.auto_tile_mask == mask) {
+            return &foo;
+        }
+    }
+    return 0;
+}
 const GfxFrame &GetTileGfxFrame(uint16_t tile_id)
 {
     const TileDef &tile_def = GetTileDef(tile_id);

@@ -81,8 +81,9 @@ struct Tilemap {
     bool AtWorld(TileLayerType layer, int world_x, int world_y, uint16_t &tile_id);
     bool IsSolid(int x, int y);  // tile x,y coord, returns true if out of bounds
 
-    void Set(TileLayerType layer, uint16_t x, uint16_t y, uint16_t tile_id, double now);
-    bool SetTry(TileLayerType layer, uint16_t x, uint16_t y, uint16_t tile_id, double now);
+    void Autotile(TileLayerType layer, uint16_t cx, uint16_t cy, uint16_t tile_id, double now);
+    void Set(TileLayerType layer, uint16_t x, uint16_t y, uint16_t tile_id, double now, bool autotile = false);
+    bool SetTry(TileLayerType layer, uint16_t x, uint16_t y, uint16_t tile_id, double now, bool autotile = false);
     void SetFromWangMap(WangMap &wangMap, double now);
     void Fill(TileLayerType layer, uint16_t x, uint16_t y, uint16_t new_tile_id, double now);
 

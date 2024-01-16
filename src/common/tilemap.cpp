@@ -58,7 +58,45 @@ bool Tilemap::IsSolid(int x, int y)
     return false;
 }
 
-void Tilemap::Set(TileLayerType layer, uint16_t x, uint16_t y, uint16_t tile_id, double now)
+void Tilemap::Autotile(TileLayerType layer, uint16_t cx, uint16_t cy, uint16_t tile_id, double now)
+{
+    const TileDef &tile_def = GetTileDef(tile_id);
+    int mask = tile_def.auto_tile_mask;
+
+    // Bit placement for auto-tile masks. 0b12345678 maps to:
+    //  1 2 3
+    //  4 . 5
+    //  6 7 8
+    struct {
+        Coord coord;
+        int mask;
+    } magics[]{
+        {{  0, -1 }, 0b11100000},  // top
+        {{ -1,  0 }, 0b10010100},  // left
+        {{  1,  0 }, 0b00101001},  // right
+        {{  0,  1 }, 0b00000111},  // bottom
+        {{ -1, -1 }, 0b10000000},  // top left
+        {{  1, -1 }, 0b00100000},  // top right
+        {{ -1,  1 }, 0b00000100},  // bottom left
+        {{  1,  1 }, 0b00000001},  // bottom right
+    };
+
+    for (const auto &magic : magics) {
+        uint16_t tile_id_other = 0;
+        if (AtTry(layer, cx + magic.coord.x, cy + magic.coord.y, tile_id_other)) {
+            int mask_other = GetTileDef(tile_id_other).auto_tile_mask;
+
+            int foo = ~magic.mask;
+            int new_mask = (mask_other & ~foo) | (mask & foo);
+
+            TileDef *new_tile = FindTileDefByMask(tile_def.material_id, new_mask);
+            if (new_tile) {
+                Set(layer, cx + magic.coord.x, cy + magic.coord.y, new_tile->id, now, false);
+            }
+        }
+    }
+}
+void Tilemap::Set(TileLayerType layer, uint16_t x, uint16_t y, uint16_t tile_id, double now, bool autotile)
 {
     assert(x < width);
     assert(y < height);
@@ -70,11 +108,15 @@ void Tilemap::Set(TileLayerType layer, uint16_t x, uint16_t y, uint16_t tile_id,
         dirtyTiles.insert({ x, y });
         chunkLastUpdatedAt = now;
     }
+
+    if (autotile) {
+        Autotile(layer, x, y, tile_id, now);
+    }
 }
-bool Tilemap::SetTry(TileLayerType layer, uint16_t x, uint16_t y, uint16_t tile_id, double now)
+bool Tilemap::SetTry(TileLayerType layer, uint16_t x, uint16_t y, uint16_t tile_id, double now, bool autotile)
 {
     if (x >= 0 && y >= 0 && x < width && y < height) {
-        Set(layer, x, y, tile_id, now);
+        Set(layer, x, y, tile_id, now, autotile);
         return true;
     }
     return false;

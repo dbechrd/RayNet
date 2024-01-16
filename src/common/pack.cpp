@@ -15,8 +15,9 @@
 
 char PeekTxt(FILE *f)
 {
+    int tell = ftell(f);
     char next = fgetc(f);
-    fseek(f, ftell(f) - 1, SEEK_SET);
+    fseek(f, tell, SEEK_SET);
     return next;
 }
 
@@ -222,12 +223,14 @@ void Process(PackStream &stream, std::vector<T> &vec)
     uint16_t len = (uint16_t)vec.size();
 
     int wrap_width = 0;
+#if 0
     if (stream.type == PACK_TYPE_TEXT) {
         if constexpr (!(std::is_fundamental_v<T> || std::is_enum_v<T>)) {
             wrap_width = 1;
         }
         fprintf(stream.file, "\n");
     }
+#endif
 
     PROC(len);
     vec.resize(len);
@@ -671,7 +674,7 @@ Err LoadPack(Pack &pack, PackStreamType type, std::string path)
     PerfTimer t{ TextFormat("Load pack %s", path.c_str()) };
     Err err = RN_SUCCESS;
 
-    FILE *file = fopen(path.c_str(), type == PACK_TYPE_BINARY ? "rb" : "r");
+    FILE *file = fopen(path.c_str(), "rb"); //type == PACK_TYPE_BINARY ? "rb" : "r");
     if (!file) {
         return RN_BAD_FILE_READ;
     }
@@ -756,7 +759,7 @@ Err LoadResources(Pack &pack)
         }
 
 #if _DEBUG
-        // HACK(dlb): auto-generate tile ids for newly added tile defs
+        // HACK(dlb): auto-generate ids for newly added frames
         uint16_t next_frame_id = 0;
         for (GfxFrame &gfx_frame : pack.gfx_frames) {
             if (gfx_frame.id < UINT16_MAX) {
@@ -769,6 +772,22 @@ Err LoadResources(Pack &pack)
             }
             if (!gfx_frame.name.size()) {
                 gfx_frame.name = TextFormat("frm_%s_%u_%u", gfx_frame.gfx.c_str(), gfx_frame.x, gfx_frame.y);
+            }
+        }
+
+        // HACK(dlb): auto-generate ids for newly added anims
+        uint16_t next_anim_id = 0;
+        for (GfxAnim &gfx_anim : pack.gfx_anims) {
+            if (gfx_anim.id < UINT16_MAX) {
+                next_anim_id = MAX(next_anim_id, gfx_anim.id + 1);
+            }
+        }
+        for (GfxAnim &gfx_anim : pack.gfx_anims) {
+            if (gfx_anim.id == UINT16_MAX) {
+                gfx_anim.id = next_anim_id++;
+            }
+            if (!gfx_anim.name.size()) {
+                gfx_anim.name = TextFormat("anim_%s_%u_%u", gfx_anim.frames[0].c_str());
             }
         }
 #endif

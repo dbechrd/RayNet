@@ -150,7 +150,7 @@ struct Editor {
     double dt;
 
     // TODO: Make this an enum! Doh.
-    bool showGfxFrameEditor      { 1 };
+    bool showGfxFrameEditor      { 0 };
     bool showGfxFrameEditorDirty { 0 };
     bool showGfxAnimEditor       { 0 };
     bool showGfxAnimEditorDirty  { 0 };
