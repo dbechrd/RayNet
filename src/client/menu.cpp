@@ -37,17 +37,17 @@ void MenuMain::Draw(GameClient &client, bool &back)
     const GfxFile &gfx_background = pack_assets.FindByName<GfxFile>(background);
     dlb_DrawTexturePro(gfx_background.texture,
         { 0, 0, (float)gfx_background.texture.width, (float)gfx_background.texture.height },
-        { 0, 0, (float)GetRenderWidth(), (float)GetRenderHeight() },
+        { 0, 0, g_RenderSize.x, g_RenderSize.y },
         {}, WHITE
     );
 
     const GfxFile &gfx_scrolls = pack_assets.FindByName<GfxFile>(scrolls);
     dlb_DrawTextureCenteredFull(gfx_scrolls.texture,
-        { floorf(GetRenderWidth() / 2.0f), floorf(GetRenderHeight() / 2.0f) },
+        { floorf(g_RenderSize.x / 2.0f), floorf(g_RenderSize.y / 2.0f) },
         WHITE
     );
 
-    Vector2 uiPosition{ floorf(GetRenderWidth() / 2.0f), floorf(GetRenderHeight() / 2.0f) };
+    Vector2 uiPosition{ floorf(g_RenderSize.x / 2.0f), floorf(g_RenderSize.y / 2.0f) };
     uiPosition.y -= 115;
 
     Vector2 uiSize{};
@@ -64,15 +64,15 @@ void MenuMain::Draw(GameClient &client, bool &back)
 
 #if 0
     // Draw weird squares animation
-    const Vector2 screenHalfSize{ GetRenderWidth()/2.0f, GetRenderHeight()/2.0f };
+    const Vector2 screenHalfSize{ g_RenderSize.x/2.0f, g_RenderSize.y/2.0f };
     const Vector2 screenCenter{ screenHalfSize.x, screenHalfSize.y };
     for (float scale = 0.0f; scale < 1.1f; scale += 0.1f) {
         const float modScale = fmodf(texMenuBgScale + scale, 1);
         Rectangle menuBgRect{
             screenCenter.x - screenHalfSize.x * modScale,
             screenCenter.y - screenHalfSize.y * modScale,
-            GetRenderWidth() * modScale,
-            GetRenderHeight() * modScale
+            g_RenderSize.x * modScale,
+            g_RenderSize.y * modScale
         };
         DrawRectangleLinesEx(menuBgRect, 20, BLACK);
     }
@@ -93,7 +93,7 @@ void MenuMain::Draw(GameClient &client, bool &back)
     }
 
     // Draw font atlas for SDF font
-    //DrawTexture(fntBig.texture, GetRenderWidth() - fntBig.texture.width, 0, WHITE);
+    //DrawTexture(fntBig.texture, g_RenderSize.x - fntBig.texture.width, 0, WHITE);
 }
 
 void MenuConnecting::OnEnter(void) {
@@ -113,7 +113,7 @@ void MenuConnecting::Draw(GameClient &client, bool &back)
     const GfxFile &gfx_background = pack_assets.FindByName<GfxFile>(background);
     dlb_DrawTexturePro(gfx_background.texture,
         { 0, 0, (float)gfx_background.texture.width, (float)gfx_background.texture.height },
-        { 0, 0, (float)GetRenderWidth(), (float)GetRenderHeight() },
+        { 0, 0, g_RenderSize.x, g_RenderSize.y },
         {}, WHITE
     );
 
@@ -135,7 +135,7 @@ void MenuConnecting::Draw(GameClient &client, bool &back)
     uiStyleMenu.font = &fntBig;
     uiStyleMenu.alignH = TextAlign_Center;
 
-    Vector2 uiPosition{ floorf(GetRenderWidth() / 2.0f), floorf(GetRenderHeight() - uiStyleMenu.font->baseSize * 4) };
+    Vector2 uiPosition{ floorf(g_RenderSize.x / 2.0f), floorf(g_RenderSize.y - uiStyleMenu.font->baseSize * 4) };
     Vector2 uiSize{};
     UI uiMenu{ uiPosition, uiSize, uiStyleMenu };
 

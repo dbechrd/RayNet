@@ -461,8 +461,8 @@ void Editor::CenterCameraOnMap(Camera2D &camera)
     auto &new_editor_map = pack_maps.FindById<Tilemap>(map_id);
 
     Vector2 viewportSize{
-        (float)(GetRenderWidth() - width),
-        (float)GetRenderHeight()
+        (g_RenderSize.x - width),
+        g_RenderSize.y
     };
     Vector2 mapSize{
         (float)new_editor_map.width * TILE_W,
@@ -598,15 +598,15 @@ void Editor::DrawUI_ActionBar(void)
     if (dock_left) {
         uiPosition = { 0, 0 };
     } else {
-        uiPosition = { GetRenderWidth() - width, 0 };
+        uiPosition = { g_RenderSize.x - width, 0 };
     }
-    Vector2 uiSize{ width, (float)GetRenderHeight() };
+    Vector2 uiSize{ width, g_RenderSize.y };
 
     UIStyle uiStyle{};
     UI ui{ uiPosition, uiSize, uiStyle };
 
     UIState uiState{};
-    const Rectangle actionBarRect{ uiPosition.x, uiPosition.y, width, (float)GetRenderHeight() };
+    const Rectangle actionBarRect{ uiPosition.x, uiPosition.y, width, g_RenderSize.y };
 #if 0
     DrawRectangleRounded(actionBarRect, 0.15f, 8, ASESPRITE_BEIGE);
     DrawRectangleRoundedLines(actionBarRect, 0.15f, 8, 2.0f, BLACK);
@@ -789,7 +789,7 @@ void Editor::DrawUI_ActionBar(void)
     UIStyle scrollStyle = ui.GetStyle();
     scrollStyle.margin = {};
     scrollStyle.pad = {};
-    scrollStyle.size = { width, (float)GetRenderHeight() - ui.CursorScreen().y };
+    scrollStyle.size = { width, g_RenderSize.y - ui.CursorScreen().y };
     ui.PushStyle(scrollStyle);
     ui.BeginScrollPanel(scrollPanel, IO::IO_ScrollPanelOuter);
     ui.PopStyle();
@@ -987,8 +987,8 @@ void Editor::DrawUI_Tilesheet(UI &ui)
     TileLayerType layer = state.tiles.layer;
     auto &cursor = state.tiles.cursor;
 
-    int tiles_x = 6;
-    int tiles_y = tile_defs.size() / 6 + (tile_defs.size() % 6 > 0);
+    int tiles_x = 12;
+    int tiles_y = tile_defs.size() / tiles_x + (tile_defs.size() % tiles_x > 0);
 
     UIStyle blackBorderStyle{};
     //blackBorderStyle.borderColor = BLACK;
@@ -2186,7 +2186,7 @@ void Editor::DrawUI_GfxFrameEditor(void)
     } else {
         uiPosition = { 0, 0 };
     }
-    Vector2 uiSize{ (float)GetRenderWidth() - (width - borderWidth), (float)GetRenderHeight() };
+    Vector2 uiSize{ (float)g_RenderSize.x - (width - borderWidth), g_RenderSize.y };
 
     UI ui{ uiPosition, uiSize, {} };
 
@@ -2254,7 +2254,7 @@ void Editor::DrawUI_GfxAnimEditor(void)
     } else {
         uiPosition = { 0, 0 };
     }
-    Vector2 uiSize{ (float)GetRenderWidth() - (width - borderWidth), (float)GetRenderHeight() };
+    Vector2 uiSize{ g_RenderSize.x - (width - borderWidth), g_RenderSize.y };
 
     UI ui{ uiPosition, uiSize, {} };
 

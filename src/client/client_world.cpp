@@ -295,8 +295,8 @@ void ClientWorld::UpdateCamera(GameClient &client)
     Vector2 targetPos = target.Position2D();
 
     camera.offset = {
-        /*floorf(*/GetRenderWidth ()/2.0f/*)*/,
-        /*floorf(*/GetRenderHeight()/2.0f/*)*/
+        /*floorf(*/g_RenderSize.x/2.0f/*)*/,
+        /*floorf(*/g_RenderSize.y/2.0f/*)*/
     };
 
     if (!io.KeyDown(KEY_SPACE)) {
@@ -747,7 +747,7 @@ void ClientWorld::DrawHUDEntityHoverInfo(void)
     Vector2 hpBarSize{ 200, 24 };
 
     Rectangle hpBarBg{
-        (float)GetRenderWidth() / 2 - hpBarSize.x / 2 - hpBarPad.x,
+        (float)g_RenderSize.x / 2 - hpBarSize.x / 2 - hpBarPad.x,
         20.0f,
         hpBarSize.x + hpBarPad.x * 2,
         hpBarSize.y + hpBarPad.y * 2
@@ -896,8 +896,8 @@ void ClientWorld::Draw(GameClient &client)
 
 #if CL_DBG_PIXEL_FIXER
     Vector2 screenSize{
-        floorf((float)GetRenderWidth()),
-        floorf((float)GetRenderHeight())
+        floorf(g_RenderSize.x),
+        floorf(g_RenderSize.y)
     };
     SetShaderValue(shdPixelFixer, shdPixelFixerScreenSizeUniformLoc, &screenSize, SHADER_UNIFORM_VEC2);
     BeginShaderMode(shdPixelFixer);

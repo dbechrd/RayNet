@@ -69,7 +69,7 @@ struct Spinner {
 
         Vector2 mousePos = GetMousePosition();
         if (!activePrev) {
-            position = mousePos; //{ GetRenderWidth() / 2.0f, GetRenderHeight() / 2.0f };
+            position = mousePos; //{ g_RenderSize.x / 2.0f, g_RenderSize.y / 2.0f };
             CircleConstrainToScreen(position, outerRadius);
         }
 
@@ -161,8 +161,8 @@ struct Title {
         }
 
         const Vector2 titlePos{
-            floorf(GetRenderWidth() / 2.0f - text_size.x / 2.0f),
-            floorf(GetRenderHeight() * 0.1f),
+            floorf(g_RenderSize.x / 2.0f - text_size.x / 2.0f),
+            floorf(g_RenderSize.y * 0.1f),
         };
 
         // TODO: Move this logic to Update() function?

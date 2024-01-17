@@ -17,7 +17,7 @@ void draw_f3_menu(GameClient &client)
 {
     IO::Scoped scope(IO::IO_F3Menu);
 
-    //Vector2 hudCursor{ GetRenderWidth() - 360.0f - 8.0f, 8.0f };
+    //Vector2 hudCursor{ g_RenderSize.x - 360.0f - 8.0f, 8.0f };
     Vector2 hudCursor{ 8.0f, 48.0f };
     // TODO: ui.histogram(histogram);
     Vector2 histoCursor = hudCursor;
@@ -50,8 +50,7 @@ void draw_f3_menu(GameClient &client)
         client.clientTimeDeltaVsServer > 0 ? "+" : "", client.clientTimeDeltaVsServer
     );
     DRAW_TEXT("localTime", "%.2f", client.now);
-    DRAW_TEXT("window", "%d, %d", GetScreenWidth(), GetScreenHeight());
-    DRAW_TEXT("render", "%d, %d", GetRenderWidth(), GetRenderHeight());
+    DRAW_TEXT("render", "%.f, %.f", g_RenderSize.x, g_RenderSize.y);
     DRAW_TEXT("cursorScn", "%d, %d", GetMouseX(), GetMouseY());
     if (client.yj_client->IsConnected() && client.world) {
         Camera2D &camera = client.world->camera;
@@ -146,6 +145,8 @@ int main(int argc, char *argv[])
         //SetWindowState(FLAG_BORDERLESS_WINDOWED_MODE);
         //SetWindowState(FLAG_FULLSCREEN_MODE);
         SetExitKey(0);  // must be called after InitWindow()
+        g_RenderSize.x = GetRenderWidth();
+        g_RenderSize.y = GetRenderHeight();
 
         DrawBootScreen();
     }
@@ -181,20 +182,19 @@ int main(int argc, char *argv[])
     UnloadImage(icon);
 
     {
-        Vector2 screenSize = { (float)GetRenderWidth(), (float)GetRenderHeight() };
         #if CL_DBG_ONE_SCREEN
             const int monitorWidth = GetMonitorWidth(0);
             const int monitorHeight = GetMonitorHeight(0);
             SetWindowPosition(
-                monitorWidth / 2, // - (int)screenSize.x / 2,
-                monitorHeight / 2 - (int)screenSize.y / 2
+                monitorWidth / 2, // - (int)g_RenderSize.x / 2,
+                monitorHeight / 2 - (int)g_RenderSize.y / 2
             );
         #elif CL_DBG_TWO_SCREEN
             const int monitorWidth = GetMonitorWidth(0);
             const int monitorHeight = GetMonitorHeight(0);
             SetWindowPosition(
-                monitorWidth / 2 - (int)screenSize.x / 2,
-                monitorHeight / 2 - (int)screenSize.y / 2
+                monitorWidth / 2 - (int)g_RenderSize.x / 2,
+                monitorHeight / 2 - (int)g_RenderSize.y / 2
             );
         #endif
     }
@@ -207,6 +207,9 @@ int main(int argc, char *argv[])
 
     bool quit = false;
     while (!quit) {
+        g_RenderSize.x = GetRenderWidth();
+        g_RenderSize.y = GetRenderHeight();
+
         client->frame++;
         client->now = GetTime();
         client->frameDt = MIN(client->now - client->frameStart, SV_TICK_DT);  // arbitrary limit for now
@@ -473,7 +476,7 @@ int main(int argc, char *argv[])
 #if _DEBUG && 0
             {
                 // Debug circle-edge collision
-                Vector2 center = { GetRenderWidth() / 2.0f, GetRenderHeight() / 2.0f };
+                Vector2 center = { g_RenderSize.x / 2.0f, g_RenderSize.y / 2.0f };
                 float radius = 100.0f;
 
                 Vector2 mouse = GetMousePosition();

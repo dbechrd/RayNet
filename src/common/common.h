@@ -179,6 +179,8 @@ float GetRandomFloatZeroToOne(void);
 float GetRandomFloatMinusOneToOne(void);
 float GetRandomFloatVariance(float variance);
 
+extern Vector2 g_RenderSize;
+
 Rectangle GetCameraRectWorld(Camera2D &camera);
 Rectangle RectShrink(const Rectangle &rect, Vector2 pixels);
 Rectangle RectShrink(const Rectangle &rect, float pixels);

@@ -97,6 +97,9 @@ Err Play(GameServer &server)
 
     bool quit = false;
     while (!quit) {
+        g_RenderSize.x = GetRenderWidth();
+        g_RenderSize.y = GetRenderHeight();
+
         io.PushScope(IO::IO_Game);
 
         server.frame++;
@@ -203,7 +206,7 @@ Err Play(GameServer &server)
             // [Debug] FPS, clock, etc.
             if (server.showF3Menu) {
                 Vector2 f3_pos{
-                    editor.dock_left ? GetRenderWidth() - 360.0f - 8.0f : 8.0f,
+                    editor.dock_left ? g_RenderSize.x - 360.0f - 8.0f : 8.0f,
                     8.0f
                 };
                 F3Menu_Draw(server, camera, f3_pos);
@@ -247,6 +250,8 @@ int main(int argc, char *argv[])
             SetWindowState(FLAG_WINDOW_MAXIMIZED);
             SetWindowState(FLAG_VSYNC_HINT);  // KEEP THIS ENABLED it makes the room cooler
             SetExitKey(0);  // must be called after InitWindow()
+            g_RenderSize.x = GetRenderWidth();
+            g_RenderSize.y = GetRenderHeight();
 
             DrawBootScreen();
         }
@@ -270,7 +275,7 @@ int main(int argc, char *argv[])
         SetWindowIcon(icon);
         UnloadImage(icon);
 
-        Vector2 screenSize = { (float)GetRenderWidth(), (float)GetRenderHeight() };
+        Vector2 screenSize = { g_RenderSize.x, g_RenderSize.y };
 
     #if CL_DBG_ONE_SCREEN
         const int monitorWidth = GetMonitorWidth(0);

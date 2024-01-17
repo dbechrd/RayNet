@@ -9,8 +9,8 @@ void DrawBootScreenMessage(const char *msg, int dots)
     const float spacing = 4.0f;
     Vector2 msgSize = MeasureTextEx(font, msg, fontSize, spacing);
     Vector2 msgPos{
-        GetRenderWidth() / 2.0f - msgSize.x / 2.0f,
-        GetRenderHeight() / 2.0f - msgSize.y / 2.0f
+        g_RenderSize.x / 2.0f - msgSize.x / 2.0f,
+        g_RenderSize.y / 2.0f - msgSize.y / 2.0f
     };
     DrawTextEx(font, msg, msgPos, fontSize, spacing, WHITE);
 

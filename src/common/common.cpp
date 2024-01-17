@@ -8,6 +8,8 @@
 #define STB_HERRINGBONE_WANG_TILE_IMPLEMENTATION
 #include "stb_herringbone_wang_tile.cpp"
 
+Vector2 g_RenderSize{};
+
 // LoadPack font from memory buffer, fileType refers to extension: i.e. ".ttf"
 Font dlb_LoadFontFromMemory(const char *fileType, const unsigned char *fileData, int dataSize, int fontSize, int *fontChars, int glyphCount, int type)
 {
@@ -307,10 +309,10 @@ Rectangle GetCameraRectWorld(Camera2D &camera)
 #if CL_DBG_TILE_CULLING
     const int screenMargin = 64;
     Vector2 screenTLWorld = GetScreenToWorld2D({ screenMargin, screenMargin }, camera);
-    Vector2 screenBRWorld = GetScreenToWorld2D({ (float)GetRenderWidth() - screenMargin, (float)GetRenderHeight() - screenMargin }, camera);
+    Vector2 screenBRWorld = GetScreenToWorld2D({ (float)g_RenderSize.x - screenMargin, (float)g_RenderSize.y - screenMargin }, camera);
 #else
     const Vector2 cameraTLWorld = GetScreenToWorld2D({ 0, 0 }, camera);
-    const Vector2 cameraBRWorld = GetScreenToWorld2D({ (float)GetRenderWidth(), (float)GetRenderHeight() }, camera);
+    const Vector2 cameraBRWorld = GetScreenToWorld2D({ g_RenderSize.x, g_RenderSize.y }, camera);
 #endif
 
     const Rectangle cameraRectWorld{
@@ -389,7 +391,7 @@ void RectConstrainToRect(Rectangle &rect, Rectangle boundary)
 
 void RectConstrainToScreen(Rectangle &rect, Vector2 *resultOffset)
 {
-    Vector2 screenSize{ (float)GetRenderWidth(), (float)GetRenderHeight() };
+    Vector2 screenSize{ g_RenderSize.x, g_RenderSize.y };
     Rectangle newRect = rect;
     newRect.x = CLAMP(rect.x, 0, screenSize.x - rect.width);
     newRect.y = CLAMP(rect.y, 0, screenSize.y - rect.height);
@@ -401,7 +403,7 @@ void RectConstrainToScreen(Rectangle &rect, Vector2 *resultOffset)
 
 void CircleConstrainToScreen(Vector2 &center, float radius, Vector2 *resultOffset)
 {
-    Vector2 screenSize{ (float)GetRenderWidth(), (float)GetRenderHeight() };
+    Vector2 screenSize{ g_RenderSize.x, g_RenderSize.y };
     Vector2 newCenter = center;
     newCenter.x = CLAMP(newCenter.x, radius, screenSize.x - radius);
     newCenter.y = CLAMP(newCenter.y, radius, screenSize.y - radius);
@@ -423,7 +425,7 @@ void PushScissorRect(Rectangle rect)
 
     RectConstrainToRect(rect, GetScissorRect());
 
-    rlScissor(rect.x, GetRenderHeight() - (rect.y + rect.height), rect.width, rect.height);
+    rlScissor(rect.x, g_RenderSize.y - (rect.y + rect.height), rect.width, rect.height);
     scissorStack.push(rect);
 }
 
@@ -433,7 +435,7 @@ Rectangle GetScissorRect(void)
         Rectangle &rect = scissorStack.top();
         return rect;
     } else {
-        return { 0, 0, (float)GetRenderWidth(), (float)GetRenderHeight() };
+        return { 0, 0, g_RenderSize.x, g_RenderSize.y };
     }
 }
 
@@ -446,7 +448,7 @@ void PopScissorRect(void)
     // Restore previous scissor rect
     if (!scissorStack.empty()) {
         Rectangle &rect = scissorStack.top();
-        rlScissor(rect.x, GetRenderHeight() - (rect.y + rect.height), rect.width, rect.height);
+        rlScissor(rect.x, g_RenderSize.y - (rect.y + rect.height), rect.width, rect.height);
     } else {
         rlDisableScissorTest();
     }

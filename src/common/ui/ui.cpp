@@ -500,8 +500,8 @@ void UI::EndScrollPanel(ScrollPanel &scrollPanel)
     }
 
     // Minimum panel size / distance from edge of screen
-    scrollPanel.rect.x = CLAMP(scrollPanel.rect.x, -scrollPanel.rect.width + minSize, GetRenderWidth() - minSize);
-    scrollPanel.rect.y = CLAMP(scrollPanel.rect.y, -scrollPanel.rect.height + minSize, GetRenderHeight() - minSize);
+    scrollPanel.rect.x = CLAMP(scrollPanel.rect.x, -scrollPanel.rect.width + minSize, g_RenderSize.x - minSize);
+    scrollPanel.rect.y = CLAMP(scrollPanel.rect.y, -scrollPanel.rect.height + minSize, g_RenderSize.y - minSize);
 #endif
 
     cursor.x = scrollPanel.state.ctrlRect.x;
