@@ -416,12 +416,12 @@ TileDef &GetTileDef(uint16_t tile_id)
     }
     return pack_assets.tile_defs[0];
 }
-TileDef *FindTileDefByMask(uint16_t material_id, int mask)
+TileDef *FindTileDefByMask(uint8_t auto_tile_group, int mask)
 {
     // TODO(perf): Hash table (also, match materials somehow?)
-    for (auto &foo : pack_assets.tile_defs) {
-        if (foo.id && foo.material_id == material_id && foo.auto_tile_mask == mask) {
-            return &foo;
+    for (TileDef &tile_def : pack_assets.tile_defs) {
+        if (tile_def.id && tile_def.auto_tile_group == auto_tile_group && tile_def.auto_tile_mask == mask) {
+            return &tile_def;
         }
     }
     return 0;

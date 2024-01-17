@@ -66,6 +66,10 @@ void Tilemap::Autotile(TileLayerType layer, uint16_t x, uint16_t y, double now)
     if (!AtTry(layer, x, y, center_tile_id)) {
         return;
     }
+    const TileDef &center_def = GetTileDef(center_tile_id);
+    if (!center_def.auto_tile_group) {
+        return;
+    }
 
     uint16_t tile_ids[8]{};
     AtTry(layer, x - 1, y - 1, tile_ids[0]);
@@ -87,16 +91,15 @@ void Tilemap::Autotile(TileLayerType layer, uint16_t x, uint16_t y, double now)
     tile_defs[6] = &GetTileDef(tile_ids[6]);
     tile_defs[7] = &GetTileDef(tile_ids[7]);
 
-    const TileDef &center_def = GetTileDef(center_tile_id);
     bool match[8]{
-        tile_defs[0]->material_id == center_def.material_id,
-        tile_defs[1]->material_id == center_def.material_id,
-        tile_defs[2]->material_id == center_def.material_id,
-        tile_defs[3]->material_id == center_def.material_id,
-        tile_defs[4]->material_id == center_def.material_id,
-        tile_defs[5]->material_id == center_def.material_id,
-        tile_defs[6]->material_id == center_def.material_id,
-        tile_defs[7]->material_id == center_def.material_id,
+        tile_defs[0]->auto_tile_group == center_def.auto_tile_group,
+        tile_defs[1]->auto_tile_group == center_def.auto_tile_group,
+        tile_defs[2]->auto_tile_group == center_def.auto_tile_group,
+        tile_defs[3]->auto_tile_group == center_def.auto_tile_group,
+        tile_defs[4]->auto_tile_group == center_def.auto_tile_group,
+        tile_defs[5]->auto_tile_group == center_def.auto_tile_group,
+        tile_defs[6]->auto_tile_group == center_def.auto_tile_group,
+        tile_defs[7]->auto_tile_group == center_def.auto_tile_group,
     };
 
     int auto_masks[8]{
@@ -120,7 +123,7 @@ void Tilemap::Autotile(TileLayerType layer, uint16_t x, uint16_t y, double now)
     if (match[6]) center_mask |= auto_masks[6];
     if (match[7]) center_mask |= auto_masks[7];
 
-    TileDef *new_tile = FindTileDefByMask(center_def.material_id, center_mask);
+    TileDef *new_tile = FindTileDefByMask(center_def.auto_tile_group, center_mask);
     if (new_tile) {
         Set(layer, x, y, new_tile->id, now, false);
         return;
@@ -132,14 +135,14 @@ void Tilemap::Autotile(TileLayerType layer, uint16_t x, uint16_t y, double now)
     if (!(match[S] && match[W])) center_mask &= ~auto_masks[SW];
     if (!(match[S] && match[E])) center_mask &= ~auto_masks[SE];
 
-    new_tile = FindTileDefByMask(center_def.material_id, center_mask);
+    new_tile = FindTileDefByMask(center_def.auto_tile_group, center_mask);
     if (new_tile) {
         Set(layer, x, y, new_tile->id, now, false);
         return;
     }
 
     // Check for a partial by ignoring all corners
-    new_tile = FindTileDefByMask(center_def.material_id, center_mask & ~auto_masks[NW] & ~auto_masks[NE] & ~auto_masks[SW] & ~auto_masks[SE]);
+    new_tile = FindTileDefByMask(center_def.auto_tile_group, center_mask & ~auto_masks[NW] & ~auto_masks[NE] & ~auto_masks[SW] & ~auto_masks[SE]);
     if (new_tile) {
         Set(layer, x, y, new_tile->id, now, false);
         return;
@@ -564,7 +567,7 @@ void Tilemap::DrawTileIds(Camera2D &camera)
     const int pad = 8;
     for (int y = yMin; y < yMax; y++) {
         for (int x = xMin; x < xMax; x++) {
-            uint16_t tile_id = At(TILE_LAYER_GROUND, x, y);
+            uint16_t tile_id = At(TILE_LAYER_OBJECT, x, y);
             Vector2 pos = { (float)x * TILE_W + pad, (float)y * TILE_W + pad };
             DrawTextEx(fntSmall, TextFormat("%d", tile_id), pos, fntSmall.baseSize / camera.zoom, 1 / camera.zoom, WHITE);
         }

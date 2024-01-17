@@ -891,6 +891,7 @@ void ClientWorld::Draw(GameClient &client)
 
     DrawCmdQueue sortedDraws{};
     map->Draw(camera, sortedDraws);
+
     DrawHoveredTileIndicator(client);
     DrawEntities(client, *map, sortedDraws);
 
@@ -906,6 +907,8 @@ void ClientWorld::Draw(GameClient &client)
 #if CL_DBG_PIXEL_FIXER
     EndShaderMode();
 #endif
+
+    map->DrawTileIds(camera);
 
     EndMode2D();
 

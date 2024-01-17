@@ -518,79 +518,79 @@
 5 8 "sprite_prj_fireball" 8 "anim_prj_fireball" "null" "null" "null" "null" "null" "null" "null"
 5 9 "sprite_itm_poop" 8 "anim_itm_poop" "null" "null" "null" "null" "null" "null" "null"
 
-# TileDef id name anim material_id flags auto_tile_mask
-6 0 "til_missing" "anim_missing" 0 0 0
-6 1 "til_void" "anim_til_void" 1 1 0
-6 2 "til_stone_path" "anim_til_stone_path" 2 0 0
-6 3 "til_water_dark" "anim_til_water_dark" 3 3 0
-6 4 "til_grass_weeds" "anim_til_grass_weeds" 4 0 0
-6 5 "til_grass_flowers" "anim_til_grass_flowers" 4 0 0
-6 6 "til_stone_wall_tl" "anim_til_stone_wall_tl" 2 1 0
-6 7 "til_stone_wall_tc" "anim_til_stone_wall_tc" 2 1 0
-6 8 "til_stone_wall_tr" "anim_til_stone_wall_tr" 2 1 0
-6 9 "til_stone_wall_cl" "anim_til_stone_wall_cl" 2 1 0
-6 10 "til_stone_wall_cc" "anim_til_stone_wall_cc" 2 1 0
-6 11 "til_stone_wall_cr" "anim_til_stone_wall_cr" 2 1 0
-6 12 "til_stone_wall_bl" "anim_til_stone_wall_bl" 2 1 0
-6 13 "til_stone_wall_bc" "anim_til_stone_wall_bc" 2 1 0
-6 14 "til_stone_wall_br" "anim_til_stone_wall_br" 2 1 0
-6 15 "obj_bush" "anim_obj_bush" 4 1 0
-6 16 "obj_chest_basic" "anim_obj_chest_closed" 5 1 0
-6 17 "obj_portal" "anim_obj_portal" 1 0 0
-6 18 "obj_sign" "anim_obj_sign" 5 0 0
-6 19 "obj_lever_unpowered" "anim_obj_lever_unpowered" 2 0 0
-6 20 "obj_lever_powered" "anim_obj_lever_powered" 2 0 0
-6 21 "obj_door_closed" "anim_obj_door_closed" 5 1 0
-6 22 "obj_door_open" "anim_obj_door_open" 5 0 0
-6 23 "obj_flag" "anim_obj_flag" 0 1 0
-6 24 "til_auto_grass_0_0" "anim_til_auto_grass_0_0" 6 0 2
-6 25 "til_auto_grass_64_0" "anim_til_auto_grass_64_0" 6 0 10
-6 26 "til_auto_grass_128_0" "anim_til_auto_grass_128_0" 6 0 26
-6 27 "til_auto_grass_192_0" "anim_til_auto_grass_192_0" 6 0 18
-6 28 "til_auto_grass_256_0" "anim_til_auto_grass_256_0" 6 0 218
-6 29 "til_auto_grass_320_0" "anim_til_auto_grass_320_0" 6 0 27
-6 30 "til_auto_grass_384_0" "anim_til_auto_grass_384_0" 6 0 30
-6 31 "til_auto_grass_448_0" "anim_til_auto_grass_448_0" 6 0 122
-6 32 "til_auto_grass_512_0" "anim_til_auto_grass_512_0" 6 0 11
-6 33 "til_auto_grass_576_0" "anim_til_auto_grass_576_0" 6 0 95
-6 34 "til_auto_grass_640_0" "anim_til_auto_grass_640_0" 6 0 31
-6 35 "til_auto_grass_704_0" "anim_til_auto_grass_704_0" 6 0 22
-6 36 "til_auto_grass_0_64" "anim_til_auto_grass_0_64" 6 0 66
-6 37 "til_auto_grass_64_64" "anim_til_auto_grass_64_64" 6 0 74
-6 38 "til_auto_grass_128_64" "anim_til_auto_grass_128_64" 6 0 90
-6 39 "til_auto_grass_192_64" "anim_til_auto_grass_192_64" 6 0 82
-6 40 "til_auto_grass_256_64" "anim_til_auto_grass_256_64" 6 0 75
-6 41 "til_auto_grass_320_64" "anim_til_auto_grass_320_64" 6 0 127
-6 42 "til_auto_grass_384_64" "anim_til_auto_grass_384_64" 6 0 223
-6 43 "til_auto_grass_448_64" "anim_til_auto_grass_448_64" 6 0 86
-6 44 "til_auto_grass_512_64" "anim_til_auto_grass_512_64" 6 0 107
-6 45 "til_auto_grass_576_64" "anim_til_auto_grass_576_64" 6 0 126
-6 46 "til_auto_grass_640_64" "anim_til_auto_grass_640_64" 1 0 0
-6 47 "til_auto_grass_704_64" "anim_til_auto_grass_704_64" 6 0 222
-6 48 "til_auto_grass_0_128" "anim_til_auto_grass_0_128" 6 0 64
-6 49 "til_auto_grass_64_128" "anim_til_auto_grass_64_128" 6 0 72
-6 50 "til_auto_grass_128_128" "anim_til_auto_grass_128_128" 6 0 88
-6 51 "til_auto_grass_192_128" "anim_til_auto_grass_192_128" 6 0 80
-6 52 "til_auto_grass_256_128" "anim_til_auto_grass_256_128" 6 0 106
-6 53 "til_auto_grass_320_128" "anim_til_auto_grass_320_128" 6 0 251
-6 54 "til_auto_grass_384_128" "anim_til_auto_grass_384_128" 6 0 254
-6 55 "til_auto_grass_448_128" "anim_til_auto_grass_448_128" 6 0 210
-6 56 "til_auto_grass_512_128" "anim_til_auto_grass_512_128" 6 0 123
-6 57 "til_auto_grass_576_128" "anim_til_auto_grass_576_128" 6 0 255
-6 58 "til_auto_grass_640_128" "anim_til_auto_grass_640_128" 6 0 219
-6 59 "til_auto_grass_704_128" "anim_til_auto_grass_704_128" 6 0 214
-6 60 "til_auto_grass_0_192" "anim_til_auto_grass_0_192" 6 0 0
-6 61 "til_auto_grass_64_192" "anim_til_auto_grass_64_192" 6 0 8
-6 62 "til_auto_grass_128_192" "anim_til_auto_grass_128_192" 6 0 24
-6 63 "til_auto_grass_192_192" "anim_til_auto_grass_192_192" 6 0 16
-6 64 "til_auto_grass_256_192" "anim_til_auto_grass_256_192" 6 0 94
-6 65 "til_auto_grass_320_192" "anim_til_auto_grass_320_192" 6 0 120
-6 66 "til_auto_grass_384_192" "anim_til_auto_grass_384_192" 6 0 216
-6 67 "til_auto_grass_448_192" "anim_til_auto_grass_448_192" 6 0 91
-6 68 "til_auto_grass_512_192" "anim_til_auto_grass_512_192" 6 0 104
-6 69 "til_auto_grass_576_192" "anim_til_auto_grass_576_192" 6 0 248
-6 70 "til_auto_grass_640_192" "anim_til_auto_grass_640_192" 6 0 250
-6 71 "til_auto_grass_704_192" "anim_til_auto_grass_704_192" 6 0 208
+# TileDef id name anim material_id flags auto_tile_group auto_tile_mask
+6 0 "til_missing" "anim_missing" 0 0 0 0
+6 1 "til_void" "anim_til_void" 1 1 0 0
+6 2 "til_stone_path" "anim_til_stone_path" 2 0 0 0
+6 3 "til_water_dark" "anim_til_water_dark" 3 3 0 0
+6 4 "til_grass_weeds" "anim_til_grass_weeds" 4 0 0 0
+6 5 "til_grass_flowers" "anim_til_grass_flowers" 4 0 0 0
+6 6 "til_stone_wall_tl" "anim_til_stone_wall_tl" 2 1 0 0
+6 7 "til_stone_wall_tc" "anim_til_stone_wall_tc" 2 1 0 0
+6 8 "til_stone_wall_tr" "anim_til_stone_wall_tr" 2 1 0 0
+6 9 "til_stone_wall_cl" "anim_til_stone_wall_cl" 2 1 0 0
+6 10 "til_stone_wall_cc" "anim_til_stone_wall_cc" 2 1 0 0
+6 11 "til_stone_wall_cr" "anim_til_stone_wall_cr" 2 1 0 0
+6 12 "til_stone_wall_bl" "anim_til_stone_wall_bl" 2 1 0 0
+6 13 "til_stone_wall_bc" "anim_til_stone_wall_bc" 2 1 0 0
+6 14 "til_stone_wall_br" "anim_til_stone_wall_br" 2 1 0 0
+6 15 "obj_bush" "anim_obj_bush" 4 1 0 0
+6 16 "obj_chest_basic" "anim_obj_chest_closed" 5 1 0 0
+6 17 "obj_portal" "anim_obj_portal" 1 0 0 0
+6 18 "obj_sign" "anim_obj_sign" 5 0 0 0
+6 19 "obj_lever_unpowered" "anim_obj_lever_unpowered" 2 0 0 0
+6 20 "obj_lever_powered" "anim_obj_lever_powered" 2 0 0 0
+6 21 "obj_door_closed" "anim_obj_door_closed" 5 1 0 0
+6 22 "obj_door_open" "anim_obj_door_open" 5 0 0 0
+6 23 "obj_flag" "anim_obj_flag" 0 1 0 0
+6 24 "til_auto_grass_0_0" "anim_til_auto_grass_0_0" 4 0 1 2
+6 25 "til_auto_grass_64_0" "anim_til_auto_grass_64_0" 4 0 1 10
+6 26 "til_auto_grass_128_0" "anim_til_auto_grass_128_0" 4 0 1 26
+6 27 "til_auto_grass_192_0" "anim_til_auto_grass_192_0" 4 0 1 18
+6 28 "til_auto_grass_256_0" "anim_til_auto_grass_256_0" 4 0 1 218
+6 29 "til_auto_grass_320_0" "anim_til_auto_grass_320_0" 4 0 1 27
+6 30 "til_auto_grass_384_0" "anim_til_auto_grass_384_0" 4 0 1 30
+6 31 "til_auto_grass_448_0" "anim_til_auto_grass_448_0" 4 0 1 122
+6 32 "til_auto_grass_512_0" "anim_til_auto_grass_512_0" 4 0 1 11
+6 33 "til_auto_grass_576_0" "anim_til_auto_grass_576_0" 4 0 1 95
+6 34 "til_auto_grass_640_0" "anim_til_auto_grass_640_0" 4 0 1 31
+6 35 "til_auto_grass_704_0" "anim_til_auto_grass_704_0" 4 0 1 22
+6 36 "til_auto_grass_0_64" "anim_til_auto_grass_0_64" 4 0 1 66
+6 37 "til_auto_grass_64_64" "anim_til_auto_grass_64_64" 4 0 1 74
+6 38 "til_auto_grass_128_64" "anim_til_auto_grass_128_64" 4 0 1 90
+6 39 "til_auto_grass_192_64" "anim_til_auto_grass_192_64" 4 0 1 82
+6 40 "til_auto_grass_256_64" "anim_til_auto_grass_256_64" 4 0 1 75
+6 41 "til_auto_grass_320_64" "anim_til_auto_grass_320_64" 4 0 1 127
+6 42 "til_auto_grass_384_64" "anim_til_auto_grass_384_64" 4 0 1 223
+6 43 "til_auto_grass_448_64" "anim_til_auto_grass_448_64" 4 0 1 86
+6 44 "til_auto_grass_512_64" "anim_til_auto_grass_512_64" 4 0 1 107
+6 45 "til_auto_grass_576_64" "anim_til_auto_grass_576_64" 4 0 1 126
+6 46 "til_auto_grass_640_64" "anim_til_auto_grass_640_64" 4 0 1 0
+6 47 "til_auto_grass_704_64" "anim_til_auto_grass_704_64" 4 0 1 222
+6 48 "til_auto_grass_0_128" "anim_til_auto_grass_0_128" 4 0 1 64
+6 49 "til_auto_grass_64_128" "anim_til_auto_grass_64_128" 4 0 1 72
+6 50 "til_auto_grass_128_128" "anim_til_auto_grass_128_128" 4 0 1 88
+6 51 "til_auto_grass_192_128" "anim_til_auto_grass_192_128" 4 0 1 80
+6 52 "til_auto_grass_256_128" "anim_til_auto_grass_256_128" 4 0 1 106
+6 53 "til_auto_grass_320_128" "anim_til_auto_grass_320_128" 4 0 1 251
+6 54 "til_auto_grass_384_128" "anim_til_auto_grass_384_128" 4 0 1 254
+6 55 "til_auto_grass_448_128" "anim_til_auto_grass_448_128" 4 0 1 210
+6 56 "til_auto_grass_512_128" "anim_til_auto_grass_512_128" 4 0 1 123
+6 57 "til_auto_grass_576_128" "anim_til_auto_grass_576_128" 4 0 1 255
+6 58 "til_auto_grass_640_128" "anim_til_auto_grass_640_128" 4 0 1 219
+6 59 "til_auto_grass_704_128" "anim_til_auto_grass_704_128" 4 0 1 214
+6 60 "til_auto_grass_0_192" "anim_til_auto_grass_0_192" 4 0 1 0
+6 61 "til_auto_grass_64_192" "anim_til_auto_grass_64_192" 4 0 1 8
+6 62 "til_auto_grass_128_192" "anim_til_auto_grass_128_192" 4 0 1 24
+6 63 "til_auto_grass_192_192" "anim_til_auto_grass_192_192" 4 0 1 16
+6 64 "til_auto_grass_256_192" "anim_til_auto_grass_256_192" 4 0 1 94
+6 65 "til_auto_grass_320_192" "anim_til_auto_grass_320_192" 4 0 1 120
+6 66 "til_auto_grass_384_192" "anim_til_auto_grass_384_192" 4 0 1 216
+6 67 "til_auto_grass_448_192" "anim_til_auto_grass_448_192" 4 0 1 91
+6 68 "til_auto_grass_512_192" "anim_til_auto_grass_512_192" 4 0 1 104
+6 69 "til_auto_grass_576_192" "anim_til_auto_grass_576_192" 4 0 1 248
+6 70 "til_auto_grass_640_192" "anim_til_auto_grass_640_192" 4 0 1 250
+6 71 "til_auto_grass_704_192" "anim_til_auto_grass_704_192" 4 0 1 208
 
 # TileMat id name footstep_sound
 7 0 "mat_missing" "null"
@@ -599,7 +599,6 @@
 7 3 "mat_water" "sfx_footstep_water"
 7 4 "mat_grass" "sfx_footstep_grass"
 7 5 "mat_wood" "sfx_footstep_wood"
-7 6 "mat_auto_grass" "sfx_footstep_grass"
 
 # Tilemap version id name width height title bg_music layers object_data path_nodes paths
 
