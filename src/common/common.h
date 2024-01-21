@@ -58,6 +58,7 @@
 
 #define DEV_BUILD_PACK_FILE 1
 #define DBG_UI_NO_SCISSOR   0
+#define DBG_UI_SIGN_EDITOR  0
 
 // Helper macros
 

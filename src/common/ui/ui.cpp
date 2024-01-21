@@ -791,27 +791,44 @@ struct StbString {
         : font(font), data(data) {}
 };
 
+size_t RN_linelen(const char *str)
+{
+    if (!str) return 0;
+
+    size_t len = 0;
+    const char *c = str;
+    while (*c && *c != '\n') c++;
+    if (*c) c++;
+    len = c - str;
+    return len;
+}
+
 void RN_stb_layout_row(StbTexteditRow *row, StbString *str, int startIndex)
 {
-    assert(startIndex == 0); // We're not handling multi-line for now
+    const char *line = str->data.c_str() + startIndex;
+    size_t linelen = RN_linelen(line);
+    size_t textlen = linelen;
 
-    Vector2 textSize = dlb_MeasureTextShadowEx(*str->font, CSTRLEN(str->data.c_str() + startIndex));
+    if (line[linelen - 1] == '\n') {
+        textlen--;
+    }
+    Vector2 textSize = dlb_MeasureTextShadowEx(*str->font, line, textlen);
 
-    // TODO: Handle multiline
-    //assert(textSize.y == str->font->baseSize);
+    if (linelen == 1 && line[0] == '\n') {
+        textSize.y = (float)(str->font->baseSize / 2 - 1);  // newlines are half space, no clue why we need -1 though... -_-
+    }
 
     row->x0 = 0;
     row->x1 = textSize.x;
     row->baseline_y_delta = textSize.y;
     row->ymin = 0;
-    row->ymax = str->font->baseSize;
-    row->num_chars = str->data.size() - startIndex; // TODO: Word wrap if multi-line is needed
+    row->ymax = textSize.y;
+    row->num_chars = linelen;
 }
 int RN_stb_get_char_width(StbString *str, int startIndex, int offset) {
     std::string oneChar = str->data.substr((size_t)startIndex + offset, 1);
     Vector2 charSize = dlb_MeasureTextShadowEx(*str->font, CSTRS(oneChar));
-    // NOTE(dlb): Wtf? Raylib probably doing int truncation bullshit.
-    return charSize.x + 1;
+    return charSize.x;
 }
 int RN_stb_key_to_char(int key)
 {
@@ -1029,7 +1046,6 @@ UIState UI::TextboxWithDefault(uint32_t ctrlid, std::string &text, const std::st
             STB_KEY(KEY_END);
             STB_KEY(KEY_PAGE_UP);
             STB_KEY(KEY_PAGE_DOWN);
-            STB_KEY(KEY_Z);
 #undef STB_KEY
 
             if (ctrl && io.KeyPressed(KEY_A)) {
@@ -1114,10 +1130,9 @@ UIState UI::TextboxWithDefault(uint32_t ctrlid, std::string &text, const std::st
 
     // Border
     Color borderColor = style.borderColor[UI_CtrlTypeTextbox];
-    if (!borderColor.a) {
-        borderColor = BLACK;
+    if (borderColor.a) {
+        DrawRectangleLinesEx(ctrlRect, 1, borderColor);
     }
-    DrawRectangleLinesEx(ctrlRect, 1, borderColor);
 
     // Text
     if (text.size() || isActive) {
@@ -1133,22 +1148,47 @@ UIState UI::TextboxWithDefault(uint32_t ctrlid, std::string &text, const std::st
         if (stbState.select_start != stbState.select_end) {
             int selectLeft = MIN(stbState.select_start, stbState.select_end);
             int selectRight = MAX(stbState.select_start, stbState.select_end);
-            float selectOffsetX = 0;
-            if (selectLeft) {
-                std::string textBeforeSelection = text.substr(0, selectLeft);
-                Vector2 textBeforeSelectionSize = dlb_MeasureTextShadowEx(*style.font, CSTRS(textBeforeSelection));
-                selectOffsetX = textBeforeSelectionSize.x + 1;
+
+            int startIndex = selectLeft;
+            Vector2 cursor{};
+
+            // Measure text before selection to find beginning offset
+            if (startIndex) {
+                // NOTE(dlb)[perf]: For strings with many lines, we should findRowStart(str)
+                // and measure from there instead.
+                dlb_MeasureTextShadowEx(*style.font, text.c_str(), startIndex, &cursor);
             }
-            std::string selectedText = text.substr(selectLeft, (size_t)selectRight - selectLeft);
-            Vector2 selectedTextSize = dlb_MeasureTextShadowEx(*style.font, CSTRS(selectedText));
-            float selectWidth = selectedTextSize.x;
-            Rectangle selectionRect{
-                ctrlRect.x + style.pad.left + selectOffsetX,
-                ctrlRect.y + style.pad.top,
-                selectWidth,
-                (float)style.font->baseSize
-            };
-            DrawRectangleRec(selectionRect, Fade(SKYBLUE, 0.5f));
+
+            // Draw rects for each row within the selection
+            StbTexteditRow row{};
+            while (true) {
+                RN_stb_layout_row(&row, &str, startIndex);
+
+                float width = (row.x1 - row.x0);
+                float height = (row.ymax - row.ymin);
+
+                if (startIndex + row.num_chars > selectRight) {
+                    Vector2 lastLineSize = dlb_MeasureTextShadowEx(*style.font, text.c_str() + startIndex, selectRight - startIndex, 0);
+                    width = lastLineSize.x;
+                }
+
+                Rectangle rowRect{
+                    ctrlRect.x + style.pad.left + cursor.x,
+                    ctrlRect.y + style.pad.top + cursor.y,
+                    width,
+                    height
+                };
+
+                DrawRectangleRec(rowRect, Fade(SKYBLUE, 0.5f));
+
+                startIndex += row.num_chars;
+                if (startIndex >= selectRight) {
+                    break;
+                }
+
+                cursor.x = 0;
+                cursor.y += row.baseline_y_delta;
+            }
         }
 
         Vector2 measureCursor{};

@@ -804,7 +804,7 @@ void ClientWorld::DrawHUDSignEditor(void)
         Vector2 playerTopWorld = player->TopCenter();
         Vector2 playerTopScreen = GetWorldToScreen2D(playerTopWorld, camera);
 
-        Vector2 uiSignEditorSize{ 200, 100 };
+        Vector2 uiSignEditorSize{ 400, 200 };
         Vector2 uiSignEditorPos{
             playerTopScreen.x - uiSignEditorSize.x / 2.0f,
             playerTopScreen.y - uiSignEditorSize.y
@@ -812,9 +812,19 @@ void ClientWorld::DrawHUDSignEditor(void)
         uiSignEditorPos.x = floorf(uiSignEditorPos.x);
         uiSignEditorPos.y = floorf(uiSignEditorPos.y);
 
+        UIPad margin{ 4, 4, 4, 4 };
+
         UIStyle uiSignEditorStyle{};
-        //uiSignEditorStyle.borderColor = BLANK;
-        uiSignEditorStyle.size.x = uiSignEditorSize.x;
+        uiSignEditorStyle.margin = {};
+        uiSignEditorStyle.pad = {};
+#if (DBG_UI_SIGN_EDITOR)
+        uiSignEditorStyle.bgColor[UI_CtrlTypeTextbox] = Fade(PINK, 0.2f);
+#else
+        uiSignEditorStyle.borderColor[UI_CtrlTypeTextbox] = BLANK;
+        uiSignEditorStyle.bgColor[UI_CtrlTypeTextbox] = BLANK;
+#endif
+        uiSignEditorStyle.size.x = uiSignEditorSize.x - margin.left - margin.right;
+        uiSignEditorStyle.size.y = uiSignEditorSize.y - margin.top - margin.bottom;
         UI uiSignEditor{ uiSignEditorPos, uiSignEditorSize, uiSignEditorStyle };
 
         const Rectangle uiSignedEditorRect{
@@ -829,19 +839,11 @@ void ClientWorld::DrawHUDSignEditor(void)
         UIState uiState{};
         uiState.hover = dlb_CheckCollisionPointRec(GetMousePosition(), uiSignedEditorRect);
 
-        static std::string signText{};
+        static std::string signText{ "||\n\n||\n\n||\n\n||" };
 
-        UIPad margin = uiSignEditorStyle.margin;
-        //margin.left -= 4;
-        //margin.bottom -= 4;
         uiSignEditor.PushMargin(margin);
-        uiSignEditor.PushWidth(uiSignEditorSize.x); // - (uiSignEditorStyle.margin.left + uiSignEditorStyle.margin.right));
-        uiSignEditor.PushBgColor(Fade(PINK, 0.2f), UI_CtrlTypeTextbox);
-        //uiSignEditor.PushBgColor(BLANK, UI_CtrlTypeTextbox);
-        uiSignEditor.Textbox(__COUNTER__, signText, false, 0, LimitStringLength, (void *)128);
+        uiSignEditor.Textbox(__COUNTER__, signText, true, 0, LimitStringLength, (void *)128);
         uiSignEditor.Newline();
-        uiSignEditor.PopStyle();
-        uiSignEditor.PopStyle();
         uiSignEditor.PopStyle();
 
         if (io.KeyPressed(KEY_ESCAPE)) {
@@ -908,7 +910,7 @@ void ClientWorld::Draw(GameClient &client)
     EndShaderMode();
 #endif
 
-    map->DrawTileIds(camera);
+    //map->DrawTileIds(camera);
 
     EndMode2D();
 
