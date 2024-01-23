@@ -500,10 +500,10 @@ void Tilemap::Draw(Camera2D &camera, DrawCmdQueue &sortedDraws)
     Rectangle cameraRectWorld = GetCameraRectWorld(camera);
 
     // NOTE(dlb): Give extra padding on all sides to prevent culling 2-tall objects
-    int yMin = CLAMP(-1 + floorf(cameraRectWorld.y / TILE_W), 0, height);
-    int yMax = CLAMP( 1 + ceilf((cameraRectWorld.y + cameraRectWorld.height) / TILE_W), 0, height);
-    int xMin = CLAMP(-1 + floorf(cameraRectWorld.x / TILE_W), 0, width);
-    int xMax = CLAMP( 1 + ceilf((cameraRectWorld.x + cameraRectWorld.width) / TILE_W), 0, width);
+    uint16_t yMin = CLAMP(-1 + floorf(cameraRectWorld.y / TILE_W), 0, height);
+    uint16_t yMax = CLAMP( 1 + ceilf((cameraRectWorld.y + cameraRectWorld.height) / TILE_W), 0, height);
+    uint16_t xMin = CLAMP(-1 + floorf(cameraRectWorld.x / TILE_W), 0, width);
+    uint16_t xMax = CLAMP( 1 + ceilf((cameraRectWorld.x + cameraRectWorld.width) / TILE_W), 0, width);
 
     DrawCmdQueue *queue = 0;
     for (int layer = 0; layer < TILE_LAYER_COUNT; layer++) {
@@ -526,10 +526,10 @@ void Tilemap::Draw(Camera2D &camera, DrawCmdQueue &sortedDraws)
 void Tilemap::DrawColliders(Camera2D &camera)
 {
     Rectangle cameraRectWorld = GetCameraRectWorld(camera);
-    int yMin = CLAMP(floorf(cameraRectWorld.y / TILE_W), 0, height);
-    int yMax = CLAMP(ceilf((cameraRectWorld.y + cameraRectWorld.height) / TILE_W), 0, height);
-    int xMin = CLAMP(floorf(cameraRectWorld.x / TILE_W), 0, width);
-    int xMax = CLAMP(ceilf((cameraRectWorld.x + cameraRectWorld.width) / TILE_W), 0, width);
+    uint16_t yMin = CLAMP(floorf(cameraRectWorld.y / TILE_W), 0, height);
+    uint16_t yMax = CLAMP(ceilf((cameraRectWorld.y + cameraRectWorld.height) / TILE_W), 0, height);
+    uint16_t xMin = CLAMP(floorf(cameraRectWorld.x / TILE_W), 0, width);
+    uint16_t xMax = CLAMP(ceilf((cameraRectWorld.x + cameraRectWorld.width) / TILE_W), 0, width);
 
     for (int y = yMin; y < yMax; y++) {
         for (int x = xMin; x < xMax; x++) {
@@ -559,10 +559,10 @@ void Tilemap::DrawEdges(void)
 void Tilemap::DrawTileIds(Camera2D &camera)
 {
     Rectangle cameraRectWorld = GetCameraRectWorld(camera);
-    int yMin = CLAMP(floorf(cameraRectWorld.y / TILE_W), 0, height);
-    int yMax = CLAMP(ceilf((cameraRectWorld.y + cameraRectWorld.height) / TILE_W), 0, height);
-    int xMin = CLAMP(floorf(cameraRectWorld.x / TILE_W), 0, width);
-    int xMax = CLAMP(ceilf((cameraRectWorld.x + cameraRectWorld.width) / TILE_W), 0, width);
+    uint16_t yMin = CLAMP(floorf(cameraRectWorld.y / TILE_W), 0, height);
+    uint16_t yMax = CLAMP(ceilf((cameraRectWorld.y + cameraRectWorld.height) / TILE_W), 0, height);
+    uint16_t xMin = CLAMP(floorf(cameraRectWorld.x / TILE_W), 0, width);
+    uint16_t xMax = CLAMP(ceilf((cameraRectWorld.x + cameraRectWorld.width) / TILE_W), 0, width);
 
     const int pad = 8;
     for (int y = yMin; y < yMax; y++) {
@@ -570,6 +570,36 @@ void Tilemap::DrawTileIds(Camera2D &camera)
             uint16_t tile_id = At(TILE_LAYER_OBJECT, x, y);
             Vector2 pos = { (float)x * TILE_W + pad, (float)y * TILE_W + pad };
             DrawTextEx(fntSmall, TextFormat("%d", tile_id), pos, fntSmall.baseSize / camera.zoom, 1 / camera.zoom, WHITE);
+        }
+    }
+}
+void Tilemap::DrawObjects(Camera2D &camera)
+{
+    Rectangle cameraRectWorld = GetCameraRectWorld(camera);
+    uint16_t yMin = CLAMP(floorf(cameraRectWorld.y / TILE_W), 0, height);
+    uint16_t yMax = CLAMP(ceilf((cameraRectWorld.y + cameraRectWorld.height) / TILE_W), 0, height);
+    uint16_t xMin = CLAMP(floorf(cameraRectWorld.x / TILE_W), 0, width);
+    uint16_t xMax = CLAMP(ceilf((cameraRectWorld.x + cameraRectWorld.width) / TILE_W), 0, width);
+
+    const Color rect_col = ORANGE;
+
+    for (auto &obj : object_data) {
+        if (obj.x >= xMin && obj.x <= xMax && obj.y >= yMin && obj.y <= yMax) {
+            Vector2 tilePos = { (float)obj.x * TILE_W, (float)obj.y * TILE_W };
+            const int rect_pad = 1;
+            Rectangle rect{
+                tilePos.x + rect_pad,
+                tilePos.y + rect_pad,
+                TILE_W - rect_pad * 2,
+                TILE_W - rect_pad * 2,
+            };
+            DrawRectangleRec(rect, Fade(rect_col, 0.6f));
+            DrawRectangleLinesEx(rect, 2.0f, rect_col);
+
+            const int text_pad = 8;
+            Vector2 pos = { (float)obj.x * TILE_W + text_pad, (float)obj.y * TILE_W + text_pad };
+            DrawTextEx(fntSmall, ObjTypeStr(obj.type), { pos.x + 1 / camera.zoom, pos.y + 1 / camera.zoom }, fntSmall.baseSize / camera.zoom, 1 / camera.zoom, BLACK);
+            DrawTextEx(fntSmall, ObjTypeStr(obj.type), pos, fntSmall.baseSize / camera.zoom, 1 / camera.zoom, WHITE);
         }
     }
 }

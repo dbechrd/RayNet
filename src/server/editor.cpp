@@ -85,6 +85,9 @@ void Editor::DrawGroundOverlays(Camera2D &camera)
     if (state.showTileIds) {
         map.DrawTileIds(camera);
     }
+    if (state.showObjects) {
+        map.DrawObjects(camera);
+    }
 
     if (active) {
         switch (mode) {
@@ -768,6 +771,10 @@ void Editor::DrawUI_ActionBar(void)
     UIState showEntityIdsButton = ui.ToggleButton("Entity IDs", state.showEntityIds, GRAY, LIGHTGRAY);
     if (showEntityIdsButton.released) {
         state.showEntityIds = !state.showEntityIds;
+    }
+    UIState showObjectsButton = ui.ToggleButton("Objects", state.showObjects, GRAY, LIGHTGRAY);
+    if (showObjectsButton.released) {
+        state.showObjects = !state.showObjects;
     }
 
     ui.Space({ 0, 8 });

@@ -103,6 +103,7 @@ struct Tilemap {
     void DrawColliders(Camera2D &camera);
     void DrawEdges(void);
     void DrawTileIds(Camera2D &camera);
+    void DrawObjects(Camera2D &camera);
 
 private:
     void UpdatePower(double now);

@@ -123,6 +123,7 @@ struct EditModeState {
     bool showTileEdges {};
     bool showTileIds   {};
     bool showEntityIds {};
+    bool showObjects   {};
 
     EditModeTiles     tiles     {};
     EditModeObjects   objects   {};
