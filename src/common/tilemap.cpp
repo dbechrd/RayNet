@@ -251,11 +251,18 @@ void Tilemap::Fill(TileLayerType layer, uint16_t x, uint16_t y, uint16_t new_til
 
 ObjectData *Tilemap::GetObjectData(uint16_t x, uint16_t y)
 {
+#if 0
     for (ObjectData &obj_data : object_data) {
         if (obj_data.x == x && obj_data.y == y) {
             return &obj_data;
         }
     }
+#else
+    const auto &iter = obj_by_coord.find({ x, y });
+    if (iter != obj_by_coord.end()) {
+        return &object_data[iter->second];
+    }
+#endif
     return 0;
 }
 
@@ -307,11 +314,13 @@ void Tilemap::UpdatePower(double now)
     }
 
     for (auto &obj : object_data) {
+        if (!IsPowerLoad(obj)) {
+            continue;
+        }
+
         const int powered = (int)active_power_channels.contains(obj.power_channel);
         if (obj.power_level != powered) {
-            if (IsPowerLoad(obj)) {
-                obj.power_level = powered;
-            }
+            obj.power_level = powered;
         }
 
         uint16_t old_tile_id = At(TILE_LAYER_OBJECT, obj.x, obj.y);

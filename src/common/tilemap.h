@@ -15,6 +15,9 @@ struct Tilemap {
     struct Coord {
         int x, y;
 
+        Coord(void) = default;
+        Coord(int x, int y) : x(x), y(y) {}
+
         bool operator==(const Coord &other) const
         {
             return x == other.x && y == other.y;
@@ -70,6 +73,7 @@ struct Tilemap {
     double      chunkLastUpdatedAt {};  // used by server to know when chunks are dirty on clients
     CoordSet    dirtyTiles         {};  // tiles that have changed since last snapshot was sent
     Edge::Array edges              {};  // collision edge list
+    std::unordered_map<Coord, uint16_t, Coord::Hasher> obj_by_coord {};
 
     //-------------------------------
     // Clean this section up

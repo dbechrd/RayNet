@@ -37,7 +37,7 @@ void GameServer::OnClientJoin(int clientIdx)
         const Vector3 townCenter{ 1660, 2360, 0 };
         const Vector3 inTree{ 2980.15f, 832.31f };
         const Vector3 freyaHouse{ 1560.0f, 2460.0f };
-        player->position = freyaHouse;
+        player->position = caveEntrance;
         player->radius = 16;
         player->hp_max = 100;
         player->hp = player->hp_max;
@@ -1162,9 +1162,22 @@ void GameServer::ProcessMsg(int clientIdx, Msg_C_TileInteract &msg)
                 map.Set(TILE_LAYER_OBJECT, msg.x, msg.y, obj_data->tile_powered, now);
                 printf("lever on\n");
             }
-            //BroadcastTileUpdate(*map, msg.x, msg.y);  // dirty should handle this
         } else if (obj_data->type == OBJ_LOOTABLE) {
-            SendEntitySay(clientIdx, player.entityId, 0, "Chest", TextFormat("loot_table_id: %u", obj_data->loot_table_id));
+            if (!obj_data->looted) {
+                SendEntitySay(clientIdx, player.entityId, 0, "Chest", TextFormat("loot_table_id: %u", obj_data->loot_table_id));
+                obj_data->looted = true;
+                map.Set(TILE_LAYER_OBJECT, msg.x, msg.y, obj_data->tile_looted, now);
+            } else {
+                const char *msgs[]{
+                    "It's empty.",
+                    "There's nothing left.",
+                    "Someone already found this.",
+                    "No more loot.",
+                    "Just dusty cobwebs.",
+                };
+                int msgIdx = GetRandomValue(0, ARRAY_SIZE(msgs) - 1);
+                SendEntitySay(clientIdx, player.entityId, 0, "Empty Chest", msgs[msgIdx]);
+            }
         } else if (obj_data->type == OBJ_SIGN) {
             SendEntitySay(clientIdx, player.entityId, 0, "Sign", obj_data->sign_text.c_str());
         } else if (obj_data->type == OBJ_WARP) {

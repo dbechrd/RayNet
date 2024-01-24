@@ -228,7 +228,9 @@ struct ObjectData {
     FIELD(uint8_t , power_channel, {}, HAQ_SERIALIZE | HAQ_EDIT        , udata.type == OBJ_LEVER || udata.type == OBJ_DOOR, udata) \
                                                                                                                                    \
     /* type == "lootable" */                                                                                                       \
-    FIELD(uint16_t, loot_table_id, {}, HAQ_SERIALIZE | HAQ_EDIT, udata.type == OBJ_LOOTABLE, udata)                                \
+    FIELD(uint16_t, tile_looted  , {}, HAQ_SERIALIZE | HAQ_EDIT_TILE_ID, udata.type == OBJ_LOOTABLE, udata)                        \
+    FIELD(uint16_t, loot_table_id, {}, HAQ_SERIALIZE | HAQ_EDIT        , udata.type == OBJ_LOOTABLE, udata)                        \
+    FIELD(uint8_t , looted       , {}, HAQ_SERIALIZE | HAQ_EDIT        , udata.type == OBJ_LOOTABLE, udata)                        \
                                                                                                                                    \
     /* type == "sign" */                                                                                                           \
     FIELD(std::string, sign_text, {}, HAQ_SERIALIZE | HAQ_EDIT_STRING_MULTILINE, udata.type == OBJ_SIGN, udata)                    \

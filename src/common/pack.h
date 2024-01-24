@@ -118,6 +118,12 @@ struct Pack {
 
         if constexpr (dat.dtype == GfxFrame::dtype) {
             gfx_frame_ids_by_gfx_file_name[dat.gfx].push_back(dat.id);
+        } else if constexpr (dat.dtype == Tilemap::dtype) {
+            for (uint16_t i = 0; i < dat.object_data.size(); i++) {
+                ObjectData &obj = dat.object_data[i];
+                Tilemap::Coord coord{ obj.x, obj.y };
+                dat.obj_by_coord[coord] = i;
+            }
         }
 
         by_id[dat.id] = index;
