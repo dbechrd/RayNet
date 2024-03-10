@@ -83,7 +83,7 @@ void Editor::DrawGroundOverlays(Camera2D &camera)
         map.DrawEdges();
     }
     if (state.showTileIds) {
-        map.DrawTileIds(camera);
+        map.DrawTileIds(camera, state.tiles.layer);
     }
     if (state.showObjects) {
         map.DrawObjects(camera);

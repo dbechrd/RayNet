@@ -565,7 +565,7 @@ void Tilemap::DrawEdges(void)
         edge.Draw(MAGENTA, 3.0f);
     }
 }
-void Tilemap::DrawTileIds(Camera2D &camera)
+void Tilemap::DrawTileIds(Camera2D &camera, TileLayerType layer)
 {
     Rectangle cameraRectWorld = GetCameraRectWorld(camera);
     uint16_t yMin = CLAMP(floorf(cameraRectWorld.y / TILE_W), 0, height);
@@ -576,7 +576,7 @@ void Tilemap::DrawTileIds(Camera2D &camera)
     const int pad = 8;
     for (int y = yMin; y < yMax; y++) {
         for (int x = xMin; x < xMax; x++) {
-            uint16_t tile_id = At(TILE_LAYER_OBJECT, x, y);
+            uint16_t tile_id = At(layer, x, y);
             Vector2 pos = { (float)x * TILE_W + pad, (float)y * TILE_W + pad };
             DrawTextEx(fntSmall, TextFormat("%d", tile_id), pos, fntSmall.baseSize / camera.zoom, 1 / camera.zoom, WHITE);
         }
