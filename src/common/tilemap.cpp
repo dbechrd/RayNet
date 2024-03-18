@@ -418,34 +418,7 @@ void Tilemap::UpdateIntervals(void)
 {
     intervals.clear();
 
-    for (int y = 0; y <= height; y++) {
-        int solidStart = -1;
-        int emptyStart = -1;
-
-        for (int x = 0; x <= width; x++) {
-            const bool solid = IsSolid(x, y);
-
-            if (solidStart == -1 && solid) {
-                solidStart = x;
-            } else if (solidStart != -1 && (!solid || x == width)) {
-                const float py = (float)y * TILE_W;
-                const Vector2 left{ (float)solidStart * TILE_W, py};
-                const Vector2 right{ (float)x * TILE_W, py};
-                intervals.push_back(Interval{ { left, right }, true });
-                solidStart = -1;
-            }
-
-            if (emptyStart == -1 && !solid) {
-                emptyStart = x;
-            } else if (emptyStart != -1 && (solid || x == width)) {
-                const float py = (float)y * TILE_W;
-                const Vector2 left{ (float)emptyStart * TILE_W, py};
-                const Vector2 right{ (float)x * TILE_W, py};
-                intervals.push_back(Interval{ { left, right }, false });
-                emptyStart = -1;
-            }
-        }
-    }
+    // TODO(cleanup): UpdatePathfinding() somewhere
 }
 void Tilemap::Update(double now, bool simulate)
 {
@@ -613,10 +586,44 @@ void Tilemap::DrawEdges(void)
         edge.Draw(3.0f);
     }
 }
-void Tilemap::DrawIntervals(void)
+
+bool Tilemap_AnyaSolidQuery(int x, int y, void *userdata)
 {
-    for (const Interval &i : intervals) {
-        i.Draw(5.0f);
+    Tilemap *map = (Tilemap *)userdata;
+    return map->IsSolid(x, y);
+}
+void Tilemap::DrawIntervals(Camera2D &camera)
+{
+    Vector2 world = GetScreenToWorld2D(GetMousePosition(), camera);
+    Coord coord{};
+    if (!WorldToTileIndex(world.x, world.y, coord)) {
+        return;
+    }
+
+    Vector2 start{ (float)coord.x, (float)coord.y };
+    Vector2 target{ (float)coord.x + 10, (float)coord.y - 10 };
+
+    Anya_State state{ start, target, Tilemap_AnyaSolidQuery, this };
+    auto nodes = Anya_GenStartSuccessors(state);
+    for (auto &node : nodes) {
+        const auto &i = node.interval;
+        DrawLineEx(
+            { i.x_min * TILE_W, i.y * TILE_W },
+            { i.x_max * TILE_W, i.y * TILE_W },
+            5, SKYBLUE
+        );
+    }
+
+    if (nodes.size()) {
+        auto successors = Anya_Successors(state, nodes[0]);
+        for (auto &node : nodes) {
+            const auto &i = node.interval;
+            DrawLineEx(
+                { i.x_min * TILE_W, i.y * TILE_W },
+                { i.x_max * TILE_W, i.y * TILE_W },
+                3, ORANGE
+            );
+        }
     }
 }
 void Tilemap::DrawTileIds(Camera2D &camera, TileLayerType layer)

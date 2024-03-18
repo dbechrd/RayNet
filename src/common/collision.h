@@ -47,22 +47,6 @@ struct Edge {
     }
 };
 
-struct Interval {
-    typedef std::vector<Interval> Array;
-
-    LineSegment2 line{};
-    bool solid{};
-
-    Interval(void) {}
-    Interval(LineSegment2 line, bool solid) : line(line), solid(solid) {}
-
-    void Draw(float thickness = 1.0f) const
-    {
-        Color color = solid ? ORANGE : LIME;
-        DrawLineEx(line.start, line.end, thickness, color);
-    }
-};
-
 struct Manifold {
     Vector2 contact;
     Vector2 normal;

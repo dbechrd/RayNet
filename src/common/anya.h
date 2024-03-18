@@ -1,10 +1,38 @@
 #pragma once
 #include "common.h"
 
+struct Anya_Path {
+    std::vector<Vector2> points;
+};
+
+typedef bool (*Anya_SolidQuery)(int x, int y, void *userdata);
+
+struct Anya_State {
+    Vector2 start;
+    Vector2 target;
+    Anya_SolidQuery solid_query;
+    void *userdata;
+    
+    Anya_Path path;
+
+    Anya_State(Vector2 start, Vector2 target, Anya_SolidQuery solid_query, void *userdata)
+        : start(start), target(target), solid_query(solid_query), userdata(userdata) {}
+
+    bool Query(int x, int y)
+    {
+        return solid_query(x, y, userdata);
+    }
+};
+
 struct Anya_Interval {
     float x_min;
     float x_max;
     float y;
+
+    bool HasInterval(void)
+    {
+        return x_min < x_max;
+    }
 
     bool IsValid(Vector2 r)
     {
@@ -20,16 +48,23 @@ struct Anya_Interval {
 };
 
 struct Anya_Node {
+    Anya_State *state;
+    Anya_Node *parent;
+    
     Anya_Interval interval;
     Vector2 root;
-    Anya_Node *parent;
 
-    static Anya_Node FromStart(Vector2 s)
+    Anya_Node() {}
+    Anya_Node(Anya_State &state) : state(&state) {}
+    Anya_Node(Anya_State &state, Anya_Interval interval, Vector2 root)
+        : state(&state), interval(interval), root(root) {}
+
+    static Anya_Node FromStart(Anya_State &state)
     {
-        Anya_Node n{};
-        n.interval.x_min = s.x;
-        n.interval.x_max = s.x;
-        n.interval.y = s.y;
+        Anya_Node n{ state };
+        n.interval.x_min = state.start.x;
+        n.interval.x_max = state.start.x;
+        n.interval.y = state.start.y;
         n.root = { -1, -1 };
         return n;
     }
@@ -66,21 +101,25 @@ struct Anya_Node {
 
         return path;
     }
-};
 
-struct Anya_Path {
-    std::vector<Vector2> points;
-};
-
-typedef bool (*Anya_GridQuery)(int x, int y, void *userdata);
-
-struct Anya_State {
-    Anya_GridQuery grid_query;
-    void *userdata;
-    Anya_Path path;
-
-    bool Query(int x, int y)
+    bool operator<(const Anya_Node &rhs) const
     {
-        return grid_query(x, y, userdata);
+        assert(state == rhs.state);
+
+        // Find the point p in the interval that is closest to the target
+        Vector2 p{};
+        assert(CheckCollisionLines(root, state->target, { interval.x_min, interval.y }, { interval.x_max, interval.y }, &p));
+
+        // Same thing for other node
+        Vector2 p_rhs{};
+        assert(CheckCollisionLines(rhs.root, state->target, { rhs.interval.x_min, rhs.interval.y }, { rhs.interval.x_max, rhs.interval.y }, &p_rhs));
+
+        // Compare the distances of each closest point to see which one is better
+        const float dist = Vector2DistanceSqr(p, state->target);
+        const float rhs_dist = Vector2DistanceSqr(p_rhs, state->target);
+
+        return dist < rhs_dist;
     }
 };
+
+void Anya(Anya_State &state);

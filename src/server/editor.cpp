@@ -96,7 +96,7 @@ void Editor::DrawGroundOverlays(Camera2D &camera)
         map.DrawEdges();
     }
     if (state.showANYA) {
-        map.DrawIntervals();
+        map.DrawIntervals(camera);
     }
     if (state.showTileIds) {
         map.DrawTileIds(camera, state.tiles.layer);

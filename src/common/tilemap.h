@@ -1,5 +1,6 @@
 #pragma once
 #include "common.h"
+#include "anya.h"
 
 enum TileLayerType {
     TILE_LAYER_GROUND,
@@ -78,11 +79,11 @@ struct Tilemap {
     //-------------------------------
     // Not serialized
     //-------------------------------
-    //uint16_t        net_id             {};  // for communicating efficiently w/ client about which map
-    double          chunkLastUpdatedAt {};  // used by server to know when chunks are dirty on clients
-    CoordSet        dirtyTiles         {};  // tiles that have changed since last snapshot was sent
-    Edge::Array     edges              {};  // collision edge list
-    Interval::Array intervals          {};  // ANYA intervals
+    //uint16_t                   net_id             {};  // for communicating efficiently w/ client about which map
+    double                     chunkLastUpdatedAt {};  // used by server to know when chunks are dirty on clients
+    CoordSet                   dirtyTiles         {};  // tiles that have changed since last snapshot was sent
+    Edge::Array                edges              {};  // collision edge list
+    std::vector<Anya_Interval> intervals          {};  // ANYA intervals
     std::unordered_map<Coord, uint16_t, Coord::Hasher> obj_by_coord {};
 
     //-------------------------------
@@ -118,7 +119,7 @@ struct Tilemap {
     void Draw(Camera2D &camera, DrawCmdQueue &sortedDraws);
     void DrawColliders(Camera2D &camera);
     void DrawEdges(void);
-    void DrawIntervals(void);
+    void DrawIntervals(Camera2D &camera);
     void DrawTileIds(Camera2D &camera, TileLayerType layer);
     void DrawObjects(Camera2D &camera);
     void DrawFloodDebug(TileFloodDebugData &floodDebugData);
