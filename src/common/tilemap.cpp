@@ -3,6 +3,7 @@
 #include "file_utils.h"
 #include "net/net.h"
 #include "wang.h"
+#include "flood_fill.h"
 
 uint16_t Tilemap::At(TileLayerType layer, uint16_t x, uint16_t y)
 {
@@ -198,55 +199,69 @@ void Tilemap::SetFromWangMap(WangMap &wangMap, double now)
         }
     }
 }
-bool Tilemap::NeedsFill(TileLayerType layer, uint16_t x, uint16_t y, uint16_t old_tile_id)
+
+struct TileFloodData {
+    Tilemap *map;
+    TileLayerType layer;
+    double now;
+};
+
+bool TileFlood_TryGet(int x, int y, void *userdata, int *value)
 {
-    uint16_t tile_id{};
-    if (AtTry(layer, x, y, tile_id)) {
-        return tile_id == old_tile_id;
+    TileFloodData *data = (TileFloodData *)userdata;
+    uint16_t tile_id = 0;
+    if (data->map->AtTry(data->layer, x, y, tile_id)) {
+        *value = tile_id;
+        return true;
     }
     return false;
 }
-void Tilemap::Scan(TileLayerType layer, uint16_t lx, uint16_t rx, uint16_t y, uint16_t old_tile_id, std::stack<Coord> &stack)
+
+void TileFlood_Set(int x, int y, int value, void *userdata)
 {
-    bool inSpan = false;
-    for (uint16_t x = lx; x < rx; x++) {
-        if (!NeedsFill(layer, x, y, old_tile_id)) {
-            inSpan = false;
-        } else if (!inSpan) {
-            stack.push({ x, y });
-            inSpan = true;
-        }
-    }
+    TileFloodData *data = (TileFloodData *)userdata;
+    data->map->Set(data->layer, x, y, value, data->now);
 }
-void Tilemap::Fill(TileLayerType layer, uint16_t x, uint16_t y, uint16_t new_tile_id, double now)
+
+void Tilemap::Flood(TileLayerType layer, uint16_t x, uint16_t y, uint16_t new_tile_id, double now)
 {
-    uint16_t old_tile_id = At(layer, x, y);
-    if (old_tile_id == new_tile_id) {
-        return;
+    TileFloodData data{};
+    data.map = this;
+    data.layer = layer;
+    data.now = now;
+    FloodFill filler{ TileFlood_TryGet, TileFlood_Set, (void *)&data };
+    filler.Fill(x, y, new_tile_id);
+}
+
+bool TileFloodDebug_TryGet(int x, int y, void *userdata, int *value)
+{
+    Tilemap::TileFloodDebugData *data = (Tilemap::TileFloodDebugData *)userdata;
+    uint16_t tile_id = 0;
+    if (x >= 0 && x < data->map_w && y >= 0 && y < data->map_h) {
+        *value = data->tile_ids_after[y * data->map_w + x];
+        return true;
     }
+    return false;
+}
 
-    std::stack<Tilemap::Coord> stack{};
-    stack.push({ x, y });
+void TileFloodDebug_Set(int x, int y, int value, void *userdata)
+{
+    Tilemap::TileFloodDebugData *data = (Tilemap::TileFloodDebugData *)userdata;
+    data->tile_ids_after[y * data->map_w + x] = value;
+    data->change_list.push_back({ x, y });
+}
 
-    while (!stack.empty()) {
-        Tilemap::Coord coord = stack.top();
-        stack.pop();
+Tilemap::TileFloodDebugData Tilemap::FloodDebug(TileLayerType layer, uint16_t x, uint16_t y, uint16_t new_tile_id)
+{
+    TileFloodDebugData data{};
+    data.map_w = width;
+    data.map_h = height;
+    data.tile_ids_before = layers[layer];
+    data.tile_ids_after = layers[layer];
+    FloodFill filler{ TileFloodDebug_TryGet, TileFloodDebug_Set, (void *)&data };
+    filler.Fill(x, y, new_tile_id);
 
-        uint16_t lx = coord.x;
-        uint16_t rx = coord.x;
-        while (lx && NeedsFill(layer, lx - 1, coord.y, old_tile_id)) {
-            Set(layer, lx - 1, coord.y, new_tile_id, now);
-            lx -= 1;
-        }
-        while (NeedsFill(layer, rx, coord.y, old_tile_id)) {
-            Set(layer, rx, coord.y, new_tile_id, now);
-            rx += 1;
-        }
-        if (coord.y) {
-            Scan(layer, lx, rx, coord.y - 1, old_tile_id, stack);
-        }
-        Scan(layer, lx, rx, coord.y + 1, old_tile_id, stack);
-    }
+    return data;
 }
 
 ObjectData *Tilemap::GetObjectData(uint16_t x, uint16_t y)
@@ -297,12 +312,10 @@ bool IsActivePowerSource(ObjectData &obj)
     // TODO: Make object flags or something more efficient
     return obj.power_level && obj.type == OBJ_LEVER;
 }
-
 bool IsPowerLoad(ObjectData &obj)
 {
     return obj.type == OBJ_DOOR;
 }
-
 void Tilemap::UpdatePower(double now)
 {
     std::unordered_set<uint8_t> active_power_channels{};
@@ -334,17 +347,17 @@ void Tilemap::UpdatePower(double now)
         }
     }
 }
-
-void Tilemap::UpdateEdges(Edge::Array &edges)
+void Tilemap::UpdateEdges(void)
 {
     //PerfTimer t{ "UpdateEdges" };
     edges.clear();
 
     // Clockwise winding, Edge Normal = (-y, x)
 
-    int topStartIdx = -1;
-    int bottomStartIdx = -1;
     for (int y = 0; y <= height; y++) {
+        int topStartIdx = -1;
+        int bottomStartIdx = -1;
+
         for (int x = 0; x <= width; x++) {
             const bool solid = IsSolid(x, y);
             const bool solidAbove = IsSolid(x, y - 1);
@@ -370,10 +383,11 @@ void Tilemap::UpdateEdges(Edge::Array &edges)
             }
         }
     }
-
-    int leftStartIdx = -1;
-    int rightStartIdx = -1;
+    
     for (int x = 0; x <= width; x++) {
+        int leftStartIdx = -1;
+        int rightStartIdx = -1;
+
         for (int y = 0; y <= height; y++) {
             const bool solid = IsSolid(x, y);
             const bool solidLeft = IsSolid(x - 1, y);
@@ -400,6 +414,39 @@ void Tilemap::UpdateEdges(Edge::Array &edges)
         }
     }
 }
+void Tilemap::UpdateIntervals(void)
+{
+    intervals.clear();
+
+    for (int y = 0; y <= height; y++) {
+        int solidStart = -1;
+        int emptyStart = -1;
+
+        for (int x = 0; x <= width; x++) {
+            const bool solid = IsSolid(x, y);
+
+            if (solidStart == -1 && solid) {
+                solidStart = x;
+            } else if (solidStart != -1 && (!solid || x == width)) {
+                const float py = (float)y * TILE_W;
+                const Vector2 left{ (float)solidStart * TILE_W, py};
+                const Vector2 right{ (float)x * TILE_W, py};
+                intervals.push_back(Interval{ { left, right }, true });
+                solidStart = -1;
+            }
+
+            if (emptyStart == -1 && !solid) {
+                emptyStart = x;
+            } else if (emptyStart != -1 && (solid || x == width)) {
+                const float py = (float)y * TILE_W;
+                const Vector2 left{ (float)emptyStart * TILE_W, py};
+                const Vector2 right{ (float)x * TILE_W, py};
+                intervals.push_back(Interval{ { left, right }, false });
+                emptyStart = -1;
+            }
+        }
+    }
+}
 void Tilemap::Update(double now, bool simulate)
 {
     //Tilemap *map = LocalPlayerMap();
@@ -410,7 +457,8 @@ void Tilemap::Update(double now, bool simulate)
     }
 
     // TODO: Only run this when the edge list is dirty
-    UpdateEdges(edges);
+    UpdateEdges();
+    UpdateIntervals();
 }
 
 void Tilemap::ResolveEntityCollisionsEdges(Entity &entity)
@@ -562,7 +610,13 @@ void Tilemap::DrawColliders(Camera2D &camera)
 void Tilemap::DrawEdges(void)
 {
     for (const Edge &edge : edges) {
-        edge.Draw(MAGENTA, 3.0f);
+        edge.Draw(3.0f);
+    }
+}
+void Tilemap::DrawIntervals(void)
+{
+    for (const Interval &i : intervals) {
+        i.Draw(5.0f);
     }
 }
 void Tilemap::DrawTileIds(Camera2D &camera, TileLayerType layer)
@@ -612,3 +666,25 @@ void Tilemap::DrawObjects(Camera2D &camera)
         }
     }
 }
+
+#if _DEBUG
+void Tilemap::DrawFloodDebug(TileFloodDebugData &floodDebugData)
+{
+    for (int i = 0; i < floodDebugData.change_list.size(); i++) {
+        const auto &change = floodDebugData.change_list[i];
+
+        Vector2 tilePos = { (float)change.x * TILE_W, (float)change.y * TILE_W };
+        const int rect_pad = 1;
+        Rectangle rect{
+            tilePos.x + rect_pad,
+            tilePos.y + rect_pad,
+            TILE_W - rect_pad * 2,
+            TILE_W - rect_pad * 2,
+        };
+
+        const Color rect_col = i <= floodDebugData.step ? PINK : WHITE;
+        DrawRectangleRec(rect, Fade(rect_col, 0.6f));
+        DrawRectangleLinesEx(rect, 2.0f, rect_col);
+    }
+}
+#endif

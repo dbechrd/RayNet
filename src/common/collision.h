@@ -34,9 +34,9 @@ struct Edge {
         return edge_mid;
     }
 
-    void Draw(Color color, float thickness = 1.0f, bool withNormal = true) const {
+    void Draw(float thickness = 1.0f, bool withNormal = true) const {
         // Draw edge
-        DrawLineEx(line.start, line.end, thickness, color);
+        DrawLineEx(line.start, line.end, thickness, MAGENTA);
 
         // Draw normal
         if (withNormal) {
@@ -44,6 +44,22 @@ struct Edge {
             const Vector2 normal_scaled = Vector2Scale(normal, 12.0f);
             DrawLineEx(edge_mid, Vector2Add(edge_mid, normal_scaled), thickness, SKYBLUE);
         }
+    }
+};
+
+struct Interval {
+    typedef std::vector<Interval> Array;
+
+    LineSegment2 line{};
+    bool solid{};
+
+    Interval(void) {}
+    Interval(LineSegment2 line, bool solid) : line(line), solid(solid) {}
+
+    void Draw(float thickness = 1.0f) const
+    {
+        Color color = solid ? ORANGE : LIME;
+        DrawLineEx(line.start, line.end, thickness, color);
     }
 };
 

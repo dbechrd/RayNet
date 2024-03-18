@@ -37,6 +37,15 @@ struct Tilemap {
         Coord br;
     };
 
+    struct TileFloodDebugData {
+        uint16_t map_w;
+        uint16_t map_h;
+        std::vector<uint16_t> tile_ids_before;
+        std::vector<uint16_t> tile_ids_after;
+        std::vector<Tilemap::Coord> change_list;
+        int step;
+    };
+
     static const DataType dtype = DAT_TYP_TILE_MAP;
     static const uint32_t MAGIC = 0xDBBB9192;
     static const uint16_t VERSION = 9;
@@ -69,10 +78,11 @@ struct Tilemap {
     //-------------------------------
     // Not serialized
     //-------------------------------
-    //uint16_t net_id             {};  // for communicating efficiently w/ client about which map
-    double      chunkLastUpdatedAt {};  // used by server to know when chunks are dirty on clients
-    CoordSet    dirtyTiles         {};  // tiles that have changed since last snapshot was sent
-    Edge::Array edges              {};  // collision edge list
+    //uint16_t        net_id             {};  // for communicating efficiently w/ client about which map
+    double          chunkLastUpdatedAt {};  // used by server to know when chunks are dirty on clients
+    CoordSet        dirtyTiles         {};  // tiles that have changed since last snapshot was sent
+    Edge::Array     edges              {};  // collision edge list
+    Interval::Array intervals          {};  // ANYA intervals
     std::unordered_map<Coord, uint16_t, Coord::Hasher> obj_by_coord {};
 
     //-------------------------------
@@ -89,7 +99,9 @@ struct Tilemap {
     void Set(TileLayerType layer, uint16_t x, uint16_t y, uint16_t tile_id, double now, bool autotile = true);
     bool SetTry(TileLayerType layer, uint16_t x, uint16_t y, uint16_t tile_id, double now, bool autotile = true);
     void SetFromWangMap(WangMap &wangMap, double now);
-    void Fill(TileLayerType layer, uint16_t x, uint16_t y, uint16_t new_tile_id, double now);
+    
+    void Flood(TileLayerType layer, uint16_t x, uint16_t y, uint16_t new_tile_id, double now);
+    TileFloodDebugData FloodDebug(TileLayerType layer, uint16_t x, uint16_t y, uint16_t new_tile_id);
 
     // Objects
     ObjectData *GetObjectData(uint16_t x, uint16_t y);
@@ -106,13 +118,13 @@ struct Tilemap {
     void Draw(Camera2D &camera, DrawCmdQueue &sortedDraws);
     void DrawColliders(Camera2D &camera);
     void DrawEdges(void);
+    void DrawIntervals(void);
     void DrawTileIds(Camera2D &camera, TileLayerType layer);
     void DrawObjects(Camera2D &camera);
+    void DrawFloodDebug(TileFloodDebugData &floodDebugData);
 
 private:
     void UpdatePower(double now);
-    void UpdateEdges(Edge::Array &edges);
-
-    bool NeedsFill(TileLayerType layer, uint16_t x, uint16_t y, uint16_t old_tile_id);
-    void Scan(TileLayerType layer, uint16_t lx, uint16_t rx, uint16_t y, uint16_t old_tile_id, std::stack<Coord> &stack);
+    void UpdateEdges(void);
+    void UpdateIntervals(void);
 };

@@ -734,6 +734,7 @@ void dlb_CommonTests(void)
 #endif
 }
 
+#include "anya.cpp"
 #include "collision.cpp"
 #include "dlg.cpp"
 #include "data.cpp"

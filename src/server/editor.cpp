@@ -66,6 +66,19 @@ void Editor::HandleInput(Camera2D &camera, double now, double dt)
         UI::UnfocusActiveEditor();
     }
 
+    if (mode == EditMode_Tiles && state.showFloodDebug) {
+        if (io.KeyPressed(KEY_LEFT, true)) {
+            if (state.tiles.lastFloodData.step > 0) {
+                state.tiles.lastFloodData.step--;
+            }
+        }
+        if (io.KeyPressed(KEY_RIGHT, true)) {
+            if (state.tiles.lastFloodData.step < state.tiles.lastFloodData.change_list.size() - 1) {
+                state.tiles.lastFloodData.step++;
+            }
+        }
+    }
+
     io.PopScope();
 }
 
@@ -82,11 +95,17 @@ void Editor::DrawGroundOverlays(Camera2D &camera)
     if (state.showTileEdges) {
         map.DrawEdges();
     }
+    if (state.showANYA) {
+        map.DrawIntervals();
+    }
     if (state.showTileIds) {
         map.DrawTileIds(camera, state.tiles.layer);
     }
     if (state.showObjects) {
         map.DrawObjects(camera);
+    }
+    if (state.showFloodDebug) {
+        map.DrawFloodDebug(state.tiles.lastFloodData);
     }
 
     if (active) {
@@ -150,7 +169,12 @@ void Editor::DrawGroundOverlay_Tiles(Camera2D &camera)
             }
         } else if (editorFillTile) {
             if (cursor.selection_tiles->size()) {
-                map.Fill(layer, coord.x, coord.y, cursor.selection_tiles[layer][0], now);
+                if (io.KeyDown(KEY_LEFT_SHIFT)) {
+                    state.tiles.lastFloodData = map.FloodDebug(layer, coord.x, coord.y, cursor.selection_tiles[layer][0]);
+                    state.showFloodDebug = true;
+                } else {
+                    map.Flood(layer, coord.x, coord.y, cursor.selection_tiles[layer][0], now);
+                }
             }
         }
 
@@ -760,9 +784,13 @@ void Editor::DrawUI_ActionBar(void)
     if (showCollidersButton.released) {
         state.showColliders = !state.showColliders;
     }
-    UIState showTileEdgesButton = ui.ToggleButton("Edges", state.showTileEdges, GRAY, MAROON);
+    UIState showTileEdgesButton = ui.ToggleButton(TextFormat("Edges (%u)", map.edges.size()), state.showTileEdges, GRAY, MAROON);
     if (showTileEdgesButton.released) {
         state.showTileEdges = !state.showTileEdges;
+    }
+    UIState showANYAButton = ui.ToggleButton(TextFormat("ANYA (%u)", map.intervals.size()), state.showANYA, GRAY, MAROON);
+    if (showANYAButton.released) {
+        state.showANYA = !state.showANYA;
     }
     UIState showTileIdsButton = ui.ToggleButton("Tile IDs", state.showTileIds, GRAY, LIGHTGRAY);
     if (showTileIdsButton.released) {
@@ -775,6 +803,10 @@ void Editor::DrawUI_ActionBar(void)
     UIState showObjectsButton = ui.ToggleButton("Objects", state.showObjects, GRAY, LIGHTGRAY);
     if (showObjectsButton.released) {
         state.showObjects = !state.showObjects;
+    }
+    UIState showFloodDebug = ui.ToggleButton("Flood Debug", state.showFloodDebug, GRAY, LIGHTGRAY);
+    if (showFloodDebug.released) {
+        state.showFloodDebug = !state.showFloodDebug;
     }
 
     ui.Space({ 0, 8 });

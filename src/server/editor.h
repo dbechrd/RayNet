@@ -35,6 +35,7 @@ enum SelectionType {
 struct EditModeTiles {
     TileEditMode tileEditMode;
     TileLayerType layer;
+    Tilemap::TileFloodDebugData lastFloodData;
     struct {
         // Tile picking from the tile palette
         Tilemap::Coord pick_start{};
@@ -119,11 +120,13 @@ struct GfxAnimEditor {
 };
 
 struct EditModeState {
-    bool showColliders {};
-    bool showTileEdges {};
-    bool showTileIds   {};
-    bool showEntityIds {};
-    bool showObjects   {};
+    bool showColliders  {};
+    bool showTileEdges  {};
+    bool showANYA       {};
+    bool showTileIds    {};
+    bool showEntityIds  {};
+    bool showObjects    {};
+    bool showFloodDebug {};
 
     EditModeTiles     tiles     {};
     EditModeObjects   objects   {};
