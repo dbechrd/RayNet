@@ -2,16 +2,144 @@
 
 #define ANYA_EPSILON 0.0001f
 
-std::vector<Anya_Interval> Anya_SplitAtCorners(Anya_Interval &I)
+Anya_Interval::Anya_Interval()
+{}
+
+Anya_Interval::Anya_Interval(float y, float x_min, float x_max) : y(y), x_min(x_min), x_max(x_max)
+{}
+
+bool Anya_Interval::HasInterval(void)
+{
+    return x_min < x_max;
+}
+
+#if ANYA_PRUNE
+bool Anya_Interval::IsValid(Vector2 r)
+{
+    // TODO: Every p in I is visible from r
+    return true;
+}
+#endif
+
+bool Anya_Interval::Contains(Vector2 p)
+{
+    // TODO: Open vs. closed intervals!?
+    return p.y == y && p.x >= x_min && p.x <= x_max;
+}
+
+Anya_Node::Anya_Node(Anya_State &state) : state(&state)
+{}
+
+Anya_Node::Anya_Node(Anya_State &state, Anya_Interval interval, Vector2 root)
+    : state{ &state }, interval{ interval }, root{ root }
+{}
+
+bool Anya_Node::IsStart(void)
+{
+    return interval.x_min == interval.x_max;
+}
+
+bool Anya_Node::IsFlat(void)
+{
+    return interval.y == root.y;
+}
+
+Anya_Path Anya_Node::PathTo(Vector2 t)
+{
+    Anya_Path path{};
+
+    // TODO(perf): Second stack is kinda dumb, maybe just reverse the vector at the end?
+    std::stack<Vector2> points{};
+    points.push(t);
+
+    Anya_Node *node = this;
+    while (node) {
+        points.push(node->root);
+        node = node->parent;
+    }
+
+    path.points.reserve(points.size());
+    while (!points.empty()) {
+        path.points.push_back(points.top());
+        points.pop();
+    }
+
+    return path;
+}
+
+bool Anya_Node::operator<(const Anya_Node &rhs) const
+{
+    assert(state == rhs.state);
+
+    Vector2 closest_point = ClosestPointLineSegmentToLine(
+        { interval.x_min, interval.y },
+        { interval.x_max, interval.y },
+        root,
+        state->target
+    );
+
+    Vector2 rhs_closest_point = ClosestPointLineSegmentToLine(
+        { rhs.interval.x_min, rhs.interval.y },
+        { rhs.interval.x_max, rhs.interval.y },
+        rhs.root,
+        state->target
+    );
+
+    // Compare the distances of each closest point to see which one is better
+    const float dist = Vector2DistanceSqr(closest_point, state->target);
+    const float rhs_dist = Vector2DistanceSqr(rhs_closest_point, state->target);
+
+    return dist < rhs_dist;
+}
+
+Anya_State::Anya_State(Vector2 start, Vector2 target, Anya_SolidQuery solid_query, void *userdata)
+    : start(start), target(target), solid_query(solid_query), userdata(userdata)
+{}
+
+bool Anya_State::Query(int x, int y)
+{
+    return solid_query(x, y, userdata);
+}
+
+std::vector<Anya_Interval> Anya_SplitAtCorners(Anya_State &state, Anya_Interval &I)
 {
     std::vector<Anya_Interval> intervals{};
 
-#if 0
-    // TODO: Split I
-#else
-    // HACK: Make it work incorrectly for now
-    intervals.push_back(I);
-#endif
+    int x0 = floorf(I.x_min + 1);
+    int x1 = floorf(I.x_max);
+
+    Anya_Interval segment{ I.y, I.x_min, -1 };
+
+    for (int x = x0; x <= x1; x++) {
+        if (x == x1) {
+            segment.x_max = I.x_max;
+
+            intervals.push_back(segment);
+            break;
+        }
+
+        const bool tl = state.Query(x - 1, I.y - 1);
+        const bool bl = state.Query(x - 1, I.y);
+        const bool tr = state.Query(x, I.y - 1);
+        const bool br = state.Query(x, I.y);
+
+        const int solid = tl + bl + tr + br;
+        const bool corner = solid == 1;
+        if (corner) {
+            segment.x_max = x;
+
+            if (!segment.HasInterval()) {
+                assert(!"invalid segment");
+            }
+            intervals.push_back(segment);
+            segment.x_min = segment.x_max + ANYA_EPSILON;
+            segment.x_max = -1;
+        }
+    }
+
+    if (intervals.empty()) {
+        intervals.push_back(I);
+    }
 
     return intervals;
 }
@@ -21,6 +149,30 @@ std::vector<Anya_Node> Anya_GenStartSuccessors(Anya_State &state)
     const Vector2 s = state.start;
     std::vector<Anya_Node> successors{};
     std::vector<Anya_Interval> max_intervals{};
+
+    // Max interval for all visible points in row above s []
+    {
+        // None   Left   Right  Both
+        // _____  _____  _____  _____
+        // |x|x|  | |x|  |x| |  | | |
+        // |.|.|  |.|.|  |.|.|  |.|.|
+
+        const float y = s.y - 1;
+        float x_min = s.x;
+        float x_max = s.x;
+
+        while (!state.Query(x_min - 1, y)) {
+            x_min--;
+        }
+        while (!state.Query(x_max, y)) {
+            x_max++;
+        }
+
+        Anya_Interval I_max_up{ y, x_min, x_max };
+        if (I_max_up.HasInterval()) {
+            max_intervals.push_back(I_max_up);
+        }
+    }
 
     // Max interval for all visible points left of s [)
     {
@@ -49,11 +201,7 @@ std::vector<Anya_Node> Anya_GenStartSuccessors(Anya_State &state)
             x_min -= 1;
         }
 
-        Anya_Interval I_max_left{};
-        I_max_left.y = y;
-        I_max_left.x_min = x_min;
-        I_max_left.x_max = s.x - ANYA_EPSILON;
-
+        Anya_Interval I_max_left{ y, x_min, s.x - ANYA_EPSILON };
         if (I_max_left.HasInterval()) {
             max_intervals.push_back(I_max_left);
         }
@@ -86,41 +234,9 @@ std::vector<Anya_Node> Anya_GenStartSuccessors(Anya_State &state)
             x_max += 1;
         }
 
-        Anya_Interval I_max_right{};
-        I_max_right.y = y;
-        I_max_right.x_min = s.x + ANYA_EPSILON;
-        I_max_right.x_max = x_max;
-
+        Anya_Interval I_max_right{ y, s.x + ANYA_EPSILON, x_max };
         if (I_max_right.HasInterval()) {
             max_intervals.push_back(I_max_right);
-        }
-    }
-
-    // Max interval for all visible points in row above s []
-    {
-        // None   Left   Right  Both
-        // _____  _____  _____  _____
-        // |x|x|  | |x|  |x| |  | | |
-        // |.|.|  |.|.|  |.|.|  |.|.|
-
-        const float y = s.y - 1;
-        float x_min = s.x;
-        float x_max = s.x;
-
-        while (!state.Query(x_min - 1, y)) {
-            x_min--;
-        }
-        while (!state.Query(x_max, y)) {
-            x_max++;
-        }
-
-        Anya_Interval I_max_up{};
-        I_max_up.y = y;
-        I_max_up.x_min = x_min;
-        I_max_up.x_max = x_max;
-
-        if (I_max_up.HasInterval()) {
-            max_intervals.push_back(I_max_up);
         }
     }
 
@@ -142,20 +258,19 @@ std::vector<Anya_Node> Anya_GenStartSuccessors(Anya_State &state)
             x_max++;
         }
 
-        Anya_Interval I_max_down{};
-        I_max_down.y = y;
-        I_max_down.x_min = x_min;
-        I_max_down.x_max = x_max;
-
+        Anya_Interval I_max_down{ y, x_min, x_max };
         if (I_max_down.HasInterval()) {
             max_intervals.push_back(I_max_down);
         }
     }
 
     for (auto &max_interval : max_intervals) {
-        auto split_intervals = Anya_SplitAtCorners(max_interval);
+        auto split_intervals = Anya_SplitAtCorners(state, max_interval);
         for (auto &split_interval : split_intervals) {
-            successors.push_back({ state, split_interval, s });
+            Anya_Node node{ state };
+            node.interval = split_interval;
+            node.root = s;
+            successors.push_back(node);
         }
     }
 
@@ -166,15 +281,43 @@ std::vector<Anya_Node> Anya_GenFlatSuccessors(Anya_State &state, Vector2 p, Vect
 {
     std::vector<Anya_Node> successors{};
 
-    Vector2 p_prime{};
+    float p_prime = p.x;
+    
     // TODO: p_prime = first corner point (or farthest vertex) on p.y row such that (r, p, p') is taut
-    Anya_Interval I{};
-    // TODO: I = { p (open), p_prime (closed) }
+    // Next segment to right of p (]
+    {
+        for (;;) {
+            bool tr = state.Query(p_prime, p.y - 1);
+            bool br = state.Query(p_prime, p.y);
+            if (tr && br) {
+                // _____
+                // | |x|
+                // |_|x|
+                break;
+            } else if (tr && state.Query(p_prime - 1, p.y)) {  // TR & BL
+                // _____
+                // | |x|
+                // |x|_|
+                break;
+            } else if (br && state.Query(p_prime - 1, p.y - 1)) {  // BR & TL
+                // _____
+                // |x| |
+                // |_|x|
+                break;
+            }
+            p_prime += 1;
+        }
+    }
 
-    if (r.y == p.y) {
-        successors.push_back({ state, I, r });
-    } else {
-        successors.push_back({ state, I, p });
+    // I = { p (open), p_prime (closed) }
+    Anya_Interval I{ p.y, p.x + ANYA_EPSILON, p_prime };
+
+    if (I.HasInterval()) {
+        if (r.y == p.y) {
+            successors.push_back({ state, I, r });
+        } else {
+            successors.push_back({ state, I, p });
+        }
     }
 
     return successors;
@@ -195,17 +338,17 @@ std::vector<Anya_Node> Anya_GenConeSuccessors(Anya_State &state, Vector2 a, Vect
         Vector2 p{};
         // TODO: p = point from adjacent row, reached via right-hand turn at a
         // I = maximum closed interval beginning at p and observable from r_prime
+        I.y = p.y;
         I.x_min = p.x;
         I.x_max = -1; // TODO: ???
-        I.y = p.y;
     } else if (Vector2Equals(a, b)) {
         r_prime = a;
         Vector2 p{};
         // TODO: p = point from adjacent row, computed via linear projection from r through a
         // I = maximum closed interval beginning at p and observable from r_prime
+        I.y = p.y;
         I.x_min = p.x;
         I.x_max = -1; // TODO: ???
-        I.y = p.y;
     } else {
         r_prime = r;
         Vector2 p{};
@@ -213,12 +356,12 @@ std::vector<Anya_Node> Anya_GenConeSuccessors(Anya_State &state, Vector2 a, Vect
         Vector2 p_prime{};
         // TDOO: p' = point from adjacent row, computed via linear projection from r through b
         // I = maximum closed interval with endpoints a and b (which is implicitly observable from r)
+        I.y = a.y;
         I.x_min = a.x;
         I.x_max = b.x;
-        I.y = a.y;
     }
 
-    std::vector<Anya_Interval> intervals = Anya_SplitAtCorners(I);
+    std::vector<Anya_Interval> intervals = Anya_SplitAtCorners(state, I);
     for (Anya_Interval &II : intervals) {
         Anya_Node n_prime{ state, II, r_prime };
         successors.push_back(n_prime);
@@ -239,8 +382,13 @@ std::vector<Anya_Node> Anya_Successors(Anya_State &state, Anya_Node &node)
     std::vector<Anya_Node> successors{};
 
     if (node.IsFlat()) {
-        Vector2 p{};
-        // TODO: p = endpoint of I farthest from r
+        const Vector2 p0{ I.x_min, I.y };
+        const Vector2 p1{ I.x_max, I.y };
+        const float p0_dist = Vector2DistanceSqr(p0, r);
+        const float p1_dist = Vector2DistanceSqr(p1, r);
+
+        // p = endpoint of I farthest from r
+        Vector2 p = p0_dist > p1_dist ? p0 : p1;
 
         auto flats = Anya_GenFlatSuccessors(state, p, r);
         successors.reserve(successors.size() + flats.size());
@@ -339,10 +487,16 @@ bool Anya_ShouldPrune(Anya_Node &node)
 void Anya(Anya_State &state)
 {
     std::priority_queue<Anya_Node> open{};
-    open.push(Anya_Node::FromStart(state));
 
-    while (!open.empty()) {
+    Anya_Node start{ state, { state.start.y, state.start.x, state.start.x }, { -1, -1 } };
+    open.push(start);
+
+    const int maxIters = 1000;
+    int iters = 0;
+
+    while (!open.empty() && iters < maxIters) {
         Anya_Node node = open.top();
+        state.debugNodes.push_back(node);
         open.pop();
         if (node.interval.Contains(state.target)) {
             state.path = node.PathTo(state.target);
@@ -355,5 +509,7 @@ void Anya(Anya_State &state)
                 open.push(successor);
             }
         }
+
+        iters++;
     }
 }

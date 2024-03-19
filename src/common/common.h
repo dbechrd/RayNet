@@ -182,6 +182,11 @@ float GetRandomFloatVariance(float variance);
 
 extern Vector2 g_RenderSize;
 
+inline float Vector2CrossProduct(Vector2 a, Vector2 b)
+{
+    return a.x * b.y - a.y * b.x;
+}
+
 Rectangle GetCameraRectWorld(Camera2D &camera);
 Rectangle RectShrink(const Rectangle &rect, Vector2 pixels);
 Rectangle RectShrink(const Rectangle &rect, float pixels);

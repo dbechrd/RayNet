@@ -594,7 +594,13 @@ bool Tilemap_AnyaSolidQuery(int x, int y, void *userdata)
 }
 void Tilemap::DrawIntervals(Camera2D &camera)
 {
+    Vector2 fountain{ 1630, 2910 };
+#if 0
     Vector2 world = GetScreenToWorld2D(GetMousePosition(), camera);
+#else
+    Vector2 world = fountain;
+#endif
+
     Coord coord{};
     if (!WorldToTileIndex(world.x, world.y, coord)) {
         return;
@@ -603,28 +609,73 @@ void Tilemap::DrawIntervals(Camera2D &camera)
     Vector2 start{ (float)coord.x, (float)coord.y };
     Vector2 target{ (float)coord.x + 10, (float)coord.y - 10 };
 
-    Anya_State state{ start, target, Tilemap_AnyaSolidQuery, this };
-    auto nodes = Anya_GenStartSuccessors(state);
-    for (auto &node : nodes) {
-        const auto &i = node.interval;
-        DrawLineEx(
-            { i.x_min * TILE_W, i.y * TILE_W },
-            { i.x_max * TILE_W, i.y * TILE_W },
-            5, SKYBLUE
-        );
-    }
+    int nodeTint = 0;
+    Color greens[] = { DARKGREEN, GREEN, LIME };
+    Color blues[] = { DARKBLUE, BLUE, SKYBLUE };
 
-    if (nodes.size()) {
-        auto successors = Anya_Successors(state, nodes[0]);
-        for (auto &node : nodes) {
+    Anya_State state{ start, target, Tilemap_AnyaSolidQuery, this };
+    Anya(state);
+
+    if (state.path.points.size()) {
+        DrawLineStrip(state.path.points.data(), state.path.points.size(), PINK);
+    } else {
+        static int nodeView = 0;
+
+        if (io.KeyPressed(KEY_LEFT, true)) {
+            nodeView--;
+        }
+        if (io.KeyPressed(KEY_RIGHT, true)) {
+            nodeView++;
+        }
+        nodeView = CLAMP(nodeView, 0, state.debugNodes.size() - 1);
+
+        int nodeIdx = 0;
+        for (const auto &node : state.debugNodes) {
+            if (nodeIdx > nodeView) break;
+
             const auto &i = node.interval;
+
             DrawLineEx(
                 { i.x_min * TILE_W, i.y * TILE_W },
                 { i.x_max * TILE_W, i.y * TILE_W },
-                3, ORANGE
+                8,
+                nodeIdx == nodeView ? YELLOW : greens[nodeTint]
             );
+            nodeTint++;
+            nodeTint %= 3;
+            nodeIdx++;
         }
     }
+
+#if 0
+    auto nodes = Anya_GenStartSuccessors(state);
+    for (auto &node : nodes) {
+        const auto &i = node.interval;
+
+        DrawLineEx(
+            { i.x_min * TILE_W, i.y * TILE_W },
+            { i.x_max * TILE_W, i.y * TILE_W },
+            8, greens[nodeTint]
+        );
+        nodeTint++;
+        nodeTint %= 3;
+    }
+
+    for (auto &node : nodes) {
+        auto successors = Anya_Successors(state, node);
+        for (auto &successor : successors) {
+            const auto &i = successor.interval;
+            
+            DrawLineEx(
+                { i.x_min * TILE_W, i.y * TILE_W },
+                { i.x_max * TILE_W, i.y * TILE_W },
+                4, blues[nodeTint]
+            );
+        }
+        nodeTint++;
+        nodeTint %= 3;
+    }
+#endif
 }
 void Tilemap::DrawTileIds(Camera2D &camera, TileLayerType layer)
 {

@@ -180,3 +180,40 @@ bool dlb_CheckCollisionCircleEdge(Vector2 center, float radius, Edge edge, Manif
     }
     return false;
 }
+
+Vector2 ClosestPointLineSegmentToLine(Vector2 segmentA, Vector2 segmentB, Vector2 lineA, Vector2 lineB)
+{
+    // https://stackoverflow.com/a/565282
+    // t = (q - p) x s / (r x s)
+    // u = (q - p) x r / (r x s)
+
+    Vector2 closest_point{};
+
+    Vector2 p = segmentA;
+    Vector2 r = Vector2Subtract(segmentB, segmentA);
+    Vector2 q = lineA;
+    Vector2 s = Vector2Subtract(lineB, lineA);
+
+    Vector2 pq = Vector2Subtract(q, p);
+    float r_x_s = Vector2CrossProduct(r, s);
+    float pq_x_r = Vector2CrossProduct(pq, r);
+
+    if (r_x_s == 0) {
+        if (pq_x_r == 0) {
+            //assert(!"co-linear");
+        } else {
+            //assert(!"parallel");
+        }
+    } else {
+        float pq_x_s = Vector2CrossProduct(pq, s);
+        float t = pq_x_s / r_x_s;
+        float u = pq_x_r / r_x_s;
+
+        if (u >= 0 && u <= 1) {
+            float t_segment = CLAMP(t, 0, 1);
+            closest_point = Vector2Add(p, Vector2Scale(r, t_segment));
+        }
+    }
+
+    return closest_point;
+}

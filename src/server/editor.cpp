@@ -97,6 +97,34 @@ void Editor::DrawGroundOverlays(Camera2D &camera)
     }
     if (state.showANYA) {
         map.DrawIntervals(camera);
+
+#if 0
+        // DEBUG: ClosestPointLineSegmentToLine
+        // In ANYA edit mode, hold left mouse and press QWER to move the lines.
+        // Red: Segment
+        // Green: Line
+        // Yellow: Closest point on segment to line (if segment would eventually intersect the line)
+        static Vector2 segmentA{};
+        static Vector2 segmentB{};
+        static Vector2 lineA{};
+        static Vector2 lineB{};
+        if (io.MouseButtonDown(MOUSE_BUTTON_LEFT)) {
+            if (io.KeyDown(KEY_Q)) {
+                segmentA = GetScreenToWorld2D(GetMousePosition(), camera);
+            } else if (io.KeyDown(KEY_W)) {
+                segmentB = GetScreenToWorld2D(GetMousePosition(), camera);
+            } else if (io.KeyDown(KEY_E)) {
+                lineA = GetScreenToWorld2D(GetMousePosition(), camera);
+            } else if (io.KeyDown(KEY_R)) {
+                lineB = GetScreenToWorld2D(GetMousePosition(), camera);
+            }
+        }
+
+        Vector2 closest = ClosestPointLineSegmentToLine(segmentA, segmentB, lineA, lineB);
+        DrawLineEx(segmentA, segmentB, 3, RED);
+        DrawLineEx(lineA, lineB, 3, GREEN);
+        DrawCircleV(closest, 5, YELLOW);
+#endif
     }
     if (state.showTileIds) {
         map.DrawTileIds(camera, state.tiles.layer);
