@@ -27,14 +27,16 @@ struct Anya_Node {
     Anya_Node *parent{};
     Anya_Interval interval{};
     Vector2 root{};
+    int successorSet{};
 
     Anya_Node(Anya_State &state);
     Anya_Node(Anya_State &state, Anya_Interval interval, Vector2 root);
 
-    bool IsStart(void);
-    bool IsFlat(void);
-
-    Anya_Path PathTo(Vector2 t);
+    bool IsStart(void) const;
+    bool IsFlat(void) const;
+    Vector2 ClosestPointToTarget(void) const;
+    float DistanceToTarget(void) const;
+    Anya_Path PathTo(Vector2 t) const;
 
     bool operator<(const Anya_Node &rhs) const;
 };

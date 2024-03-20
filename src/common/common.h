@@ -186,6 +186,10 @@ inline float Vector2CrossProduct(Vector2 a, Vector2 b)
 {
     return a.x * b.y - a.y * b.x;
 }
+inline Vector2 Vector2Floor(Vector2 v)
+{
+    return { floorf(v.x), floorf(v.y) };
+}
 
 Rectangle GetCameraRectWorld(Camera2D &camera);
 Rectangle RectShrink(const Rectangle &rect, Vector2 pixels);

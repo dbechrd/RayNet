@@ -98,7 +98,7 @@ void Editor::DrawGroundOverlays(Camera2D &camera)
     if (state.showANYA) {
         map.DrawIntervals(camera);
 
-#if 0
+#if 1
         // DEBUG: ClosestPointLineSegmentToLine
         // In ANYA edit mode, hold left mouse and press QWER to move the lines.
         // Red: Segment
@@ -110,20 +110,29 @@ void Editor::DrawGroundOverlays(Camera2D &camera)
         static Vector2 lineB{};
         if (io.MouseButtonDown(MOUSE_BUTTON_LEFT)) {
             if (io.KeyDown(KEY_Q)) {
-                segmentA = GetScreenToWorld2D(GetMousePosition(), camera);
+                segmentA = Vector2Floor(GetScreenToWorld2D(GetMousePosition(), camera));
             } else if (io.KeyDown(KEY_W)) {
-                segmentB = GetScreenToWorld2D(GetMousePosition(), camera);
+                segmentB = Vector2Floor(GetScreenToWorld2D(GetMousePosition(), camera));
             } else if (io.KeyDown(KEY_E)) {
-                lineA = GetScreenToWorld2D(GetMousePosition(), camera);
+                lineA = Vector2Floor(GetScreenToWorld2D(GetMousePosition(), camera));
             } else if (io.KeyDown(KEY_R)) {
-                lineB = GetScreenToWorld2D(GetMousePosition(), camera);
+                lineB = Vector2Floor(GetScreenToWorld2D(GetMousePosition(), camera));
             }
         }
 
         Vector2 closest = ClosestPointLineSegmentToLine(segmentA, segmentB, lineA, lineB);
-        DrawLineEx(segmentA, segmentB, 3, RED);
-        DrawLineEx(lineA, lineB, 3, GREEN);
-        DrawCircleV(closest, 5, YELLOW);
+        DrawLineEx(segmentA, segmentB, 4, RED);
+        DrawLineEx(lineA, lineB, 4, GREEN);
+        DrawCircleV(closest, 8, YELLOW);
+
+        Vector2 segmentAB = Vector2Subtract(segmentB, segmentA);
+        const float rulerLen = Vector2Length(segmentAB);
+        const char *rulerTxt = TextFormat("%.2f", rulerLen / TILE_W);
+        Vector2 rulerTxtSize = dlb_MeasureTextShadowEx(fntMedium, CSTRLEN(rulerTxt), 0);
+        Vector2 rulerTxtOffset = Vector2Floor({ -rulerTxtSize.x * 0.5f, -rulerTxtSize.y * 0.5f });
+
+        Vector2 segmentABHalf = Vector2Floor(Vector2Add(segmentA, Vector2Scale(segmentAB, 0.5f)));
+        dlb_DrawTextShadowEx(fntMedium, CSTRLEN(rulerTxt), Vector2Add(segmentABHalf, rulerTxtOffset), WHITE);
 #endif
     }
     if (state.showTileIds) {

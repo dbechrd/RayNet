@@ -34,17 +34,34 @@ Anya_Node::Anya_Node(Anya_State &state, Anya_Interval interval, Vector2 root)
     : state{ &state }, interval{ interval }, root{ root }
 {}
 
-bool Anya_Node::IsStart(void)
+bool Anya_Node::IsStart(void) const
 {
     return interval.x_min == interval.x_max;
 }
 
-bool Anya_Node::IsFlat(void)
+bool Anya_Node::IsFlat(void) const
 {
     return interval.y == root.y;
 }
 
-Anya_Path Anya_Node::PathTo(Vector2 t)
+Vector2 Anya_Node::ClosestPointToTarget(void) const
+{
+    Vector2 closest_point = ClosestPointLineSegmentToLine(
+        { interval.x_min, interval.y },
+        { interval.x_max, interval.y },
+        root,
+        state->target
+    );
+    return closest_point;
+}
+
+float Anya_Node::DistanceToTarget(void) const
+{
+    Vector2 p = ClosestPointToTarget();
+    return Vector2Distance(p, state->target);
+}
+
+Anya_Path Anya_Node::PathTo(Vector2 t) const
 {
     Anya_Path path{};
 
@@ -52,7 +69,7 @@ Anya_Path Anya_Node::PathTo(Vector2 t)
     std::stack<Vector2> points{};
     points.push(t);
 
-    Anya_Node *node = this;
+    const Anya_Node *node = this;
     while (node) {
         points.push(node->root);
         node = node->parent;
@@ -67,29 +84,20 @@ Anya_Path Anya_Node::PathTo(Vector2 t)
     return path;
 }
 
+// TODO(dlb): Cache the calculated heuristic value to speed up future comparisons (and enable cheap heuristic debug viz)
 bool Anya_Node::operator<(const Anya_Node &rhs) const
 {
     assert(state == rhs.state);
 
-    Vector2 closest_point = ClosestPointLineSegmentToLine(
-        { interval.x_min, interval.y },
-        { interval.x_max, interval.y },
-        root,
-        state->target
-    );
-
-    Vector2 rhs_closest_point = ClosestPointLineSegmentToLine(
-        { rhs.interval.x_min, rhs.interval.y },
-        { rhs.interval.x_max, rhs.interval.y },
-        rhs.root,
-        state->target
-    );
+    const Vector2 closest_point = ClosestPointToTarget();
+    const Vector2 rhs_closest_point = rhs.ClosestPointToTarget();
 
     // Compare the distances of each closest point to see which one is better
     const float dist = Vector2DistanceSqr(closest_point, state->target);
     const float rhs_dist = Vector2DistanceSqr(rhs_closest_point, state->target);
 
-    return dist < rhs_dist;
+    // NOTE: Backwards on purpose, less distance = better heuristic and priority_queue is a max heap -_-
+    return dist > rhs_dist;
 }
 
 Anya_State::Anya_State(Vector2 start, Vector2 target, Anya_SolidQuery solid_query, void *userdata)
@@ -328,6 +336,7 @@ std::vector<Anya_Node> Anya_GenConeSuccessors(Anya_State &state, Vector2 a, Vect
 {
     std::vector<Anya_Node> successors{};
 
+#if 0
     Anya_Interval I{};
     Vector2 r_prime{};
 
@@ -366,6 +375,7 @@ std::vector<Anya_Node> Anya_GenConeSuccessors(Anya_State &state, Vector2 a, Vect
         Anya_Node n_prime{ state, II, r_prime };
         successors.push_back(n_prime);
     }
+#endif
 
     return successors;
 }
@@ -506,6 +516,7 @@ void Anya(Anya_State &state)
         auto successors = Anya_Successors(state, node);
         for (auto successor : successors) {
             if (!Anya_ShouldPrune(successor)) {
+                successor.successorSet = node.successorSet + 1;
                 open.push(successor);
             }
         }

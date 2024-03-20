@@ -594,20 +594,18 @@ bool Tilemap_AnyaSolidQuery(int x, int y, void *userdata)
 }
 void Tilemap::DrawIntervals(Camera2D &camera)
 {
-    Vector2 fountain{ 1630, 2910 };
+    Vector2 start{ 25, 45 };
+
 #if 0
     Vector2 world = GetScreenToWorld2D(GetMousePosition(), camera);
-#else
-    Vector2 world = fountain;
-#endif
-
     Coord coord{};
     if (!WorldToTileIndex(world.x, world.y, coord)) {
         return;
     }
-
-    Vector2 start{ (float)coord.x, (float)coord.y };
-    Vector2 target{ (float)coord.x + 10, (float)coord.y - 10 };
+    Vector2 target{ (float)coord.x, (float)coord.y };
+#else
+    Vector2 target{ 29, 42 };
+#endif
 
     int nodeTint = 0;
     Color greens[] = { DARKGREEN, GREEN, LIME };
@@ -615,6 +613,14 @@ void Tilemap::DrawIntervals(Camera2D &camera)
 
     Anya_State state{ start, target, Tilemap_AnyaSolidQuery, this };
     Anya(state);
+
+    Rectangle startRec{ start.x * TILE_W, start.y * TILE_W, TILE_W, TILE_W };
+    DrawRectangleRec(startRec, Fade(LIME, 0.5f));
+    DrawRectangleLinesEx(startRec, 3, GREEN);
+
+    Rectangle targetRec{ target.x * TILE_W, target.y * TILE_W, TILE_W, TILE_W };
+    DrawRectangleRec(targetRec, Fade(SKYBLUE, 0.5f));
+    DrawRectangleLinesEx(targetRec, 3, BLUE);
 
     if (state.path.points.size()) {
         DrawLineStrip(state.path.points.data(), state.path.points.size(), PINK);
@@ -629,18 +635,48 @@ void Tilemap::DrawIntervals(Camera2D &camera)
         }
         nodeView = CLAMP(nodeView, 0, state.debugNodes.size() - 1);
 
+#if 0
+        // 7.07, 6.40, 5.83, 5.39, 5.10, 5.00, 5.10, 5.39, 5.83, 6.40, 7.07
+        // 6.40, 5.66, 5.00, 4.47, 4.12, 4.00, 4.12, 4.47, 5.00, 5.66, 6.40
+        // 5.83, 5.00, 4.24, 3.61, 3.16, 3.00, 3.16, 3.61, 4.24, 5.00, 5.83
+        // 5.39, 4.47, 3.61, 2.83, 2.24, 2.00, 2.24, 2.83, 3.61, 4.47, 5.39
+        // 5.10, 4.12, 3.16, 2.24, 1.41, 1.00, 1.41, 2.24, 3.16, 4.12, 5.10
+        // 5.00, 4.00, 3.00, 2.00, 1.00, 0.00, 1.00, 2.00, 3.00, 4.00, 5.00
+        // 5.10, 4.12, 3.16, 2.24, 1.41, 1.00, 1.41, 2.24, 3.16, 4.12, 5.10
+        // 5.39, 4.47, 3.61, 2.83, 2.24, 2.00, 2.24, 2.83, 3.61, 4.47, 5.39
+        // 5.83, 5.00, 4.24, 3.61, 3.16, 3.00, 3.16, 3.61, 4.24, 5.00, 5.83
+        // 6.40, 5.66, 5.00, 4.47, 4.12, 4.00, 4.12, 4.47, 5.00, 5.66, 6.40
+        // 7.07, 6.40, 5.83, 5.39, 5.10, 5.00, 5.10, 5.39, 5.83, 6.40, 7.07
+        for (float y = 0; y <= 10; y++) {
+            for (float x = -10; x <= 0; x++) {
+                float dist = Vector2Distance({ x, y }, {});
+                printf("%.2f ", dist);
+            }
+            printf("\n");
+        }
+#endif
+
         int nodeIdx = 0;
         for (const auto &node : state.debugNodes) {
             if (nodeIdx > nodeView) break;
 
             const auto &i = node.interval;
 
-            DrawLineEx(
-                { i.x_min * TILE_W, i.y * TILE_W },
-                { i.x_max * TILE_W, i.y * TILE_W },
-                8,
-                nodeIdx == nodeView ? YELLOW : greens[nodeTint]
-            );
+            Vector2 p0{ i.x_min * TILE_W, i.y * TILE_W };
+            Vector2 p1{ i.x_max * TILE_W + 4, i.y * TILE_W };
+            DrawLineEx(p0, p1, 8, nodeIdx == nodeView ? YELLOW : greens[nodeTint]);
+
+            DrawCircleV(Vector2Scale(node.ClosestPointToTarget(), TILE_W), 8, RED);
+
+            if (nodeIdx == nodeView) {
+                Vector2 p = Vector2Subtract(p1, p0);
+                Vector2 pHalf = Vector2Add(p0, Vector2Scale(p, 0.5f));
+                const char *txt = TextFormat("depth = %d, dist = %.2f", node.successorSet, node.DistanceToTarget());
+                Vector2 txtSize = dlb_MeasureTextShadowEx(fntMedium, CSTRLEN(txt));
+                Vector2 txtOffset{ -txtSize.x * 0.5f, -txtSize.y };
+                dlb_DrawTextShadowEx(fntMedium, CSTRLEN(txt), Vector2Add(pHalf, txtOffset), WHITE);
+            }
+
             nodeTint++;
             nodeTint %= 3;
             nodeIdx++;
