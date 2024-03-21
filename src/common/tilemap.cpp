@@ -594,7 +594,7 @@ bool Tilemap_AnyaSolidQuery(int x, int y, void *userdata)
 }
 void Tilemap::DrawIntervals(Camera2D &camera)
 {
-    Vector2 start{ 25, 45 };
+    static Vector2 start{ 25, 45 };
 
 #if 0
     Vector2 world = GetScreenToWorld2D(GetMousePosition(), camera);
@@ -602,10 +602,28 @@ void Tilemap::DrawIntervals(Camera2D &camera)
     if (!WorldToTileIndex(world.x, world.y, coord)) {
         return;
     }
-    Vector2 target{ (float)coord.x, (float)coord.y };
+    static Vector2 target{ (float)coord.x, (float)coord.y };
 #else
-    Vector2 target{ 29, 42 };
+    static Vector2 target{ 29, 42 };
 #endif
+    static bool showGeneratedNodes = true;
+
+    if (io.MouseButtonDown(MOUSE_BUTTON_LEFT)) {
+        if (io.KeyDown(KEY_ONE)) {
+            Vector2 mouseWorld = GetScreenToWorld2D(GetMousePosition(), camera);
+            Coord coord{};
+            WorldToTileIndex(mouseWorld.x, mouseWorld.y, coord);
+            start = { (float)coord.x, (float)coord.y };
+        } else if (io.KeyDown(KEY_TWO)) {
+            Vector2 mouseWorld = GetScreenToWorld2D(GetMousePosition(), camera);
+            Coord coord{};
+            WorldToTileIndex(mouseWorld.x, mouseWorld.y, coord);
+            target = { (float)coord.x, (float)coord.y };
+        }
+    }
+    if (io.KeyPressed(KEY_THREE)) {
+        showGeneratedNodes = !showGeneratedNodes;
+    }
 
     int nodeTint = 0;
     Color greens[] = { DARKGREEN, GREEN, LIME };
@@ -622,65 +640,83 @@ void Tilemap::DrawIntervals(Camera2D &camera)
     DrawRectangleRec(targetRec, Fade(SKYBLUE, 0.5f));
     DrawRectangleLinesEx(targetRec, 3, BLUE);
 
+    const auto &nodes = showGeneratedNodes ? state.debugNodesGenerated : state.debugNodesSearched;
+
     if (state.path.points.size()) {
         DrawLineStrip(state.path.points.data(), state.path.points.size(), PINK);
-    } else {
-        static int nodeView = 0;
+    }
 
-        if (io.KeyPressed(KEY_LEFT, true)) {
-            nodeView--;
-        }
-        if (io.KeyPressed(KEY_RIGHT, true)) {
-            nodeView++;
-        }
-        nodeView = CLAMP(nodeView, 0, state.debugNodes.size() - 1);
+    static int nodeIdx = 0;
+
+    if (io.KeyPressed(KEY_LEFT, true)) {
+        nodeIdx--;
+    }
+    if (io.KeyPressed(KEY_RIGHT, true)) {
+        nodeIdx++;
+    }
+    nodeIdx = CLAMP(nodeIdx, 0, nodes.size() - 1);
 
 #if 0
-        // 7.07, 6.40, 5.83, 5.39, 5.10, 5.00, 5.10, 5.39, 5.83, 6.40, 7.07
-        // 6.40, 5.66, 5.00, 4.47, 4.12, 4.00, 4.12, 4.47, 5.00, 5.66, 6.40
-        // 5.83, 5.00, 4.24, 3.61, 3.16, 3.00, 3.16, 3.61, 4.24, 5.00, 5.83
-        // 5.39, 4.47, 3.61, 2.83, 2.24, 2.00, 2.24, 2.83, 3.61, 4.47, 5.39
-        // 5.10, 4.12, 3.16, 2.24, 1.41, 1.00, 1.41, 2.24, 3.16, 4.12, 5.10
-        // 5.00, 4.00, 3.00, 2.00, 1.00, 0.00, 1.00, 2.00, 3.00, 4.00, 5.00
-        // 5.10, 4.12, 3.16, 2.24, 1.41, 1.00, 1.41, 2.24, 3.16, 4.12, 5.10
-        // 5.39, 4.47, 3.61, 2.83, 2.24, 2.00, 2.24, 2.83, 3.61, 4.47, 5.39
-        // 5.83, 5.00, 4.24, 3.61, 3.16, 3.00, 3.16, 3.61, 4.24, 5.00, 5.83
-        // 6.40, 5.66, 5.00, 4.47, 4.12, 4.00, 4.12, 4.47, 5.00, 5.66, 6.40
-        // 7.07, 6.40, 5.83, 5.39, 5.10, 5.00, 5.10, 5.39, 5.83, 6.40, 7.07
-        for (float y = 0; y <= 10; y++) {
-            for (float x = -10; x <= 0; x++) {
-                float dist = Vector2Distance({ x, y }, {});
-                printf("%.2f ", dist);
-            }
-            printf("\n");
+    // 7.07, 6.40, 5.83, 5.39, 5.10, 5.00, 5.10, 5.39, 5.83, 6.40, 7.07
+    // 6.40, 5.66, 5.00, 4.47, 4.12, 4.00, 4.12, 4.47, 5.00, 5.66, 6.40
+    // 5.83, 5.00, 4.24, 3.61, 3.16, 3.00, 3.16, 3.61, 4.24, 5.00, 5.83
+    // 5.39, 4.47, 3.61, 2.83, 2.24, 2.00, 2.24, 2.83, 3.61, 4.47, 5.39
+    // 5.10, 4.12, 3.16, 2.24, 1.41, 1.00, 1.41, 2.24, 3.16, 4.12, 5.10
+    // 5.00, 4.00, 3.00, 2.00, 1.00, 0.00, 1.00, 2.00, 3.00, 4.00, 5.00
+    // 5.10, 4.12, 3.16, 2.24, 1.41, 1.00, 1.41, 2.24, 3.16, 4.12, 5.10
+    // 5.39, 4.47, 3.61, 2.83, 2.24, 2.00, 2.24, 2.83, 3.61, 4.47, 5.39
+    // 5.83, 5.00, 4.24, 3.61, 3.16, 3.00, 3.16, 3.61, 4.24, 5.00, 5.83
+    // 6.40, 5.66, 5.00, 4.47, 4.12, 4.00, 4.12, 4.47, 5.00, 5.66, 6.40
+    // 7.07, 6.40, 5.83, 5.39, 5.10, 5.00, 5.10, 5.39, 5.83, 6.40, 7.07
+    for (float y = 0; y <= 10; y++) {
+        for (float x = -10; x <= 0; x++) {
+            float dist = Vector2Distance({ x, y }, {});
+            printf("%.2f ", dist);
         }
+        printf("\n");
+    }
 #endif
 
-        int nodeIdx = 0;
-        for (const auto &node : state.debugNodes) {
-            if (nodeIdx > nodeView) break;
+    rlDisableBackfaceCulling();
 
-            const auto &i = node.interval;
-
-            Vector2 p0{ i.x_min * TILE_W, i.y * TILE_W };
-            Vector2 p1{ i.x_max * TILE_W + 4, i.y * TILE_W };
-            DrawLineEx(p0, p1, 8, nodeIdx == nodeView ? YELLOW : greens[nodeTint]);
-
-            DrawCircleV(Vector2Scale(node.ClosestPointToTarget(), TILE_W), 8, RED);
-
-            if (nodeIdx == nodeView) {
-                Vector2 p = Vector2Subtract(p1, p0);
-                Vector2 pHalf = Vector2Add(p0, Vector2Scale(p, 0.5f));
-                const char *txt = TextFormat("depth = %d, dist = %.2f", node.successorSet, node.DistanceToTarget());
-                Vector2 txtSize = dlb_MeasureTextShadowEx(fntMedium, CSTRLEN(txt));
-                Vector2 txtOffset{ -txtSize.x * 0.5f, -txtSize.y };
-                dlb_DrawTextShadowEx(fntMedium, CSTRLEN(txt), Vector2Add(pHalf, txtOffset), WHITE);
-            }
-
-            nodeTint++;
-            nodeTint %= 3;
-            nodeIdx++;
+    for (int i = 0; i <= nodeIdx && i < nodes.size(); i++) {
+        const auto &node = nodes[i];
+        if (i == 0) {
+            DrawCircleV(Vector2Scale(node.state->start, TILE_W), 6, RED);
+            continue;
         }
+
+        Vector2 r = Vector2Scale(node.root, TILE_W);
+        Vector2 p0{ node.interval.x_min * TILE_W, node.interval.y * TILE_W };
+        Vector2 p1{ node.interval.x_max * TILE_W, node.interval.y * TILE_W };
+
+#if 0
+        // HACK: Make 0-length intervals show up on the screen (this should only affect the start node)
+        if (p1.x == p0.x) p1.x += 1;
+#endif
+
+        if (node.interval.y != node.root.y) {
+            // cone node
+            DrawTriangle(r, p0, p1, Fade(YELLOW, i == nodeIdx ? 0.4f : 0.2f));
+            DrawTriangleLines(r, p0, p1, YELLOW);
+        }
+            
+        DrawLineEx(p0, p1, 4, i == nodeIdx ? YELLOW : greens[nodeTint]);
+
+        if (i == nodeIdx) {
+            DrawCircleV(Vector2Scale(node.root, TILE_W), 6, RED);
+            DrawCircleV(Vector2Scale(node.ClosestPointToTarget(), TILE_W), 4, SKYBLUE);
+
+            Vector2 p = Vector2Subtract(p1, p0);
+            Vector2 pHalf = Vector2Add(p0, Vector2Scale(p, 0.5f));
+            const char *txt = TextFormat("depth = %d, dist = %.2f", node.successorSet, node.DistanceToTarget());
+            Vector2 txtSize = dlb_MeasureTextShadowEx(fntMedium, CSTRLEN(txt));
+            Vector2 txtOffset{ -txtSize.x * 0.5f, -txtSize.y };
+            dlb_DrawTextShadowEx(fntMedium, CSTRLEN(txt), Vector2Add(pHalf, txtOffset), WHITE);
+        }
+
+        nodeTint++;
+        nodeTint %= 3;
     }
 
 #if 0

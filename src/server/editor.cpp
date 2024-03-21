@@ -99,15 +99,16 @@ void Editor::DrawGroundOverlays(Camera2D &camera)
         map.DrawIntervals(camera);
 
 #if 1
-        // DEBUG: ClosestPointLineSegmentToLine
+        // DEBUG: ClosestPointLineSegmentToRay
         // In ANYA edit mode, hold left mouse and press QWER to move the lines.
         // Red: Segment
         // Green: Line
         // Yellow: Closest point on segment to line (if segment would eventually intersect the line)
-        static Vector2 segmentA{};
-        static Vector2 segmentB{};
-        static Vector2 lineA{};
-        static Vector2 lineB{};
+        static Vector2 segmentA {}; //  0 * TILE_W, 43 * TILE_W };
+        static Vector2 segmentB {}; // 64 * TILE_W, 43 * TILE_W };
+        static Vector2 lineA    {}; // 25 * TILE_W, 45 * TILE_W };
+        static Vector2 lineB    {}; // 25 * TILE_W, 44 * TILE_W };
+
         if (io.MouseButtonDown(MOUSE_BUTTON_LEFT)) {
             if (io.KeyDown(KEY_Q)) {
                 segmentA = Vector2Floor(GetScreenToWorld2D(GetMousePosition(), camera));
@@ -120,10 +121,13 @@ void Editor::DrawGroundOverlays(Camera2D &camera)
             }
         }
 
-        Vector2 closest = ClosestPointLineSegmentToLine(segmentA, segmentB, lineA, lineB);
+        Vector2 closest{};
+        bool intersects = ClosestPointLineSegmentToRay(segmentA, segmentB, lineA, lineB, closest);
         DrawLineEx(segmentA, segmentB, 4, RED);
         DrawLineEx(lineA, lineB, 4, GREEN);
-        DrawCircleV(closest, 8, YELLOW);
+        if (intersects) {
+            DrawCircleV(closest, 8, YELLOW);
+        }
 
         Vector2 segmentAB = Vector2Subtract(segmentB, segmentA);
         const float rulerLen = Vector2Length(segmentAB);

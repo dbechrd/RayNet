@@ -15,11 +15,11 @@ struct Anya_Interval {
     Anya_Interval();
     Anya_Interval(float y, float x_min, float x_max);
 
-    bool HasInterval(void);
+    bool HasInterval(void) const;
 #if ANYA_PRUNE
     bool IsValid(Vector2 r);
 #endif
-    bool Contains(Vector2 p);
+    bool Contains(Vector2 p) const;
 };
 
 struct Anya_Node {
@@ -36,7 +36,7 @@ struct Anya_Node {
     bool IsFlat(void) const;
     Vector2 ClosestPointToTarget(void) const;
     float DistanceToTarget(void) const;
-    Anya_Path PathTo(Vector2 t) const;
+    float Cost(void) const;
 
     bool operator<(const Anya_Node &rhs) const;
 };
@@ -50,7 +50,8 @@ struct Anya_State {
     void *userdata{};
 
     Anya_Path path{};
-    std::vector<Anya_Node> debugNodes{};
+    std::vector<Anya_Node> debugNodesGenerated{};
+    std::vector<Anya_Node> debugNodesSearched{};
 
     Anya_State(Vector2 start, Vector2 target, Anya_SolidQuery solid_query, void *userdata);
 

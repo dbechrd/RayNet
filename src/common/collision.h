@@ -78,4 +78,4 @@ bool dlb_CheckCollisionCircleRec(Vector2 center, float radius, Rectangle rec, Ma
 bool dlb_CheckCollisionCircleRec2(Vector2 center, float radius, Rectangle rec, Manifold *manifold);
 bool dlb_CheckCollisionCircleEdge(Vector2 center, float radius, Edge edge, Manifold *manifold);
 
-Vector2 ClosestPointLineSegmentToLine(Vector2 segmentA, Vector2 segmentB, Vector2 lineA, Vector2 lineB);
+bool ClosestPointLineSegmentToRay(Vector2 segmentA, Vector2 segmentB, Vector2 lineA, Vector2 lineB, Vector2 &result);
