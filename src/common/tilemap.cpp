@@ -643,10 +643,10 @@ void Tilemap::DrawIntervals(Camera2D &camera)
     DrawRectangleRec(targetRec, Fade(SKYBLUE, 0.5f));
     DrawRectangleLinesEx(targetRec, 3, BLUE);
 
-    const auto &nodes = showGeneratedNodes ? state.debugNodesGenerated : state.debugNodesSearched;
+    const auto &nodes = showGeneratedNodes ? state.nodes : state.nodeSearchOrder;
 
-    if (state.path.points.size()) {
-        DrawLineStrip(state.path.points.data(), state.path.points.size(), PINK);
+    if (state.path.size()) {
+        DrawLineStrip(state.path.data(), state.path.size(), PINK);
     }
 
     static int nodeIdx = 0;
@@ -715,7 +715,7 @@ void Tilemap::DrawIntervals(Camera2D &camera)
 
             Vector2 p = Vector2Subtract(p1, p0);
             Vector2 pHalf = Vector2Add(p0, Vector2Scale(p, 0.5f));
-            const char *txt = TextFormat("id = %d, depth = %d, dist = %.2f", node.id, node.successorSet, node.DistanceToTarget());
+            const char *txt = TextFormat("id = %d, cost = %.2f, depth = %d", node.id, node.cost, node.depth);
             Vector2 txtSize = dlb_MeasureTextShadowEx(fntMedium, CSTRLEN(txt));
             Vector2 txtOffset{ -txtSize.x * 0.5f, -txtSize.y };
             dlb_DrawTextShadowEx(fntMedium, CSTRLEN(txt), Vector2Add(pHalf, txtOffset), WHITE);

@@ -3,10 +3,6 @@
 
 struct Anya_State;
 
-struct Anya_Path {
-    std::vector<Vector2> points{};
-};
-
 struct Anya_Interval {
     float y{};
     float x_min{};
@@ -23,24 +19,29 @@ struct Anya_Interval {
 };
 
 struct Anya_Node {
-    Anya_State *state{};
-    Anya_Node *parent{};
-    Anya_Interval interval{};
-    Vector2 root{};
-    int successorSet{};
+    Anya_State *state;
     int id{};
+    int parent{};
+
+    Vector2 root{};
+    Anya_Interval interval{};
+    float cost{};
+
+    int depth{};
     Color dbgColor{};
 
-    Anya_Node(Anya_State &state);
-    Anya_Node(Anya_State &state, Anya_Interval interval, Vector2 root);
+    Anya_Node(Anya_Node &parent, Vector2 root, Anya_Interval interval);
+    
+    static Anya_Node StartNode(Anya_State &state);
 
     bool IsStart(void) const;
     bool IsFlat(void) const;
     Vector2 ClosestPointToTarget(void) const;
     float DistanceToTarget(void) const;
-    float Cost(void) const;
 
-    bool operator<(const Anya_Node &rhs) const;
+private:
+    Anya_Node(Anya_State &state, Vector2 start);
+    float Cost(void) const;
 };
 
 typedef bool (*Anya_SolidQuery)(int x, int y, void *userdata);
@@ -50,15 +51,17 @@ struct Anya_State {
     Vector2 target{};
     Anya_SolidQuery solid_query{};
     void *userdata{};
-    int next_node_id = 0;
+    int next_id{};
 
-    Anya_Path path{};
-    std::vector<Anya_Node> debugNodesGenerated{};
-    std::vector<Anya_Node> debugNodesSearched{};
+    std::vector<Anya_Node> nodes{};
+    std::vector<Anya_Node> nodeSearchOrder{};
+    std::vector<Vector2> path{};
 
     inline int GetId(void)
     {
-        return next_node_id++;
+        assert(nodes.size() == next_id);
+        next_id++;
+        return nodes.size();
     }
     Anya_State(Vector2 start, Vector2 target, Anya_SolidQuery solid_query, void *userdata);
 
