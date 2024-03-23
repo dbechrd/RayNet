@@ -625,6 +625,9 @@ void Tilemap::DrawIntervals(Camera2D &camera)
         showGeneratedNodes = !showGeneratedNodes;
     }
 
+    const char *nodeMode = showGeneratedNodes ? "generate order" : "search order";
+    dlb_DrawTextShadowEx(fntMedium, CSTRLEN(nodeMode), GetScreenToWorld2D({ 800, 800 }, camera), WHITE);
+
     int nodeTint = 0;
     Color greens[] = { DARKGREEN, GREEN, LIME };
     Color blues[] = { DARKBLUE, BLUE, SKYBLUE };
@@ -695,13 +698,16 @@ void Tilemap::DrawIntervals(Camera2D &camera)
         if (p1.x == p0.x) p1.x += 1;
 #endif
 
+        Color color = node.dbgColor;
+        if (!color.a) color = YELLOW;
+
         if (node.interval.y != node.root.y) {
             // cone node
-            DrawTriangle(r, p0, p1, Fade(YELLOW, i == nodeIdx ? 0.4f : 0.2f));
-            DrawTriangleLines(r, p0, p1, YELLOW);
+            DrawTriangle(r, p0, p1, Fade(color, i == nodeIdx ? 0.4f : 0.2f));
+            DrawTriangleLines(r, p0, p1, color);
         }
             
-        DrawLineEx(p0, p1, 4, i == nodeIdx ? YELLOW : greens[nodeTint]);
+        DrawLineEx(p0, p1, 4, i == nodeIdx ? color : greens[nodeTint]);
 
         if (i == nodeIdx) {
             DrawCircleV(Vector2Scale(node.root, TILE_W), 6, RED);
@@ -709,7 +715,7 @@ void Tilemap::DrawIntervals(Camera2D &camera)
 
             Vector2 p = Vector2Subtract(p1, p0);
             Vector2 pHalf = Vector2Add(p0, Vector2Scale(p, 0.5f));
-            const char *txt = TextFormat("depth = %d, dist = %.2f", node.successorSet, node.DistanceToTarget());
+            const char *txt = TextFormat("id = %d, depth = %d, dist = %.2f", node.id, node.successorSet, node.DistanceToTarget());
             Vector2 txtSize = dlb_MeasureTextShadowEx(fntMedium, CSTRLEN(txt));
             Vector2 txtOffset{ -txtSize.x * 0.5f, -txtSize.y };
             dlb_DrawTextShadowEx(fntMedium, CSTRLEN(txt), Vector2Add(pHalf, txtOffset), WHITE);

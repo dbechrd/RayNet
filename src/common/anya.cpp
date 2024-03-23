@@ -29,11 +29,13 @@ bool Anya_Interval::Contains(Vector2 p) const
 
 Anya_Node::Anya_Node(Anya_State &state) : state(&state)
 {
+    id = state.GetId();
 }
 
 Anya_Node::Anya_Node(Anya_State &state, Anya_Interval interval, Vector2 root)
     : state{ &state }, interval{ interval }, root{ root }
 {
+    id = state.GetId();
 }
 
 bool Anya_Node::IsStart(void) const
@@ -129,6 +131,113 @@ bool Anya_IsCorner(Anya_State &state, float x, float y)
 
     const int solid = tl + bl + tr + br;
     return solid == 1;
+}
+
+bool Anya_IsTurningPoint(Anya_State &state, Vector2 p, Vector2 r)
+{
+    assert(floorf(p.y) == p.y);
+    if (floorf(p.x) != p.x) {
+        return false;
+    }
+
+    const bool nw = state.Query(p.x - 1, p.y - 1);
+    const bool ne = state.Query(p.x,     p.y - 1);
+    const bool sw = state.Query(p.x - 1, p.y);
+    const bool se = state.Query(p.x,     p.y);
+
+    const bool corner = (nw + ne + sw + se) == 1;
+    if (!corner) {
+        return false;
+    }
+
+    if (p.y < r.y) {
+        // cone up
+        if (p.x < r.x) {
+            // north west
+            //        | NE
+            //  ____  |____
+            //   SW | p
+            //      |  \
+            //          r
+            return ne || sw;
+        } else if (p.x > r.x) {
+            // north east
+            //   NW |  
+            //  ____|  ____
+            //      p | SE
+            //     /  |
+            //    r    
+            return nw || se;
+        } else {
+            // north
+            //  ___  p  ___
+            //  SW | | | SE
+            //     | r |
+            //
+            return sw || se;
+        }
+    } else if (p.y > r.y) {
+        // cone down
+        if (p.x < r.x) {
+            // south west
+            //         r
+            //  NW |  /
+            //  ___| p ___
+            //        | SE
+            //        |
+            //
+            return nw || se;
+        } else if (p.x > r.x) {
+            // south east
+            //   r
+            //    \  | NE
+            // ___ p |___
+            // SW |
+            //    |
+            //
+            return ne || sw;
+        } else {
+            // south
+            //         
+            //  NW | r | NE
+            //  ___| | |___
+            //       p
+            //
+            return nw || ne;
+        }
+    } else {
+        // flat node
+        if (p.x < r.x) {
+            // west
+            // 
+            //  | NE
+            //  |____
+            // 
+            //  p---r
+            //   ____
+            //  | SE
+            //  |
+            //
+            return ne || se;
+        } else if (p.x > r.x) {
+            // east
+            // 
+            //   NW |
+            //  ____|
+            // 
+            //  r---p
+            //  ____
+            //   SW |
+            //      |
+            //
+            return nw || sw;
+        } else {
+            assert(!"point == root is not allowed!");
+            return false;
+        }
+    }
+
+    assert(!"can't get here");
 }
 
 std::vector<Anya_Interval> Anya_SplitAtCorners(Anya_State &state, Anya_Interval &I)
@@ -276,10 +385,10 @@ std::vector<Anya_Node> Anya_GenStartSuccessors(Anya_State &state)
         float x_min = s.x;
         float x_max = s.x;
 
-        while (!state.Query(x_min - 1, y)) {
+        while (!state.Query(x_min - 1, y - 1)) {
             x_min--;
         }
-        while (!state.Query(x_max, y)) {
+        while (!state.Query(x_max, y - 1)) {
             x_max++;
         }
 
@@ -308,35 +417,91 @@ std::vector<Anya_Node> Anya_GenFlatSuccessors(Anya_State &state, Vector2 p, Vect
 {
     std::vector<Anya_Node> successors{};
 
-    float p_prime = p.x;
-    
-    // p_prime = first corner point (or farthest vertex) on p.y row such that (r, p, p') is taut
-    {
-        for (;;) {
-            bool tr = state.Query(p_prime, p.y - 1);
-            bool br = state.Query(p_prime, p.y);
-            if (tr && br) {
+#if 1
+    int dir = 0;
+    if (p.x > r.x) {
+        dir = 1;
+    } else if (p.x < r.x) {
+        dir = -1;
+    } else {
+        if (p.y < r.y) {
+            // Searching up
+            if (state.Query(p.x - 1, p.y)) {
+                // If BL, go left to remain taut
                 // _____
-                // | |x|
-                // |_|x|
-                break;
-            } else if (tr && state.Query(p_prime - 1, p.y)) {  // TR & BL
-                // _____
-                // | |x|
+                // | | |
                 // |x|_|
-                break;
-            } else if (br && state.Query(p_prime - 1, p.y - 1)) {  // BR & TL
+                dir = -1;
+            } else if (state.Query(p.x, p.y)) {
+                // If BR, go right to remain taut
+                // _____
+                // | | |
+                // |_|x|
+                dir = 1;
+            } else {
+                assert(!"cannot create flat successors on row above if not a corner!");
+            }
+        } else if (p.y > r.y) {
+            // Searching down
+            if (state.Query(p.x - 1, p.y - 1)) {
+                // If TL, go left to remain taut
                 // _____
                 // |x| |
-                // |_|x|
-                break;
+                // |_|_|
+                dir = -1;
+            } else if (state.Query(p.x, p.y - 1)) {
+                // If TR, go right to remain taut
+                // _____
+                // | |x|
+                // |_|_|
+                dir = 1;
+            } else {
+                assert(!"cannot create flat successors on row below if not a corner!");
             }
-            p_prime += 1;
+        } else {
+            assert(!"p cannot equal r!");
         }
+    }
+    assert(dir);
+#endif
+
+    float p_prime = p.x;
+
+    int block_offset      = dir == 1 ? 0 : -1;  // if search right, offset x by 0, if search left, offset x by -1, with respect to top-left corner of cell
+    int block_offset_diag = dir == 1 ? -1 : 0;  // opposite block offset, for diagonal blocker checks
+
+    // p_prime = first corner point (or farthest vertex) on p.y row such that (r, p, p') is taut
+    for (;;) {
+        // Either top/bottom left, or top/bottom right, depending on search direction
+        bool t = state.Query(p_prime + block_offset, p.y - 1);
+        bool b = state.Query(p_prime + block_offset, p.y);
+        if (t && b) {
+            break;
+        } else if (t && state.Query(p_prime + block_offset_diag, p.y)) {  // TR & BL
+            // dir=1  dir=-1
+            // _____  _____
+            // | |x|  |x| |
+            // |x|_|  |_|x|
+            break;
+        } else if (b && state.Query(p_prime + block_offset_diag, p.y - 1)) {  // BR & TL
+            // dir=1  dir=-1
+            // _____  _____   
+            // |x| |  | |x|   
+            // |_|x|  |x|_|   
+            break;
+        }
+        p_prime += dir;
     }
 
     // I = { p (open), p_prime (closed) }
-    Anya_Interval I{ p.y, p.x + ANYA_EPSILON, p_prime };
+    Anya_Interval I;
+    if (dir == 1) {
+        // right
+        I = { p.y, p.x + ANYA_EPSILON, p_prime };
+    } else {
+        // left
+        I = { p.y, p_prime, p.x - ANYA_EPSILON };
+    }
 
     if (I.HasInterval()) {
         if (r.y == p.y) {
@@ -351,6 +516,8 @@ std::vector<Anya_Node> Anya_GenFlatSuccessors(Anya_State &state, Vector2 p, Vect
 
 std::vector<Anya_Node> Anya_GenConeSuccessors(Anya_State &state, Vector2 a, Vector2 b, Vector2 r)
 {
+    assert(a.y == b.y);  // if not.. then.. idk man.
+
     // a and b must be corners (preferably turning points..)
     //assert(floorf(a.x) == a.x);
     //assert(floorf(a.y) == a.y);
@@ -361,45 +528,40 @@ std::vector<Anya_Node> Anya_GenConeSuccessors(Anya_State &state, Vector2 a, Vect
 
     Anya_Interval I{};
     Vector2 r_prime{};
+    Color dbgColor{};
 
     // Non-observable successors of a flat node
     if (a.y == b.y && b.y == r.y) {
         // r_prime == a or b, whichever is farther from r
-        r_prime = Vector2DistanceSqr(a, r) > Vector2DistanceSqr(b, r) ? a : b;
+        r_prime = fabsf(a.x - r.x) > fabsf(b.x - r.x) ? a : b;
+
+        int dir = r_prime.x > r.x ? 1 : -1;
 
         // p = point from adjacent row, reached via right-hand turn at a
-        Vector2 p{ a.x, a.y + 1 };
+        // NOTE(dlb): Let's assume 'a' should be 'r_prime'.. turning at 'a' makes no sense...
+        Vector2 p{ r_prime.x, r_prime.y + dir };
         
+        int x_min = p.x;
         int x_max = p.x;
-
+        
         // I = maximum closed interval beginning at p and observable from r_prime
-        {
-            for (;;) {
-                bool tr = state.Query(x_max, p.y - 1);
-                bool br = state.Query(x_max, p.y);
-                if (tr && br) {
-                    // _____
-                    // | |x|
-                    // |_|x|
-                    break;
-                } else if (tr && state.Query(x_max - 1, p.y)) {  // TR & BL
-                    // _____
-                    // | |x|
-                    // |x|_|
-                    break;
-                } else if (br && state.Query(x_max - 1, p.y - 1)) {  // BR & TL
-                    // _____
-                    // |x| |
-                    // |_|x|
-                    break;
-                }
-                x_max += 1;
-            }
+#if 1
+        int blocker_offset = 0;
+        assert(dir == 1);
+#else
+        int blocker_offset = r_prime.x > r.x ? 0 : -1;
+        while (!state.Query(x_min - 1, p.y + blocker_offset)) {
+            x_min--;
+        }
+#endif
+        while (!state.Query(x_max, p.y + blocker_offset)) {
+            x_max++;
         }
 
         I.y = p.y;
-        I.x_min = p.x;
+        I.x_min = x_min;
         I.x_max = x_max;
+        dbgColor = RED;
 
     // Non-observable successors of a cone node
     } else if (Vector2Equals(a, b)) {
@@ -407,61 +569,66 @@ std::vector<Anya_Node> Anya_GenConeSuccessors(Anya_State &state, Vector2 a, Vect
         
         // HACK(dlb): Hard-coded map width!!
         // p = point from adjacent row, computed via linear projection from r through a
-        float dy_a = a.y - r.y > 0 ? 1.0f : -1.0f;
+        int dir = a.y - r.y > 0 ? 1 : -1;
         Vector2 p{};
-        assert(ClosestPointLineSegmentToRay({ 0, a.y + dy_a }, { 64, a.y + dy_a }, r, a, p));
-
-        int x_max = p.x;
+        assert(ClosestPointLineSegmentToRay({ 0, a.y + dir }, { 64, a.y + dir }, r, a, p));
 
         // I = maximum closed interval beginning at p and observable from r_prime
-        {
-            for (;;) {
-                bool tr = state.Query(x_max, p.y - 1);
-                bool br = state.Query(x_max, p.y);
-                if (tr && br) {
-                    // _____
-                    // | |x|
-                    // |_|x|
-                    break;
-                } else if (tr && state.Query(x_max - 1, p.y)) {  // TR & BL
-                    // _____
-                    // | |x|
-                    // |x|_|
-                    break;
-                } else if (br && state.Query(x_max - 1, p.y - 1)) {  // BR & TL
-                    // _____
-                    // |x| |
-                    // |_|x|
-                    break;
-                }
-                x_max += 1;
-            }
+        int y = p.y;
+        int x_min = p.x;
+        int x_max = p.x;
+
+        int block_offset = dir == 1 ? -1 : 0;
+        while (!state.Query(x_min - 1, y + block_offset)) {
+            x_min--;
+        }
+        while (!state.Query(x_max, y + block_offset)) {
+            x_max++;
         }
 
-        I.y = p.y;
-        I.x_min = p.x;
+        I.y = y;
+        I.x_min = x_min;
         I.x_max = x_max;
+        dbgColor = WHITE;
 
     // Observable successors of a cone node
     } else {
         r_prime = r;
-        
+
         // HACK(dlb): Hard-coded map width!!
         // p = point from adjacent row, computed via linear projection from r through a
-        float dy_a = a.y - r.y > 0 ? 1.0f : -1.0f;
+        int dir_a = a.y - r.y > 0 ? 1 : -1;
+        int dir_b = b.y - r.y > 0 ? 1 : -1;
+        assert(dir_b == dir_a);
+
         Vector2 p{};
-        assert(ClosestPointLineSegmentToRay({ 0, a.y + dy_a }, { 64, a.y + dy_a }, r, a, p));
+        assert(ClosestPointLineSegmentToRay({ 0, a.y + dir_a }, { 64, a.y + dir_a }, r, a, p));
         
         // p' = point from adjacent row, computed via linear projection from r through b
         // HACK(dlb): Hard-coded map width!!
-        float dy_b = b.y - r.y > 0 ? 1.0f : -1.0f;
         Vector2 p_prime{};
-        assert(ClosestPointLineSegmentToRay({ 0, b.y + dy_b }, { 64, b.y + dy_b }, r, b, p_prime));
+        assert(ClosestPointLineSegmentToRay({ 0, b.y + dir_b }, { 64, b.y + dir_b }, r, b, p_prime));
+
+        int y = p.y;
+        int x_min = r_prime.x;
+        int x_max = r_prime.x;
+
+        int block_offset = dir_a == 1 ? -1 : 0;
+        while (x_min > p.x && !state.Query(x_min - 1, y + block_offset)) {
+            x_min--;
+        }
+        while (x_max < p_prime.x && !state.Query(x_max, y + block_offset)) {
+            x_max++;
+        }
+
+        x_min = MAX(p.x, x_min);
+        x_max = MIN(p_prime.x, x_max);
 
         // I = maximum closed interval with endpoints p and p' (which is implicitly observable from r)
         I.y = p.y;
-        I.x_min = p.x;
-        I.x_max = p_prime.x;
+        I.x_min = x_min;
+        I.x_max = x_max;
+        dbgColor = BLUE;
     }
 
     if (I.HasInterval()) {
@@ -469,6 +636,7 @@ std::vector<Anya_Node> Anya_GenConeSuccessors(Anya_State &state, Vector2 a, Vect
         for (Anya_Interval &II : intervals) {
             assert(II.HasInterval());
             Anya_Node n_prime{ state, II, r_prime };
+            n_prime.dbgColor = dbgColor;
             successors.push_back(n_prime);
         }
     }
@@ -496,11 +664,12 @@ std::vector<Anya_Node> Anya_Successors(Anya_State &state, Anya_Node &node)
         // p = endpoint of I farthest from r
         Vector2 p = p0_dist > p1_dist ? p0 : p1;
 
+        //assert(floorf(p.x) == p.x);  // expecting this to be a corner
         auto flats = Anya_GenFlatSuccessors(state, p, r);
         successors.reserve(successors.size() + flats.size());
         successors.insert(successors.end(), flats.begin(), flats.end());
 
-        if (Anya_IsCorner(state, p.x, p.y)) {
+        if (Anya_IsTurningPoint(state, p, r)) {
             auto cones = Anya_GenConeSuccessors(state, p, p, r);
             successors.reserve(successors.size() + cones.size());
             successors.insert(successors.end(), cones.begin(), cones.end());
@@ -513,7 +682,7 @@ std::vector<Anya_Node> Anya_Successors(Anya_State &state, Anya_Node &node)
         successors.reserve(successors.size() + cones.size());
         successors.insert(successors.end(), cones.begin(), cones.end());
 
-        if (Anya_IsCorner(state, a.x, a.y)) {
+        if (Anya_IsTurningPoint(state, a, r)) {
             auto a_flats = Anya_GenFlatSuccessors(state, a, r);
             successors.reserve(successors.size() + a_flats.size());
             successors.insert(successors.end(), a_flats.begin(), a_flats.end());
@@ -523,7 +692,7 @@ std::vector<Anya_Node> Anya_Successors(Anya_State &state, Anya_Node &node)
             successors.insert(successors.end(), a_cones.begin(), a_cones.end());
         }
 
-        if (Anya_IsCorner(state, b.x, b.y)) {
+        if (Anya_IsTurningPoint(state, b, r)) {
             auto b_flats = Anya_GenFlatSuccessors(state, b, r);
             successors.reserve(successors.size() + b_flats.size());
             successors.insert(successors.end(), b_flats.begin(), b_flats.end());
@@ -611,6 +780,10 @@ void Anya(Anya_State &state)
         state.debugNodesSearched.push_back(node);
         open.pop();
 
+        if (node.id == 16) {
+            printf("");
+        }
+
         if (node.interval.Contains(state.target)) {
             path_cache[state.target] = { 0, node.root };
             break;
@@ -645,25 +818,25 @@ void Anya(Anya_State &state)
         iters++;
     }
 
-#if 1
-    std::vector<Vector2> grid_path{};
-    
-    Vector2 root = state.target;
-    do {
-        grid_path.push_back(root);
+    if (iters < maxIters) {
+        std::vector<Vector2> grid_path{};
 
-        const auto &iter = path_cache.find(root);
-        if (iter == path_cache.end()) {
-            //assert(!"wtf!");
-            break;
+        Vector2 root = state.target;
+        do {
+            grid_path.push_back(root);
+
+            const auto &iter = path_cache.find(root);
+            if (iter == path_cache.end()) {
+                //assert(!"wtf!");
+                break;
+            }
+            root = iter->second.root;
+        } while (!Vector2Equals(root, state.start));
+
+        grid_path.push_back(state.start);
+
+        for (int i = grid_path.size() - 1; i >= 0; i--) {
+            state.path.points.push_back(Vector2Scale(grid_path[i], TILE_W));
         }
-        root = iter->second.root;
-    } while (!Vector2Equals(root, state.start));
-
-    grid_path.push_back(state.start);
-
-    for (int i = grid_path.size() - 1; i >= 0; i--) {
-        state.path.points.push_back(Vector2Scale(grid_path[i], TILE_W));
     }
-#endif
 }

@@ -28,6 +28,8 @@ struct Anya_Node {
     Anya_Interval interval{};
     Vector2 root{};
     int successorSet{};
+    int id{};
+    Color dbgColor{};
 
     Anya_Node(Anya_State &state);
     Anya_Node(Anya_State &state, Anya_Interval interval, Vector2 root);
@@ -48,11 +50,16 @@ struct Anya_State {
     Vector2 target{};
     Anya_SolidQuery solid_query{};
     void *userdata{};
+    int next_node_id = 0;
 
     Anya_Path path{};
     std::vector<Anya_Node> debugNodesGenerated{};
     std::vector<Anya_Node> debugNodesSearched{};
 
+    inline int GetId(void)
+    {
+        return next_node_id++;
+    }
     Anya_State(Vector2 start, Vector2 target, Anya_SolidQuery solid_query, void *userdata);
 
     bool Query(int x, int y);
