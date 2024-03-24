@@ -1,6 +1,6 @@
 #include "anya.h"
 
-#define ANYA_EPSILON 0.0001f
+#define ANYA_EPSILON 0.0f //0.0001f
 
 Anya_Interval::Anya_Interval()
 {}
@@ -32,18 +32,20 @@ Anya_Node::Anya_Node(Anya_Node &parent, Vector2 root, Anya_Interval interval) :
     id(state->GetId()),
     parent(parent.id),
     root(root),
-    interval(interval),
-    cost(Cost())
-{}
+    interval(interval)
+{
+    CalcCost();
+}
 
 Anya_Node::Anya_Node(Anya_State &state, Vector2 start) :
     state(&state),
     id(state.GetId()),
     parent(-1),
-    root({ -1, -1 }),
-    interval({ start.y, start.x, start.x }),
-    cost(Cost())
-{}
+    root({ start.x, start.y }),
+    interval({ start.y, start.x, start.x })
+{
+    CalcCost();
+}
 
 Anya_Node Anya_Node::StartNode(Anya_State &state)
 {
@@ -93,20 +95,24 @@ Vector2 Anya_Node::ClosestPointToTarget(void) const
     return closest_point;
 }
 
-float Anya_Node::DistanceToTarget(void) const
+void Anya_Node::CalcCost(void)
 {
-    Vector2 p = ClosestPointToTarget();
-    return Vector2Distance(p, state->target);
-}
-
-float Anya_Node::Cost(void) const
-{
-    Vector2 p = ClosestPointToTarget();
-    float cost = Vector2DistanceSqr(p, state->target);
+    float cost = 0;
     if (parent >= 0) {
-        cost += state->nodes[parent].cost;
+        // cost of start -> parent root
+        const auto &parent_node = state->nodes[parent];
+        cost += parent_node.rootCost;
+        // cost of parent root -> root
+        cost += Vector2Distance(parent_node.root, root);
     }
-    return cost;
+    rootCost = cost;
+
+    Vector2 p = ClosestPointToTarget();
+    // cost of root -> p
+    cost += Vector2Distance(root, p);
+    // approx. cost of p -> target
+    cost += Vector2Distance(p, state->target);
+    totalCost = cost;
 }
 
 Anya_State::Anya_State(Vector2 start, Vector2 target, Anya_SolidQuery solid_query, void *userdata)
@@ -118,38 +124,50 @@ bool Anya_State::Query(int x, int y)
     return solid_query(x, y, userdata);
 }
 
-bool Anya_IsCorner(Anya_State &state, float x, float y)
+#define CORNER_NW 0b0001
+#define CORNER_NE 0b0010
+#define CORNER_SW 0b0100
+#define CORNER_SE 0b1000
+
+bool Anya_IsCorner(Anya_State &state, float x, float y, int *flags = 0)
 {
     assert(floorf(y) == y);
     if (floorf(x) != x) {
         return false;
     }
 
-    const bool tl = state.Query(x - 1, y - 1);
-    const bool bl = state.Query(x - 1, y);
-    const bool tr = state.Query(x, y - 1);
-    const bool br = state.Query(x, y);
+    const bool nw = state.Query(x - 1, y - 1);
+    const bool ne = state.Query(x    , y - 1);
+    const bool sw = state.Query(x - 1, y);
+    const bool se = state.Query(x    , y);
 
-    const int solid = tl + bl + tr + br;
-    return solid == 1;
+    if (flags) {
+        if (nw) *flags |= CORNER_NW;
+        if (ne) *flags |= CORNER_NE;
+        if (sw) *flags |= CORNER_SW;
+        if (se) *flags |= CORNER_SE;
+    }
+
+    return nw + ne + sw + se == 1;
 }
 
-bool Anya_IsTurningPoint(Anya_State &state, Vector2 p, Vector2 r)
+bool Anya_IsTurningPoint(Anya_State &state, Vector2 p, Vector2 r, int *flags = 0, bool *is_corner = 0)
 {
-    assert(floorf(p.y) == p.y);
-    if (floorf(p.x) != p.x) {
+    int corner_flags = 0;
+    
+    bool isCorner = Anya_IsCorner(state, p.x, p.y, &corner_flags);
+    
+    if (flags) *flags = corner_flags;
+    if (is_corner) *is_corner = isCorner;
+    
+    if (!isCorner) {
         return false;
     }
 
-    const bool nw = state.Query(p.x - 1, p.y - 1);
-    const bool ne = state.Query(p.x,     p.y - 1);
-    const bool sw = state.Query(p.x - 1, p.y);
-    const bool se = state.Query(p.x,     p.y);
-
-    const bool corner = (nw + ne + sw + se) == 1;
-    if (!corner) {
-        return false;
-    }
+    bool nw = corner_flags & CORNER_NW;
+    bool ne = corner_flags & CORNER_NE;
+    bool sw = corner_flags & CORNER_SW;
+    bool se = corner_flags & CORNER_SE;
 
     if (p.y < r.y) {
         // cone up
@@ -237,11 +255,10 @@ bool Anya_IsTurningPoint(Anya_State &state, Vector2 p, Vector2 r)
             return false;
         }
     }
-
     assert(!"can't get here");
 }
 
-std::vector<Anya_Interval> Anya_SplitAtCorners(Anya_State &state, Anya_Interval &I)
+std::vector<Anya_Interval> Anya_SplitAtCorners(Anya_State &state, Vector2 r, Anya_Interval &I)
 {
     std::vector<Anya_Interval> intervals{};
 
@@ -260,7 +277,8 @@ std::vector<Anya_Interval> Anya_SplitAtCorners(Anya_State &state, Anya_Interval 
             break;
         }
 
-        if (Anya_IsCorner(state, x, I.y)) {
+        if (Anya_IsCorner(state, (float)x, I.y)) {
+        //if (Anya_IsTurningPoint(state, { (float)x, I.y }, r)) {
             segment.x_max = x;
 
             if (segment.HasInterval()) {
@@ -400,7 +418,7 @@ void Anya_GenStartSuccessors(Anya_Node &start)
     }
 
     for (auto &max_interval : max_intervals) {
-        auto split_intervals = Anya_SplitAtCorners(state, max_interval);
+        auto split_intervals = Anya_SplitAtCorners(state, s, max_interval);
         for (auto &split_interval : split_intervals) {
             assert(split_interval.HasInterval());
 
@@ -410,7 +428,7 @@ void Anya_GenStartSuccessors(Anya_Node &start)
     }
 }
 
-void Anya_GenFlatSuccessors(Anya_Node &parent, Vector2 p, Vector2 r)
+void Anya_GenFlatSuccessors(Anya_Node &parent, Vector2 p, Vector2 r, int flags)
 {
     Anya_State &state = *parent.state;
 
@@ -423,36 +441,38 @@ void Anya_GenFlatSuccessors(Anya_Node &parent, Vector2 p, Vector2 r)
     } else {
         if (p.y < r.y) {
             // Searching up
-            if (state.Query(p.x - 1, p.y)) {
+            if (flags & CORNER_SW) {
                 // If BL, go left to remain taut
                 // _____
                 // | | |
                 // |x|_|
                 dir = -1;
-            } else if (state.Query(p.x, p.y)) {
+            } else if (flags & CORNER_SE) {
                 // If BR, go right to remain taut
                 // _____
                 // | | |
                 // |_|x|
                 dir = 1;
             } else {
+                return;
                 assert(!"cannot create flat successors on row above if not a corner!");
             }
         } else if (p.y > r.y) {
             // Searching down
-            if (state.Query(p.x - 1, p.y - 1)) {
+            if (flags & CORNER_NW) {
                 // If TL, go left to remain taut
                 // _____
                 // |x| |
                 // |_|_|
                 dir = -1;
-            } else if (state.Query(p.x, p.y - 1)) {
+            } else if (flags & CORNER_NE) {
                 // If TR, go right to remain taut
                 // _____
                 // | |x|
                 // |_|_|
                 dir = 1;
             } else {
+                return;
                 assert(!"cannot create flat successors on row below if not a corner!");
             }
         } else {
@@ -462,19 +482,48 @@ void Anya_GenFlatSuccessors(Anya_Node &parent, Vector2 p, Vector2 r)
     assert(dir);
 #endif
 
+#if 0
     float p_prime = p.x;
+    if (Anya_IsCorner(state, p.x, p.y)) {
+        p_prime += dir;
+    }
 
-    int block_offset      = dir == 1 ? 0 : -1;  // if search right, offset x by 0, if search left, offset x by -1, with respect to top-left corner of cell
+    // p_prime = first corner_flags point (or farthest vertex) on p.y row such that (r, p, p') is taut
+    // HACK(dlb): Hard-coded map width!
+    while (p_prime < 64 && !Anya_IsCorner(state, p_prime, p.y)) {
+        p_prime += dir;
+    }
+#else
+    float p_prime = p.x;
+    
+    int block_offset      = dir == 1 ? 0 : -1;  // if search right, offset x by 0, if search left, offset x by -1, with respect to top-left corner_flags of cell
     int block_offset_diag = dir == 1 ? -1 : 0;  // opposite block offset, for diagonal blocker checks
 
-    // p_prime = first corner point (or farthest vertex) on p.y row such that (r, p, p') is taut
-    for (;;) {
+    bool initial_t = state.Query(p_prime + block_offset, p.y - 1);
+    bool initial_b = state.Query(p_prime + block_offset, p.y);
+    
+    if (initial_t && initial_b) {
+        // Wall
+        return;
+    } else if (initial_t && state.Query(p_prime + block_offset_diag, p.y)) {
+        // Passing through diagonal
+        return;
+    } else if (initial_b && state.Query(p_prime + block_offset_diag, p.y - 1)) {
+        // Passing through diagonal
+        return;
+    }
+
+    p_prime += dir;
+
+    // p_prime = first corner_flags point (or farthest vertex) on p.y row such that (r, p, p') is taut
+    // HACK(dlb): Hard-coded map width
+    while (p_prime >= 0 && p_prime <= 64) {
         // Either top/bottom left, or top/bottom right, depending on search direction
         bool t = state.Query(p_prime + block_offset, p.y - 1);
         bool b = state.Query(p_prime + block_offset, p.y);
-#if 0
-        if (t || b) {
-            // first corner point in either direction (i.e. shortest possible flat successor)
+#if 1
+        // first corner_flags point in either direction (i.e. shortest possible flat successor)
+        if (t != initial_t || b != initial_b) {
             break;
         }
 #else
@@ -496,6 +545,7 @@ void Anya_GenFlatSuccessors(Anya_Node &parent, Vector2 p, Vector2 r)
 #endif
         p_prime += dir;
     }
+#endif
 
     // I = { p (open), p_prime (closed) }
     Anya_Interval I;
@@ -516,7 +566,7 @@ void Anya_GenFlatSuccessors(Anya_Node &parent, Vector2 p, Vector2 r)
     }
 }
 
-void Anya_GenConeSuccessors(Anya_Node &parent, Vector2 a, Vector2 b, Vector2 r)
+void Anya_GenConeSuccessors(Anya_Node &parent, Vector2 a, Vector2 b, Vector2 r, int flags)
 {
     assert(a.y == b.y);  // if not.. then.. idk man.
 
@@ -527,31 +577,132 @@ void Anya_GenConeSuccessors(Anya_Node &parent, Vector2 a, Vector2 b, Vector2 r)
     Color dbgColor{};
 
     // Non-observable successors of a flat node
-    if (a.y == b.y && b.y == r.y) {
+    if (Vector2Equals(a, b)) { //a.y == b.y && b.y == r.y) {
+        // guaranteed to be a turning point?
+        assert(flags);
+
+#if 1
+        // a and b are guaranteed to be the same!
+        assert(a.x == b.x);
+        r_prime = a;
+#else
         // r_prime == a or b, whichever is farther from r
         r_prime = fabsf(a.x - r.x) > fabsf(b.x - r.x) ? a : b;
+#endif
 
-        int dir = r_prime.x > r.x ? 1 : -1;
+        // Furthest end of flat node should always be a closed interval at a turning point
+        assert(floorf(r_prime.x) == r_prime.x);
 
-        // p = point from adjacent row, reached via right-hand turn at a
-        // NOTE(dlb): Let's assume 'a' should be 'r_prime'.. turning at 'a' makes no sense...
-        Vector2 p{ r_prime.x, r_prime.y + dir };
-        
+        bool north = a.x == r.x && a.y < r.y;
+        bool south = a.x == r.x && a.y > r.y;
+        bool east = a.x > r.x && a.y == r.y;
+        bool west = a.x < r.x && a.y == r.y;
+        bool north_east = a.x > r.x && a.y < r.y;
+        bool north_west = a.x < r.x && a.y < r.y;
+        bool south_west = a.x < r.x && a.y > r.y;
+        bool south_east = a.x > r.x && a.y > r.y;
+
+        assert(north + south + east + west + north_east + north_west + south_west + south_east == 1);
+
+        int search_dir_x = 0;
+        int dir_y = 0;
+
+        if (north) {
+            dir_y = -1;
+            if (flags & CORNER_SW) search_dir_x = -1;
+            if (flags & CORNER_SE) search_dir_x =  1;
+        } else if (south) {
+            dir_y = 1;
+            if (flags & CORNER_NW) search_dir_x = -1;
+            if (flags & CORNER_NE) search_dir_x =  1;
+        } else if (east) {
+            // could be a cone successor of a flat node
+            search_dir_x = 1;
+            if (flags & CORNER_NW) dir_y = -1;
+            if (flags & CORNER_SW) dir_y =  1;
+        } else if (west) {
+            // could be a cone successor of a flat node
+            search_dir_x = -1;
+            if (flags & CORNER_NE) dir_y = -1;
+            if (flags & CORNER_SE) dir_y =  1;
+        } else if (north_east) {
+            if (flags & CORNER_NW) {
+                // turn north and search west to find hidden cone
+                dir_y = -1;
+                search_dir_x = -1;
+            }
+            if (flags & CORNER_SE) {
+                // turn east
+                dir_y = -1;
+                search_dir_x = 1;
+            }
+        } else if (north_west) {
+            if (flags & CORNER_NE) {
+                // turn north and search east to find hidden cone
+                dir_y = -1;
+                search_dir_x = 1;
+            }
+            if (flags & CORNER_SW) {
+                // turn west
+                dir_y = -1;
+                search_dir_x = -1;
+            }
+        } else if (south_west) {
+            if (flags & CORNER_NW) {
+                // turn west
+                dir_y = 1;
+                search_dir_x = -1;
+            }
+            if (flags & CORNER_SE) {
+                // turn south and search east for hidden cone
+                dir_y = 1;
+                search_dir_x = 1;
+            }
+        } else if (south_east) {
+            if (flags & CORNER_NE) {
+                // turn east
+                dir_y = 1;
+                search_dir_x = 1;
+            }
+            if (flags & CORNER_SW) {
+                // turn south and search west for hidden cone
+                dir_y = 1;
+                search_dir_x = -1;
+            }
+        }
+
+        //assert(dir_y);
+        assert(search_dir_x);
+
+        Vector2 p{};
+
+        //int dir_y = r_prime.y < r.y ? -1 : r_prime.y > r.y ? 1 : 0;
+        if (a.y == r.y) {
+            // p = point from adjacent row, reached via right-hand turn at a
+            // NOTE(dlb): Let's assume 'a' should be 'r_prime'.. turning at 'a' makes no sense...
+            p = { r_prime.x, r_prime.y + dir_y };
+        } else {
+            assert(ClosestPointLineSegmentToRay({ 0, a.y + dir_y }, { 64, a.y + dir_y }, r, a, p));
+        }
+#if 0
         int x_min = p.x;
         int x_max = p.x;
-        
-        // I = maximum closed interval beginning at p and observable from r_prime
-#if 1
-        int blocker_offset = 0;
-        assert(dir == 1);
 #else
-        int blocker_offset = r_prime.x > r.x ? 0 : -1;
-        while (!state.Query(x_min - 1, p.y + blocker_offset)) {
-            x_min--;
-        }
+        // I = maximum closed interval beginning at p and observable from r_prime
+        int y = p.y;
+        int x_min = p.x;
+        int x_max = p.x;
 #endif
-        while (!state.Query(x_max, p.y + blocker_offset)) {
-            x_max++;
+
+        int block_offset_y = dir_y == 1 ? -dir_y : 0;
+        if (search_dir_x == 1) {
+            while (!state.Query(x_max, p.y + block_offset_y)) {
+                x_max++;
+            }
+        } else {
+            while (!state.Query(x_min - 1, p.y + block_offset_y)) {
+                x_min--;
+            }
         }
 
         I.y = p.y;
@@ -562,19 +713,48 @@ void Anya_GenConeSuccessors(Anya_Node &parent, Vector2 a, Vector2 b, Vector2 r)
     // Non-observable successors of a cone node
     } else if (Vector2Equals(a, b)) {
         r_prime = a;
-        
+
+#if 0
+        int dir_x = 0;
+        int dir_y = 0;
+
+        if (dir_x == 1) {
+            // east
+            if (state.Query(r_prime.x - 1, r_prime.y)) {
+                // SW corner_flags, search down
+                dir_y = 1;
+            } else if (state.Query(r_prime.x - 1, r_prime.y - 1)) {
+                // NW corner_flags, search up
+                dir_y = -1;
+            } else {
+                assert(!"expected turning point!");
+            }
+        } else {
+            // west
+            if (state.Query(r_prime.x, r_prime.y - 1)) {
+                // NE corner_flags, search up
+                dir_y = -1;
+            } else if (state.Query(r_prime.x, r_prime.y)) {
+                // SE corner_flags, search down
+                dir_y = 1;
+            } else {
+                assert(!"expected turning point!");
+            }
+        }
+#endif
+
         // HACK(dlb): Hard-coded map width!!
         // p = point from adjacent row, computed via linear projection from r through a
-        int dir = a.y - r.y > 0 ? 1 : -1;
+        int dir_y = a.y - r.y > 0 ? 1 : -1;
         Vector2 p{};
-        assert(ClosestPointLineSegmentToRay({ 0, a.y + dir }, { 64, a.y + dir }, r, a, p));
+        assert(ClosestPointLineSegmentToRay({ 0, a.y + dir_y }, { 64, a.y + dir_y }, r, a, p));
 
         // I = maximum closed interval beginning at p and observable from r_prime
         int y = p.y;
         int x_min = p.x;
         int x_max = p.x;
 
-        int block_offset = dir == 1 ? -1 : 0;
+        int block_offset = dir_y == 1 ? -1 : 0;
         while (!state.Query(x_min - 1, y + block_offset)) {
             x_min--;
         }
@@ -604,31 +784,42 @@ void Anya_GenConeSuccessors(Anya_Node &parent, Vector2 a, Vector2 b, Vector2 r)
         // HACK(dlb): Hard-coded map width!!
         Vector2 p_prime{};
         assert(ClosestPointLineSegmentToRay({ 0, b.y + dir_b }, { 64, b.y + dir_b }, r, b, p_prime));
-
+#if 1
         int y = p.y;
-        int x_min = r_prime.x;
-        int x_max = r_prime.x;
+        int x_min = floorf(p.x);
+        int x_max = x_min;
 
         int block_offset = dir_a == 1 ? -1 : 0;
-        while (x_min > p.x && !state.Query(x_min - 1, y + block_offset)) {
-            x_min--;
-        }
-        while (x_max < p_prime.x && !state.Query(x_max, y + block_offset)) {
+        //while (x_min > p.x && !state.Query(x_min - 1, y + block_offset)) {
+        //    x_min--;
+        //}
+        bool is_blocked = false;
+        while (!is_blocked && x_max < p_prime.x) {
+            is_blocked = state.Query(x_max, y + block_offset);
+            if (is_blocked) break;
             x_max++;
         }
 
-        x_min = MAX(p.x, x_min);
-        x_max = MIN(p_prime.x, x_max);
-
+        // I = maximum closed interval with endpoints p and p' (which is implicitly observable from r)
+        if (!is_blocked) {
+            I.y = p.y;
+            I.x_min = p.x;
+            I.x_max = p_prime.x;
+            dbgColor = BLUE;
+        } else {
+            printf("");
+        }
+#else
         // I = maximum closed interval with endpoints p and p' (which is implicitly observable from r)
         I.y = p.y;
-        I.x_min = x_min;
-        I.x_max = x_max;
+        I.x_min = p.x;
+        I.x_max = p_prime.x;
         dbgColor = BLUE;
+#endif
     }
 
     if (I.HasInterval()) {
-        std::vector<Anya_Interval> intervals = Anya_SplitAtCorners(*parent.state, I);
+        std::vector<Anya_Interval> intervals = Anya_SplitAtCorners(*parent.state, r_prime, I);
         for (Anya_Interval &II : intervals) {
             assert(II.HasInterval());
             Anya_Node n_prime{ parent, r_prime, II };
@@ -638,10 +829,21 @@ void Anya_GenConeSuccessors(Anya_Node &parent, Vector2 a, Vector2 b, Vector2 r)
     }
 }
 
+void Anya_Flat_FlatSuccessors(Anya_Node &node)
+{
+
+}
+
+void Anya_Flat_ConeSuccessors(Anya_Node &node)
+{
+
+}
+
 void Anya_Successors(Anya_Node &node)
 {
     if (node.IsStart()) {
         Anya_GenStartSuccessors(node);
+        return;
     }
 
     Anya_State &state = *node.state;
@@ -649,6 +851,10 @@ void Anya_Successors(Anya_Node &node)
     Vector2 r = node.root;
 
     std::vector<Anya_Node> successors{};
+
+    if (state.next_id == 23) {
+        printf("");
+    }
 
     if (node.IsFlat()) {
         const Vector2 p0{ I.x_min, I.y };
@@ -659,26 +865,41 @@ void Anya_Successors(Anya_Node &node)
         // p = endpoint of I farthest from r
         Vector2 p = p0_dist > p1_dist ? p0 : p1;
 
-        //assert(floorf(p.x) == p.x);  // expecting this to be a corner
-        Anya_GenFlatSuccessors(node, p, r);
+        int p_flags = 0;
+        bool p_turn = Anya_IsTurningPoint(state, p, r, &p_flags);
 
-        if (Anya_IsTurningPoint(state, p, r)) {
-            Anya_GenConeSuccessors(node, p, p, r);
+        Anya_GenFlatSuccessors(node, p, r, p_flags);
+
+        if (p_turn) {
+            Anya_GenConeSuccessors(node, p, p, r, p_flags);
         }
     } else {
         Vector2 a = { I.x_min, I.y };
         Vector2 b = { I.x_max, I.y };
 
-        Anya_GenConeSuccessors(node, a, b, r);
+        int a_flags = 0;
+        int b_flags = 0;
+        bool a_corner = false;
+        bool b_corner = false;
+        bool a_turn = Anya_IsTurningPoint(state, a, r, &a_flags, &a_corner);
+        bool b_turn = Anya_IsTurningPoint(state, b, r, &b_flags, &b_corner);
 
-        if (Anya_IsTurningPoint(state, a, r)) {
-            Anya_GenFlatSuccessors(node, a, r);
-            Anya_GenConeSuccessors(node, a, a, r);
+        Anya_GenConeSuccessors(node, a, b, r, 0);
+#if 0
+        if (a_corner) {
         }
-
-        if (Anya_IsTurningPoint(state, b, r)) {
-            Anya_GenFlatSuccessors(node, b, r);
-            Anya_GenConeSuccessors(node, b, b, r);
+        if (a_turn) {
+            Anya_GenConeSuccessors(node, a, a, r, a_flags);
+        }
+#else
+        if (a_turn) {
+            Anya_GenFlatSuccessors(node, a, r, a_flags);
+            Anya_GenConeSuccessors(node, a, a, r, a_flags);
+        }
+#endif
+        if (b_turn) {
+            Anya_GenFlatSuccessors(node, b, r, b_flags);
+            Anya_GenConeSuccessors(node, b, b, r, b_flags);
         }
     }
 }
@@ -707,12 +928,12 @@ bool Anya_IsIntermediate(Anya_Node &node)
         }
     } else {
         // TODO:
-        // if node.I has a closed endpoint that is also a corner point {
+        // if node.I has a closed endpoint that is also a corner_flags point {
         //     return false;
         // }
         Anya_Interval I_prime{};
         // TODO: I_prime = interval after projecting node.r through node.I
-        // if I_prime contains any corner points {
+        // if I_prime contains any corner_flags points {
         //     return false;
         // }
     }
@@ -744,7 +965,7 @@ void Anya(Anya_State &state)
         bool operator<(const PrioNode &rhs) const
         {
             // NOTE: Backwards on purpose, less distance = better heuristic and priority_queue is a max heap -_-
-            return cost > rhs.cost;
+            return cost == rhs.cost ? id > rhs.id : cost > rhs.cost;
         }
     };
     std::priority_queue<PrioNode> open{};
@@ -752,12 +973,14 @@ void Anya(Anya_State &state)
     Anya_Node start = Anya_Node::StartNode(state);
     //Anya_Node start{ state, { 44, 25, 26 }, { 25, 45 } };
 
-    open.push({ start.id, start.cost, start.interval.y });
+    open.push({ start.id, start.totalCost, start.interval.y });
     state.nodes.push_back(start);
 
     const int maxIters = 1000;
     int iters = 0;
 
+    // TODO(dlb): This may still be necessary to prevent cycles:
+    // Don't push nodes with equal or higher cost into the open queue.
 #if 0
     struct PathNode {
         float cost{};
@@ -778,7 +1001,7 @@ void Anya(Anya_State &state)
         open.pop();
         state.nodeSearchOrder.push_back(node);
 
-        if (node.id == 12) {
+        if (node.id == 18) {
             printf("");
         }
 
@@ -787,13 +1010,13 @@ void Anya(Anya_State &state)
             break;
         }
 
-        int successorStart = state.nodes.size();
+        int successorsStart = state.nodes.size();
         Anya_Successors(node);
-        int successorCount = state.nodes.size();
-        for (int i = successorStart; i < successorCount; i++) {
+        int successorsEnd = state.nodes.size();
+        for (int i = successorsStart; i < successorsEnd; i++) {
             Anya_Node &successor = state.nodes[i];
             if (!Anya_ShouldPrune(successor)) {
-                open.push({ successor.id, successor.cost, successor.interval.y });
+                open.push({ successor.id, successor.totalCost, successor.interval.y });
 
                 if (Vector2Equals(successor.root, node.root)) {
                     successor.parent = node.parent;
@@ -817,6 +1040,7 @@ void Anya(Anya_State &state)
             grid_path.push(node->root);
             node = &state.nodes[node->parent];
         }
+        grid_path.push(node->root);
 
         while (!grid_path.empty()) {
             state.path.push_back(Vector2Scale(grid_path.top(), TILE_W));

@@ -88,10 +88,17 @@ Err Play(GameServer &server)
 {
     Err err = RN_SUCCESS;
 
+    Tilemap &level_001 = pack_maps.FindByName<Tilemap>(MAP_OVERWORLD);
+    
     Camera2D camera{};
     camera.zoom = 1;
+    camera.target = { level_001.width * TILE_W / 2.0f, level_001.height * TILE_W / 2.0f };
+    camera.offset = { GetRenderWidth() / 2.0f, GetRenderHeight() / 2.0f };
 
-    Tilemap &level_001 = pack_maps.FindByName<Tilemap>(MAP_OVERWORLD);
+    // fountain, for anya testing
+    camera.target = { 1630, 3060 };
+    camera.offset = Vector2Floor(camera.offset);
+
     Editor editor{ level_001.id };
     editor.Init();
 

@@ -635,11 +635,11 @@ void Tilemap::DrawIntervals(Camera2D &camera)
     Anya_State state{ start, target, Tilemap_AnyaSolidQuery, this };
     Anya(state);
 
-    Rectangle startRec{ start.x * TILE_W, start.y * TILE_W, TILE_W, TILE_W };
+    Rectangle startRec{ start.x * TILE_W, start.y * TILE_W, TILE_W * 0.5f, TILE_W * 0.5f };
     DrawRectangleRec(startRec, Fade(LIME, 0.5f));
     DrawRectangleLinesEx(startRec, 3, GREEN);
 
-    Rectangle targetRec{ target.x * TILE_W, target.y * TILE_W, TILE_W, TILE_W };
+    Rectangle targetRec{ target.x * TILE_W, target.y * TILE_W, TILE_W * 0.5f, TILE_W * 0.5f };
     DrawRectangleRec(targetRec, Fade(SKYBLUE, 0.5f));
     DrawRectangleLinesEx(targetRec, 3, BLUE);
 
@@ -682,13 +682,8 @@ void Tilemap::DrawIntervals(Camera2D &camera)
 
     rlDisableBackfaceCulling();
 
-    for (int i = 0; i <= nodeIdx && i < nodes.size(); i++) {
+    for (int i = 1; i <= nodeIdx && i < nodes.size(); i++) {
         const auto &node = nodes[i];
-        if (i == 0) {
-            DrawCircleV(Vector2Scale(node.state->start, TILE_W), 6, RED);
-            continue;
-        }
-
         Vector2 r = Vector2Scale(node.root, TILE_W);
         Vector2 p0{ node.interval.x_min * TILE_W, node.interval.y * TILE_W };
         Vector2 p1{ node.interval.x_max * TILE_W, node.interval.y * TILE_W };
@@ -715,7 +710,7 @@ void Tilemap::DrawIntervals(Camera2D &camera)
 
             Vector2 p = Vector2Subtract(p1, p0);
             Vector2 pHalf = Vector2Add(p0, Vector2Scale(p, 0.5f));
-            const char *txt = TextFormat("id = %d, cost = %.2f, depth = %d", node.id, node.cost, node.depth);
+            const char *txt = TextFormat("id = %d, cost = %.2f, depth = %d", node.id, node.totalCost, node.depth);
             Vector2 txtSize = dlb_MeasureTextShadowEx(fntMedium, CSTRLEN(txt));
             Vector2 txtOffset{ -txtSize.x * 0.5f, -txtSize.y };
             dlb_DrawTextShadowEx(fntMedium, CSTRLEN(txt), Vector2Add(pHalf, txtOffset), WHITE);

@@ -25,7 +25,8 @@ struct Anya_Node {
 
     Vector2 root{};
     Anya_Interval interval{};
-    float cost{};
+    float rootCost{};
+    float totalCost{};
 
     int depth{};
     Color dbgColor{};
@@ -37,11 +38,10 @@ struct Anya_Node {
     bool IsStart(void) const;
     bool IsFlat(void) const;
     Vector2 ClosestPointToTarget(void) const;
-    float DistanceToTarget(void) const;
 
 private:
     Anya_Node(Anya_State &state, Vector2 start);
-    float Cost(void) const;
+    void CalcCost(void);
 };
 
 typedef bool (*Anya_SolidQuery)(int x, int y, void *userdata);
