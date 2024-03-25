@@ -1037,7 +1037,7 @@ bool Anya_ShouldPrune(Anya_Node &node)
 }
 #endif
 
-void Anya(Anya_State &state)
+void Anya(Anya_State &state, float radius)
 {
     struct PrioNode {
         int id{};
@@ -1116,8 +1116,27 @@ void Anya(Anya_State &state)
         }
         grid_path.push(node->root);
 
+        const float nudge = radius / 1.4142135f;
         while (!grid_path.empty()) {
-            state.path.push_back(Vector2Scale(grid_path.top(), TILE_W));
+            Vector2 gridPos = grid_path.top();
+            Vector2 worldPos = Vector2Scale(gridPos, TILE_W);
+            int flags = 0;
+            if (Anya_IsCorner(state, gridPos.x, gridPos.y, &flags)) {
+                if (flags & CORNER_NW) {
+                    worldPos.x += nudge;
+                    worldPos.y += nudge;
+                } else if (flags & CORNER_NE) {
+                    worldPos.x -= nudge;
+                    worldPos.y += nudge;
+                } else if (flags & CORNER_SE) {
+                    worldPos.x -= nudge;
+                    worldPos.y -= nudge;
+                } else if (flags & CORNER_SW) {
+                    worldPos.x += nudge;
+                    worldPos.y -= nudge;
+                }
+            }
+            state.path.push_back(worldPos);
             grid_path.pop();
         }
     }

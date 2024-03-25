@@ -587,7 +587,7 @@ void Tilemap::DrawEdges(void)
     }
 }
 
-bool Tilemap_AnyaSolidQuery(int x, int y, void *userdata)
+bool Tilemap::Tilemap_AnyaSolidQuery(int x, int y, void *userdata)
 {
     Tilemap *map = (Tilemap *)userdata;
     return map->IsSolid(x, y);
@@ -595,7 +595,6 @@ bool Tilemap_AnyaSolidQuery(int x, int y, void *userdata)
 void Tilemap::DrawIntervals(Camera2D &camera)
 {
     static Vector2 start{ 25, 45 };
-
 
 #if 0
     Vector2 world = GetScreenToWorld2D(GetMousePosition(), camera);
@@ -648,8 +647,9 @@ void Tilemap::DrawIntervals(Camera2D &camera)
         nodeLast = true;
     }
 
+    const float radius = 16.0f;
     Anya_State state{ start, target, Tilemap_AnyaSolidQuery, this };
-    Anya(state);
+    Anya(state, radius);
     
     const auto &nodes = showGeneratedNodes ? state.nodes : state.nodeSearchOrder;
     if (nodeLast) {
@@ -673,6 +673,9 @@ void Tilemap::DrawIntervals(Camera2D &camera)
     DrawRectangleRec(targetRec, Fade(SKYBLUE, 0.5f));
     DrawRectangleLinesEx(targetRec, 3, BLUE);
 
+    for (auto &node : state.path) {
+        DrawCircle(node.x, node.y, radius, PINK);
+    }
     if (state.path.size()) {
         DrawLineStrip(state.path.data(), state.path.size(), PINK);
     }

@@ -155,8 +155,8 @@ void ProtoDb::Load(void)
     npc_chicken.ambient_fx_delay_max = 30;
     npc_chicken.radius = 5;
     npc_chicken.hp_max = 15;
-    npc_chicken.speed_min = 50;
-    npc_chicken.speed_max = 150;
+    npc_chicken.speed_min = 300;
+    npc_chicken.speed_max = 600;
     npc_chicken.drag = 1.0f;
     npc_chicken.sprite_id = pack_assets.FindByName<Sprite>("sprite_npc_chicken").id;
 
@@ -623,7 +623,7 @@ void GameServer::TickEntityNPC(Entity &e_npc, double dt, double now)
     // Chicken pathing AI (really bad)
     if (e_npc.spec == Entity::SPC_NPC_CHICKEN) {
         if (e_npc.colliding) {
-            e_npc.path_rand_direction = {};
+            //e_npc.path_rand_direction = {};
         }
 
         if (now - e_npc.path_rand_started_at >= e_npc.path_rand_duration) {
@@ -636,12 +636,34 @@ void GameServer::TickEntityNPC(Entity &e_npc, double dt, double now)
                 duration = GetRandomValue(2, 4);
             } else {
                 dir = {};
-                duration = GetRandomValue(5, 10);
+                duration = GetRandomValue(4, 8);
             }
             e_npc.path_rand_started_at = now;
-            e_npc.path_rand_direction = dir;
+            //e_npc.path_rand_direction = dir;
             e_npc.path_rand_duration = duration;
+
+            auto player0 = entityDb->FindEntity(players[0].entityId);
+            if (player0) {
+                Vector2 npcPos = e_npc.Position2D();
+                Vector2 playerPos = player0->Position2D();
+                Tilemap::Coord npcCoord{};
+                Tilemap::Coord playerCoord{};
+                if (map.WorldToTileIndex(npcPos.x, npcPos.y, npcCoord) &&
+                    map.WorldToTileIndex(playerPos.x, playerPos.y, playerCoord)) {
+                    Vector2 start{ (float)npcCoord.x, (float)npcCoord.y };
+                    Vector2 target{ (float)playerCoord.x, (float)playerCoord.y };
+                    Anya_State state{ start, target, Tilemap::Tilemap_AnyaSolidQuery, &map };
+                    Anya(state, e_npc.radius);
+                    if (state.path.size() > 1) {
+                        Vector2 toPlayer = Vector2Normalize(Vector2Subtract(state.path[1], npcPos));
+                        e_npc.path_rand_direction = {};
+                        e_npc.path_rand_direction.x = toPlayer.x;
+                        e_npc.path_rand_direction.y = toPlayer.y;
+                    }
+                }
+            }
         }
+
         Vector3 move = Vector3Scale(e_npc.path_rand_direction, e_npc.speed);
         e_npc.ApplyForce(move);
     }

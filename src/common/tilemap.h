@@ -119,6 +119,7 @@ struct Tilemap {
     void Draw(Camera2D &camera, DrawCmdQueue &sortedDraws);
     void DrawColliders(Camera2D &camera);
     void DrawEdges(void);
+    static bool Tilemap_AnyaSolidQuery(int x, int y, void *userdata);
     void DrawIntervals(Camera2D &camera);
     void DrawTileIds(Camera2D &camera, TileLayerType layer);
     void DrawObjects(Camera2D &camera);

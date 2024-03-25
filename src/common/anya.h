@@ -72,4 +72,4 @@ struct Anya_State {
     inline bool Query_SE(int x, int y);
 };
 
-void Anya(Anya_State &state);
+void Anya(Anya_State &state, float radius = 1.0f);
