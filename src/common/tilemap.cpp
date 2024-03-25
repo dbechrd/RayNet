@@ -596,6 +596,7 @@ void Tilemap::DrawIntervals(Camera2D &camera)
 {
     static Vector2 start{ 25, 45 };
 
+
 #if 0
     Vector2 world = GetScreenToWorld2D(GetMousePosition(), camera);
     Coord coord{};
@@ -604,9 +605,11 @@ void Tilemap::DrawIntervals(Camera2D &camera)
     }
     static Vector2 target{ (float)coord.x, (float)coord.y };
 #else
-    static Vector2 target{ 29, 42 };
+    static Vector2 target{ 37, 46 };
 #endif
     static bool showGeneratedNodes = true;
+
+    IO::Scoped scope(IO::Scope::IO_GameDebugDraw);
 
     if (io.MouseButtonDown(MOUSE_BUTTON_LEFT)) {
         if (io.KeyDown(KEY_ONE)) {
@@ -625,15 +628,40 @@ void Tilemap::DrawIntervals(Camera2D &camera)
         showGeneratedNodes = !showGeneratedNodes;
     }
 
+    static bool nodeLast = false;
+    static int nodeIdx = 0;
+    if (io.KeyPressed(KEY_LEFT, true)) {
+        nodeIdx -= io.KeyDown(KEY_LEFT_SHIFT) ? 10 : 1;
+        nodeLast = false;
+    }
+    if (io.KeyPressed(KEY_RIGHT, true)) {
+        nodeIdx += io.KeyDown(KEY_LEFT_SHIFT) ? 10 : 1;
+        nodeLast = false;
+    }
+    if (io.KeyPressed(KEY_HOME)) {
+        nodeIdx = 0;
+        nodeLast = false;
+    }
+    if (io.KeyPressed(KEY_END)) {
+        nodeLast = true;
+    }
+
+    Anya_State state{ start, target, Tilemap_AnyaSolidQuery, this };
+    Anya(state);
+    
+    const auto &nodes = showGeneratedNodes ? state.nodes : state.nodeSearchOrder;
+    if (nodeLast) {
+        nodeIdx = nodes.size() - 1;
+    } else {
+        nodeIdx = CLAMP(nodeIdx, 0, nodes.size() - 1);
+    }
+
     const char *nodeMode = showGeneratedNodes ? "generate order" : "search order";
     dlb_DrawTextShadowEx(fntMedium, CSTRLEN(nodeMode), GetScreenToWorld2D({ 800, 800 }, camera), WHITE);
 
     int nodeTint = 0;
     Color greens[] = { DARKGREEN, GREEN, LIME };
     Color blues[] = { DARKBLUE, BLUE, SKYBLUE };
-
-    Anya_State state{ start, target, Tilemap_AnyaSolidQuery, this };
-    Anya(state);
 
     Rectangle startRec{ start.x * TILE_W, start.y * TILE_W, TILE_W * 0.5f, TILE_W * 0.5f };
     DrawRectangleRec(startRec, Fade(LIME, 0.5f));
@@ -643,21 +671,9 @@ void Tilemap::DrawIntervals(Camera2D &camera)
     DrawRectangleRec(targetRec, Fade(SKYBLUE, 0.5f));
     DrawRectangleLinesEx(targetRec, 3, BLUE);
 
-    const auto &nodes = showGeneratedNodes ? state.nodes : state.nodeSearchOrder;
-
     if (state.path.size()) {
         DrawLineStrip(state.path.data(), state.path.size(), PINK);
     }
-
-    static int nodeIdx = 0;
-
-    if (io.KeyPressed(KEY_LEFT, true)) {
-        nodeIdx--;
-    }
-    if (io.KeyPressed(KEY_RIGHT, true)) {
-        nodeIdx++;
-    }
-    nodeIdx = CLAMP(nodeIdx, 0, nodes.size() - 1);
 
 #if 0
     // 7.07, 6.40, 5.83, 5.39, 5.10, 5.00, 5.10, 5.39, 5.83, 6.40, 7.07
@@ -710,7 +726,18 @@ void Tilemap::DrawIntervals(Camera2D &camera)
 
             Vector2 p = Vector2Subtract(p1, p0);
             Vector2 pHalf = Vector2Add(p0, Vector2Scale(p, 0.5f));
-            const char *txt = TextFormat("id = %d, cost = %.2f, depth = %d", node.id, node.totalCost, node.depth);
+            const char *txt = TextFormat(
+                "    id: %d\n"
+                "parent: %d\n"
+                "  cost: %.2f\n"
+                " I.min: %f\n"
+                " I.max: %f\n",
+                node.id,
+                node.orig_parent,
+                node.totalCost,
+                node.interval.x_min,
+                node.interval.x_max
+            );
             Vector2 txtSize = dlb_MeasureTextShadowEx(fntMedium, CSTRLEN(txt));
             Vector2 txtOffset{ -txtSize.x * 0.5f, -txtSize.y };
             dlb_DrawTextShadowEx(fntMedium, CSTRLEN(txt), Vector2Add(pHalf, txtOffset), WHITE);
@@ -798,7 +825,6 @@ void Tilemap::DrawObjects(Camera2D &camera)
     }
 }
 
-#if _DEBUG
 void Tilemap::DrawFloodDebug(TileFloodDebugData &floodDebugData)
 {
     for (int i = 0; i < floodDebugData.change_list.size(); i++) {
@@ -818,4 +844,3 @@ void Tilemap::DrawFloodDebug(TileFloodDebugData &floodDebugData)
         DrawRectangleLinesEx(rect, 2.0f, rect_col);
     }
 }
-#endif

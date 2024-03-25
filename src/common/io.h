@@ -11,6 +11,7 @@ struct IO {
         IO_None,
         IO_Game,
         IO_GameNPC,
+        IO_GameDebugDraw,
         IO_GameNPCDialog,
         IO_HUDSpinner,
         IO_HUDMenu,

@@ -21,14 +21,14 @@ struct Anya_Interval {
 struct Anya_Node {
     Anya_State *state;
     int id{};
-    int parent{};
+    int parent{};       // gets overwritten along the way to simplify the path
+    int orig_parent{};  // id of node that spawned this successor
 
     Vector2 root{};
     Anya_Interval interval{};
     float rootCost{};
     float totalCost{};
 
-    int depth{};
     Color dbgColor{};
 
     Anya_Node(Anya_Node &parent, Vector2 root, Anya_Interval interval);
@@ -65,7 +65,11 @@ struct Anya_State {
     }
     Anya_State(Vector2 start, Vector2 target, Anya_SolidQuery solid_query, void *userdata);
 
-    bool Query(int x, int y);
+    //inline bool Query(int x, int y);
+    inline bool Query_NW(int x, int y);
+    inline bool Query_NE(int x, int y);
+    inline bool Query_SW(int x, int y);
+    inline bool Query_SE(int x, int y);
 };
 
 void Anya(Anya_State &state);

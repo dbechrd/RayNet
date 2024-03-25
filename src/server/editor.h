@@ -122,7 +122,7 @@ struct GfxAnimEditor {
 struct EditModeState {
     bool showColliders  {};
     bool showTileEdges  {};
-    bool showANYA       {};
+    bool showANYA       { true };
     bool showTileIds    {};
     bool showEntityIds  {};
     bool showObjects    {};
