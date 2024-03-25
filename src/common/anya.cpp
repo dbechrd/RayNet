@@ -229,10 +229,10 @@ bool Anya_IsTurningPoint(Anya_State &state, Vector2 p, Vector2 r, int *flags = 0
         return false;
     }
 
-    bool nw = corner_flags & CORNER_NW;
-    bool ne = corner_flags & CORNER_NE;
-    bool sw = corner_flags & CORNER_SW;
-    bool se = corner_flags & CORNER_SE;
+    const bool nw = corner_flags & CORNER_NW;
+    const bool ne = corner_flags & CORNER_NE;
+    const bool sw = corner_flags & CORNER_SW;
+    const bool se = corner_flags & CORNER_SE;
 
     if (p.y < r.y) {
         // cone up
@@ -630,7 +630,7 @@ void Anya_GenConeSuccessors(Anya_Node &parent, Vector2 a, Vector2 b, Vector2 r, 
         I.y = p.y;
         I.x_min = x_min;
         I.x_max = x_max;
-        dbgColor = RED;
+        dbgColor = BLUE;
     }
 
     if (I.HasInterval()) {
@@ -785,7 +785,7 @@ void Anya_GenConeSuccessorsNew(Anya_Node &parent, Vector2 a, Vector2 b, Vector2 
         if (I_middle.HasInterval()) {
             roots.push_back(r);
             max_intervals.push_back(I_middle);
-            colors.push_back(RED);
+            colors.push_back(WHITE);
         }
 
         bool aTurningPoint = Anya_IsTurningPoint(*parent.state, a, r);
@@ -846,7 +846,7 @@ void Anya_GenConeSuccessorsNew(Anya_Node &parent, Vector2 a, Vector2 b, Vector2 
         // Non-observable successors of a cone node
         // a,a of cone, or b,b of cone
         r_prime = a;
-        color = WHITE;
+        color = RED;
 
         // Query current row if above, or previous row if below
         bool cone_up = a.y < r.y;
@@ -895,6 +895,9 @@ void Anya_GenConeSuccessorsNew(Anya_Node &parent, Vector2 a, Vector2 b, Vector2 
         assert(a.x == b.x);
         assert(a.y == b.y);
         assert(a.y == r.y);
+
+        //r_prime = a;
+        //color = BLUE;
     }
     
     assert(roots.size() == max_intervals.size());
@@ -903,12 +906,33 @@ void Anya_GenConeSuccessorsNew(Anya_Node &parent, Vector2 a, Vector2 b, Vector2 
     for (int i = 0; i < roots.size(); i++) {
         if (max_intervals[i].HasInterval()) {
             std::vector<Anya_Interval> intervals = Anya_SplitAtCorners(*parent.state, roots[i], max_intervals[i]);
+#if 0
+            std::vector<Anya_Interval> smaller_intervals{};
+            for (Anya_Interval &II : intervals) {
+                if (II.x_max - II.x_min > 8) {
+                    float split_at = II.x_min + (II.x_max - II.x_min) * 0.5f;
+                    Anya_Interval a{ II.y, II.x_min, split_at };
+                    Anya_Interval b{ II.y, split_at, II.x_max };
+                    smaller_intervals.push_back(a);
+                    smaller_intervals.push_back(b);
+                } else {
+                    smaller_intervals.push_back(II);
+                }
+            }
+            for (Anya_Interval &II : smaller_intervals) {
+                assert(II.HasInterval());
+                Anya_Node node{ parent, roots[i], II };
+                node.dbgColor = colors[i];
+                parent.state->nodes.push_back(node);
+            }
+#else
             for (Anya_Interval &II : intervals) {
                 assert(II.HasInterval());
                 Anya_Node node{ parent, roots[i], II };
                 node.dbgColor = colors[i];
                 parent.state->nodes.push_back(node);
             }
+#endif
         }
     }
 }

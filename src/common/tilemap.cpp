@@ -608,28 +608,30 @@ void Tilemap::DrawIntervals(Camera2D &camera)
     static Vector2 target{ 37, 46 };
 #endif
     static bool showGeneratedNodes = true;
+    static bool heatmap = false;
+    static bool nodeLast = false;
+    static int nodeIdx = 0;
 
     IO::Scoped scope(IO::Scope::IO_GameDebugDraw);
 
-    if (io.MouseButtonDown(MOUSE_BUTTON_LEFT)) {
-        if (io.KeyDown(KEY_ONE)) {
-            Vector2 mouseWorld = GetScreenToWorld2D(GetMousePosition(), camera);
-            Coord coord{};
-            WorldToTileIndex(mouseWorld.x, mouseWorld.y, coord);
-            start = { (float)coord.x, (float)coord.y };
-        } else if (io.KeyDown(KEY_TWO)) {
-            Vector2 mouseWorld = GetScreenToWorld2D(GetMousePosition(), camera);
-            Coord coord{};
-            WorldToTileIndex(mouseWorld.x, mouseWorld.y, coord);
-            target = { (float)coord.x, (float)coord.y };
-        }
+    if (io.KeyDown(KEY_ONE)) {
+        Vector2 mouseWorld = GetScreenToWorld2D(GetMousePosition(), camera);
+        Coord coord{};
+        WorldToTileIndex(mouseWorld.x, mouseWorld.y, coord);
+        start = { (float)coord.x, (float)coord.y };
+    } else if (io.KeyDown(KEY_TWO)) {
+        Vector2 mouseWorld = GetScreenToWorld2D(GetMousePosition(), camera);
+        Coord coord{};
+        WorldToTileIndex(mouseWorld.x, mouseWorld.y, coord);
+        target = { (float)coord.x, (float)coord.y };
     }
     if (io.KeyPressed(KEY_THREE)) {
         showGeneratedNodes = !showGeneratedNodes;
     }
+    if (io.KeyPressed(KEY_FOUR)) {
+        heatmap = !heatmap;
+    }
 
-    static bool nodeLast = false;
-    static int nodeIdx = 0;
     if (io.KeyPressed(KEY_LEFT, true)) {
         nodeIdx -= io.KeyDown(KEY_LEFT_SHIFT) ? 10 : 1;
         nodeLast = false;
@@ -712,13 +714,17 @@ void Tilemap::DrawIntervals(Camera2D &camera)
         Color color = node.dbgColor;
         if (!color.a) color = YELLOW;
 
-        if (node.interval.y != node.root.y) {
+        if (!heatmap && node.interval.y != node.root.y) {
             // cone node
             DrawTriangle(r, p0, p1, Fade(color, i == nodeIdx ? 0.4f : 0.2f));
             DrawTriangleLines(r, p0, p1, color);
         }
             
-        DrawLineEx(p0, p1, 4, i == nodeIdx ? color : greens[nodeTint]);
+        if (heatmap) {
+            DrawLineEx(Vector2Add(p0, { 0, 32 }), Vector2Add(p1, { 0, 32 }), 64, Fade(RED, 0.2f));
+        } else {
+            DrawLineEx(p0, p1, 4, i == nodeIdx ? color : greens[nodeTint]);
+        }
 
         if (i == nodeIdx) {
             DrawCircleV(Vector2Scale(node.root, TILE_W), 6, RED);
