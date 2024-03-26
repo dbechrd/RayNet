@@ -153,10 +153,10 @@ void ProtoDb::Load(void)
     npc_chicken.ambient_fx = "sfx_chicken_cluck";
     npc_chicken.ambient_fx_delay_min = 15;
     npc_chicken.ambient_fx_delay_max = 30;
-    npc_chicken.radius = 5;
+    npc_chicken.radius = 10;
     npc_chicken.hp_max = 15;
-    npc_chicken.speed_min = 300;
-    npc_chicken.speed_max = 600;
+    npc_chicken.speed_min = 1000;
+    npc_chicken.speed_max = 250;
     npc_chicken.drag = 1.0f;
     npc_chicken.sprite_id = pack_assets.FindByName<Sprite>("sprite_npc_chicken").id;
 
@@ -622,45 +622,45 @@ void GameServer::TickEntityNPC(Entity &e_npc, double dt, double now)
 
     // Chicken pathing AI (really bad)
     if (e_npc.spec == Entity::SPC_NPC_CHICKEN) {
-        if (e_npc.colliding) {
-            //e_npc.path_rand_direction = {};
-        }
-
         if (now - e_npc.path_rand_started_at >= e_npc.path_rand_duration) {
-            double duration = 0;
-            Vector3 dir{};
-            if (Vector3LengthSqr(e_npc.path_rand_direction) == 0) {
-                dir.x = GetRandomFloatMinusOneToOne();
-                dir.y = GetRandomFloatMinusOneToOne();
-                dir = Vector3Normalize(dir);
-                duration = GetRandomValue(2, 4);
-            } else {
-                dir = {};
-                duration = GetRandomValue(4, 8);
-            }
+            e_npc.path_rand_duration = 0;
             e_npc.path_rand_started_at = now;
-            //e_npc.path_rand_direction = dir;
-            e_npc.path_rand_duration = duration;
 
-            auto player0 = entityDb->FindEntity(players[0].entityId);
-            if (player0) {
-                Vector2 npcPos = e_npc.Position2D();
-                Vector2 playerPos = player0->Position2D();
-                Tilemap::Coord npcCoord{};
-                Tilemap::Coord playerCoord{};
-                if (map.WorldToTileIndex(npcPos.x, npcPos.y, npcCoord) &&
-                    map.WorldToTileIndex(playerPos.x, playerPos.y, playerCoord)) {
-                    Vector2 start{ (float)npcCoord.x, (float)npcCoord.y };
-                    Vector2 target{ (float)playerCoord.x, (float)playerCoord.y };
-                    Anya_State state{ start, target, Tilemap::Tilemap_AnyaSolidQuery, &map };
-                    Anya(state, e_npc.radius);
-                    if (state.path.size() > 1) {
-                        Vector2 toPlayer = Vector2Normalize(Vector2Subtract(state.path[1], npcPos));
-                        e_npc.path_rand_direction = {};
-                        e_npc.path_rand_direction.x = toPlayer.x;
-                        e_npc.path_rand_direction.y = toPlayer.y;
+            // Start moving
+            if (Vector3Equals(e_npc.path_rand_direction, Vector3Zero())) {
+                // Toward player, if possible
+                auto player0 = entityDb->FindEntity(players[0].entityId);
+                if (player0 && player0->map_id == e_npc.map_id) {
+                    Vector2 npcPos = e_npc.Position2D();
+                    Vector2 playerPos = player0->Position2D();
+                    Tilemap::Coord npcCoord{};
+                    Tilemap::Coord playerCoord{};
+                    if (map.WorldToTileIndex(npcPos.x, npcPos.y, npcCoord) &&
+                        map.WorldToTileIndex(playerPos.x, playerPos.y, playerCoord)) {
+                        Vector2 start{ (float)npcCoord.x, (float)npcCoord.y };
+                        Vector2 target{ (float)playerCoord.x, (float)playerCoord.y };
+                        Anya_State state{ start, target, Tilemap::Tilemap_AnyaSolidQuery, &map };
+                        Anya(state, e_npc.radius);
+                        if (state.path.size() > 1) {
+                            Vector2 toPlayer = Vector2Normalize(Vector2Subtract(state.path[1], npcPos));
+                            e_npc.path_rand_direction = { toPlayer.x, toPlayer.y, 0.0f };
+                            e_npc.path_rand_duration = GetRandomValue(1, 8);
+                        }
                     }
                 }
+                
+                // Randomly, if not
+                if (!e_npc.path_rand_duration) {
+                    Vector3 dir{};
+                    dir.x = GetRandomFloatMinusOneToOne();
+                    dir.y = GetRandomFloatMinusOneToOne();
+                    e_npc.path_rand_direction = Vector3Normalize(dir);
+                    e_npc.path_rand_duration = GetRandomValue(2, 4);
+                }
+            } else {
+                // Stop moving for a bit
+                e_npc.path_rand_direction = {};
+                e_npc.path_rand_duration = GetRandomValue(2, 12);
             }
         }
 

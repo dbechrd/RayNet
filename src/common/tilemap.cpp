@@ -609,7 +609,10 @@ void Tilemap::DrawIntervals(Camera2D &camera)
     static bool showGeneratedNodes = true;
     static bool heatmap = false;
     static bool nodeLast = false;
+    static int nodeIdxPrev = 0;
     static int nodeIdx = 0;
+
+    nodeIdxPrev = nodeIdx;
 
     IO::Scoped scope(IO::Scope::IO_GameDebugDraw);
 
@@ -661,15 +664,11 @@ void Tilemap::DrawIntervals(Camera2D &camera)
     const char *nodeMode = showGeneratedNodes ? "generate order" : "search order";
     dlb_DrawTextShadowEx(fntMedium, CSTRLEN(nodeMode), GetScreenToWorld2D({ 800, 800 }, camera), WHITE);
 
-    int nodeTint = 0;
-    Color greens[] = { DARKGREEN, GREEN, LIME };
-    Color blues[] = { DARKBLUE, BLUE, SKYBLUE };
-
-    Rectangle startRec{ start.x * TILE_W, start.y * TILE_W, TILE_W * 0.5f, TILE_W * 0.5f };
+    Rectangle startRec{ start.x * TILE_W, start.y * TILE_W, TILE_W, TILE_W };
     DrawRectangleRec(startRec, Fade(LIME, 0.5f));
     DrawRectangleLinesEx(startRec, 3, GREEN);
 
-    Rectangle targetRec{ target.x * TILE_W, target.y * TILE_W, TILE_W * 0.5f, TILE_W * 0.5f };
+    Rectangle targetRec{ target.x * TILE_W, target.y * TILE_W, TILE_W, TILE_W };
     DrawRectangleRec(targetRec, Fade(SKYBLUE, 0.5f));
     DrawRectangleLinesEx(targetRec, 3, BLUE);
 
@@ -705,11 +704,33 @@ void Tilemap::DrawIntervals(Camera2D &camera)
 
     rlDisableBackfaceCulling();
 
+    static float anim_t = 0;
+    static double last_update = GetTime();
+    double now = GetTime();
+    double dt = now - last_update;
+    last_update = now;
+
+    if (nodeIdx != nodeIdxPrev) {
+        anim_t = 0;
+    }
+    
+    const float anim_duration = 0.2f;
+    anim_t += dt / anim_duration;
+    anim_t = CLAMP(anim_t, 0, 1);
+
+    Color greens[] = { DARKGREEN, GREEN, LIME };
+    Color blues[] = { DARKBLUE, BLUE, SKYBLUE };
+
     for (int i = 1; i <= nodeIdx && i < nodes.size(); i++) {
         const auto &node = nodes[i];
         Vector2 r = Vector2Scale(node.root, TILE_W);
         Vector2 p0{ node.interval.x_min * TILE_W, node.interval.y * TILE_W };
         Vector2 p1{ node.interval.x_max * TILE_W, node.interval.y * TILE_W };
+
+        if (i == nodeIdx) {
+            p0 = Vector2Add(r, Vector2Scale(Vector2Subtract(p0, r), anim_t));
+            p1 = Vector2Add(r, Vector2Scale(Vector2Subtract(p1, r), anim_t));
+        }
 
 #if 0
         // HACK: Make 0-length intervals show up on the screen (this should only affect the start node)
@@ -728,15 +749,13 @@ void Tilemap::DrawIntervals(Camera2D &camera)
         if (heatmap) {
             DrawLineEx(Vector2Add(p0, { 0, 32 }), Vector2Add(p1, { 0, 32 }), 64, Fade(RED, 0.2f));
         } else {
-            DrawLineEx(p0, p1, 4, i == nodeIdx ? color : greens[nodeTint]);
+            DrawLineEx(p0, p1, 4, i == nodeIdx ? color : greens[i % ARRAY_SIZE(greens)]);
         }
 
         if (i == nodeIdx) {
             DrawCircleV(Vector2Scale(node.root, TILE_W), 6, RED);
             DrawCircleV(Vector2Scale(node.ClosestPointToTarget(), TILE_W), 4, SKYBLUE);
 
-            Vector2 p = Vector2Subtract(p1, p0);
-            Vector2 pHalf = Vector2Add(p0, Vector2Scale(p, 0.5f));
             const char *txt = TextFormat(
                 "    id: %d\n"
                 "parent: %d\n"
@@ -751,11 +770,8 @@ void Tilemap::DrawIntervals(Camera2D &camera)
             );
             Vector2 txtSize = dlb_MeasureTextShadowEx(fntMedium, CSTRLEN(txt));
             Vector2 txtOffset{ -txtSize.x * 0.5f, -txtSize.y };
-            dlb_DrawTextShadowEx(fntMedium, CSTRLEN(txt), Vector2Add(pHalf, txtOffset), WHITE);
+            dlb_DrawTextShadowEx(fntMedium, CSTRLEN(txt), Vector2Add(r, txtOffset), WHITE);
         }
-
-        nodeTint++;
-        nodeTint %= 3;
     }
 
 #if 0

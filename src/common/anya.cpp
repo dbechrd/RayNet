@@ -284,20 +284,21 @@ int Anya_FlatBlockerWest(Anya_State &state, int x, int y, int flags)
         // |x| |
         // |x|_|
         return x;
-    } else if (nw && flags & CORNER_SE) {
-        // _____
-        // |x| |
-        // |_|x|
-        return x;
-    } else if (sw && flags & CORNER_NE) {
-        // _____
-        // | |x|
-        // |x|_|
-        return x;
     }
+    //else if (nw && flags & CORNER_SE) {
+    //    // _____
+    //    // |x| |
+    //    // |_|x|
+    //    return x;
+    //} else if (sw && flags & CORNER_NE) {
+    //    // _____
+    //    // | |x|
+    //    // |x|_|
+    //    return x;
+    //}
 
-    // Assumes x,y is a corner
-    assert(Anya_IsCorner(flags));
+    // Assumes x,y is open space or a corner
+    //assert(flags == 0 || Anya_IsCorner(flags));
 
     int x_min = x - 1;
     while (state.Query_NW(x_min, y) == nw &&
@@ -320,20 +321,21 @@ int Anya_FlatBlockerEast(Anya_State &state, int x, int y, int flags)
         // | |x|
         // |_|x|
         return x;
-    } else if (ne && flags & CORNER_SW) {
-        // _____
-        // | |x|
-        // |x|_|
-        return x;
-    } else if (se && flags & CORNER_NW) {
-        // _____
-        // |x| |
-        // |_|x|
-        return x;
     }
+    //else if (ne && flags & CORNER_SW) {
+    //    // _____
+    //    // | |x|
+    //    // |x|_|
+    //    return x;
+    //} else if (se && flags & CORNER_NW) {
+    //    // _____
+    //    // |x| |
+    //    // |_|x|
+    //    return x;
+    //}
 
-    // Assumes x,y is a corner
-    assert(Anya_IsCorner(flags));
+    // Assumes x,y is open space or a corner
+    //assert(flags == 0 || Anya_IsCorner(flags));
 
     int x_max = x + 1;
     while (state.Query_NE(x_max, y) == ne &&
@@ -1050,9 +1052,18 @@ void Anya(Anya_State &state, float radius)
         }
         grid_path.push(node->root);
 
-        const float nudge = radius / 1.4142135f;
+        const float nudge = TILE_W / 2; // radius / 1.4142135f;
+        Vector2 prevPos{ -1, -1 };
         while (!grid_path.empty()) {
             Vector2 gridPos = grid_path.top();
+            grid_path.pop();
+
+            // HACK(dlb): WHY ARE THERE DUPES!?!?!?
+            if (Vector2Equals(gridPos, prevPos)) {
+                continue;
+            }
+            prevPos = gridPos;
+
             Vector2 worldPos = Vector2Scale(gridPos, TILE_W);
             int flags = Anya_QueryCornerFlags(state, gridPos);
             if (Anya_IsCorner(flags)) {
@@ -1069,9 +1080,11 @@ void Anya(Anya_State &state, float radius)
                     worldPos.x += nudge;
                     worldPos.y -= nudge;
                 }
+            } else {
+                worldPos.x += nudge;
+                worldPos.y += nudge;
             }
             state.path.push_back(worldPos);
-            grid_path.pop();
         }
     }
 }
