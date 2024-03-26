@@ -35,8 +35,8 @@ struct Anya_Node {
     
     static Anya_Node StartNode(Anya_State &state);
 
-    bool IsStart(void) const;
-    bool IsFlat(void) const;
+    inline bool IsStart(void) const;
+    inline bool IsFlat(void) const;
     Vector2 ClosestPointToTarget(void) const;
 
 private:
@@ -52,6 +52,7 @@ struct Anya_State {
     Anya_SolidQuery solid_query{};
     void *userdata{};
     int next_id{};
+    bool target_found{};
 
     std::vector<Anya_Node> nodes{};
     std::vector<Anya_Node> nodeSearchOrder{};
@@ -65,11 +66,12 @@ struct Anya_State {
     }
     Anya_State(Vector2 start, Vector2 target, Anya_SolidQuery solid_query, void *userdata);
 
-    //inline bool Query(int x, int y);
     inline bool Query_NW(int x, int y);
     inline bool Query_NE(int x, int y);
     inline bool Query_SW(int x, int y);
     inline bool Query_SE(int x, int y);
+
+    bool AddNodeAndCheckTarget(Anya_Node &node);
 };
 
 void Anya(Anya_State &state, float radius = 1.0f);

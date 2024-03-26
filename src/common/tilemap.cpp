@@ -647,7 +647,7 @@ void Tilemap::DrawIntervals(Camera2D &camera)
         nodeLast = true;
     }
 
-    const float radius = 16.0f;
+    const float radius = 8.0f;
     Anya_State state{ start, target, Tilemap_AnyaSolidQuery, this };
     Anya(state, radius);
     
@@ -674,7 +674,9 @@ void Tilemap::DrawIntervals(Camera2D &camera)
     DrawRectangleLinesEx(targetRec, 3, BLUE);
 
     for (auto &node : state.path) {
-        DrawCircle(node.x, node.y, radius, PINK);
+        DrawCircleV(node, radius, Fade(PINK, 0.5f));
+        //DrawCircleLines(node.x, node.y, radius, PINK);
+        DrawRing(node, radius - 1, radius, 0, 360, 45, PINK);
     }
     if (state.path.size()) {
         DrawLineStrip(state.path.data(), state.path.size(), PINK);
